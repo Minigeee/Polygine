@@ -22,13 +22,28 @@ set(SRC_DIR ${PROJECT_SOURCE_DIR}/src)
 set(INC_DIR ${PROJECT_SOURCE_DIR}/include)
 
 # Add sources
-file(GLOB AUDIO_SRC ${SRC_DIR}/Audio/*.cpp          ${INC_DIR}/poly/Audio/*.h)
-file(GLOB CORE_SRC ${SRC_DIR}/Core/*.cpp            ${INC_DIR}/poly/Core/*.h)
-file(GLOB ENGINE_SRC ${SRC_DIR}/Engine/*.cpp        ${INC_DIR}/poly/Engine/*.h)
-file(GLOB GRAPHICS_SRC ${SRC_DIR}/Graphics/*.cpp    ${INC_DIR}/poly/Graphics/*.h)
-file(GLOB MATH_SRC ${SRC_DIR}/Math/*.cpp            ${INC_DIR}/poly/Math/*.h)
-file(GLOB NETWORK_SRC ${SRC_DIR}/Network/*.cpp      ${INC_DIR}/poly/Network/*.h)
-file(GLOB PHYSICS_SRC ${SRC_DIR}/Physics/*.cpp      ${INC_DIR}/poly/Physics/*.h)
+file(GLOB AUDIO_SRC
+    ${SRC_DIR}/Audio/*.cpp
+    ${INC_DIR}/poly/Audio/*.h)
+file(GLOB CORE_SRC
+    ${SRC_DIR}/Core/*.cpp
+    ${INC_DIR}/poly/Core/*.h
+    ${INC_DIR}/poly/Core/*.inl)
+file(GLOB ENGINE_SRC
+    ${SRC_DIR}/Engine/*.cpp
+    ${INC_DIR}/poly/Engine/*.h)
+file(GLOB GRAPHICS_SRC
+    ${SRC_DIR}/Graphics/*.cpp
+    ${INC_DIR}/poly/Graphics/*.h)
+file(GLOB MATH_SRC
+    ${SRC_DIR}/Math/*.cpp
+    ${INC_DIR}/poly/Math/*.h)
+file(GLOB NETWORK_SRC
+    ${SRC_DIR}/Network/*.cpp
+    ${INC_DIR}/poly/Network/*.h)
+file(GLOB PHYSICS_SRC
+    ${SRC_DIR}/Physics/*.cpp
+    ${INC_DIR}/poly/Physics/*.h)
 
 source_group("Audio" FILES ${AUDIO_SRC})
 source_group("Core" FILES ${CORE_SRC})
