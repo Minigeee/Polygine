@@ -3,8 +3,6 @@
 
 #include <poly/Core/DataTypes.h>
 
-#include <vector>
-
 namespace poly
 {
 
@@ -30,7 +28,6 @@ public:
 
     ObjectPool(const ObjectPool&) = delete;
     ObjectPool& operator=(const ObjectPool&) = delete;
-
     ObjectPool(ObjectPool&& other);
     ObjectPool& operator=(ObjectPool&& other);
 
@@ -52,6 +49,20 @@ public:
     void reset();
 
 private:
+    ///////////////////////////////////////////////////////////
+    /// \brief Allocate a new page of memory
+    ///
+    ///////////////////////////////////////////////////////////
+    void* allocPage();
+
+    ///////////////////////////////////////////////////////////
+    // Types
+    ///////////////////////////////////////////////////////////
+
+    ///////////////////////////////////////////////////////////
+    /// \brief Header structure that holds metadata for each page
+    ///
+    ///////////////////////////////////////////////////////////
     struct PageHeader
     {
         void* m_nextPage;
@@ -59,13 +70,12 @@ private:
         Uint32 m_numObjects;
     };
 
-private:
-    void* allocPage();
-
-private:
-    void* m_firstPage;
-    Uint32 m_objectSize;
-    Uint32 m_pageSize;
+    ///////////////////////////////////////////////////////////
+    // Variables
+    ///////////////////////////////////////////////////////////
+    void* m_firstPage;      //!< Pointer to the first page of objects
+    Uint32 m_objectSize;    //!< Size of each object in bytes
+    Uint32 m_pageSize;      //!< Size of each page in number of objects
 };
 
 }

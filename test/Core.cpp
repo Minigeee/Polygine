@@ -1,3 +1,4 @@
+#include <poly/Core/HandleArray.h>
 #include <poly/Core/ObjectPool.h>
 
 #define CATCH_CONFIG_MAIN
@@ -124,5 +125,74 @@ TEST_CASE("Object Pool", "[ObjectPool]")
 
         REQUIRE(pool.getNumObjects() == 5000000 * 2);
         REQUIRE(pool.getNumPages() == 2);
+    }
+}
+
+
+TEST_CASE("Handle Array", "[HandleArray]")
+{
+    HandleArray<Uint32> arr(16);
+
+    SECTION("Underlying memory")
+    {
+        REQUIRE(arr.capacity() == 16);
+        REQUIRE(arr.size() == 0);
+        REQUIRE(arr.isEmpty());
+    }
+
+    Handle h1 = arr.add(3);
+    Handle h2 = arr.add(1);
+    Handle h3 = arr.add(4);
+    Handle h4 = arr.add(1);
+    Handle h5 = arr.add(5);
+
+    SECTION("Test accessor")
+    {
+        REQUIRE(arr[h1] == 3);
+        REQUIRE(arr[h2] == 1);
+        REQUIRE(arr[h3] == 4);
+        REQUIRE(arr[h4] == 1);
+        REQUIRE(arr[h5] == 5);
+    }
+
+    arr.remove(h2);
+    arr.remove(h1);
+
+    SECTION("Test remove")
+    {
+        REQUIRE(arr[h3] == 4);
+        REQUIRE(arr[h4] == 1);
+        REQUIRE(arr[h5] == 5);
+
+        std::vector<Uint32>& data = arr.getData();
+        REQUIRE(data.size() == 3);
+        REQUIRE(data[0] == 1);
+        REQUIRE(data[1] == 5);
+        REQUIRE(data[2] == 4);
+    }
+
+    SECTION("Invalidate handles")
+    {
+        bool invalidated = false;
+        try
+        {
+            Uint32 test = arr[h1];
+        }
+        catch (const char*)
+        {
+            invalidated = true;
+        }
+        REQUIRE(invalidated);
+
+        invalidated = false;
+        try
+        {
+            Uint32 test = arr[h2];
+        }
+        catch (const char*)
+        {
+            invalidated = true;
+        }
+        REQUIRE(invalidated);
     }
 }

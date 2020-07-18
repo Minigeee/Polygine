@@ -1,6 +1,7 @@
 #include <poly/Core/ObjectPool.h>
 
 #include <stdlib.h>
+#include <cstring>
 
 using namespace poly;
 
