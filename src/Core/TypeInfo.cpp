@@ -7,7 +7,7 @@ std::unordered_map<Uint32, TypeInfo> TypeInfo::idToInfo;
 
 ///////////////////////////////////////////////////////////
 
-const TypeInfo& TypeInfo::get(Uint32 id)
+const TypeInfo& TypeInfo::getInfo(Uint32 id)
 {
 	return idToInfo[id];
 }

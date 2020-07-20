@@ -20,11 +20,11 @@ public:
 	///
 	/// This will record data for the data type used in the template
 	/// parameter. The data is stored and can be accessed later
-	/// using one of the get() functions.
+	/// using one of the getInfo() functions.
 	///
 	/// \param name The name of the variable type
 	///
-	/// \see get
+	/// \see getInfo
 	///
 	///////////////////////////////////////////////////////////
 	template <typename T> static void init(const char* name);
@@ -43,7 +43,7 @@ public:
 	/// \return A type info struct
 	///
 	///////////////////////////////////////////////////////////
-	template <typename T> static const TypeInfo& get();
+	template <typename T> static const TypeInfo& getInfo();
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the type info struct of the specified type ID
@@ -53,7 +53,7 @@ public:
 	/// \return A type info struct
 	///
 	///////////////////////////////////////////////////////////
-	static const TypeInfo& get(Uint32 typeId);
+	static const TypeInfo& getInfo(Uint32 typeId);
 
 	Uint32 m_id;			//!< The numerical ID of the variable type
 	Uint32 m_size;			//!< The size of the type in bytes
@@ -98,7 +98,7 @@ private:
 /// info for a specific type, the static function init<T>() must
 /// be called, where the template parameter T is the type
 /// you wish to retrieve type info for. Afterwards,
-/// using the static function get<T>() will return a TypeInfo
+/// using the static function getInfo<T>() will return a TypeInfo
 /// struct containing all the correct data.
 ///
 /// Usage example:
@@ -116,15 +116,15 @@ private:
 /// TypeInfo::init<B>("B");
 /// TypeInfo::init<C>("C");
 ///
-/// TypeInfo::get<int>().m_name;		// "int"
-/// TypeInfo::get<int>().m_size;		// 4
-/// TypeInfo::get<float>().m_align;		// 4
-/// TypeInfo::get<int>().m_isPod;		// true
-/// TypeInfo::get<A>().m_isPod;			// true
-/// TypeInfo::get<B>().m_isPod;			// false
-/// TypeInfo::get<B>().m_isAbstract;	// true
-/// TypeInfo::get<C>().m_isAbstract;	// true
-/// TypeInfo::get<C>().m_isPolymorphic; // true
+/// TypeInfo::getInfo<int>().m_name;		// "int"
+/// TypeInfo::getInfo<int>().m_size;		// 4
+/// TypeInfo::getInfo<float>().m_align;		// 4
+/// TypeInfo::getInfo<int>().m_isPod;		// true
+/// TypeInfo::getInfo<A>().m_isPod;			// true
+/// TypeInfo::getInfo<B>().m_isPod;			// false
+/// TypeInfo::getInfo<B>().m_isAbstract;	// true
+/// TypeInfo::getInfo<C>().m_isAbstract;	// true
+/// TypeInfo::getInfo<C>().m_isPolymorphic; // true
 ///
 /// \endcode
 ///
