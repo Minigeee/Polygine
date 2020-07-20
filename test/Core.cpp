@@ -1,5 +1,6 @@
 #include <poly/Core/HandleArray.h>
 #include <poly/Core/ObjectPool.h>
+#include <poly/Core/TypeInfo.h>
 
 #define CATCH_CONFIG_MAIN
 #include <catch.hpp>

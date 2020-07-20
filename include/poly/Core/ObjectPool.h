@@ -7,7 +7,7 @@ namespace poly
 {
 
 ///////////////////////////////////////////////////////////
-/// \brief A memory allocator for allocating objects of the same size
+/// \brief A pool allocator
 ///
 ///////////////////////////////////////////////////////////
 class ObjectPool
@@ -206,7 +206,7 @@ private:
 /// \class poly::ObjectPool
 /// \ingroup Core
 ///
-/// The object pool is a memory allocator that can hold a collection
+/// The object pool is a pool allocator that can hold a collection
 /// objects of the same size. Its purpose is to increase allocation
 /// speed if many object allocations are required, and to minimize
 /// memory fragmentation. The object pool should be used in
