@@ -9,6 +9,7 @@ set(VERSION_PATCH 0)
 set(POLY_BUILD_EXAMPLES FALSE CACHE BOOL "Set TRUE to build Polygine examples")
 set(POLY_BUILD_TESTS FALSE CACHE BOOL "Set TRUE to build Polygine tests")
 set(POLY_INSTALL_DIR ${CMAKE_INSTALL_PREFIX} CACHE PATH "Location to install Polygine headers and binaries")
+set(POLY_ENABLE_PROFILING TRUE CACHE BOOL "Set TRUE to enable profiling")
 
 set(CMAKE_DEBUG_POSTFIX "-d")
 
@@ -16,6 +17,10 @@ set(CMAKE_DEBUG_POSTFIX "-d")
 if (MSVC)
     # Remove warnings
     add_definitions(-D_CRT_SECURE_NO_DEPRECATE -D_SCL_SECURE_NO_WARNINGS)
+endif()
+
+if (POLY_ENABLE_PROFILING)
+    add_definitions(-DENABLE_PROFILING)
 endif()
 
 set(SRC_DIR ${PROJECT_SOURCE_DIR}/src)

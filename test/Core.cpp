@@ -1,6 +1,7 @@
 #include <poly/Core/Clock.h>
 #include <poly/Core/HandleArray.h>
 #include <poly/Core/ObjectPool.h>
+#include <poly/Core/Profiler.h>
 #include <poly/Core/Sleep.h>
 #include <poly/Core/Time.h>
 #include <poly/Core/TypeInfo.h>
@@ -219,23 +220,5 @@ TEST_CASE("Time", "[Time]")
 
         REQUIRE(fabsf((a - b).toSeconds() - 0.4f) <= epsilon);
         REQUIRE(fabsf((a + b).toSeconds() - 2.0f) <= epsilon);
-    }
-
-    SECTION("Sleep and clock")
-    {
-        Clock clock;
-        sleep(Time::fromMicroseconds(10000));
-        Time elapsed = clock.getElapsedTime();
-        std::cout << elapsed.toSeconds() << "s \n";
-
-        clock.restart();
-        sleep(0.01f);
-        elapsed = clock.getElapsedTime();
-        std::cout << elapsed.toSeconds() << "s \n";
-
-        clock.restart();
-        sleep(10);
-        elapsed = clock.getElapsedTime();
-        std::cout << elapsed.toSeconds() << "s \n";
     }
 }
