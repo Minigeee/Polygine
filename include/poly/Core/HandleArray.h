@@ -9,7 +9,7 @@ namespace poly
 {
 
 ///////////////////////////////////////////////////////////
-/// \brief The structure used to access elements in the handle array
+/// \brief The structure used to access elements in a handle array
 ///
 ///////////////////////////////////////////////////////////
 struct Handle

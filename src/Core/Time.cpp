@@ -11,7 +11,7 @@ Time::Time() :
 	m_microseconds(0)
 { }
 
-Time::Time(Uint64 micro) :
+Time::Time(Int64 micro) :
 	m_microseconds(micro)
 { }
 
@@ -19,15 +19,15 @@ Time::Time(Uint64 micro) :
 
 Time Time::fromSeconds(float seconds)
 {
-	return Time((Uint64)((double)seconds * 1000000));
+	return Time((Int64)((double)seconds * 1000000));
 }
 
-Time Time::fromMilliseconds(Uint32 milliseconds)
+Time Time::fromMilliseconds(Int32 milliseconds)
 {
-	return Time((Uint64)milliseconds * 1000);
+	return Time((Int64)milliseconds * 1000);
 }
 
-Time Time::fromMicroseconds(Uint64 microseconds)
+Time Time::fromMicroseconds(Int64 microseconds)
 {
 	return Time(microseconds);
 }
@@ -39,12 +39,12 @@ float Time::toSeconds() const
 	return (float)(m_microseconds * 0.000001);
 }
 
-Uint32 Time::toMilliseconds() const
+Int32 Time::toMilliseconds() const
 {
-	return (Uint32)(m_microseconds * 0.001);
+	return (Int32)(m_microseconds * 0.001);
 }
 
-Uint64 Time::toMicroseconds() const
+Int64 Time::toMicroseconds() const
 {
 	return m_microseconds;
 }

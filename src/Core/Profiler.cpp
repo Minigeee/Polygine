@@ -61,7 +61,8 @@ Time ProfilerData::stdDev() const
 ProfilerMarker::ProfilerMarker() :
 	m_elapsedTime	(0),
 	m_label			(0),
-	m_func			(0)
+	m_func			(0),
+	m_isRunning		(false)
 {
 
 }
@@ -69,7 +70,8 @@ ProfilerMarker::ProfilerMarker() :
 ProfilerMarker::ProfilerMarker(const std::string& label, const std::string& func) :
 	m_elapsedTime	(0),
 	m_label			(label),
-	m_func			(func)
+	m_func			(func),
+	m_isRunning		(false)
 {
 
 }
@@ -85,15 +87,21 @@ void ProfilerMarker::start()
 {
 	// Start the clock
 	m_clock.restart();
+	m_isRunning = true;
 }
 
 void ProfilerMarker::stop()
 {
-	// Record the time
-	m_elapsedTime = m_clock.getElapsedTime();
+	if (m_isRunning)
+	{
+		// Record the time
+		m_elapsedTime = m_clock.getElapsedTime();
 
-	// Add self to main profiler
-	Profiler::addMarker(*this);
+		// Add self to main profiler
+		Profiler::addMarker(*this);
+
+		m_isRunning = false;
+	}
 }
 
 ///////////////////////////////////////////////////////////
