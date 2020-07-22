@@ -31,7 +31,7 @@ inline Uint32 TypeInfo::id()
 ///////////////////////////////////////////////////////////
 
 template <typename T>
-inline const TypeInfo& TypeInfo::get()
+inline const TypeInfo& TypeInfo::getInfo()
 {
 	return idToInfo[id<T>()];
 }

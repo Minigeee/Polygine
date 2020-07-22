@@ -1,5 +1,9 @@
+#include <poly/Core/Clock.h>
 #include <poly/Core/HandleArray.h>
 #include <poly/Core/ObjectPool.h>
+#include <poly/Core/Profiler.h>
+#include <poly/Core/Sleep.h>
+#include <poly/Core/Time.h>
 #include <poly/Core/TypeInfo.h>
 
 #define CATCH_CONFIG_MAIN
@@ -195,5 +199,26 @@ TEST_CASE("Handle Array", "[HandleArray]")
             invalidated = true;
         }
         REQUIRE(invalidated);
+    }
+}
+
+TEST_CASE("Time", "[Time]")
+{
+    Time t(0);
+
+    SECTION("Conversions")
+    {
+        REQUIRE(Time::fromSeconds(1.0f).toMicroseconds() == 1000000);
+        REQUIRE(Time::fromMilliseconds(1000).toMicroseconds() == 1000000);
+    }
+
+    SECTION("Operations")
+    {
+        Time a = Time::fromSeconds(1.2f);
+        Time b = Time::fromSeconds(0.8f);
+        const float epsilon = 0.00001f;
+
+        REQUIRE(fabsf((a - b).toSeconds() - 0.4f) <= epsilon);
+        REQUIRE(fabsf((a + b).toSeconds() - 2.0f) <= epsilon);
     }
 }
