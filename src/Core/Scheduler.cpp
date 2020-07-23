@@ -82,9 +82,19 @@ void Scheduler::finish()
 
 void Scheduler::stop()
 {
+	{
+		// Acquire mutex and clear queue to prevent any extra tasks executing
+		std::unique_lock<std::mutex> lock(m_mutex);
+
+		while (!m_queue.empty())
+			m_queue.pop();
+	}
+
+	// Notify stop
 	m_shouldStop = true;
 	m_scv.notify_all();
 
+	// Join all threads
 	for (Uint32 i = 0; i < m_threads.size(); ++i)
 	{
 		if (m_threads[i].joinable())
