@@ -236,9 +236,15 @@ void test(const std::string& name)
 TEST_CASE("Scheduler", "[Scheduler]")
 {
     Scheduler scheduler;
-    scheduler.addTask(test, "John");
-    scheduler.addTask(test, "Jane");
-    scheduler.addTask(test, "World");
+
+    for (int i = 0; i < 100; ++i)
+        scheduler.addTask(Scheduler::Low, test, "Low" + std::to_string(i));
+
+    for (int i = 0; i < 100; ++i)
+        scheduler.addTask(Scheduler::Medium, test, "Medium" + std::to_string(i));
+
+    for (int i = 0; i < 100; ++i)
+        scheduler.addTask(Scheduler::High, test, "High" + std::to_string(i));
 
     scheduler.finish();
     scheduler.stop();

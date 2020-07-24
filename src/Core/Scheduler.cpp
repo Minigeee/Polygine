@@ -40,21 +40,34 @@ void Scheduler::workerLoop()
 			// First, aquire lock
 			std::unique_lock<std::mutex> lock(m_mutex);
 
-			// Then check if there are tasks in queue
-			if (!m_queue.size())
+			// Then check if there are tasks any of the queues
+			if (!m_queue[0].size() && !m_queue[1].size() && !m_queue[2].size())
 			{
 				// If there aren't any tasks, wait for one
 				m_scv.wait(lock);
 
-				// Check if queue is still empty
-				if (!m_queue.size())
-					// If it is empty, then reset
+				// Check if the queues are still empty
+				if (!m_queue[0].size() && !m_queue[1].size() && !m_queue[2].size())
+					// If all are empty, then reset
 					continue;
 			}
 
-			// Now get the next task and pop
-			fn = std::move(m_queue.front());
-			m_queue.pop();
+			// Now get the next task, starting with highest priority queue, and pop
+			if (m_queue[0].size())
+			{
+				fn = std::move(m_queue[0].front());
+				m_queue[0].pop();
+			}
+			else if (m_queue[1].size())
+			{
+				fn = std::move(m_queue[1].front());
+				m_queue[1].pop();
+			}
+			else
+			{
+				fn = std::move(m_queue[2].front());
+				m_queue[2].pop();
+			}
 		}
 
 		// Indicate that a thread is busy
@@ -76,7 +89,7 @@ void Scheduler::finish()
 	std::unique_lock<std::mutex> lock(m_mutex);
 
 	// Keep waiting until number of busy threads is 0 and the size of queue is 0
-	while (m_numBusy || m_queue.size())
+	while (m_numBusy || m_queue[0].size() || m_queue[1].size() || m_queue[2].size())
 		m_fcv.wait(lock);
 }
 
@@ -86,8 +99,11 @@ void Scheduler::stop()
 		// Acquire mutex and clear queue to prevent any extra tasks executing
 		std::unique_lock<std::mutex> lock(m_mutex);
 
-		while (!m_queue.empty())
-			m_queue.pop();
+		for (int i = 0; i < 3; ++i)
+		{
+			while (!m_queue[i].empty())
+				m_queue[i].pop();
+		}
 	}
 
 	// Notify stop

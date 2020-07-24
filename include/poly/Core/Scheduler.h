@@ -21,6 +21,18 @@ class Scheduler
 {
 public:
 	///////////////////////////////////////////////////////////
+	/// \brief Priority levels for the tasks
+	///
+	///////////////////////////////////////////////////////////
+	enum Priority
+	{
+		High,	//!< High priority tasks will be executed first
+		Medium, //!< Medium priority tasks will be executed before low priority
+		Low		//!< Low priority tasks will be executed last
+	};
+
+public:
+	///////////////////////////////////////////////////////////
 	/// \brief Default constructor
 	///
 	/// The default constructor creates the system recommendend
@@ -80,12 +92,55 @@ public:
 	/// For member functions, the instance passed in can be pointer or
 	/// reference.
 	///
+	/// All tasks added using this function will use
+	/// a Priority::High. To specify a different priority level,
+	/// use the overloaded version of this function.
+	///
 	/// \param func The function to execute
 	/// \param args All other arguments for the specified function
 	///
 	///////////////////////////////////////////////////////////
 	template <typename F, typename... Args>
 	void addTask(F&& func, Args&&... args);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Add a task function with a certain priority for the scheduler to execute
+	///
+	/// This function adds the specified function to a queue
+	/// for the worker threads to execute when available.
+	/// Functions that have return values will not be retrievable,
+	/// so if some result is needed from the task, use another
+	/// method to retrieve the results (i.e. setting a member variable).
+	///
+	/// To add a normal function:
+	///
+	/// \li addTask(func, arg1, arg2, arg3, ...);
+	///
+	/// To add a member function:
+	///
+	/// \li addTask(&Class::func, &instance, arg1, arg2, ...);
+	///
+	/// For member functions, the instance passed in can be pointer or
+	/// reference.
+	///
+	/// Tasks with higher priority will be executed before tasks
+	/// with lower priority.
+	///
+	/// \li \link Priority::High \endlink should be used for tasks that need to be
+	/// finished as soon as possible
+	/// \li \link Priority::Medium \endlink should be used for tasks that need
+	/// to be finished soon, but are not as important.
+	/// \li \link Priority::Low \endlink should be used for tasks that can be
+	/// finished whenever
+	///
+	/// \param priority The #Priority level to execute the task with
+	/// \param func The function to execute
+	/// \param args All other arguments for the specified function
+	///
+	///////////////////////////////////////////////////////////
+
+	template <typename F, typename... Args>
+	void addTask(Priority priority, F&& func, Args&&... args);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Wait for all tasks in the queue to finish
@@ -114,14 +169,14 @@ private:
 	///////////////////////////////////////////////////////////
 	void workerLoop();
 
-	std::queue<std::function<void()>> m_queue;	//!< The task queue
-	std::vector<std::thread> m_threads;			//!< The list of worker threads
-	std::atomic<Uint32> m_numBusy;				//!< The number of busy threads
-	std::atomic<bool> m_shouldStop;				//!< True if stop() has been called
+	std::queue<std::function<void()>> m_queue[3];	//!< The task queue
+	std::vector<std::thread> m_threads;				//!< The list of worker threads
+	std::atomic<Uint32> m_numBusy;					//!< The number of busy threads
+	std::atomic<bool> m_shouldStop;					//!< True if stop() has been called
 
-	std::mutex m_mutex;							//!< Mutex to protect queue and for condition variables
-	std::condition_variable m_scv;				//!< The condition variable used to notify new tasks
-	std::condition_variable m_fcv;				//!< The condition variable used to notify finishing tasks
+	std::mutex m_mutex;								//!< Mutex to protect queue and for condition variables
+	std::condition_variable m_scv;					//!< The condition variable used to notify new tasks
+	std::condition_variable m_fcv;					//!< The condition variable used to notify finishing tasks
 };
 
 #include <poly/Core/Scheduler.inl>
@@ -181,16 +236,25 @@ private:
 /// {
 ///		// The constructor will create a certain number of threads
 ///		Scheduler scheduler;
+///
+///		// These tasks will be added into the high priority queue
 ///		scheduler.addTask(test, "World");
 ///		scheduler.addTask(test, "ABC");
+///
+///
+///		// Add a low priority task
+///		scheduler.addTask(Scheduler::Low, test, "Low");
+///		// Even though this task was added after the low priority, it will execute first
+///		scheduler.addTask(Scheduler::Medium, test, "Medium");
+///
 ///
 ///		// Call a member function
 ///		A a;
 ///		scheduler.addTask(&A::test, &a, "Class A");
 ///
+///
 ///		// Wait for all tasks to finish
 ///		scheduler.finish();
-///
 ///		// Join all worker threads
 ///		scheduler.stop();
 ///
