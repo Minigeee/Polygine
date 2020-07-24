@@ -1,3 +1,4 @@
+#include <poly/Core/Logger.h>
 #include <poly/Core/Scheduler.h>
 
 namespace poly
@@ -11,7 +12,7 @@ Scheduler::Scheduler() :
 {
 	Uint32 size = std::thread::hardware_concurrency();
 	for (Uint32 i = 0; i < size; ++i)
-		m_threads.push_back(std::thread(&Scheduler::workerLoop, this));
+		m_threads.push_back(std::thread(&Scheduler::workerLoop, this, i));
 }
 
 Scheduler::Scheduler(Uint32 numWorkers) :
@@ -19,7 +20,7 @@ Scheduler::Scheduler(Uint32 numWorkers) :
 	m_shouldStop	(false)
 {
 	for (Uint32 i = 0; i < numWorkers; ++i)
-		m_threads.push_back(std::thread(&Scheduler::workerLoop, this));
+		m_threads.push_back(std::thread(&Scheduler::workerLoop, this, i));
 }
 
 Scheduler::~Scheduler()
@@ -30,8 +31,10 @@ Scheduler::~Scheduler()
 
 ///////////////////////////////////////////////////////////
 
-void Scheduler::workerLoop()
+void Scheduler::workerLoop(Uint32 id)
 {
+	Logger::setThreadName("Worker #" + std::to_string(id));
+
 	while (!m_shouldStop)
 	{
 		std::function<void()> fn;

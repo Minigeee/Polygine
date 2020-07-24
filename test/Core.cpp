@@ -1,5 +1,6 @@
 #include <poly/Core/Clock.h>
 #include <poly/Core/HandleArray.h>
+#include <poly/Core/Logger.h>
 #include <poly/Core/ObjectPool.h>
 #include <poly/Core/Profiler.h>
 #include <poly/Core/Scheduler.h>
@@ -230,22 +231,46 @@ std::mutex m;
 void test(const std::string& name)
 {
     std::lock_guard<std::mutex> lock(m);
-    std::cout << "Hello " << name << "!\n";
+    LOG_WARNING("Hello " + name + "!");
+}
+
+void testSync()
+{
+    START_PROFILING(sync);
+    for (int i = 0; i < 100; ++i)
+        LOG("Hello World!");
+    STOP_PROFILING(sync);
+}
+
+void testAsync()
+{
+    Scheduler scheduler;
+    Logger::setScheduler(&scheduler);
+
+    START_PROFILING(async);
+    for (int i = 0; i < 100; ++i)
+        LOG("Hello World!");
+    STOP_PROFILING(async);
+
+    scheduler.finish();
 }
 
 TEST_CASE("Scheduler", "[Scheduler]")
 {
-    Scheduler scheduler;
+    Logger::init("game.log");
 
+    /*
     for (int i = 0; i < 100; ++i)
-        scheduler.addTask(Scheduler::Low, test, "Low" + std::to_string(i));
-
+        testSync();
     for (int i = 0; i < 100; ++i)
-        scheduler.addTask(Scheduler::Medium, test, "Medium" + std::to_string(i));
+        testAsync();
 
-    for (int i = 0; i < 100; ++i)
-        scheduler.addTask(Scheduler::High, test, "High" + std::to_string(i));
+    const ProfilerData& a = Profiler::getData("testSync", "sync");
+    const ProfilerData& b = Profiler::getData("testAsync", "async");
 
-    scheduler.finish();
-    scheduler.stop();
+    std::cout << "Mean:    " << a.mean().toMicroseconds() << "us\nStd Dev: " << a.stdDev().toMicroseconds() << "us\n\n";
+    std::cout << "Mean:    " << b.mean().toMicroseconds() << "us\nStd Dev: " << b.stdDev().toMicroseconds() << "us\n\n";
+    */
+
+    LOG_DEBUG("Debug?");
 }
