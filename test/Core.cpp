@@ -259,6 +259,7 @@ TEST_CASE("Scheduler", "[Scheduler]")
 {
     Logger::init("game.log");
 
+    /*
     for (int i = 0; i < 100; ++i)
         testSync();
     for (int i = 0; i < 100; ++i)
@@ -269,4 +270,7 @@ TEST_CASE("Scheduler", "[Scheduler]")
 
     std::cout << "Mean:    " << a.mean().toMicroseconds() << "us\nStd Dev: " << a.stdDev().toMicroseconds() << "us\n\n";
     std::cout << "Mean:    " << b.mean().toMicroseconds() << "us\nStd Dev: " << b.stdDev().toMicroseconds() << "us\n\n";
+    */
+
+    LOG_DEBUG("Debug?");
 }

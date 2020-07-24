@@ -29,7 +29,7 @@ bool Logger::init(const std::string& fname)
 	m_file.open(fname);
 
 	// Print header
-	std::string header = " Time                     |  Thread name:ID        |  Message\n";
+	std::string header = " Time                     |  Thread name      |  Message\n";
 	header += "---------------------------------------------------------------------------------------------\n";
 
 #ifndef NDEBUG
@@ -101,8 +101,10 @@ void Logger::logMsg(Logger::MsgType type, const std::string& msg, std::thread::i
 		ss << "[WARNING] - ";
 	else if (type == Error)
 		ss << "[ERROR]   - ";
-	else
+	else if (type == Fatal)
 		ss << "[FATAL]   - ";
+	else
+		ss << "[DEBUG]   - ";
 
 	ss << msg << '\n';
 
@@ -123,6 +125,8 @@ void Logger::logMsg(Logger::MsgType type, const std::string& msg, std::thread::i
 		SetConsoleTextAttribute(hConsole, 12);
 	else if (type == Fatal)
 		SetConsoleTextAttribute(hConsole, 4);
+	else if (type == Debug)
+		SetConsoleTextAttribute(hConsole, 10);
 
 	std::cerr << line;
 

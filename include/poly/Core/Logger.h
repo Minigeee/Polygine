@@ -27,7 +27,8 @@ public:
 		Fatal,		//!< Fatal error message type
 		Error,		//!< Error message type
 		Warning,	//!< Warning message type
-		Info		//!< Info message type
+		Info,		//!< Info message type
+		Debug		//!< Debug message type
 	};
 
 public:
@@ -70,6 +71,7 @@ public:
 	/// \li #LOG_WARNING
 	/// \li #LOG_ERROR
 	/// \li #LOG_FATAL
+	/// \li #LOG_DEBUG
 	///
 	/// \param type The message #Type
 	/// \param msg The message to log
@@ -168,6 +170,25 @@ private:
 ///////////////////////////////////////////////////////////
 #define LOG_FATAL(msg)		poly::Logger::log(poly::Logger::Fatal, msg)
 
+///////////////////////////////////////////////////////////
+/// \brief Log an \link MsgType::Debug \endlink message
+///
+/// Messages of this type show up in green in the console.
+/// If a scheduler is provided, then messages logged with
+/// this macro will be asynchronous.
+///
+/// When compiled in release mode, debug messages won't
+/// be logged if this macro is used.
+///
+/// \param msg The message to log
+///
+///////////////////////////////////////////////////////////
+#ifndef NDEBUG
+#define LOG_DEBUG(msg)		poly::Logger::log(poly::Logger::Debug, msg)
+#else
+#define LOG_DEBUG(msg)
+#endif
+
 }
 
 #endif
@@ -198,6 +219,7 @@ private:
 /// \li #LOG_WARNING
 /// \li #LOG_ERROR
 /// \li #LOG_FATAL
+/// \li #LOG_DEBUG
 ///
 /// Note that this is a very basic logging class that exists
 /// for convenience. There are other libraries that are much
