@@ -16,7 +16,7 @@ struct TypeInfo
 {
 public:
 	///////////////////////////////////////////////////////////
-	/// \brief Initialize a variable type to retrieve info for its type
+	/// \brief Add information for a data type, including its name
 	///
 	/// This will record data for the data type used in the template
 	/// parameter. The data is stored and can be accessed later
@@ -27,7 +27,7 @@ public:
 	/// \see getInfo
 	///
 	///////////////////////////////////////////////////////////
-	template <typename T> static void init(const char* name);
+	template <typename T> static void addInfo(const char* name);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the unique numerical ID of the variable type
@@ -42,6 +42,8 @@ public:
 	///
 	/// \return A type info struct
 	///
+	/// \see addInfo
+	///
 	///////////////////////////////////////////////////////////
 	template <typename T> static const TypeInfo& getInfo();
 
@@ -51,6 +53,8 @@ public:
 	/// \param typeId The ID of the variable type to retrieve
 	///
 	/// \return A type info struct
+	///
+	/// \see addInfo
 	///
 	///////////////////////////////////////////////////////////
 	static const TypeInfo& getInfo(Uint32 typeId);

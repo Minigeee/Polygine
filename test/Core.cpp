@@ -2,6 +2,7 @@
 #include <poly/Core/HandleArray.h>
 #include <poly/Core/ObjectPool.h>
 #include <poly/Core/Profiler.h>
+#include <poly/Core/Scheduler.h>
 #include <poly/Core/Sleep.h>
 #include <poly/Core/Time.h>
 #include <poly/Core/TypeInfo.h>
@@ -221,4 +222,30 @@ TEST_CASE("Time", "[Time]")
         REQUIRE(fabsf((a - b).toSeconds() - 0.4f) <= epsilon);
         REQUIRE(fabsf((a + b).toSeconds() - 2.0f) <= epsilon);
     }
+}
+
+
+std::mutex m;
+
+void test(const std::string& name)
+{
+    std::lock_guard<std::mutex> lock(m);
+    std::cout << "Hello " << name << "!\n";
+}
+
+TEST_CASE("Scheduler", "[Scheduler]")
+{
+    Scheduler scheduler;
+
+    for (int i = 0; i < 100; ++i)
+        scheduler.addTask(Scheduler::Low, test, "Low" + std::to_string(i));
+
+    for (int i = 0; i < 100; ++i)
+        scheduler.addTask(Scheduler::Medium, test, "Medium" + std::to_string(i));
+
+    for (int i = 0; i < 100; ++i)
+        scheduler.addTask(Scheduler::High, test, "High" + std::to_string(i));
+
+    scheduler.finish();
+    scheduler.stop();
 }

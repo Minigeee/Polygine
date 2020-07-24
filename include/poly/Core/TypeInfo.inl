@@ -3,7 +3,7 @@
 ///////////////////////////////////////////////////////////
 
 template <typename T>
-inline void TypeInfo::init(const char* name)
+inline void TypeInfo::addInfo(const char* name)
 {
 	// Create info struct
 	TypeInfo info;
