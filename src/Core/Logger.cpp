@@ -44,16 +44,25 @@ bool Logger::init(const std::string& fname)
 
 ///////////////////////////////////////////////////////////
 
-void Logger::log(Logger::Verbosity verbosity, const std::string& msg)
+void Logger::log(Logger::MsgType type, const std::string& msg)
 {
 	std::thread::id id = std::this_thread::get_id();
-	if (m_scheduler)
-		m_scheduler->addTask(m_priority, &Logger::logMsg, verbosity, msg, id);
+
+	if (type == Error || type == Fatal)
+		// Force error and fatal messages to be synchronous
+		logMsg(type, msg, id);
+
 	else
-		logMsg(verbosity, msg, id);
+	{
+		// Otherwise, use the scheduler if possible
+		if (m_scheduler)
+			m_scheduler->addTask(m_priority, &Logger::logMsg, type, msg, id);
+		else
+			logMsg(type, msg, id);
+	}
 }
 
-void Logger::logMsg(Logger::Verbosity verbosity, const std::string& msg, std::thread::id threadId)
+void Logger::logMsg(Logger::MsgType type, const std::string& msg, std::thread::id threadId)
 {
 	std::ostringstream ss;
 
@@ -83,22 +92,14 @@ void Logger::logMsg(Logger::Verbosity verbosity, const std::string& msg, std::th
 	}
 
 	// Construct the thread label
-	{
-		Uint32 start = ss.tellp();
-		ss << threadName << ':';
-		Uint32 size = (Uint32)ss.tellp() - start;
+	ss << std::setw(15) << std::left << threadName << "] | ";
 
-		const Uint32 threadNameWidth = 20;
-		Uint32 width = threadNameWidth - size;
-		ss << std::setw(width) << std::left << std::this_thread::get_id() << "] | ";
-	}
-
-	// Create verbosity label
-	if (verbosity == Info)
+	// Create type label
+	if (type == Info)
 		ss << "[INFO]    - ";
-	else if (verbosity == Warning)
+	else if (type == Warning)
 		ss << "[WARNING] - ";
-	else if (verbosity == Error)
+	else if (type == Error)
 		ss << "[ERROR]   - ";
 	else
 		ss << "[FATAL]   - ";
@@ -116,17 +117,21 @@ void Logger::logMsg(Logger::Verbosity verbosity, const std::string& msg, std::th
 	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 
 	// Set console color
-	if (verbosity == Warning)
+	if (type == Warning)
 		SetConsoleTextAttribute(hConsole, 6);
-	else if (verbosity == Error)
+	else if (type == Error)
 		SetConsoleTextAttribute(hConsole, 12);
-	else if (verbosity == Fatal)
+	else if (type == Fatal)
 		SetConsoleTextAttribute(hConsole, 4);
 
 	std::cerr << line;
 
 	// Reset color afterwards
 	SetConsoleTextAttribute(hConsole, 7);
+#else
+
+	// TODO : Colored output for linux/macos
+
 #endif
 #endif
 
