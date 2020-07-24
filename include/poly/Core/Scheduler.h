@@ -167,7 +167,7 @@ private:
 	/// \brief The loop that worker threads use
 	///
 	///////////////////////////////////////////////////////////
-	void workerLoop();
+	void workerLoop(Uint32 id);
 
 	std::queue<std::function<void()>> m_queue[3];	//!< The task queue
 	std::vector<std::thread> m_threads;				//!< The list of worker threads
