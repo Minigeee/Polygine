@@ -12,3 +12,7 @@ _deps
 
 # Ignore build files
 build/
+
+# Ignore documentation files
+generated_docs/
+Doxyfile
