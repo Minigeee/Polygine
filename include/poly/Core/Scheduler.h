@@ -172,11 +172,12 @@ private:
 	std::queue<std::function<void()>> m_queue[3];	//!< The task queue
 	std::vector<std::thread> m_threads;				//!< The list of worker threads
 	std::atomic<Uint32> m_numBusy;					//!< The number of busy threads
+	std::atomic<Uint32> m_numStopped;				//!< The number of threads that have left their loop
 	std::atomic<bool> m_shouldStop;					//!< True if stop() has been called
 
 	std::mutex m_mutex;								//!< Mutex to protect queue and for condition variables
-	std::condition_variable m_scv;					//!< The condition variable used to notify new tasks
-	std::condition_variable m_fcv;					//!< The condition variable used to notify finishing tasks
+	std::condition_variable m_scv;					//!< The condition variable used to notify new tasks (start)
+	std::condition_variable m_fcv;					//!< The condition variable used to notify finishing tasks (finish)
 };
 
 #include <poly/Core/Scheduler.inl>
