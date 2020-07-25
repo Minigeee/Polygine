@@ -177,31 +177,6 @@ TEST_CASE("Handle Array", "[HandleArray]")
         REQUIRE(data[1] == 5);
         REQUIRE(data[2] == 4);
     }
-
-    SECTION("Invalidate handles")
-    {
-        bool invalidated = false;
-        try
-        {
-            Uint32 test = arr[h1];
-        }
-        catch (const char*)
-        {
-            invalidated = true;
-        }
-        REQUIRE(invalidated);
-
-        invalidated = false;
-        try
-        {
-            Uint32 test = arr[h2];
-        }
-        catch (const char*)
-        {
-            invalidated = true;
-        }
-        REQUIRE(invalidated);
-    }
 }
 
 TEST_CASE("Time", "[Time]")
