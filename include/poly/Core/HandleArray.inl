@@ -27,7 +27,7 @@ inline T& HandleArray<T>::operator[](Handle handle)
 
 	// Make sure the handle is valid
 	if (entry.m_counter != handle.m_counter)
-		LOG_ERROR("Invalid handle: " + std::to_string(handle.m_index));
+		LOG_ERROR("Invalid handle: %d", handle.m_index);
 
 	return m_data[entry.m_index];
 }

@@ -11,6 +11,14 @@
 namespace poly
 {
 
+namespace priv
+{
+
+std::string vformat(const char* fmt, va_list ap);
+std::string format(const char* fmt, ...);
+
+}
+
 ///////////////////////////////////////////////////////////
 /// \brief A class used for logging messages
 ///
@@ -165,10 +173,13 @@ private:
 /// If a scheduler is provided, then messages logged with
 /// this macro will be asynchronous.
 ///
-/// \param msg The message to log
+/// This macro uses printf style formatting, so all arguments
+/// after the formatting string will be used to create the string.
+///
+/// \param msg The message to log (the formatting string)
 ///
 ///////////////////////////////////////////////////////////
-#define LOG(msg)			poly::Logger::log(poly::Logger::Info, msg)
+#define LOG(msg, ...) poly::Logger::log(poly::Logger::Info, poly::priv::format(msg, __VA_ARGS__))
 
 ///////////////////////////////////////////////////////////
 /// \brief Log an \link MsgType::Warning \endlink message
@@ -177,10 +188,13 @@ private:
 /// If a scheduler is provided, then messages logged with
 /// this macro will be asynchronous.
 ///
-/// \param msg The message to log
+/// This macro uses printf style formatting, so all arguments
+/// after the formatting string will be used to create the string.
+///
+/// \param msg The message to log (the formatting string)
 ///
 ///////////////////////////////////////////////////////////
-#define LOG_WARNING(msg)	poly::Logger::log(poly::Logger::Warning, msg)
+#define LOG_WARNING(msg, ...) poly::Logger::log(poly::Logger::Warning, poly::priv::format(msg, __VA_ARGS__))
 
 ///////////////////////////////////////////////////////////
 /// \brief Log an \link MsgType::Error \endlink message
@@ -190,10 +204,13 @@ private:
 /// scheduler is provided. This is to increase the change
 /// that the message is logged in the case of a crash.
 ///
-/// \param msg The message to log
+/// This macro uses printf style formatting, so all arguments
+/// after the formatting string will be used to create the string.
+///
+/// \param msg The message to log (the formatting string)
 ///
 ///////////////////////////////////////////////////////////
-#define LOG_ERROR(msg)		poly::Logger::log(poly::Logger::Error, msg)
+#define LOG_ERROR(msg, ...) poly::Logger::log(poly::Logger::Error, poly::priv::format(msg, __VA_ARGS__))
 
 ///////////////////////////////////////////////////////////
 /// \brief Log an \link MsgType::Fatal \endlink message
@@ -203,10 +220,13 @@ private:
 /// scheduler is provided. This is to increase the change
 /// that the message is logged in the case of a crash.
 ///
-/// \param msg The message to log
+/// This macro uses printf style formatting, so all arguments
+/// after the formatting string will be used to create the string.
+///
+/// \param msg The message to log (the formatting string)
 ///
 ///////////////////////////////////////////////////////////
-#define LOG_FATAL(msg)		poly::Logger::log(poly::Logger::Fatal, msg)
+#define LOG_FATAL(msg, ...) poly::Logger::log(poly::Logger::Fatal, poly::priv::format(msg, __VA_ARGS__))
 
 ///////////////////////////////////////////////////////////
 /// \brief Log an \link MsgType::Debug \endlink message
@@ -218,13 +238,15 @@ private:
 /// When compiled in release mode, debug messages won't
 /// be logged if this macro is used.
 ///
-/// \param msg The message to log
+/// This macro uses printf style formatting, so all arguments
+/// after the formatting string will be used to create the string.
 ///
+/// \param msg The message to log (the formatting string)
 ///////////////////////////////////////////////////////////
 #ifndef NDEBUG
-#define LOG_DEBUG(msg)		poly::Logger::log(poly::Logger::Debug, msg)
+#define LOG_DEBUG(msg, ...) poly::Logger::log(poly::Logger::Debug, poly::priv::format(msg, __VA_ARGS__))
 #else
-#define LOG_DEBUG(msg)
+#define LOG_DEBUG(msg, ...)
 #endif
 
 }
@@ -291,6 +313,9 @@ private:
 /// // Log fatal error
 /// // Even though async logging is setup, this will forced to be synchronous
 /// LOG_FATAL("You have died");
+///
+/// // Printf style formatting
+/// LOG("Pi is: %.5f", 3.141592f);
 ///
 /// scheduler.finish();
 ///
