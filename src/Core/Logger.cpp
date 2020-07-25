@@ -23,6 +23,8 @@ std::mutex Logger::m_mutex;
 std::mutex Logger::m_threadMutex;
 std::mutex Logger::m_queueMutex;
 
+bool Logger::m_shouldFlush[5] = { true, true, false, false, false };
+
 ///////////////////////////////////////////////////////////
 
 bool Logger::init(const std::string& fname)
@@ -93,7 +95,7 @@ void Logger::logMsg(Logger::MsgType type, const std::string& msg, std::thread::i
 	std::string threadName;
 	{
 		std::lock_guard<std::mutex> lock(m_threadMutex);
-		std::string& name = m_threadNames[std::this_thread::get_id()];
+		std::string& name = m_threadNames[threadId];
 
 		// Create a new name for the thread if one doesn't exist
 		if (!name.size())
@@ -151,7 +153,13 @@ void Logger::logMsg(Logger::MsgType type, const std::string& msg, std::thread::i
 #endif
 
 	if (m_file.is_open())
+	{
 		m_file << line;
+
+		// Flush depending on message type
+		if (m_shouldFlush[type])
+			std::flush(m_file);
+	}
 }
 
 void Logger::logAsync()

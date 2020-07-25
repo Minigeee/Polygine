@@ -17,8 +17,19 @@ int main()
     
     LOG("Creating handle arrays...");
 
+
+    HandleArray<int> arr;
+
     for (int i = 0; i < 100; ++i)
-        LOG("Log #" + std::to_string(i));
+        Handle h = arr.add(i);
+
+    LOG_WARNING("Warning... Warning...");
+
+    Handle h(10);
+    arr.remove(h);
+
+    int v = arr[Handle(10)];
+    LOG_DEBUG(std::to_string(v));
 
     // Make sure all tasks are finished before quitting
     scheduler.finish();

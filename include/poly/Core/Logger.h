@@ -105,6 +105,24 @@ public:
 	///////////////////////////////////////////////////////////
 	static void setScheduler(Scheduler* scheduler, Scheduler::Priority priority = Scheduler::Low);
 
+	///////////////////////////////////////////////////////////
+	/// \brief Set if certain message types should flush their file output
+	///
+	/// Flushing file output will force log messages to write to
+	/// the file stream. In the event that a crash occurs, all log
+	/// messages that have already been written will be kept
+	/// in the log file. Messages that don't get flushed may not
+	/// make it into the file.
+	///
+	/// By default, only \link MsgType::Error \endlink
+	/// and \link MsgType::Fatal \endlink have their output flushed.
+	///
+	/// \param type The #MsgType to modify
+	/// \param shouldFlush Set to true if the specified message type should flush
+	///
+	///////////////////////////////////////////////////////////
+	static void setFlush(MsgType type, bool shouldFlush);
+
 private:
 	struct LogMsg
 	{
@@ -131,7 +149,9 @@ private:
 	static Scheduler* m_scheduler;			//!< Scheduler for asynchronous logging
 	static Scheduler::Priority m_priority;	//!< Priority level to give logging tasks
 	static std::unordered_map<std::thread::id, std::string> m_threadNames;	//!< Map of thread IDs to names for custom thread names
-	static std::queue<LogMsg> m_msgQueue;
+	static std::queue<LogMsg> m_msgQueue;	//!< The message queue used for asynchronous messages
+
+	static bool m_shouldFlush[5];			//!< Array that determines which message types should flush output
 
 	static std::mutex m_mutex;				//!< Mutex to protect log outputs
 	static std::mutex m_threadMutex;		//!< Mutex to protect the thread names map
