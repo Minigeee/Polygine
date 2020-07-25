@@ -2,6 +2,7 @@
 #define POLY_HANDLE_ARRAY_H
 
 #include <poly/Core/DataTypes.h>
+#include <poly/Core/Logger.h>
 
 #include <vector>
 

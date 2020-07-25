@@ -94,17 +94,17 @@ Time& operator*=(Time& a, Int64 b)
 
 Time operator*(Time a, double b)
 {
-	return Time(a.toMicroseconds() * b);
+	return Time((Uint64)(a.toMicroseconds() * b));
 }
 
 Time operator*(double a, Time b)
 {
-	return Time(a * b.toMicroseconds());
+	return Time((Uint64)(a * b.toMicroseconds()));
 }
 
 Time& operator*=(Time& a, double b)
 {
-	a = Time(a.toMicroseconds() * b);
+	a = Time((Uint64)(a.toMicroseconds() * b));
 	return a;
 }
 
@@ -128,17 +128,17 @@ Time& operator/=(Time& a, Int64 b)
 
 Time operator/(Time a, double b)
 {
-	return Time(a.toMicroseconds() / b);
+	return Time((Uint64)(a.toMicroseconds() / b));
 }
 
 Time operator/(double a, Time b)
 {
-	return Time(a / b.toMicroseconds());
+	return Time((Uint64)(a / b.toMicroseconds()));
 }
 
 Time& operator/=(Time& a, double b)
 {
-	a = Time(a.toMicroseconds() / b);
+	a = Time((Uint64)(a.toMicroseconds() / b));
 	return a;
 }
 

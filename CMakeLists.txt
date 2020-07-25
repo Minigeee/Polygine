@@ -4,7 +4,7 @@ project(polygine)
 # Version numbers
 set(VERSION_MAJOR 0)
 set(VERSION_MINOR 0)
-set(VERSION_PATCH 0)
+set(VERSION_PATCH 1)
 
 set(POLY_BUILD_EXAMPLES FALSE CACHE BOOL "Set TRUE to build Polygine examples")
 set(POLY_BUILD_TESTS FALSE CACHE BOOL "Set TRUE to build Polygine tests")

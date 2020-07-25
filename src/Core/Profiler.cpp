@@ -17,12 +17,12 @@ Time ProfilerData::mean() const
 	double avg = 0.0;
 
 	// First, calculate the average of remaining times in interval
-	for (int i = 0; i < m_interval.size(); ++i)
+	for (Uint32 i = 0; i < m_interval.size(); ++i)
 		avg += (double)m_interval[i].toSeconds();
 	avg /= (double)m_interval.size();
 
 	// Calculate average with the rest of values
-	for (int i = 0; i < m_averages.size(); ++i)
+	for (Uint32 i = 0; i < m_averages.size(); ++i)
 		avg += (double)m_averages[i].toSeconds();
 	avg /= (double)m_averages.size() + (m_interval.size() ? 1.0 : 0.0);
 
@@ -33,20 +33,20 @@ Time ProfilerData::stdDev() const
 {
 	// First, calculate the average of remaining times in interval
 	double intervalAvg = 0.0;
-	for (int i = 0; i < m_interval.size(); ++i)
+	for (Uint32 i = 0; i < m_interval.size(); ++i)
 		intervalAvg += (double)m_interval[i].toSeconds();
 	intervalAvg /= (double)m_interval.size();
 
 	// Calculate average with the rest of values
 	double avg = intervalAvg;
-	for (int i = 0; i < m_averages.size(); ++i)
+	for (Uint32 i = 0; i < m_averages.size(); ++i)
 		avg += (double)m_averages[i].toSeconds();
 	avg /= (double)m_averages.size() + (m_interval.size() ? 1.0 : 0.0);
 
 	// Calculate standard deviation
 	double diff = intervalAvg - avg;
 	double stdDev = diff * diff;
-	for (int i = 0; i < m_averages.size(); ++i)
+	for (Uint32 i = 0; i < m_averages.size(); ++i)
 	{
 		diff = (double)m_averages[i].toSeconds() - avg;
 		stdDev += diff * diff;
@@ -150,7 +150,7 @@ void Profiler::addMarker(const ProfilerMarker& marker)
 	{
 		// If it is, take average
 		Time average(0);
-		for (int i = 0; i < data->m_interval.size(); ++i)
+		for (Uint32 i = 0; i < data->m_interval.size(); ++i)
 			average += data->m_interval[i];
 
 		// Add the average to the list

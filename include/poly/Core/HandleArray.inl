@@ -27,7 +27,7 @@ inline T& HandleArray<T>::operator[](Handle handle)
 
 	// Make sure the handle is valid
 	if (entry.m_counter != handle.m_counter)
-		throw "Invalid handle";
+		LOG_ERROR("Invalid handle: %d", handle.m_index);
 
 	return m_data[entry.m_index];
 }
@@ -37,32 +37,11 @@ inline T& HandleArray<T>::operator[](Handle handle)
 template <typename T>
 inline Handle HandleArray<T>::add(const T& element)
 {
-	// Resize the arrays if they are full
-	if (m_data.size() == m_data.capacity())
+	// Resize the arrays if the next free handle is out of bounds
+	if (m_nextFree >= m_handleToData.size())
 	{
-		Uint32 numToAdd = m_data.size();
-
-		// If array hasn't been added before, use a slightly different loop
-		if (!numToAdd)
-		{
-			numToAdd = 8;
-
-			// Setup next free list
-			for (Uint32 i = 0; i < numToAdd; ++i)
-			{
-				m_handleToData.push_back(Handle(i + 1));
-				m_dataToHandle.push_back(0);
-			}
-		}
-		else
-		{
-			// Setup next free list
-			for (Uint32 i = 0; i < numToAdd; ++i)
-			{
-				m_handleToData.push_back(Handle(numToAdd + i + 1));
-				m_dataToHandle.push_back(0);
-			}
-		}
+		m_handleToData.push_back(Handle((Uint16)(m_handleToData.size() + 1)));
+		m_dataToHandle.push_back(0);
 	}
 
 	// Add element to data array

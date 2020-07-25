@@ -11,6 +11,14 @@
 namespace poly
 {
 
+namespace priv
+{
+
+std::string vformat(const char* fmt, va_list ap);
+std::string format(const char* fmt, ...);
+
+}
+
 ///////////////////////////////////////////////////////////
 /// \brief A class used for logging messages
 ///
@@ -96,15 +104,49 @@ public:
 	/// It will not guarantee that the messages are logged before
 	/// a crash, but it lessens the risk.
 	///
+	/// Remember to use Scheduler::finish() to ensure that all log
+	/// messages are printed before stopping the program.
+	///
 	/// \param scheduler A pointer to a scheduler to use
 	/// \param priority Optional priority value to assign to log tasks
 	///
 	///////////////////////////////////////////////////////////
 	static void setScheduler(Scheduler* scheduler, Scheduler::Priority priority = Scheduler::Low);
 
-private:
 	///////////////////////////////////////////////////////////
-	/// \brief The function that does the actual logging
+	/// \brief Set if certain message types should flush their file output
+	///
+	/// Flushing file output will force log messages to write to
+	/// the file stream. In the event that a crash occurs, all log
+	/// messages that have already been written will be kept
+	/// in the log file. Messages that don't get flushed may not
+	/// make it into the file.
+	///
+	/// By default, only \link MsgType::Error \endlink
+	/// and \link MsgType::Fatal \endlink have their output flushed.
+	///
+	/// \param type The #MsgType to modify
+	/// \param shouldFlush Set to true if the specified message type should flush
+	///
+	///////////////////////////////////////////////////////////
+	static void setFlush(MsgType type, bool shouldFlush);
+
+private:
+	struct LogMsg
+	{
+		MsgType m_type;
+		std::string m_msg;
+		std::thread::id m_threadId;
+	};
+
+	///////////////////////////////////////////////////////////
+	/// \brief The function that does the synchronous logging
+	///
+	///////////////////////////////////////////////////////////
+	static void logAsync();
+
+	///////////////////////////////////////////////////////////
+	/// \brief The function that does the synchronous logging
 	///
 	///////////////////////////////////////////////////////////
 	static void logMsg(MsgType type, const std::string& msg, std::thread::id threadId);
@@ -115,9 +157,13 @@ private:
 	static Scheduler* m_scheduler;			//!< Scheduler for asynchronous logging
 	static Scheduler::Priority m_priority;	//!< Priority level to give logging tasks
 	static std::unordered_map<std::thread::id, std::string> m_threadNames;	//!< Map of thread IDs to names for custom thread names
+	static std::queue<LogMsg> m_msgQueue;	//!< The message queue used for asynchronous messages
+
+	static bool m_shouldFlush[5];			//!< Array that determines which message types should flush output
 
 	static std::mutex m_mutex;				//!< Mutex to protect log outputs
 	static std::mutex m_threadMutex;		//!< Mutex to protect the thread names map
+	static std::mutex m_queueMutex;			//!< Mutex to protect the log queue
 };
 
 ///////////////////////////////////////////////////////////
@@ -127,10 +173,13 @@ private:
 /// If a scheduler is provided, then messages logged with
 /// this macro will be asynchronous.
 ///
-/// \param msg The message to log
+/// This macro uses printf style formatting, so all arguments
+/// after the formatting string will be used to create the string.
+///
+/// \param msg The message to log (the formatting string)
 ///
 ///////////////////////////////////////////////////////////
-#define LOG(msg)			poly::Logger::log(poly::Logger::Info, msg)
+#define LOG(msg, ...) poly::Logger::log(poly::Logger::Info, poly::priv::format(msg, __VA_ARGS__))
 
 ///////////////////////////////////////////////////////////
 /// \brief Log an \link MsgType::Warning \endlink message
@@ -139,10 +188,13 @@ private:
 /// If a scheduler is provided, then messages logged with
 /// this macro will be asynchronous.
 ///
-/// \param msg The message to log
+/// This macro uses printf style formatting, so all arguments
+/// after the formatting string will be used to create the string.
+///
+/// \param msg The message to log (the formatting string)
 ///
 ///////////////////////////////////////////////////////////
-#define LOG_WARNING(msg)	poly::Logger::log(poly::Logger::Warning, msg)
+#define LOG_WARNING(msg, ...) poly::Logger::log(poly::Logger::Warning, poly::priv::format(msg, __VA_ARGS__))
 
 ///////////////////////////////////////////////////////////
 /// \brief Log an \link MsgType::Error \endlink message
@@ -152,10 +204,13 @@ private:
 /// scheduler is provided. This is to increase the change
 /// that the message is logged in the case of a crash.
 ///
-/// \param msg The message to log
+/// This macro uses printf style formatting, so all arguments
+/// after the formatting string will be used to create the string.
+///
+/// \param msg The message to log (the formatting string)
 ///
 ///////////////////////////////////////////////////////////
-#define LOG_ERROR(msg)		poly::Logger::log(poly::Logger::Error, msg)
+#define LOG_ERROR(msg, ...) poly::Logger::log(poly::Logger::Error, poly::priv::format(msg, __VA_ARGS__))
 
 ///////////////////////////////////////////////////////////
 /// \brief Log an \link MsgType::Fatal \endlink message
@@ -165,10 +220,13 @@ private:
 /// scheduler is provided. This is to increase the change
 /// that the message is logged in the case of a crash.
 ///
-/// \param msg The message to log
+/// This macro uses printf style formatting, so all arguments
+/// after the formatting string will be used to create the string.
+///
+/// \param msg The message to log (the formatting string)
 ///
 ///////////////////////////////////////////////////////////
-#define LOG_FATAL(msg)		poly::Logger::log(poly::Logger::Fatal, msg)
+#define LOG_FATAL(msg, ...) poly::Logger::log(poly::Logger::Fatal, poly::priv::format(msg, __VA_ARGS__))
 
 ///////////////////////////////////////////////////////////
 /// \brief Log an \link MsgType::Debug \endlink message
@@ -180,13 +238,15 @@ private:
 /// When compiled in release mode, debug messages won't
 /// be logged if this macro is used.
 ///
-/// \param msg The message to log
+/// This macro uses printf style formatting, so all arguments
+/// after the formatting string will be used to create the string.
 ///
+/// \param msg The message to log (the formatting string)
 ///////////////////////////////////////////////////////////
 #ifndef NDEBUG
-#define LOG_DEBUG(msg)		poly::Logger::log(poly::Logger::Debug, msg)
+#define LOG_DEBUG(msg, ...) poly::Logger::log(poly::Logger::Debug, poly::priv::format(msg, __VA_ARGS__))
 #else
-#define LOG_DEBUG(msg)
+#define LOG_DEBUG(msg, ...)
 #endif
 
 }
@@ -253,6 +313,9 @@ private:
 /// // Log fatal error
 /// // Even though async logging is setup, this will forced to be synchronous
 /// LOG_FATAL("You have died");
+///
+/// // Printf style formatting
+/// LOG("Pi is: %.5f", 3.141592f);
 ///
 /// scheduler.finish();
 ///

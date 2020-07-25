@@ -1,6 +1,8 @@
 #include <poly/Core/Logger.h>
 #include <poly/Core/Scheduler.h>
 
+#include <iostream>
+
 namespace poly
 {
 
@@ -8,11 +10,21 @@ namespace poly
 
 Scheduler::Scheduler() :
 	m_numBusy		(0),
+	m_numStopped	(0),
 	m_shouldStop	(false)
 {
 	Uint32 size = std::thread::hardware_concurrency();
+	m_numBusy = size;
+
 	for (Uint32 i = 0; i < size; ++i)
 		m_threads.push_back(std::thread(&Scheduler::workerLoop, this, i));
+
+	// Don't continue until all threads are ready
+	{
+		std::unique_lock<std::mutex> lock(m_mutex);
+		while (m_numBusy > 0)
+			m_fcv.wait(lock);
+	}
 }
 
 Scheduler::Scheduler(Uint32 numWorkers) :
@@ -33,29 +45,36 @@ Scheduler::~Scheduler()
 
 void Scheduler::workerLoop(Uint32 id)
 {
-	Logger::setThreadName("Worker #" + std::to_string(id));
+	Logger::setThreadName("Worker #" + std::to_string(id + 1));
 
 	while (!m_shouldStop)
 	{
 		std::function<void()> fn;
 
 		{
-			// First, aquire lock
+			// Acquire the mutex to access queue
 			std::unique_lock<std::mutex> lock(m_mutex);
 
-			// Then check if there are tasks any of the queues
+			// If there are items in the queue, skip waiting
 			if (!m_queue[0].size() && !m_queue[1].size() && !m_queue[2].size())
 			{
-				// If there aren't any tasks, wait for one
+				// Mark this thread as free
+				--m_numBusy;
+				m_fcv.notify_all();
+
+				// Wait until get a signal to start work
 				m_scv.wait(lock);
 
-				// Check if the queues are still empty
+				// Mark this thread as busy
+				++m_numBusy;
+
+				// Sometimes, threads will wake up without there actually being work
 				if (!m_queue[0].size() && !m_queue[1].size() && !m_queue[2].size())
-					// If all are empty, then reset
 					continue;
 			}
 
-			// Now get the next task, starting with highest priority queue, and pop
+			// Get the next function, based on priority, by moving and popping
+			// Use std::move because its faster
 			if (m_queue[0].size())
 			{
 				fn = std::move(m_queue[0].front());
@@ -73,16 +92,12 @@ void Scheduler::workerLoop(Uint32 id)
 			}
 		}
 
-		// Indicate that a thread is busy
-		++m_numBusy;
-
-		// Start the task
+		// Run the function
 		fn();
-
-		// After finishing, indicate that a thread is available
-		--m_numBusy;
-		m_fcv.notify_all();
 	}
+
+	// Once done, increment the stopped counter
+	++m_numStopped;
 }
 
 ///////////////////////////////////////////////////////////
@@ -107,11 +122,24 @@ void Scheduler::stop()
 			while (!m_queue[i].empty())
 				m_queue[i].pop();
 		}
+
+		// Wait until all threads are waiting
+		while (m_numBusy)
+			m_fcv.wait(lock);
 	}
 
-	// Notify stop
+	// Set stop flag
 	m_shouldStop = true;
-	m_scv.notify_all();
+
+	do
+		// Sometimes (very rarely), the stopping thread will notify the conditional variable
+		// before all the worker threads get to their wait.
+		// It will cause the program to freeze because without sending the signal more than
+		// once, the thread will wait until a signal from another source is recieve
+
+		// Loop the notify until all threads are stopped
+		m_scv.notify_all();
+	while (m_numStopped < m_threads.size());
 
 	// Join all threads
 	for (Uint32 i = 0; i < m_threads.size(); ++i)

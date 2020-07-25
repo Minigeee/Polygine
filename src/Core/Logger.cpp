@@ -17,9 +17,13 @@ std::ofstream Logger::m_file;
 Scheduler* Logger::m_scheduler = 0;
 Scheduler::Priority Logger::m_priority = Scheduler::Low;
 std::unordered_map<std::thread::id, std::string> Logger::m_threadNames;
+std::queue<Logger::LogMsg> Logger::m_msgQueue;
 
 std::mutex Logger::m_mutex;
 std::mutex Logger::m_threadMutex;
+std::mutex Logger::m_queueMutex;
+
+bool Logger::m_shouldFlush[5] = { true, true, false, false, false };
 
 ///////////////////////////////////////////////////////////
 
@@ -56,7 +60,16 @@ void Logger::log(Logger::MsgType type, const std::string& msg)
 	{
 		// Otherwise, use the scheduler if possible
 		if (m_scheduler)
-			m_scheduler->addTask(m_priority, &Logger::logMsg, type, msg, id);
+		{
+			std::lock_guard<std::mutex> lock(m_queueMutex);
+
+			// Add a log message object to the queue if doing async
+			m_msgQueue.push(LogMsg({ type, msg, id }));
+
+			// Only add another async function if there is only 1 message in the queue
+			if (m_msgQueue.size() == 1)
+				m_scheduler->addTask(m_priority, &Logger::logAsync);
+		}
 		else
 			logMsg(type, msg, id);
 	}
@@ -82,7 +95,7 @@ void Logger::logMsg(Logger::MsgType type, const std::string& msg, std::thread::i
 	std::string threadName;
 	{
 		std::lock_guard<std::mutex> lock(m_threadMutex);
-		std::string& name = m_threadNames[std::this_thread::get_id()];
+		std::string& name = m_threadNames[threadId];
 
 		// Create a new name for the thread if one doesn't exist
 		if (!name.size())
@@ -140,7 +153,33 @@ void Logger::logMsg(Logger::MsgType type, const std::string& msg, std::thread::i
 #endif
 
 	if (m_file.is_open())
+	{
 		m_file << line;
+
+		// Flush depending on message type
+		if (m_shouldFlush[type])
+			std::flush(m_file);
+	}
+}
+
+void Logger::logAsync()
+{
+	m_queueMutex.lock();
+
+	// Loop through the queue and log everything
+	while (!m_msgQueue.empty())
+	{
+		LogMsg msg = std::move(m_msgQueue.front());
+		m_msgQueue.pop();
+		m_queueMutex.unlock();
+
+		// Use synchronous log
+		logMsg(msg.m_type, msg.m_msg, msg.m_threadId);
+
+		m_queueMutex.lock();
+	}
+
+	m_queueMutex.unlock();
 }
 
 ///////////////////////////////////////////////////////////
@@ -159,5 +198,56 @@ void Logger::setScheduler(Scheduler* scheduler, Scheduler::Priority priority)
 }
 
 ///////////////////////////////////////////////////////////
+
+namespace priv
+{
+
+// Code source: https://stackoverflow.com/questions/69738/c-how-to-get-fprintf-results-as-a-stdstring-w-o-sprintf#69911
+
+std::string vformat(const char* fmt, va_list ap)
+{
+	// Allocate a buffer on the stack that's big enough for us almost
+	// all the time.  Be prepared to allocate dynamically if it doesn't fit.
+	size_t size = 1024;
+	char stackbuf[1024];
+	std::vector<char> dynamicbuf;
+	char* buf = &stackbuf[0];
+	va_list ap_copy;
+
+	while (1) {
+		// Try to vsnprintf into our buffer.
+		va_copy(ap_copy, ap);
+		int needed = vsnprintf(buf, size, fmt, ap);
+		va_end(ap_copy);
+
+		// NB. C99 (which modern Linux and OS X follow) says vsnprintf
+		// failure returns the length it would have needed.  But older
+		// glibc and current Windows return -1 for failure, i.e., not
+		// telling us how much was needed.
+
+		if (needed <= (int)size && needed >= 0) {
+			// It fit fine so we're done.
+			return std::string(buf, (size_t)needed);
+		}
+
+		// vsnprintf reported that it wanted to write more characters
+		// than we allotted.  So try again using a dynamic buffer.  This
+		// doesn't happen very often if we chose our initial size well.
+		size = (needed > 0) ? (needed + 1) : (size * 2);
+		dynamicbuf.resize(size);
+		buf = &dynamicbuf[0];
+	}
+}
+
+std::string format(const char* fmt, ...)
+{
+	va_list ap;
+	va_start(ap, fmt);
+	std::string buf = vformat(fmt, ap);
+	va_end(ap);
+	return buf;
+}
+
+}
 
 }

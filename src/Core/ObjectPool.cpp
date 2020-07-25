@@ -1,3 +1,4 @@
+#include <poly/Core/Logger.h>
 #include <poly/Core/ObjectPool.h>
 
 #include <stdlib.h>
@@ -169,7 +170,11 @@ void ObjectPool::free(void* ptr)
 	}
 
 	// If couldn't find the page that contains the pointer, quit
-	if (!header) return;
+	if (!header)
+	{
+		LOG_WARNING("Tried to free memory that doesn't belong to the object pool");
+		return;
+	}
 
 	// Update free list and number of objects
 	*(void**)ptr = header->m_nextFree;

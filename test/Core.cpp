@@ -177,31 +177,6 @@ TEST_CASE("Handle Array", "[HandleArray]")
         REQUIRE(data[1] == 5);
         REQUIRE(data[2] == 4);
     }
-
-    SECTION("Invalidate handles")
-    {
-        bool invalidated = false;
-        try
-        {
-            Uint32 test = arr[h1];
-        }
-        catch (const char*)
-        {
-            invalidated = true;
-        }
-        REQUIRE(invalidated);
-
-        invalidated = false;
-        try
-        {
-            Uint32 test = arr[h2];
-        }
-        catch (const char*)
-        {
-            invalidated = true;
-        }
-        REQUIRE(invalidated);
-    }
 }
 
 TEST_CASE("Time", "[Time]")
@@ -223,54 +198,4 @@ TEST_CASE("Time", "[Time]")
         REQUIRE(fabsf((a - b).toSeconds() - 0.4f) <= epsilon);
         REQUIRE(fabsf((a + b).toSeconds() - 2.0f) <= epsilon);
     }
-}
-
-
-std::mutex m;
-
-void test(const std::string& name)
-{
-    std::lock_guard<std::mutex> lock(m);
-    LOG_WARNING("Hello " + name + "!");
-}
-
-void testSync()
-{
-    START_PROFILING(sync);
-    for (int i = 0; i < 100; ++i)
-        LOG("Hello World!");
-    STOP_PROFILING(sync);
-}
-
-void testAsync()
-{
-    Scheduler scheduler;
-    Logger::setScheduler(&scheduler);
-
-    START_PROFILING(async);
-    for (int i = 0; i < 100; ++i)
-        LOG("Hello World!");
-    STOP_PROFILING(async);
-
-    scheduler.finish();
-}
-
-TEST_CASE("Scheduler", "[Scheduler]")
-{
-    Logger::init("game.log");
-
-    /*
-    for (int i = 0; i < 100; ++i)
-        testSync();
-    for (int i = 0; i < 100; ++i)
-        testAsync();
-
-    const ProfilerData& a = Profiler::getData("testSync", "sync");
-    const ProfilerData& b = Profiler::getData("testAsync", "async");
-
-    std::cout << "Mean:    " << a.mean().toMicroseconds() << "us\nStd Dev: " << a.stdDev().toMicroseconds() << "us\n\n";
-    std::cout << "Mean:    " << b.mean().toMicroseconds() << "us\nStd Dev: " << b.stdDev().toMicroseconds() << "us\n\n";
-    */
-
-    LOG_DEBUG("Debug?");
 }
