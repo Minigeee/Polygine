@@ -17,9 +17,11 @@ std::ofstream Logger::m_file;
 Scheduler* Logger::m_scheduler = 0;
 Scheduler::Priority Logger::m_priority = Scheduler::Low;
 std::unordered_map<std::thread::id, std::string> Logger::m_threadNames;
+std::queue<Logger::LogMsg> Logger::m_msgQueue;
 
 std::mutex Logger::m_mutex;
 std::mutex Logger::m_threadMutex;
+std::mutex Logger::m_queueMutex;
 
 ///////////////////////////////////////////////////////////
 
@@ -56,7 +58,16 @@ void Logger::log(Logger::MsgType type, const std::string& msg)
 	{
 		// Otherwise, use the scheduler if possible
 		if (m_scheduler)
-			m_scheduler->addTask(m_priority, &Logger::logMsg, type, msg, id);
+		{
+			std::lock_guard<std::mutex> lock(m_queueMutex);
+
+			// Add a log message object to the queue if doing async
+			m_msgQueue.push(LogMsg({ type, msg, id }));
+
+			// Only add another async function if there is only 1 message in the queue
+			if (m_msgQueue.size() == 1)
+				m_scheduler->addTask(m_priority, &Logger::logAsync);
+		}
 		else
 			logMsg(type, msg, id);
 	}
@@ -141,6 +152,26 @@ void Logger::logMsg(Logger::MsgType type, const std::string& msg, std::thread::i
 
 	if (m_file.is_open())
 		m_file << line;
+}
+
+void Logger::logAsync()
+{
+	m_queueMutex.lock();
+
+	// Loop through the queue and log everything
+	while (!m_msgQueue.empty())
+	{
+		LogMsg msg = std::move(m_msgQueue.front());
+		m_msgQueue.pop();
+		m_queueMutex.unlock();
+
+		// Use synchronous log
+		logMsg(msg.m_type, msg.m_msg, msg.m_threadId);
+
+		m_queueMutex.lock();
+	}
+
+	m_queueMutex.unlock();
 }
 
 ///////////////////////////////////////////////////////////

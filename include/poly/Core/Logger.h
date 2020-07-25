@@ -96,6 +96,9 @@ public:
 	/// It will not guarantee that the messages are logged before
 	/// a crash, but it lessens the risk.
 	///
+	/// Remember to use Scheduler::finish() to ensure that all log
+	/// messages are printed before stopping the program.
+	///
 	/// \param scheduler A pointer to a scheduler to use
 	/// \param priority Optional priority value to assign to log tasks
 	///
@@ -103,8 +106,21 @@ public:
 	static void setScheduler(Scheduler* scheduler, Scheduler::Priority priority = Scheduler::Low);
 
 private:
+	struct LogMsg
+	{
+		MsgType m_type;
+		std::string m_msg;
+		std::thread::id m_threadId;
+	};
+
 	///////////////////////////////////////////////////////////
-	/// \brief The function that does the actual logging
+	/// \brief The function that does the synchronous logging
+	///
+	///////////////////////////////////////////////////////////
+	static void logAsync();
+
+	///////////////////////////////////////////////////////////
+	/// \brief The function that does the synchronous logging
 	///
 	///////////////////////////////////////////////////////////
 	static void logMsg(MsgType type, const std::string& msg, std::thread::id threadId);
@@ -115,9 +131,11 @@ private:
 	static Scheduler* m_scheduler;			//!< Scheduler for asynchronous logging
 	static Scheduler::Priority m_priority;	//!< Priority level to give logging tasks
 	static std::unordered_map<std::thread::id, std::string> m_threadNames;	//!< Map of thread IDs to names for custom thread names
+	static std::queue<LogMsg> m_msgQueue;
 
 	static std::mutex m_mutex;				//!< Mutex to protect log outputs
 	static std::mutex m_threadMutex;		//!< Mutex to protect the thread names map
+	static std::mutex m_queueMutex;			//!< Mutex to protect the log queue
 };
 
 ///////////////////////////////////////////////////////////

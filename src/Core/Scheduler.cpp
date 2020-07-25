@@ -45,7 +45,7 @@ Scheduler::~Scheduler()
 
 void Scheduler::workerLoop(Uint32 id)
 {
-	Logger::setThreadName("Worker #" + std::to_string(id));
+	Logger::setThreadName("Worker #" + std::to_string(id + 1));
 
 	while (!m_shouldStop)
 	{
