@@ -180,9 +180,9 @@ private:
 	std::condition_variable m_fcv;					//!< The condition variable used to notify finishing tasks (finish)
 };
 
-#include <poly/Core/Scheduler.inl>
-
 }
+
+#include <poly/Core/Scheduler.inl>
 
 #endif
 

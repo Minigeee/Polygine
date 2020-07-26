@@ -162,9 +162,9 @@ private:
 	Uint16 m_nextFree;					//!< Index of the next free handle
 };
 
-#include <poly/Core/HandleArray.inl>
-
 }
+
+#include <poly/Core/HandleArray.inl>
 
 #endif
 

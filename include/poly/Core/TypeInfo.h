@@ -74,9 +74,9 @@ private:
 	static std::unordered_map<Uint32, TypeInfo> idToInfo;	//!< Maps type ID to type info struct
 };
 
-#include <poly/Core/TypeInfo.inl>
-
 }
+
+#include <poly/Core/TypeInfo.inl>
 
 #endif
 
