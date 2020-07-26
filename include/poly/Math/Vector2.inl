@@ -1,3 +1,5 @@
+#include <poly/Math/Vector3.h>
+
 #include <cmath>
 
 namespace poly
@@ -28,19 +30,29 @@ inline Vector2<T>::Vector2(const Vector2<T>& v) :
 template <typename T>
 template <typename U>
 inline Vector2<T>::Vector2(U s) :
-	x(static_cast<T>(s)), y(static_cast<T>(s))
+	x(static_cast<T>(s)),
+	y(static_cast<T>(s))
 { }
 
 template <typename T>
-template <typename A, typename B>
-inline Vector2<T>::Vector2(A x, B y) :
-	x(static_cast<T>(x)), y(static_cast<T>(y))
+template <typename X, typename Y>
+inline Vector2<T>::Vector2(X x, Y y) :
+	x(static_cast<T>(x)),
+	y(static_cast<T>(y))
 { }
 
 template <typename T>
 template <typename U>
 inline Vector2<T>::Vector2(const Vector2<U>& v) :
-	x(static_cast<T>(v.x)), y(static_cast<T>(v.y))
+	x(static_cast<T>(v.x)),
+	y(static_cast<T>(v.y))
+{ }
+
+template <typename T>
+template <typename U>
+inline Vector2<T>::Vector2(const Vector3<U> & v) :
+	x(static_cast<T>(v.x)),
+	y(static_cast<T>(v.y))
 { }
 
 ///////////////////////////////////////////////////////////
@@ -158,6 +170,12 @@ inline Vector2<double>& operator%=(Vector2<double>& a, const Vector2<U>& b)
 }
 
 ///////////////////////////////////////////////////////////
+
+template <typename T>
+Vector2<T> operator-(const Vector2<T>& v)
+{
+	return Vector2<T>(-v.x, -v.y);
+}
 
 template <typename T>
 inline Vector2<T> operator+(const Vector2<T>& v, T s)
@@ -285,6 +303,18 @@ inline Vector2<double> operator%(const Vector2<double>& a, const Vector2<double>
 	return Vector2<double>(fmod(a.x, b.x), fmod(a.y, b.y));
 }
 
+template <typename T>
+inline bool operator==(const Vector2<T>& a, const Vector2<T>& b)
+{
+	return a.x == b.x && a.y == b.y;
+}
+
+template <typename T>
+inline bool operator!=(const Vector2<T>& a, const Vector2<T>& b)
+{
+	return a.x != b.x || a.y != b.y;
+}
+
 ///////////////////////////////////////////////////////////
 
 template <typename T>
@@ -360,10 +390,10 @@ template <typename T>
 Vector2<T> normalize(const Vector2<T>& v)
 {
 	T d = static_cast<T>(1) / length(v);
-	return Vector2(
+	return Vector2<T>(
 		v.x * d,
 		v.y * d
-	);
+		);
 }
 
 template <typename T>

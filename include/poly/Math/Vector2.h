@@ -1,5 +1,5 @@
-#ifndef POLY_VECTOR_H
-#define POLY_VECTOR_H
+#ifndef POLY_VECTOR2_H
+#define POLY_VECTOR2_H
 
 #include <poly/Core/DataTypes.h>
 
@@ -27,8 +27,8 @@ struct Vector2
 	template <typename U>
 	explicit Vector2(U s);
 
-	template <typename A, typename B>
-	Vector2(A x, B y);
+	template <typename X, typename Y>
+	Vector2(X x, Y y);
 
 	template <typename U>
 	Vector2(const Vector2<U>& v);
@@ -93,6 +93,9 @@ Vector2<float>& operator%=(Vector2<float>& a, const Vector2<U>& b);
 template <typename U>
 Vector2<double>& operator%=(Vector2<double>& a, const Vector2<U>& b);
 
+
+template <typename T>
+Vector2<T> operator-(const Vector2<T>& v);
 
 template <typename T>
 Vector2<T> operator+(const Vector2<T>& v, T s);
@@ -162,9 +165,6 @@ bool operator==(const Vector2<T>& a, const Vector2<T>& b);
 
 template <typename T>
 bool operator!=(const Vector2<T>& a, const Vector2<T>& b);
-
-template <typename T>
-Vector2<T> operator-(const Vector2<T>& v);
 
 ///////////////////////////////////////////////////////////
 // Math
