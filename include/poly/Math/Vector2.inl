@@ -1,4 +1,5 @@
 #include <poly/Math/Vector3.h>
+#include <poly/Math/Vector4.h>
 
 #include <cmath>
 
@@ -51,6 +52,13 @@ inline Vector2<T>::Vector2(const Vector2<U>& v) :
 template <typename T>
 template <typename U>
 inline Vector2<T>::Vector2(const Vector3<U> & v) :
+	x(static_cast<T>(v.x)),
+	y(static_cast<T>(v.y))
+{ }
+
+template <typename T>
+template <typename U>
+inline Vector2<T>::Vector2(const Vector4<U> & v) :
 	x(static_cast<T>(v.x)),
 	y(static_cast<T>(v.y))
 { }
@@ -370,7 +378,7 @@ Vector2<T> sqrt(const Vector2<T>& v)
 template <typename T>
 T length(const Vector2<T>& v)
 {
-	return sqrt(v.x * v.x + v.y * v.y);
+	return ::sqrt(sum(v * v));
 }
 
 template <typename T>
@@ -383,17 +391,13 @@ template <typename T>
 T distSquared(const Vector2<T>& a, const Vector2<T>& b)
 {
 	Vector2<T> d(a - b);
-	return d.x * d.x + d.y * d.y;
+	return sum(d * d);
 }
 
 template <typename T>
 Vector2<T> normalize(const Vector2<T>& v)
 {
-	T d = static_cast<T>(1) / length(v);
-	return Vector2<T>(
-		v.x * d,
-		v.y * d
-		);
+	return v / length(v);
 }
 
 template <typename T>

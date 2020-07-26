@@ -1,4 +1,5 @@
-#include <poly/Math/Vector3.h>
+#include <poly/Math/Vector2.h>
+#include <poly/Math/Vector4.h>
 
 #include <cmath>
 
@@ -396,7 +397,7 @@ Vector3<T> sqrt(const Vector3<T>& v)
 template <typename T>
 T length(const Vector3<T>& v)
 {
-	return sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+	return ::sqrt(sum(v * v));
 }
 
 template <typename T>
@@ -409,18 +410,13 @@ template <typename T>
 T distSquared(const Vector3<T>& a, const Vector3<T>& b)
 {
 	Vector3<T> d(a - b);
-	return d.x * d.x + d.y * d.y + d.z * d.z;
+	return sum(d * d);
 }
 
 template <typename T>
 Vector3<T> normalize(const Vector3<T>& v)
 {
-	T d = static_cast<T>(1) / length(v);
-	return Vector3<T>(
-		v.x * d,
-		v.y * d,
-		v.z * d
-		);
+	return v / length(v);
 }
 
 template <typename T>

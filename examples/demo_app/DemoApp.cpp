@@ -15,5 +15,8 @@ int main()
     Vector3f up(0, 1, 0);
     Vector3f right(cross(front, up));
 
+    Vector3f n(1, 1, 0);
+    n = normalize(n);
+
     return 0;
 }
