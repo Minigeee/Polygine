@@ -1,6 +1,7 @@
 #ifndef POLY_LOGGER_H
 #define POLY_LOGGER_H
 
+#include <poly/Core/Macros.h>
 #include <poly/Core/Scheduler.h>
 
 #include <fstream>
@@ -83,9 +84,10 @@ public:
 	///
 	/// \param type The message #Type
 	/// \param msg The message to log
+	/// \param loc The location string indicating file name and line
 	///
 	///////////////////////////////////////////////////////////
-	static void log(MsgType type, const std::string& msg);
+	static void log(MsgType type, const std::string& msg, const std::string& loc = "");
 
 	///////////////////////////////////////////////////////////
 	/// \brief Assign the logger a scheduler to use for asynchronous logging
@@ -136,6 +138,7 @@ private:
 	{
 		MsgType m_type;
 		std::string m_msg;
+		std::string m_loc;
 		std::thread::id m_threadId;
 	};
 
@@ -149,7 +152,7 @@ private:
 	/// \brief The function that does the synchronous logging
 	///
 	///////////////////////////////////////////////////////////
-	static void logMsg(MsgType type, const std::string& msg, std::thread::id threadId);
+	static void logMsg(MsgType type, const std::string& msg, std::thread::id threadId, const std::string& loc = "");
 
 
 	static std::ofstream m_file;			//!< The file stream to write the log to
@@ -164,6 +167,7 @@ private:
 	static std::mutex m_mutex;				//!< Mutex to protect log outputs
 	static std::mutex m_threadMutex;		//!< Mutex to protect the thread names map
 	static std::mutex m_queueMutex;			//!< Mutex to protect the log queue
+	static std::atomic<bool> m_taskExists;	//!< Flag used to ensure only 1 logging thread exists at a time
 };
 
 ///////////////////////////////////////////////////////////
@@ -179,7 +183,11 @@ private:
 /// \param msg The message to log (the formatting string)
 ///
 ///////////////////////////////////////////////////////////
+#ifndef NDEBUG
+#define LOG(msg, ...) poly::Logger::log(poly::Logger::Info, poly::priv::format(msg, __VA_ARGS__), std::string(__FILE__) + ':' + std::to_string(__LINE__))
+#else
 #define LOG(msg, ...) poly::Logger::log(poly::Logger::Info, poly::priv::format(msg, __VA_ARGS__))
+#endif
 
 ///////////////////////////////////////////////////////////
 /// \brief Log an \link MsgType::Warning \endlink message
@@ -194,7 +202,11 @@ private:
 /// \param msg The message to log (the formatting string)
 ///
 ///////////////////////////////////////////////////////////
+#ifndef NDEBUG
+#define LOG_WARNING(msg, ...) poly::Logger::log(poly::Logger::Warning, poly::priv::format(msg, __VA_ARGS__), std::string(__FILE__) + ':' + std::to_string(__LINE__))
+#else
 #define LOG_WARNING(msg, ...) poly::Logger::log(poly::Logger::Warning, poly::priv::format(msg, __VA_ARGS__))
+#endif
 
 ///////////////////////////////////////////////////////////
 /// \brief Log an \link MsgType::Error \endlink message
@@ -210,7 +222,11 @@ private:
 /// \param msg The message to log (the formatting string)
 ///
 ///////////////////////////////////////////////////////////
+#ifndef NDEBUG
+#define LOG_ERROR(msg, ...) poly::Logger::log(poly::Logger::Error, poly::priv::format(msg, __VA_ARGS__), std::string(__FILE__) + ':' + std::to_string(__LINE__))
+#else
 #define LOG_ERROR(msg, ...) poly::Logger::log(poly::Logger::Error, poly::priv::format(msg, __VA_ARGS__))
+#endif
 
 ///////////////////////////////////////////////////////////
 /// \brief Log an \link MsgType::Fatal \endlink message
@@ -226,7 +242,11 @@ private:
 /// \param msg The message to log (the formatting string)
 ///
 ///////////////////////////////////////////////////////////
+#ifndef NDEBUG
+#define LOG_FATAL(msg, ...) poly::Logger::log(poly::Logger::Fatal, poly::priv::format(msg, __VA_ARGS__), std::string(__FILE__) + ':' + std::to_string(__LINE__))
+#else
 #define LOG_FATAL(msg, ...) poly::Logger::log(poly::Logger::Fatal, poly::priv::format(msg, __VA_ARGS__))
+#endif
 
 ///////////////////////////////////////////////////////////
 /// \brief Log an \link MsgType::Debug \endlink message
@@ -244,7 +264,7 @@ private:
 /// \param msg The message to log (the formatting string)
 ///////////////////////////////////////////////////////////
 #ifndef NDEBUG
-#define LOG_DEBUG(msg, ...) poly::Logger::log(poly::Logger::Debug, poly::priv::format(msg, __VA_ARGS__))
+#define LOG_DEBUG(msg, ...) poly::Logger::log(poly::Logger::Debug, poly::priv::format(msg, __VA_ARGS__), std::string(__FILE__) + ':' + std::to_string(__LINE__))
 #else
 #define LOG_DEBUG(msg, ...)
 #endif
@@ -266,6 +286,7 @@ private:
 /// \li Message types: Info, Warning, Error, Fatal
 /// \li Asynchronous logging
 /// \li Colored console output
+/// \li File name and line number
 ///
 /// In order to log to a file, init() must be called and
 /// passed a file path. To use asynchronous logging,

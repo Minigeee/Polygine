@@ -22,6 +22,7 @@ std::queue<Logger::LogMsg> Logger::m_msgQueue;
 std::mutex Logger::m_mutex;
 std::mutex Logger::m_threadMutex;
 std::mutex Logger::m_queueMutex;
+std::atomic<bool> Logger::m_taskExists = false;
 
 bool Logger::m_shouldFlush[5] = { true, true, false, false, false };
 
@@ -33,8 +34,12 @@ bool Logger::init(const std::string& fname)
 	m_file.open(fname);
 
 	// Print header
+#ifndef NDEBUG
+	std::string header = " Time                     |  Thread name      |  File:Line             |  Message\n";
+#else
 	std::string header = " Time                     |  Thread name      |  Message\n";
-	header += "---------------------------------------------------------------------------------------------\n";
+#endif
+	header += "-------------------------------------------------------------------------------------------------------\n";
 
 #ifndef NDEBUG
 	std::cerr << header;
@@ -48,34 +53,39 @@ bool Logger::init(const std::string& fname)
 
 ///////////////////////////////////////////////////////////
 
-void Logger::log(Logger::MsgType type, const std::string& msg)
+void Logger::log(Logger::MsgType type, const std::string& msg, const std::string& loc)
 {
 	std::thread::id id = std::this_thread::get_id();
 
 	if (type == Error || type == Fatal)
 		// Force error and fatal messages to be synchronous
-		logMsg(type, msg, id);
+		logMsg(type, msg, id, loc);
 
 	else
 	{
 		// Otherwise, use the scheduler if possible
 		if (m_scheduler)
 		{
-			std::lock_guard<std::mutex> lock(m_queueMutex);
+			{
+				std::lock_guard<std::mutex> lock(m_queueMutex);
 
-			// Add a log message object to the queue if doing async
-			m_msgQueue.push(LogMsg({ type, msg, id }));
+				// Add a log message object to the queue if doing async
+				m_msgQueue.push(LogMsg({ type, msg, loc, id }));
+			}
 
 			// Only add another async function if there is only 1 message in the queue
-			if (m_msgQueue.size() == 1)
+			if (!m_taskExists)
+			{
+				m_taskExists = true;
 				m_scheduler->addTask(m_priority, &Logger::logAsync);
+			}
 		}
 		else
-			logMsg(type, msg, id);
+			logMsg(type, msg, id, loc);
 	}
 }
 
-void Logger::logMsg(Logger::MsgType type, const std::string& msg, std::thread::id threadId)
+void Logger::logMsg(Logger::MsgType type, const std::string& msg, std::thread::id threadId, const std::string& loc)
 {
 	std::ostringstream ss;
 
@@ -106,6 +116,18 @@ void Logger::logMsg(Logger::MsgType type, const std::string& msg, std::thread::i
 
 	// Construct the thread label
 	ss << std::setw(15) << std::left << threadName << "] | ";
+
+#ifndef NDEBUG
+
+	if (loc.size())
+	{
+		// Make sure only the file name is included, not the path
+		Uint32 pos = loc.find_last_of("/\\");
+		std::string srcFile = loc.substr(pos + 1, loc.size() - pos - 1);
+		ss << '[' << std::setw(20) << std::left << srcFile << "] | ";
+	}
+
+#endif
 
 	// Create type label
 	if (type == Info)
@@ -179,6 +201,10 @@ void Logger::logAsync()
 		m_queueMutex.lock();
 	}
 
+	// Mark that no tasks currently exist to handle async messages
+	// so next time a message is queued, a new task is created
+	m_taskExists = false;
+
 	m_queueMutex.unlock();
 }
 
@@ -195,6 +221,11 @@ void Logger::setScheduler(Scheduler* scheduler, Scheduler::Priority priority)
 {
 	m_scheduler = scheduler;
 	m_priority = priority;
+}
+
+void Logger::setFlush(Logger::MsgType type, bool flush)
+{
+	m_shouldFlush[type] = flush;
 }
 
 ///////////////////////////////////////////////////////////

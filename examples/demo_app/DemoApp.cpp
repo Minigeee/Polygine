@@ -1,3 +1,6 @@
+#include <poly/Core/HandleArray.h>
+#include <poly/Core/Logger.h>
+#include <poly/Core/ObjectPool.h>
 #include <poly/Math/Vector2.h>
 #include <poly/Math/Vector3.h>
 
@@ -8,15 +11,19 @@ using namespace poly;
 
 int main()
 {
-    Vector2f a(3, 4);
-    Vector3f b(a, 5);
+    Logger::init("game.log");
 
-    Vector3f front(0, 0, -1);
-    Vector3f up(0, 1, 0);
-    Vector3f right(cross(front, up));
+    LOG("Hello World!");
 
-    Vector3f n(1, 1, 0);
-    n = normalize(n);
+    ObjectPool pool(4);
+    pool.alloc();
+    pool.free(0);
+
+    HandleArray<int> arr;
+    Handle h = arr.add(1);
+    arr.remove(h);
+
+    int i = arr[h];
 
     return 0;
 }
