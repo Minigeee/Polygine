@@ -1,47 +1,22 @@
-#include <poly/Core/Clock.h>
-#include <poly/Core/HandleArray.h>
-#include <poly/Core/Logger.h>
-#include <poly/Core/Profiler.h>
-#include <poly/Core/Scheduler.h>
-#include <poly/Core/Sleep.h>
+#include <poly/Math/Vector2.h>
+#include <poly/Math/Vector3.h>
+
+#include <iostream>
+#include <math.h>
 
 using namespace poly;
 
 int main()
 {
-    Scheduler scheduler;
+    Vector2f a(3, 4);
+    Vector3f b(a, 5);
 
-    Logger::init("game.log");
-    Logger::setScheduler(&scheduler);
-    Logger::setThreadName("Main thread");
+    Vector3f front(0, 0, -1);
+    Vector3f up(0, 1, 0);
+    Vector3f right(cross(front, up));
 
-    LOG("Starting demo...");
-    
-    LOG("Creating handle arrays...");
-
-    HandleArray<int> arr;
-
-    for (int i = 0; i < 100; ++i)
-        Handle h = arr.add(i);
-
-
-    LOG("Sleeping for 5 seconds...");
-
-    Clock clock;
-    sleep(Time::fromSeconds(5.0f));
-    Time elapsed = clock.getElapsedTime();
-
-    LOG("Done sleeping!");
-    LOG_DEBUG("Actually slept for %fs", elapsed.toSeconds());
-
-
-    LOG_WARNING("Now I will force crash!");
-    sleep(2.0f);
-    LOG_ERROR("Something went wrong...");
-    abort();
-
-    // Make sure all tasks are finished before quitting
-    scheduler.finish();
+    Vector3f n(1, 1, 0);
+    n = normalize(n);
 
     return 0;
 }
