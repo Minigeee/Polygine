@@ -68,6 +68,14 @@ inline Vector3<T>::Vector3(A x, const Vector2<B>& yz) :
 	z(static_cast<T>(yz.z))
 { }
 
+template <typename T>
+template <typename U>
+inline Vector3<T>::Vector3(const Vector4<U> & v) :
+	x(static_cast<T>(v.x)),
+	y(static_cast<T>(v.y)),
+	z(static_cast<T>(v.z))
+{ }
+
 ///////////////////////////////////////////////////////////
 
 template <typename T, typename U>

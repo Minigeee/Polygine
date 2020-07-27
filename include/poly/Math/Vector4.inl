@@ -84,6 +84,15 @@ inline Vector4<T>::Vector4(A x, B y, const Vector2<C>& zw) :
 
 template <typename T>
 template <typename A, typename B>
+inline Vector4<T>::Vector4(const Vector2<A>& xy, const Vector2<B>& zw) :
+	x(static_cast<T>(xy.x)),
+	y(static_cast<T>(xy.y)),
+	z(static_cast<T>(zw.z)),
+	w(static_cast<T>(zw.w))
+{ }
+
+template <typename T>
+template <typename A, typename B>
 inline Vector4<T>::Vector4(const Vector3<A> & xyz, B w) :
 	x(static_cast<T>(xyz.x)),
 	y(static_cast<T>(xyz.y)),

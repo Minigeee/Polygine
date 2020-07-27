@@ -42,7 +42,8 @@ file(GLOB GRAPHICS_SRC
     ${INC_DIR}/poly/Graphics/*.h)
 file(GLOB MATH_SRC
     ${SRC_DIR}/Math/*.cpp
-    ${INC_DIR}/poly/Math/*.h)
+    ${INC_DIR}/poly/Math/*.h
+    ${INC_DIR}/poly/Math/*.inl)
 file(GLOB NETWORK_SRC
     ${SRC_DIR}/Network/*.cpp
     ${INC_DIR}/poly/Network/*.h)
