@@ -64,17 +64,8 @@ struct Matrix2
 	// Members
 	///////////////////////////////////////////////////////////
 
-	union
-	{
-		Vector2<T> x;
-		Vector2<T> r;
-	};
-
-	union
-	{
-		Vector2<T> y;
-		Vector2<T> g;
-	};
+	Vector2<T> x;
+	Vector2<T> y;
 };
 
 ///////////////////////////////////////////////////////////
@@ -150,6 +141,13 @@ Matrix2<T> operator/(T a, const Matrix2<T>& b);
 
 template <typename T>
 Matrix2<T> operator/(const Matrix2<T>& a, const Matrix2<T>& b);
+
+
+template <typename T>
+bool operator==(const Matrix2<T>& a, const Matrix2<T>& b);
+
+template <typename T>
+bool operator!=(const Matrix2<T>& a, const Matrix2<T>& b);
 
 ///////////////////////////////////////////////////////////
 // Functions

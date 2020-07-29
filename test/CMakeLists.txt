@@ -26,3 +26,4 @@ function(add_test name src)
 endfunction()
 
 add_test(core_test "Core.cpp")
+add_test(math_test "Math.cpp")

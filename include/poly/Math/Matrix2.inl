@@ -203,9 +203,9 @@ Matrix2<T> operator*(const Matrix2<T>& a, const Matrix2<T>& b)
 #else
 	return Matrix2<T>(
 		a.x.x * b.x.x + a.x.y * b.y.x,
-		a.x.x * b.x.y + a.x.y * b.x.y,
+		a.x.x * b.x.y + a.x.y * b.y.y,
 		a.y.x * b.x.x + a.y.y * b.y.x,
-		a.y.x * b.y.y + a.y.y * b.y.y
+		a.y.x * b.x.y + a.y.y * b.y.y
 		);
 #endif
 }
@@ -260,6 +260,18 @@ Matrix2<T> operator/(const Matrix2<T>& a, const Matrix2<T>& b)
 	return Matrix2<T>(a.x / b.x, a.y / b.y);
 }
 
+template <typename T>
+bool operator==(const Matrix2<T>& a, const Matrix2<T>& b)
+{
+	return a.x == b.x && a.y == b.y;
+}
+
+template <typename T>
+bool operator!=(const Matrix2<T>& a, const Matrix2<T>& b)
+{
+	return a.x != b.x || a.y != b.y;
+}
+
 ///////////////////////////////////////////////////////////
 
 template <typename T>
@@ -279,8 +291,8 @@ Matrix2<T> inverse(const Matrix2<T>& m)
 {
 	T d = static_cast<T>(1) / determinant(m);
 	return Matrix2<T>(
-		m.y.y, -m.y.x,
-		-m.x.y, m.x.x
+		m.y.y, -m.x.y,
+		-m.y.x, m.x.x
 		) * d;
 }
 
@@ -290,7 +302,7 @@ Matrix2<T> transpose(const Matrix2<T>& m)
 	return Matrix2<T>(
 		m.x.x, m.y.x,
 		m.x.y, m.y.y
-		)
+		);
 }
 
 ///////////////////////////////////////////////////////////
