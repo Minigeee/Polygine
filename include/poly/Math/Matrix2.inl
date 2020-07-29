@@ -69,6 +69,13 @@ inline Matrix2<T>::Matrix2(const Vector2<A> & x, const Vector2<B> & y) :
 	y(y)
 { }
 
+template <typename T>
+template <typename U>
+inline Matrix2<T>::Matrix2(const Matrix3<U>& m) :
+	x(m.x),
+	y(m.y)
+{ }
+
 ///////////////////////////////////////////////////////////
 
 template <typename T, typename U>
