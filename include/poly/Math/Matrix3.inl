@@ -1,4 +1,5 @@
-// #include <poly/Math/Matrix2.h>
+#include <poly/Math/Matrix2.h>
+#include <poly/Math/Matrix4.h>
 
 namespace poly
 {
@@ -93,6 +94,14 @@ inline Matrix3<T>::Matrix3(A x, const Matrix2<B>& yz) :
 	x(x, 0, 0),
 	y(0, yz.x),
 	z(0, yz.y)
+{ }
+
+template <typename T>
+template <typename U>
+inline Matrix3<T>::Matrix3(const Matrix4<U> & m) :
+	x(m.x),
+	y(m.y),
+	z(m.z)
 { }
 
 ///////////////////////////////////////////////////////////

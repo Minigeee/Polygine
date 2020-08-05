@@ -5,6 +5,7 @@
 #include <poly/Math/Vector4.h>
 #include <poly/Math/Matrix2.h>
 #include <poly/Math/Matrix3.h>
+#include <poly/Math/Matrix4.h>
 
 #define CATCH_CONFIG_MAIN
 #include <catch.hpp>
@@ -571,14 +572,254 @@ TEST_CASE("Matrix3", "[Matrix3]")
 		r = a * inverse(a);
 		REQUIRE(FLT_CMP(r.x.x, 1.0f) == 0);
 		REQUIRE(FLT_CMP(r.x.y, 0.0f) == 0);
+		REQUIRE(FLT_CMP(r.x.z, 0.0f) == 0);
 		REQUIRE(FLT_CMP(r.y.x, 0.0f) == 0);
 		REQUIRE(FLT_CMP(r.y.y, 1.0f) == 0);
+		REQUIRE(FLT_CMP(r.y.z, 0.0f) == 0);
+		REQUIRE(FLT_CMP(r.z.x, 0.0f) == 0);
+		REQUIRE(FLT_CMP(r.z.y, 0.0f) == 0);
+		REQUIRE(FLT_CMP(r.z.z, 1.0f) == 0);
 
 		r = inverse(a) * a;
 		REQUIRE(FLT_CMP(r.x.x, 1.0f) == 0);
 		REQUIRE(FLT_CMP(r.x.y, 0.0f) == 0);
+		REQUIRE(FLT_CMP(r.x.z, 0.0f) == 0);
 		REQUIRE(FLT_CMP(r.y.x, 0.0f) == 0);
 		REQUIRE(FLT_CMP(r.y.y, 1.0f) == 0);
+		REQUIRE(FLT_CMP(r.y.z, 0.0f) == 0);
+		REQUIRE(FLT_CMP(r.z.x, 0.0f) == 0);
+		REQUIRE(FLT_CMP(r.z.y, 0.0f) == 0);
+		REQUIRE(FLT_CMP(r.z.z, 1.0f) == 0);
+	}
+}
+
+///////////////////////////////////////////////////////////
+
+TEST_CASE("Matrix4", "[Matrix4]")
+{
+	SECTION("Construct")
+	{
+		Matrix4i m;
+		REQUIRE(m.x.x == 1);
+		REQUIRE(m.y.y == 1);
+		REQUIRE(m.z.z == 1);
+		REQUIRE(m.w.w == 1);
+
+		m = Matrix4i(10);
+		REQUIRE(m.x.x == 10);
+		REQUIRE(m.y.y == 10);
+		REQUIRE(m.z.z == 10);
+		REQUIRE(m.w.w == 10);
+
+		m = Matrix4i(3.5);
+		REQUIRE(m.x.x == 3);
+		REQUIRE(m.y.y == 3);
+		REQUIRE(m.z.z == 3);
+		REQUIRE(m.w.w == 3);
+
+		m = Matrix4i(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16);
+		REQUIRE(m.x.x == 1);
+		REQUIRE(m.x.y == 2);
+		REQUIRE(m.x.z == 3);
+		REQUIRE(m.x.w == 4);
+		REQUIRE(m.y.x == 5);
+		REQUIRE(m.y.y == 6);
+		REQUIRE(m.y.z == 7);
+		REQUIRE(m.y.w == 8);
+		REQUIRE(m.z.x == 9);
+		REQUIRE(m.z.y == 10);
+		REQUIRE(m.z.z == 11);
+		REQUIRE(m.z.w == 12);
+		REQUIRE(m.w.x == 13);
+		REQUIRE(m.w.y == 14);
+		REQUIRE(m.w.z == 15);
+		REQUIRE(m.w.w == 16);
+
+		m = Matrix4i(Vector4f(1.5f), Vector4f(2.5f), Vector4f(3.5f), Vector4f(5.5f));
+		REQUIRE(m.x.x == 1);
+		REQUIRE(m.x.y == 1);
+		REQUIRE(m.x.z == 1);
+		REQUIRE(m.x.w == 1);
+		REQUIRE(m.y.x == 2);
+		REQUIRE(m.y.y == 2);
+		REQUIRE(m.y.z == 2);
+		REQUIRE(m.y.w == 2);
+		REQUIRE(m.z.x == 3);
+		REQUIRE(m.z.y == 3);
+		REQUIRE(m.z.z == 3);
+		REQUIRE(m.z.w == 3);
+		REQUIRE(m.w.x == 5);
+		REQUIRE(m.w.y == 5);
+		REQUIRE(m.w.z == 5);
+		REQUIRE(m.w.w == 5);
+	}
+
+	SECTION("Comparison")
+	{
+		Matrix4i a(1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31);
+		Matrix4i b(1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31);
+
+		REQUIRE(a == b);
+		REQUIRE(!(a != b));
+
+		a.x.x = 9;
+
+		REQUIRE(!(a == b));
+		REQUIRE(a != b);
+	}
+
+	SECTION("Math")
+	{
+		Matrix4i a(3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5, 8, 9, 7, 9, 3);
+		Matrix4i b(2, 3, 8, 4, 6, 2, 6, 4, 3, 3, 8, 3, 2, 7, 9, 5);
+
+		Matrix4i r = a + b;
+		REQUIRE(r.x.x == 5);
+		REQUIRE(r.x.y == 4);
+		REQUIRE(r.x.z == 12);
+		REQUIRE(r.x.w == 5);
+		REQUIRE(r.y.x == 11);
+		REQUIRE(r.y.y == 11);
+		REQUIRE(r.y.z == 8);
+		REQUIRE(r.y.w == 10);
+		REQUIRE(r.z.x == 8);
+		REQUIRE(r.z.y == 6);
+		REQUIRE(r.z.z == 13);
+		REQUIRE(r.z.w == 11);
+		REQUIRE(r.w.x == 11);
+		REQUIRE(r.w.y == 14);
+		REQUIRE(r.w.z == 18);
+		REQUIRE(r.w.w == 8);
+
+		r = a - b;
+		REQUIRE(r.x.x == 1);
+		REQUIRE(r.x.y == -2);
+		REQUIRE(r.x.z == -4);
+		REQUIRE(r.x.w == -3);
+		REQUIRE(r.y.x == -1);
+		REQUIRE(r.y.y == 7);
+		REQUIRE(r.y.z == -4);
+		REQUIRE(r.y.w == 2);
+		REQUIRE(r.z.x == 2);
+		REQUIRE(r.z.y == 0);
+		REQUIRE(r.z.z == -3);
+		REQUIRE(r.z.w == 5);
+		REQUIRE(r.w.x == 7);
+		REQUIRE(r.w.y == 0);
+		REQUIRE(r.w.z == 0);
+		REQUIRE(r.w.w == -2);
+
+		r = a * b;
+#ifdef USE_COLUMN_MAJOR
+		REQUIRE(r.x.x == 97);
+		REQUIRE(r.x.y == 81);
+		REQUIRE(r.x.z == 90);
+		REQUIRE(r.x.w == 96);
+		REQUIRE(r.y.x == 94);
+		REQUIRE(r.y.y == 70);
+		REQUIRE(r.y.z == 94);
+		REQUIRE(r.y.w == 78);
+		REQUIRE(r.z.x == 91);
+		REQUIRE(r.z.y == 75);
+		REQUIRE(r.z.z == 85);
+		REQUIRE(r.z.w == 94);
+		REQUIRE(r.w.x == 131);
+		REQUIRE(r.w.y == 127);
+		REQUIRE(r.w.z == 112);
+		REQUIRE(r.w.w == 131);
+#else
+		REQUIRE(r.x.x == 26);
+		REQUIRE(r.x.y == 30);
+		REQUIRE(r.x.z == 71);
+		REQUIRE(r.x.w == 33);
+		REQUIRE(r.y.x == 82);
+		REQUIRE(r.y.y == 81);
+		REQUIRE(r.y.z == 164);
+		REQUIRE(r.y.w == 92);
+		REQUIRE(r.z.x == 59);
+		REQUIRE(r.z.y == 92);
+		REQUIRE(r.z.z == 170);
+		REQUIRE(r.z.w == 87);
+		REQUIRE(r.w.x == 93);
+		REQUIRE(r.w.y == 89);
+		REQUIRE(r.w.z == 213);
+		REQUIRE(r.w.w == 106);
+#endif
+
+		Vector4i v = a * Vector4i(3, 5, 7, 9);
+#ifdef USE_COLUMN_MAJOR
+		REQUIRE(v.x == 150);
+		REQUIRE(v.y == 132);
+		REQUIRE(v.z == 138);
+		REQUIRE(v.w == 116);
+#else
+		REQUIRE(v.x == 51);
+		REQUIRE(v.y == 128);
+		REQUIRE(v.z == 137);
+		REQUIRE(v.w == 152);
+#endif
+
+		r = a / b;
+		REQUIRE(r.x.x == 1);
+		REQUIRE(r.x.y == 0);
+		REQUIRE(r.x.z == 0);
+		REQUIRE(r.x.w == 0);
+		REQUIRE(r.y.x == 0);
+		REQUIRE(r.y.y == 4);
+		REQUIRE(r.y.z == 0);
+		REQUIRE(r.y.w == 1);
+		REQUIRE(r.z.x == 1);
+		REQUIRE(r.z.y == 1);
+		REQUIRE(r.z.z == 0);
+		REQUIRE(r.z.w == 2);
+		REQUIRE(r.w.x == 4);
+		REQUIRE(r.w.y == 1);
+		REQUIRE(r.w.z == 1);
+		REQUIRE(r.w.w == 0);
+	}
+
+	SECTION("Functions")
+	{
+		Matrix4f a(3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5, 8, 9, 7, 9, 3);
+
+		float d = determinant(a);
+		REQUIRE(FLT_CMP(d, 98.0f) == 0);
+
+		Matrix4f r = a * inverse(a);
+		REQUIRE(FLT_CMP(r.x.x, 1.0f) == 0);
+		REQUIRE(FLT_CMP(r.x.y, 0.0f) == 0);
+		REQUIRE(FLT_CMP(r.x.z, 0.0f) == 0);
+		REQUIRE(FLT_CMP(r.x.w, 0.0f) == 0);
+		REQUIRE(FLT_CMP(r.y.x, 0.0f) == 0);
+		REQUIRE(FLT_CMP(r.y.y, 1.0f) == 0);
+		REQUIRE(FLT_CMP(r.y.z, 0.0f) == 0);
+		REQUIRE(FLT_CMP(r.y.w, 0.0f) == 0);
+		REQUIRE(FLT_CMP(r.z.x, 0.0f) == 0);
+		REQUIRE(FLT_CMP(r.z.y, 0.0f) == 0);
+		REQUIRE(FLT_CMP(r.z.z, 1.0f) == 0);
+		REQUIRE(FLT_CMP(r.z.w, 0.0f) == 0);
+		REQUIRE(FLT_CMP(r.w.x, 0.0f) == 0);
+		REQUIRE(FLT_CMP(r.w.y, 0.0f) == 0);
+		REQUIRE(FLT_CMP(r.w.z, 0.0f) == 0);
+		REQUIRE(FLT_CMP(r.w.w, 1.0f) == 0);
+
+		r = inverse(a) * a;
+		REQUIRE(FLT_CMP(r.x.x, 1.0f) == 0);
+		REQUIRE(FLT_CMP(r.x.y, 0.0f) == 0);
+		REQUIRE(FLT_CMP(r.x.z, 0.0f) == 0);
+		REQUIRE(FLT_CMP(r.x.w, 0.0f) == 0);
+		REQUIRE(FLT_CMP(r.y.x, 0.0f) == 0);
+		REQUIRE(FLT_CMP(r.y.y, 1.0f) == 0);
+		REQUIRE(FLT_CMP(r.y.z, 0.0f) == 0);
+		REQUIRE(FLT_CMP(r.y.w, 0.0f) == 0);
+		REQUIRE(FLT_CMP(r.z.x, 0.0f) == 0);
+		REQUIRE(FLT_CMP(r.z.y, 0.0f) == 0);
+		REQUIRE(FLT_CMP(r.z.z, 1.0f) == 0);
+		REQUIRE(FLT_CMP(r.z.w, 0.0f) == 0);
+		REQUIRE(FLT_CMP(r.w.x, 0.0f) == 0);
+		REQUIRE(FLT_CMP(r.w.y, 0.0f) == 0);
+		REQUIRE(FLT_CMP(r.w.z, 0.0f) == 0);
+		REQUIRE(FLT_CMP(r.w.w, 1.0f) == 0);
 	}
 }
 

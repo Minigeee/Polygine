@@ -1,4 +1,5 @@
-
+#include <poly/Math/Matrix3.h>
+#include <poly/Math/Matrix4.h>
 
 namespace poly
 {
@@ -72,6 +73,13 @@ inline Matrix2<T>::Matrix2(const Vector2<A> & x, const Vector2<B> & y) :
 template <typename T>
 template <typename U>
 inline Matrix2<T>::Matrix2(const Matrix3<U>& m) :
+	x(m.x),
+	y(m.y)
+{ }
+
+template <typename T>
+template <typename U>
+inline Matrix2<T>::Matrix2(const Matrix4<U> & m) :
 	x(m.x),
 	y(m.y)
 { }
