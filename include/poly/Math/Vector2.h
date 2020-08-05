@@ -805,7 +805,7 @@ Vector2<T> abs(const Vector2<T>& v);
 /// Applys pow(b, p) to each of the vector's component
 ///
 /// \param b The base vector
-/// \param b The power scalar
+/// \param p The power scalar
 ///
 /// \return The resulting vector
 ///
@@ -842,6 +842,7 @@ Vector2<T> pow(const Vector2<T>& b, const Vector2<T>& p);
 template <typename T>
 Vector2<T> sqrt(const Vector2<T>& v);
 
+
 ///////////////////////////////////////////////////////////
 // Utility
 ///////////////////////////////////////////////////////////
@@ -866,7 +867,7 @@ T length(const Vector2<T>& v);
 /// \brief Get the distance between two point vectors
 ///
 /// \param a The first vector, representing point 1
-/// \param a The second vector, representing point 2
+/// \param b The second vector, representing point 2
 ///
 /// \return The distance between the two vectors
 ///
@@ -884,7 +885,7 @@ T dist(const Vector2<T>& a, const Vector2<T>& b);
 /// and distance is only needed for comparison.
 ///
 /// \param a The first vector, representing point 1
-/// \param a The second vector, representing point 2
+/// \param b The second vector, representing point 2
 ///
 /// \return The distance between the two vectors
 ///
