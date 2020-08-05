@@ -171,7 +171,7 @@ private:
 };
 
 ///////////////////////////////////////////////////////////
-/// \brief Log an \link MsgType::Info \endlink message
+/// \brief Log a \link MsgType::Info \endlink message
 ///
 /// Messages of this type show up in white in the console.
 /// If a scheduler is provided, then messages logged with
@@ -190,7 +190,7 @@ private:
 #endif
 
 ///////////////////////////////////////////////////////////
-/// \brief Log an \link MsgType::Warning \endlink message
+/// \brief Log a \link MsgType::Warning \endlink message
 ///
 /// Messages of this type show up in yellow in the console.
 /// If a scheduler is provided, then messages logged with
@@ -209,7 +209,7 @@ private:
 #endif
 
 ///////////////////////////////////////////////////////////
-/// \brief Log an \link MsgType::Error \endlink message
+/// \brief Log a \link MsgType::Error \endlink message
 ///
 /// Messages of this type show up in light red in the console.
 /// These messages will always be synchronous, even if a
@@ -229,7 +229,7 @@ private:
 #endif
 
 ///////////////////////////////////////////////////////////
-/// \brief Log an \link MsgType::Fatal \endlink message
+/// \brief Log a \link Logger::MsgType::Fatal \endlink message
 ///
 /// Messages of this type show up in red in the console.
 /// These messages will always be synchronous, even if a
@@ -249,7 +249,7 @@ private:
 #endif
 
 ///////////////////////////////////////////////////////////
-/// \brief Log an \link MsgType::Debug \endlink message
+/// \brief Log a \link MsgType::Debug \endlink message
 ///
 /// Messages of this type show up in green in the console.
 /// If a scheduler is provided, then messages logged with
