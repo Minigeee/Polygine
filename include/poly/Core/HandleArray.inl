@@ -132,6 +132,38 @@ inline std::vector<T>& HandleArray<T>::getData()
 	return m_data;
 }
 
+template <typename T>
+inline Uint16 HandleArray<T>::getIndex(Handle handle)
+{
+	Handle entry = m_handleToData[handle.m_index];
+
+	// Make sure the handle is valid
+	if (entry.m_counter != handle.m_counter)
+	{
+		LOG_ERROR("Invalid handle: %d", handle.m_index);
+		return 0xFFFF;
+	}
+
+	return entry.m_index;
+}
+
+template <typename T>
+inline Handle HandleArray<T>::getHandle(Uint16 index)
+{
+	// Make sure index is in bounds
+	if (index >= m_data.size())
+	{
+		LOG_ERROR("Handle index out of bounds: %d", index);
+		return Handle(0);
+	}
+
+	Uint16 handleIndex = m_dataToHandle[index];
+	Handle entry = m_handleToData[handleIndex];
+
+	// Make sure using a valid counter
+	return Handle(handleIndex, entry.m_counter);
+}
+
 ///////////////////////////////////////////////////////////
 
 }
