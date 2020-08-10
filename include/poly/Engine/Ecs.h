@@ -12,6 +12,8 @@
 namespace poly
 {
 
+class Scene;
+
 namespace priv
 {
 
@@ -92,12 +94,14 @@ class EntityGroup
 {
 public:
 	EntityGroup();
-	EntityGroup(Uint16 sceneId);
+	EntityGroup(Scene* scene, Uint16 sceneId);
 
 	template <typename... Cs>
 	std::vector<Entity> createEntities(Uint16 num, Cs&&... components);
 
-	void removeEntities(const std::vector<Entity::Id>& ids);
+	void removeEntity(Entity::Id id);
+
+	void removeQueuedEntities();
 
 	template <typename C>
 	C* getComponent(Entity::Id id) const;
@@ -116,11 +120,13 @@ private:
 	void removeEntitiesImpl(const std::vector<Entity::Id>& ids);
 
 private:
+	Scene* m_scene;
 	Uint16 m_sceneId;
 	Uint32 m_groupId;
 
 	HandleArray<Entity::Id> m_entityIds;
 	std::unordered_set<Uint32> m_componentTypes;
+	std::vector<Entity::Id> m_removeQueue;
 
 	std::function<void(const std::vector<Entity::Id>&)> m_removeFunc;
 };

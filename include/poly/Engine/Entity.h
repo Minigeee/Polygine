@@ -21,7 +21,7 @@ public:
 
 public:
 	Entity() = default;
-	Entity(Id id) : m_id(id) { }
+	Entity(Id id, Scene* scene = 0) : m_id(id), m_scene(scene) { }
 
 	template <typename T>
 	T* get() const;

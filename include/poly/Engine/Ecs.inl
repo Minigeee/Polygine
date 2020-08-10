@@ -42,7 +42,7 @@ inline std::vector<Entity> EntityGroup::createEntities(Uint16 num, Cs&&... compo
 		id.m_group = m_groupId;
 
 		// Add to return list
-		entities.push_back(Entity(id));
+		entities.push_back(Entity(id, m_scene));
 	}
 
 	return entities;
