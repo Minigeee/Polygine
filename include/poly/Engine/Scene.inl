@@ -32,6 +32,7 @@ inline Uint32 generateGroupId()
 template <typename... Cs>
 inline Entity Scene::createEntity(Cs&&... components)
 {
+	static_assert(sizeof...(Cs), "Entities must have at least one component type");
 	static_assert(priv::IsUnique<Cs...>::value, "Entities are not allowed to have duplicate component types");
 
 	// Create a group id for this set
@@ -52,6 +53,19 @@ inline Entity Scene::createEntity(Cs&&... components)
 
 	// Create entity
 	return group->createEntities(1, std::forward<Cs>(components)...)[0];
+}
+
+template <typename... Cs>
+inline Entity Scene::createEntity()
+{
+	static_assert(sizeof...(Cs), "Entities must have at least one component type");
+	return createEntity(Cs()...);
+}
+
+template <typename... Cs>
+inline Entity Scene::createEntity(ComponentSet<Cs...>& components)
+{
+	return createEntity(std::forward<Cs>(components.get<Cs>())...);
 }
 
 }

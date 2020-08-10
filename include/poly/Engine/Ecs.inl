@@ -150,4 +150,18 @@ inline std::vector<C>& ComponentData<C>::getGroup(Uint16 sceneId, Uint32 groupId
 
 }
 
+template <typename... Cs>
+template <typename C>
+inline void ComponentSet<Cs...>::set(const C& component)
+{
+	static_cast<priv::ComponentSetData<C>*>(this)->m_data = component;
+}
+
+template <typename... Cs>
+template <typename C>
+inline C& ComponentSet<Cs...>::get()
+{
+	return static_cast<priv::ComponentSetData<C>*>(this)->m_data;
+}
+
 }

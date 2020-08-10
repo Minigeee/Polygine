@@ -125,6 +125,12 @@ private:
 	std::function<void(const std::vector<Entity::Id>&)> m_removeFunc;
 };
 
+template <typename C>
+struct ComponentSetData
+{
+	C m_data;
+};
+
 ///////////////////////////////////////////////////////////
 // Static definitions
 ///////////////////////////////////////////////////////////
@@ -133,6 +139,20 @@ template <typename C>
 std::vector<typename ComponentData<C>::Data> ComponentData<C>::m_data;
 
 }
+
+template <typename... Cs>
+class ComponentSet :
+	public priv::ComponentSetData<Cs>...
+{
+	static_assert(priv::IsUnique<Cs...>::value, "Component sets are not allowed to have duplicate component types");
+
+public:
+	template <typename C>
+	void set(const C& component);
+
+	template <typename C>
+	C& get();
+};
 
 }
 

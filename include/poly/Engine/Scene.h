@@ -20,6 +20,9 @@ public:
 	template <typename... Cs>
 	Entity createEntity(Cs&&... components);
 
+	template <typename... Cs>
+	Entity createEntity(ComponentSet<Cs...>& components);
+
 	template <typename T>
 	T* getComponent(Entity::Id id) const;
 
