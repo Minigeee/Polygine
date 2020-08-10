@@ -26,11 +26,9 @@ inline HandleArray<T>::HandleArray(Uint16 size) :
 template <typename T>
 inline T& HandleArray<T>::operator[](Handle handle)
 {
+	ASSERT(handle.m_index < m_handleToData.size(), "Handle index out of bounds: %d", handle.m_index);
 	Handle entry = m_handleToData[handle.m_index];
-
-	// Make sure the handle is valid
-	if (entry.m_counter != handle.m_counter)
-		LOG_ERROR("Invalid handle: %d", handle.m_index);
+	ASSERT(entry.m_counter == handle.m_counter, "Invalid handle: %d", handle.m_index);
 
 	return m_data[entry.m_index];
 }
@@ -68,6 +66,9 @@ inline Handle HandleArray<T>::add(const T& element)
 template <typename T>
 inline void HandleArray<T>::remove(Handle handle)
 {
+	ASSERT(handle.m_index < m_handleToData.size(), "Handle index out of bounds: %d", handle.m_index);
+	ASSERT(m_handleToData[handle.m_index].m_counter == handle.m_counter, "Invalid handle: %d", handle.m_index);
+
 	Uint16 pos = m_handleToData[handle.m_index].m_index;
 
 	// Swap pop
