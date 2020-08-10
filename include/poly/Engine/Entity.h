@@ -13,16 +13,20 @@ class Entity
 	friend Scene;
 
 public:
-	typedef Handle Id;
+	struct Id
+	{
+		Handle m_handle;
+		Uint32 m_group;
+	};
 
 public:
 	Entity() = default;
-	Entity(Scene* scene);
+	Entity(Id id) : m_id(id) { }
 
 	template <typename T>
 	T* get() const;
 
-	Id getId() const;
+	Id getId() const { return m_id; }
 
 private:
 	Scene* m_scene;

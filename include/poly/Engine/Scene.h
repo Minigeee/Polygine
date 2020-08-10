@@ -4,27 +4,33 @@
 #include <poly/Engine/Ecs.h>
 #include <poly/Engine/Entity.h>
 
+#include <unordered_map>
+
 namespace poly
 {
 
 class Scene
 {
 public:
-	template <typename... Args>
+	Scene();
+
+	template <typename... Cs>
 	Entity createEntity();
 
-	template <typename... Args>
-	Entity createEntity(const Args&... components);
-
-	Entity createEntity(const ComponentTypeSet& types);
+	template <typename... Cs>
+	Entity createEntity(Cs&&... components);
 
 	template <typename T>
 	T* getComponent(Entity::Id id) const;
 
 private:
 	Uint32 m_id;
+
+	std::unordered_map<Uint32, priv::EntityGroup> m_entityGroups;
 };
 
 }
+
+#include <poly/Engine/Scene.inl>
 
 #endif

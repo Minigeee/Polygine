@@ -172,7 +172,7 @@ public:
 	/// \return The internal index
 	///
 	///////////////////////////////////////////////////////////
-	Uint16 getIndex(Handle handle);
+	Uint16 getIndex(Handle handle) const;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the handle corresponding to an internal index
@@ -191,7 +191,7 @@ public:
 	/// \return The corresponding handle
 	///
 	///////////////////////////////////////////////////////////
-	Handle getHandle(Uint16 index);
+	Handle getHandle(Uint16 index) const;
 
 private:
 	std::vector<T> m_data;				//!< Internal data array

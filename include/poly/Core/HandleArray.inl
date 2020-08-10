@@ -134,29 +134,18 @@ inline std::vector<T>& HandleArray<T>::getData()
 }
 
 template <typename T>
-inline Uint16 HandleArray<T>::getIndex(Handle handle)
+inline Uint16 HandleArray<T>::getIndex(Handle handle) const
 {
 	Handle entry = m_handleToData[handle.m_index];
-
-	// Make sure the handle is valid
-	if (entry.m_counter != handle.m_counter)
-	{
-		LOG_ERROR("Invalid handle: %d", handle.m_index);
-		return 0xFFFF;
-	}
+	ASSERT(entry.m_counter == handle.m_counter, "Invalid handle: %d", handle.m_index);
 
 	return entry.m_index;
 }
 
 template <typename T>
-inline Handle HandleArray<T>::getHandle(Uint16 index)
+inline Handle HandleArray<T>::getHandle(Uint16 index) const
 {
-	// Make sure index is in bounds
-	if (index >= m_data.size())
-	{
-		LOG_ERROR("Handle index out of bounds: %d", index);
-		return Handle(0);
-	}
+	ASSERT(index < m_data.size(), "Handle index out of bounds: %d", index);
 
 	Uint16 handleIndex = m_dataToHandle[index];
 	Handle entry = m_handleToData[handleIndex];
