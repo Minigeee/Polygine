@@ -3,9 +3,18 @@
 namespace poly
 {
 
+///////////////////////////////////////////////////////////
+
 Scene::Scene() :
 	m_id	(0)
 { }
+
+Uint16 Scene::getId() const
+{
+	return m_id;
+}
+
+///////////////////////////////////////////////////////////
 
 void Scene::removeEntity(Entity::Id id)
 {
@@ -25,5 +34,7 @@ void Scene::removeQueuedEntities()
 	for (auto it = m_entityGroups.begin(); it != m_entityGroups.end(); ++it)
 		it->second.removeQueuedEntities();
 }
+
+///////////////////////////////////////////////////////////
 
 }

@@ -42,7 +42,7 @@ inline std::vector<Entity> EntityGroup::createEntities(Uint16 num, Cs&&... compo
 		id.m_group = m_groupId;
 
 		// Add to return list
-		entities.push_back(Entity(id, m_scene));
+		entities.push_back(Entity(m_scene, id));
 	}
 
 	return entities;
@@ -131,12 +131,11 @@ inline void ComponentData<C>::removeComponents(Uint16 sceneId, Uint32 groupId, c
 template <typename C>
 inline C* ComponentData<C>::getComponent(Uint16 sceneId, Uint32 groupId, Uint16 index)
 {
-	ASSERT(sceneId < m_data.size(), "Scene id does not exist for component type: %d", sceneId);
+	if (sceneId >= m_data.size()) return 0;
 
+	// Return ptr to component
 	std::vector<C>& group = m_data[sceneId][groupId];
-	ASSERT(index < group.size(), "Component index out of bounds: %d", index);
-
-	return &group[index];
+	return index < group.size() ? &group[index] : 0;
 }
 
 template <typename C>
@@ -144,6 +143,16 @@ inline std::vector<C>& ComponentData<C>::getGroup(Uint16 sceneId, Uint32 groupId
 {
 	ASSERT(sceneId < m_data.size(), "Scene id does not exist for component type: %d", sceneId);
 	return m_data[sceneId][groupId];
+}
+
+template <typename C>
+inline bool ComponentData<C>::hasGroup(Uint16 sceneId, Uint32 groupId)
+{
+	// If the scene doesn't exist for this component, then the group doesn't either
+	if (sceneId >= m_data.size()) return false;
+
+	const Data& data = m_data[sceneId];
+	return data.find(groupId) != data.end();
 }
 
 ///////////////////////////////////////////////////////////

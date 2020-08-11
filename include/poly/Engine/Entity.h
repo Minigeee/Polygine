@@ -10,23 +10,28 @@ class Scene;
 
 class Entity
 {
-	friend Scene;
-
 public:
 	struct Id
 	{
+		Id();
+
 		Handle m_handle;
 		Uint32 m_group;
 	};
 
 public:
-	Entity() = default;
-	Entity(Id id, Scene* scene = 0) : m_id(id), m_scene(scene) { }
+	Entity();
+	Entity(Scene* scene, Id id = Id());
 
-	template <typename T>
-	T* get() const;
+	Id getId() const;
 
-	Id getId() const { return m_id; }
+	template <typename C>
+	C* get() const;
+
+	template <typename C>
+	bool has() const;
+
+	void remove() const;
 
 private:
 	Scene* m_scene;
@@ -34,5 +39,7 @@ private:
 };
 
 }
+
+#include <poly/Engine/Entity.inl>
 
 #endif

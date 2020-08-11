@@ -14,6 +14,8 @@ class Scene
 public:
 	Scene();
 
+	Uint16 getId() const;
+
 	template <typename... Cs>
 	Entity createEntity();
 
@@ -40,7 +42,7 @@ public:
 	C* getComponent(Entity::Id id) const;
 
 private:
-	Uint32 m_id;
+	Uint16 m_id;
 
 	std::unordered_map<Uint32, priv::EntityGroup> m_entityGroups;
 };

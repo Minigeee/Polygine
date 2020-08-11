@@ -84,6 +84,8 @@ public:
 
 	static std::vector<C>& getGroup(Uint16 sceneId, Uint32 groupId);
 
+	static bool hasGroup(Uint16 sceneId, Uint32 groupId);
+
 private:
 	typedef std::unordered_map<Uint32, std::vector<C>> Data;
 
