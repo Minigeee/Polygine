@@ -17,61 +17,6 @@ class Scene;
 namespace priv
 {
 
-///////////////////////////////////////////////////////////
-// Unique variadic template parameters
-///////////////////////////////////////////////////////////
-
-template <typename... Args>
-struct ParameterPack {};
-
-///////////////////////////////////////////////////////////
-
-template <typename... Args>
-struct ParamsContain;
-
-template <typename A, typename... Args, typename B>
-struct ParamsContain<ParameterPack<A, Args...>, B>
-{
-	static constexpr bool value = ParamsContain<ParameterPack<Args...>, B>::value;
-};
-
-template <typename A, typename... Args>
-struct ParamsContain<ParameterPack<A, Args...>, A>
-{
-	static constexpr bool value = true;
-};
-
-template <typename A>
-struct ParamsContain<ParameterPack<>, A>
-{
-	static constexpr bool value = false;
-};
-
-///////////////////////////////////////////////////////////
-
-template <typename... Args>
-struct IsUnique;
-
-template <typename A, typename... Args>
-struct IsUnique<A, Args...>
-{
-	static constexpr bool value = !ParamsContain<ParameterPack<Args...>, A>::value && IsUnique<Args...>::value;
-};
-
-template <typename A>
-struct IsUnique<A>
-{
-	static constexpr bool value = true;
-};
-
-template <>
-struct IsUnique<>
-{
-	static constexpr bool value = true;
-};
-
-///////////////////////////////////////////////////////////
-
 template <typename C>
 class ComponentData
 {
@@ -133,12 +78,6 @@ private:
 	std::function<void(const std::vector<Entity::Id>&)> m_removeFunc;
 };
 
-template <typename C>
-struct ComponentSetData
-{
-	C m_data;
-};
-
 ///////////////////////////////////////////////////////////
 // Static definitions
 ///////////////////////////////////////////////////////////
@@ -148,18 +87,52 @@ std::vector<typename ComponentData<C>::Data> ComponentData<C>::m_data;
 
 }
 
-template <typename... Cs>
-class ComponentSet :
-	public priv::ComponentSetData<Cs>...
+template <typename C>
+class ComponentArray
 {
-	static_assert(priv::IsUnique<Cs...>::value, "Component sets are not allowed to have duplicate component types");
+public:
+	struct Group
+	{
+		Group();
+		Group(std::vector<C>& data);
+
+		C* m_data;
+		Uint16 m_size;
+	};
+
+	struct Iterator
+	{
+	public:
+		Iterator();
+		Iterator(ComponentArray<C>* arr);
+
+		C& get();
+
+		Iterator& operator++();
+		Iterator operator++(int);
+
+		bool atEnd() const;
+
+	private:
+		ComponentArray<C>* m_array;
+
+		C* m_ptr;
+		Uint32 m_group;
+		Uint16 m_size;
+		Uint16 m_index;
+	};
 
 public:
-	template <typename C>
-	void set(const C& component);
+	void addGroup(std::vector<C>& group);
 
-	template <typename C>
-	C& get();
+	Group& getGroup(Uint32 index);
+
+	Uint32 getNumGroups() const;
+
+	Iterator getIterator();
+
+private:
+	std::vector<Group> m_groups;
 };
 
 }

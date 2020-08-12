@@ -1,6 +1,7 @@
 #ifndef POLY_SCENE_H
 #define POLY_SCENE_H
 
+#include <poly/Core/Tuple.h>
 #include <poly/Engine/Ecs.h>
 #include <poly/Engine/Entity.h>
 
@@ -23,7 +24,7 @@ public:
 	Entity createEntity(Cs&&... components);
 
 	template <typename... Cs>
-	Entity createEntity(ComponentSet<Cs...>& components);
+	Entity createEntity(Tuple<Cs...>& components);
 
 	template <typename... Cs>
 	std::vector<Entity> createEntities(Uint32 num);
@@ -32,7 +33,7 @@ public:
 	std::vector<Entity> createEntities(Uint32 num, Cs&&... components);
 
 	template <typename... Cs>
-	std::vector<Entity> createEntities(Uint32 num, ComponentSet<Cs...>& components);
+	std::vector<Entity> createEntities(Uint32 num, Tuple<Cs...>& components);
 
 	void removeEntity(Entity::Id id);
 

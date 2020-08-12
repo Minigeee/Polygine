@@ -12,9 +12,12 @@ int main()
 {
     Scene scene;
 
-    Entity a = scene.createEntity(2, 3.0f);
-    Entity b = scene.createEntity(4.0f, 3);
-    bool test = a.has<Uint32>();
+    Tuple<int, float> t;
+    t.set(3);
+    t.set(3.14f);
+
+    std::cout << t.get<int>() << '\n';
+    std::cout << get<1>(t) << '\n';
 
     return 0;
 }

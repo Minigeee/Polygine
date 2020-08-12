@@ -1,3 +1,4 @@
+#include <poly/Core/Logger.h>
 #include <poly/Core/Macros.h>
 #include <poly/Core/TypeInfo.h>
 
@@ -159,18 +160,117 @@ inline bool ComponentData<C>::hasGroup(Uint16 sceneId, Uint32 groupId)
 
 }
 
-template <typename... Cs>
 template <typename C>
-inline void ComponentSet<Cs...>::set(const C& component)
+inline ComponentArray<C>::Group::Group() :
+	m_data		(0),
+	m_size		(0)
 {
-	static_cast<priv::ComponentSetData<C>*>(this)->m_data = component;
+
 }
 
-template <typename... Cs>
 template <typename C>
-inline C& ComponentSet<Cs...>::get()
+inline ComponentArray<C>::Group::Group(std::vector<C>& data) :
+	m_data		(0),
+	m_size		(data.size())
 {
-	return static_cast<priv::ComponentSetData<C>*>(this)->m_data;
+	if (m_size)
+		m_data = &data[0];
+}
+
+template <typename C>
+inline ComponentArray<C>::Iterator::Iterator() :
+	m_array		(0),
+	m_ptr		(0),
+	m_group		(0),
+	m_size		(0),
+	m_index		(0)
+{
+
+}
+
+template <typename C>
+inline ComponentArray<C>::Iterator::Iterator(ComponentArray<C>* arr) :
+	m_array		(arr),
+	m_ptr		(0),
+	m_group		(0),
+	m_size		(0),
+	m_index		(0)
+{
+	if (m_array)
+	{
+		const Group& group = m_array->m_groups[0];
+		m_size = group.m_size;
+		m_ptr = group.m_data;
+	}
+}
+
+template <typename C>
+inline C& ComponentArray<C>::Iterator::get()
+{
+	return *m_ptr;
+}
+
+template <typename C>
+inline ComponentArray<C>::Iterator& ComponentArray<C>::Iterator::operator++()
+{
+	ASSERT(m_array, "Component iterator is not initialized");
+
+	// Check to see if at end of current group
+	if (++m_index == m_size)
+	{
+		ASSERT(m_group + 1 < m_array->m_groups.size(), "Component array iterator out of bounds");
+
+		// Switch to next group
+		const Group& group = m_array->m_groups[++m_group];
+		m_size = group.m_size;
+		m_ptr = group.m_data;
+		m_index = 0;
+	}
+	else
+		// Otherwise, iterate pointer
+		++m_ptr;
+}
+
+template <typename C>
+inline ComponentArray<C>::Iterator ComponentArray<C>::Iterator::operator++(int)
+{
+	// Store old version
+	Iterator it = *this;
+	operator++();
+	return it;
+}
+
+template <typename C>
+inline bool ComponentArray<C>::Iterator::atEnd() const
+{
+	ASSERT(m_array, "Component iterator is not initialized");
+	return m_index + 1 == m_size && m_group + 1 >= m_array->m_groups.size();
+}
+
+///////////////////////////////////////////////////////////
+
+template <typename C>
+inline void ComponentArray<C>::addGroup(std::vector<C>& group)
+{
+	m_groups.push_back(Group(group));
+}
+
+template <typename C>
+inline ComponentArray<C>::Group& ComponentArray<C>::getGroup(Uint32 index)
+{
+	return m_groups[index];
+}
+
+template <typename C>
+inline Uint32 ComponentArray<C>::getNumGroups() const
+{
+	return m_groups.size();
+}
+
+template <typename C>
+inline ComponentArray<C>::Iterator ComponentArray<C>::getIterator()
+{
+	return Iterator(this);
 }
 
 }
