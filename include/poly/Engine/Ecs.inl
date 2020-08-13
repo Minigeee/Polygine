@@ -156,6 +156,12 @@ inline bool ComponentData<C>::hasGroup(Uint16 sceneId, Uint32 groupId)
 	return data.find(groupId) != data.end();
 }
 
+template <typename C>
+inline void ComponentData<C>::removeScene(Uint16 sceneId)
+{
+	m_data[sceneId] = Data();
+}
+
 ///////////////////////////////////////////////////////////
 
 }
@@ -171,7 +177,7 @@ inline ComponentArray<C>::Group::Group() :
 template <typename C>
 inline ComponentArray<C>::Group::Group(std::vector<C>& data) :
 	m_data		(0),
-	m_size		(data.size())
+	m_size		((Uint16)data.size())
 {
 	if (m_size)
 		m_data = &data[0];
@@ -207,19 +213,18 @@ inline ComponentArray<C>::Iterator::Iterator(ComponentArray<C>* arr) :
 template <typename C>
 inline C& ComponentArray<C>::Iterator::get()
 {
+	ASSERT(m_index < m_size, "Component array iterator is out of bounds");
 	return *m_ptr;
 }
 
 template <typename C>
-inline ComponentArray<C>::Iterator& ComponentArray<C>::Iterator::operator++()
+inline typename ComponentArray<C>::Iterator& ComponentArray<C>::Iterator::operator++()
 {
-	ASSERT(m_array, "Component iterator is not initialized");
+	ASSERT(m_array, "Component array iterator is not initialized");
 
 	// Check to see if at end of current group
-	if (++m_index == m_size)
+	if (++m_index == m_size && m_group + 1 < m_array->m_groups.size())
 	{
-		ASSERT(m_group + 1 < m_array->m_groups.size(), "Component array iterator out of bounds");
-
 		// Switch to next group
 		const Group& group = m_array->m_groups[++m_group];
 		m_size = group.m_size;
@@ -229,10 +234,12 @@ inline ComponentArray<C>::Iterator& ComponentArray<C>::Iterator::operator++()
 	else
 		// Otherwise, iterate pointer
 		++m_ptr;
+
+	return *this;
 }
 
 template <typename C>
-inline ComponentArray<C>::Iterator ComponentArray<C>::Iterator::operator++(int)
+inline typename ComponentArray<C>::Iterator ComponentArray<C>::Iterator::operator++(int)
 {
 	// Store old version
 	Iterator it = *this;
@@ -244,7 +251,7 @@ template <typename C>
 inline bool ComponentArray<C>::Iterator::atEnd() const
 {
 	ASSERT(m_array, "Component iterator is not initialized");
-	return m_index + 1 == m_size && m_group + 1 >= m_array->m_groups.size();
+	return m_index >= m_size && m_group + 1 >= m_array->m_groups.size();
 }
 
 ///////////////////////////////////////////////////////////
@@ -256,7 +263,7 @@ inline void ComponentArray<C>::addGroup(std::vector<C>& group)
 }
 
 template <typename C>
-inline ComponentArray<C>::Group& ComponentArray<C>::getGroup(Uint32 index)
+inline typename ComponentArray<C>::Group& ComponentArray<C>::getGroup(Uint32 index)
 {
 	return m_groups[index];
 }
@@ -268,7 +275,7 @@ inline Uint32 ComponentArray<C>::getNumGroups() const
 }
 
 template <typename C>
-inline ComponentArray<C>::Iterator ComponentArray<C>::getIterator()
+inline typename ComponentArray<C>::Iterator ComponentArray<C>::getIterator()
 {
 	return Iterator(this);
 }

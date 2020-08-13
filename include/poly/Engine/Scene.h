@@ -42,7 +42,11 @@ public:
 	template <typename C>
 	C* getComponent(Entity::Id id) const;
 
+	template <typename... Cs>
+	Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> getComponentData();
+
 private:
+	/* TODO : Scene id system */
 	Uint16 m_id;
 
 	std::unordered_map<Uint32, priv::EntityGroup> m_entityGroups;

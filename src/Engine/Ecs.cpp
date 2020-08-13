@@ -37,6 +37,11 @@ void EntityGroup::removeQueuedEntities()
 	}
 }
 
+std::vector<Entity::Id>& EntityGroup::getEntityIds()
+{
+	return m_entityIds.getData();
+}
+
 ///////////////////////////////////////////////////////////
 
 }

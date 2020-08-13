@@ -31,6 +31,8 @@ public:
 
 	static bool hasGroup(Uint16 sceneId, Uint32 groupId);
 
+	static void removeScene(Uint16 sceneId);
+
 private:
 	typedef std::unordered_map<Uint32, std::vector<C>> Data;
 
@@ -61,6 +63,8 @@ public:
 
 	template <typename C>
 	bool hasComponentType() const;
+
+	std::vector<Entity::Id>& getEntityIds();
 
 private:
 	template <typename... Cs>

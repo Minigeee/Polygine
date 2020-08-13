@@ -9,6 +9,8 @@ namespace poly
 namespace priv
 {
 
+///////////////////////////////////////////////////////////
+
 template <typename... Cs>
 inline Uint32 generateGroupId()
 {
@@ -26,6 +28,8 @@ inline Uint32 generateGroupId()
 
 	return (Uint32)hasher(hash);
 }
+
+///////////////////////////////////////////////////////////
 
 }
 
@@ -93,6 +97,35 @@ inline C* Scene::getComponent(Entity::Id id) const
 	auto it = m_entityGroups.find(id.m_group);
 	ASSERT(it != m_entityGroups.end(), "Group id for component type not found: %d", id.m_group);
 	return it->second.getComponent<C>(id);
+}
+
+template <typename... Cs>
+inline Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> Scene::getComponentData()
+{
+	Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> t;
+
+	// Iterate all groups and find which ones contain the specified types
+	for (auto it = m_entityGroups.begin(); it != m_entityGroups.end(); ++it)
+	{
+		priv::EntityGroup& group = it->second;
+
+		// Test if it has the correct components
+		bool matches = true;
+		PARAM_EXPAND(matches &= group.hasComponentType<Cs>());
+
+		// Add the group if it matches
+		if (matches)
+		{
+			// Add each required component type
+			PARAM_EXPAND(t.get<ComponentArray<Cs>>().addGroup(group.getComponentData<Cs>()));
+
+			// Add entity ids
+			t.get<ComponentArray<Entity::Id>>().addGroup(group.getEntityIds());
+		}
+	}
+
+	// Return the tuple
+	return t;
 }
 
 }
