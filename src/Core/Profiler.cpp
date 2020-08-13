@@ -4,6 +4,7 @@ namespace poly
 {
 
 std::unordered_map<std::string, ProfilerData> Profiler::m_data;
+std::mutex Profiler::m_mutex;
 
 ///////////////////////////////////////////////////////////
 
@@ -130,6 +131,9 @@ void Profiler::addMarker(const ProfilerMarker& marker)
 	// Construct marker name
 	std::string name = marker.getLabel() + ':' + marker.getFunc();
 
+	// Data is accessed from here on
+	std::lock_guard<std::mutex> lock(m_mutex);
+
 	// Find the entry for the profiler marker
 	auto it = m_data.find(name);
 	if (it == m_data.end())
@@ -172,6 +176,9 @@ const ProfilerData& Profiler::getData(const std::string& func, const std::string
 
 	// Try to find data, if can't find, create new entry
 	std::string name = label + ':' + func;
+
+	// Get access to data
+	std::lock_guard<std::mutex> lock(m_mutex);
 
 	auto it = m_data.find(name);
 	if (it == m_data.end())

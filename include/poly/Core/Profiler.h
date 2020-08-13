@@ -5,6 +5,7 @@
 #include <poly/Core/DataTypes.h>
 #include <poly/Core/Macros.h>
 
+#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -183,6 +184,7 @@ public:
 
 private:
 	static std::unordered_map<std::string, ProfilerData> m_data; //!< Map used to store the data
+	static std::mutex m_mutex;									 //!< Mutex to protect access to profiler data
 };
 
 #ifdef ENABLE_PROFILING

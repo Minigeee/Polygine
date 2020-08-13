@@ -101,7 +101,7 @@ template <typename... Ts>
 Tuple<Ts...> makeTuple(Ts&&... args);
 
 template <int N, typename... Ts>
-typename std::tuple_element_t<N, std::tuple<Ts...>> get(Tuple<Ts...>& t);
+typename std::tuple_element_t<N, std::tuple<Ts...>>& get(Tuple<Ts...>& t);
 
 }
 

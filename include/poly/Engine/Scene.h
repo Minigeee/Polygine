@@ -14,6 +14,12 @@ class Scene
 {
 public:
 	Scene();
+	~Scene();
+
+#ifndef DOXYGEN_SKIP
+	Scene(const Scene&) = delete;
+	Scene& operator=(const Scene&) = delete;
+#endif
 
 	Uint16 getId() const;
 
@@ -46,10 +52,11 @@ public:
 	Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> getComponentData();
 
 private:
-	/* TODO : Scene id system */
-	Uint16 m_id;
+	Handle m_handle;
 
 	std::unordered_map<Uint32, priv::EntityGroup> m_entityGroups;
+
+	static HandleArray<bool> idArray;
 };
 
 }

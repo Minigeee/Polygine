@@ -6,7 +6,7 @@ namespace poly
 template <typename C>
 inline C* Entity::get() const
 {
-	return m_scene->getComponent(m_id);
+	return m_scene->getComponent<C>(m_id);
 }
 
 template <typename C>

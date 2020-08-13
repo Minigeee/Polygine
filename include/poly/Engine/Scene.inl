@@ -75,7 +75,7 @@ inline std::vector<Entity> Scene::createEntities(Uint32 num, Cs&&... components)
 	if (it == m_entityGroups.end())
 	{
 		// Initialize group
-		group = &(m_entityGroups[groupId] = priv::EntityGroup(this, m_id));
+		group = &(m_entityGroups[groupId] = priv::EntityGroup(this, m_handle.m_index));
 		group->setComponentTypes<Cs...>(groupId);
 	}
 	else

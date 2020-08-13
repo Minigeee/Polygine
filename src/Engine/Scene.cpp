@@ -3,15 +3,38 @@
 namespace poly
 {
 
+HandleArray<bool> Scene::idArray;
+
 ///////////////////////////////////////////////////////////
 
 Scene::Scene() :
-	m_id	(0)
+	m_handle	(idArray.add(true))
 { }
+
+Scene::~Scene()
+{
+	// Remove all entities
+	for (auto it = m_entityGroups.begin(); it != m_entityGroups.end(); ++it)
+	{
+		priv::EntityGroup& group = it->second;
+
+		// Get list of entity ids
+		const std::vector<Entity::Id>& ids = group.getEntityIds();
+		// Add all to the remove queue
+		for (Uint32 i = 0; i < ids.size(); ++i)
+			group.removeEntity(ids[i]);
+
+		// Remove queued entities
+		group.removeQueuedEntities();
+	}
+
+	// Remove from list to free up id
+	idArray.remove(m_handle);
+}
 
 Uint16 Scene::getId() const
 {
-	return m_id;
+	return m_handle.m_index;
 }
 
 ///////////////////////////////////////////////////////////

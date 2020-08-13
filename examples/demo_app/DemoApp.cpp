@@ -31,12 +31,12 @@ int main()
 
     for (int i = 0; i < numTests; ++i)
     {
-        std::vector<int> is(10002, 3);
-        std::vector<float> fs(10002, 3.14f);
+        std::vector<int> is(50000, 3);
+        std::vector<float> fs(50000, 3.14f);
 
         START_PROFILING(base);
 
-        for (int j = 0; j < 100; ++j)
+        for (int j = 0; j < 20; ++j)
         {
             for (int n = 0; n < is.size(); ++n)
             {
@@ -50,27 +50,35 @@ int main()
 
     Scheduler scheduler;
 
-    scene.createEntities(2000, 3, 3.14f);
-    scene.createEntities(2000, 3, 3.14f, true);
-    scene.createEntities(2000, 3, 3.14f, 45u);
-    scene.createEntities(2000, 3, 3.14f, 4.0);
-    scene.createEntities(2000, 3, 3.14f, &scene);
+    Entity a = scene.createEntities(50000, 3, 3.14f)[0];
 
     for (int i = 0; i < numTests; ++i)
     {
-        Test a(&scene);
+        Test sys(&scene);
 
         START_PROFILING(single);
 
-        for (int j = 0; j < 100; ++j)
-            a.update(0.0f);
+        for (int j = 0; j < 20; ++j)
+        {
+            sys.update(0.0f);
+        }
     }
 
-    const ProfilerData& a = Profiler::getData("main", "base");
-    const ProfilerData& b = Profiler::getData("main", "single");
+    std::cout << *a.get<int>() << '\n';
 
-    std::cout << "Mean:   " << a.mean().toMicroseconds() << "us\nStd Dev: " << a.stdDev().toMicroseconds() << "us\n\n";
-    std::cout << "Mean:   " << b.mean().toMicroseconds() << "us\nStd Dev: " << b.stdDev().toMicroseconds() << "us\n\n";
+    const ProfilerData& d1 = Profiler::getData("main", "base");
+    const ProfilerData& d2 = Profiler::getData("main", "single");
+
+    std::cout << "Mean:   " << d1.mean().toMicroseconds() << "us\nStd Dev: " << d1.stdDev().toMicroseconds() << "us\n\n";
+    std::cout << "Mean:   " << d2.mean().toMicroseconds() << "us\nStd Dev: " << d2.stdDev().toMicroseconds() << "us\n\n";
 
     return 0;
 }
+
+/*
+
+TODO:
+ - Threads class
+ - Finish certain scheduler priorities
+
+*/

@@ -23,19 +23,27 @@ inline void System<Cs...>::update(float dt)
 	// Get component data
 	Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> data = m_scene->getComponentData<Cs...>();
 
-	// Get data iterators
-	typename ComponentArray<Entity::Id>::Iterator entityIt = get<0>(data).getIterator();
-	Tuple<typename ComponentArray<Cs>::Iterator...> its(data.get<ComponentArray<Cs>>().getIterator()...);
+	// Get component info
+	typename ComponentArray<Entity::Id>& entityArray = get<0>(data);
+	Uint32 numGroups = entityArray.getNumGroups();
 
-	// Iterate through all component data
-	while (!entityIt.atEnd())
+	// Iterate through groups
+	for (Uint32 i = 0; i < numGroups; ++i)
 	{
-		// Call the process function
-		process(dt, entityIt.get(), its.get<typename ComponentArray<Cs>::Iterator>().get()...);
+		// Group size
+		Uint16 size = entityArray.getGroup(i).m_size;
 
-		// Increment iterators
-		++entityIt;
-		PARAM_EXPAND(++its.get<typename ComponentArray<Cs>::Iterator>());
+		// Data pointers
+		Entity::Id* idPtr = entityArray.getGroup(i).m_data;
+
+		// For some reason tuple constructor with parameter pack doesn't work
+		// so using the set function
+		Tuple<Cs*...> ptrs;
+		PARAM_EXPAND(ptrs.set<Cs*>(data.get<ComponentArray<Cs>>().getGroup(i).m_data));
+
+		// Process all data in the group
+		for (Uint16 n = 0; n < size; ++n)
+			process(dt, idPtr[n], ptrs.get<Cs*>()[n]...);
 	}
 }
 

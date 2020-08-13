@@ -21,7 +21,7 @@ template <typename... Ts>
 template <typename T>
 inline void Tuple<Ts...>::set(const T& value)
 {
-	static_cast<priv::TupleData<T>*>(this)->m_data = component;
+	static_cast<priv::TupleData<T>*>(this)->m_data = value;
 }
 
 template <typename... Ts>
@@ -47,7 +47,7 @@ inline Tuple<Ts...> makeTuple(Ts&&... args)
 }
 
 template <int N, typename... Ts>
-typename std::tuple_element_t<N, std::tuple<Ts...>> get(Tuple<Ts...>& t)
+typename std::tuple_element_t<N, std::tuple<Ts...>>& get(Tuple<Ts...>& t)
 {
 	return t.get<typename std::tuple_element_t<N, std::tuple<Ts...>>>();
 }
