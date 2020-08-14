@@ -51,10 +51,23 @@ public:
 	template <typename... Cs>
 	Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> getComponentData();
 
+	template <typename... Cs>
+	Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> getComponentData(const ComponentTypeSet& exclude);
+
+	void addTag(Entity::Id id, Uint32 tag);
+
+	bool hasTag(Entity::Id id, Uint32 tag) const;
+
+	const std::unordered_set<Entity::Id>& getEntitiesWithTag(Uint32 tag);
+
+	template <typename... Cs, typename Func>
+	void system(Func&& func, const ComponentTypeSet& excludes = ComponentTypeSet());
+
 private:
 	Handle m_handle;
 
 	std::unordered_map<Uint32, priv::EntityGroup> m_entityGroups;
+	std::unordered_map<Uint32, std::unordered_set<Entity::Id>> m_entityTags;
 
 	static HandleArray<bool> idArray;
 };

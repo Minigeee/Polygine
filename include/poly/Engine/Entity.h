@@ -17,6 +17,8 @@ public:
 
 		Handle m_handle;
 		Uint32 m_group;
+
+		bool operator==(const Entity::Id& other) const;
 	};
 
 public:
@@ -36,6 +38,20 @@ public:
 private:
 	Scene* m_scene;
 	Id m_id;
+};
+
+}
+
+namespace std
+{
+
+template <>
+struct hash<poly::Entity::Id>
+{
+	std::size_t operator()(const poly::Entity::Id& k) const
+	{
+		return hash<poly::Uint64>()(*reinterpret_cast<const poly::Uint64*>(&k));
+	}
 };
 
 }

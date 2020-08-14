@@ -58,6 +58,27 @@ void Scene::removeQueuedEntities()
 		it->second.removeQueuedEntities();
 }
 
+void Scene::addTag(Entity::Id id, Uint32 tag)
+{
+	// Insert id into correct tag group
+	m_entityTags[tag].insert(id);
+}
+
+bool Scene::hasTag(Entity::Id id, Uint32 tag) const
+{
+	// Get the tag group
+	auto it = m_entityTags.find(tag);
+	if (it == m_entityTags.end()) return false;
+
+	// Return if the id has been found
+	return it->second.find(id) != it->second.end();
+}
+
+const std::unordered_set<Entity::Id>& Scene::getEntitiesWithTag(Uint32 tag)
+{
+	return m_entityTags[tag];
+}
+
 ///////////////////////////////////////////////////////////
 
 }

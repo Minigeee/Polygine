@@ -280,4 +280,41 @@ inline typename ComponentArray<C>::Iterator ComponentArray<C>::getIterator()
 	return Iterator(this);
 }
 
+///////////////////////////////////////////////////////////
+
+template <typename... Cs>
+inline ComponentTypeSet ComponentTypeSet::create()
+{
+	ComponentTypeSet set;
+	set.set<Cs...>();
+	return set;
+}
+
+template <typename... Cs>
+inline void ComponentTypeSet::set()
+{
+	// Insert all type ids
+	PARAM_EXPAND(m_set.insert(TypeInfo::id<Cs>()));
+}
+
+template <typename C>
+inline void ComponentTypeSet::add()
+{
+	// Insert type id
+	m_set.insert(TypeInfo::id<C>());
+}
+
+template <typename C>
+inline void ComponentTypeSet::remove()
+{
+	// Remove type id
+	m_set.erase(TypeInfo::id<C>());
+}
+
+template <typename C>
+inline bool ComponentTypeSet::has() const
+{
+	return m_set.find(TypeInfo::id<C>()) != m_set.end();
+}
+
 }

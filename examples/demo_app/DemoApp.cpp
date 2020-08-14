@@ -60,7 +60,15 @@ int main()
 
         for (int j = 0; j < 20; ++j)
         {
-            sys.update(0.0f);
+            scene.system<int, float>(
+                [](const Entity::Id& id, int& i, float& f)
+                {
+                    ++i;
+                    f += 1.0f;
+                },
+
+                ComponentTypeSet::create<bool>()
+            );
         }
     }
 

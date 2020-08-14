@@ -64,6 +64,8 @@ public:
 	template <typename C>
 	bool hasComponentType() const;
 
+	bool hasComponentType(Uint32 type) const;
+
 	std::vector<Entity::Id>& getEntityIds();
 
 private:
@@ -137,6 +139,31 @@ public:
 
 private:
 	std::vector<Group> m_groups;
+};
+
+
+class ComponentTypeSet
+{
+public:
+	template <typename... Cs>
+	static ComponentTypeSet create();
+
+	template <typename... Cs>
+	void set();
+
+	template <typename C>
+	void add();
+
+	template <typename C>
+	void remove();
+
+	template <typename C>
+	bool has() const;
+
+	const std::unordered_set<Uint32>& getSet() const;
+
+private:
+	std::unordered_set<Uint32> m_set;
 };
 
 }

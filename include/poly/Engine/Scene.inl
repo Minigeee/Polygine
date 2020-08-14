@@ -128,4 +128,71 @@ inline Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> Scene::getCompon
 	return t;
 }
 
+template <typename... Cs>
+inline Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> Scene::getComponentData(const ComponentTypeSet& exclude)
+{
+	Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> t;
+
+	// Iterate all groups and find which ones contain the specified types
+	for (auto it = m_entityGroups.begin(); it != m_entityGroups.end(); ++it)
+	{
+		priv::EntityGroup& group = it->second;
+
+		// Test if it has the correct components
+		bool matches = true;
+		PARAM_EXPAND(matches &= group.hasComponentType<Cs>());
+
+		// Check exclusions
+		const std::unordered_set<Uint32>& excludeSet = exclude.getSet();
+		if (excludeSet.size())
+		{
+			for (auto it = excludeSet.begin(); it != excludeSet.end(); ++it)
+				matches &= !group.hasComponentType(*it);
+		}
+
+		// Add the group if it matches
+		if (matches)
+		{
+			// Add each required component type
+			PARAM_EXPAND(t.get<ComponentArray<Cs>>().addGroup(group.getComponentData<Cs>()));
+
+			// Add entity ids
+			t.get<ComponentArray<Entity::Id>>().addGroup(group.getEntityIds());
+		}
+	}
+
+	// Return the tuple
+	return t;
+}
+
+template <typename... Cs, typename Func>
+inline void Scene::system(Func&& func, const ComponentTypeSet& excludes)
+{
+	// Get component data
+	Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> data = getComponentData<Cs...>(excludes);
+
+	// Get component info
+	typename ComponentArray<Entity::Id>& entityArray = get<0>(data);
+	Uint32 numGroups = entityArray.getNumGroups();
+
+	// Iterate through groups
+	for (Uint32 i = 0; i < numGroups; ++i)
+	{
+		// Group size
+		Uint16 size = entityArray.getGroup(i).m_size;
+
+		// Data pointers
+		Entity::Id* idPtr = entityArray.getGroup(i).m_data;
+
+		// For some reason tuple constructor with parameter pack doesn't work
+		// so using the set function
+		Tuple<Cs*...> ptrs;
+		PARAM_EXPAND(ptrs.set<Cs*>(data.get<ComponentArray<Cs>>().getGroup(i).m_data));
+
+		// Process all data in the group
+		for (Uint16 n = 0; n < size; ++n)
+			func(idPtr[n], ptrs.get<Cs*>()[n]...);
+	}
+}
+
 }

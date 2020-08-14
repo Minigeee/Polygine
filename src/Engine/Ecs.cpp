@@ -42,8 +42,18 @@ std::vector<Entity::Id>& EntityGroup::getEntityIds()
 	return m_entityIds.getData();
 }
 
+bool EntityGroup::hasComponentType(Uint32 type) const
+{
+	return m_componentTypes.find(type) != m_componentTypes.end();
+}
+
 ///////////////////////////////////////////////////////////
 
+}
+
+const std::unordered_set<Uint32>& ComponentTypeSet::getSet() const
+{
+	return m_set;
 }
 
 }

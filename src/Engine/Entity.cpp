@@ -10,6 +10,14 @@ Entity::Id::Id() :
 	m_group		(0)
 { }
 
+bool Entity::Id::operator==(const Entity::Id& a) const
+{
+	return
+		m_group == a.m_group &&
+		m_handle.m_index == a.m_handle.m_index &&
+		m_handle.m_counter == a.m_handle.m_counter;
+}
+
 Entity::Entity() :
 	m_scene		(0)
 { }
