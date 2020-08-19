@@ -1,8 +1,12 @@
 # Get Catch2
 find_package(Catch2 QUIET)
-if (NOT CATCH2_FOUND)
+if (NOT CATCH2_FOUND AND NOT EXISTS "${PROJECT_SOURCE_DIR}/extlibs/Catch2/CMakeLists.txt")
+        message(STATUS "Getting Catch2...")
+
     execute_process(COMMAND git submodule update --init -- ../extlibs/Catch2
                     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+else()
+    message(STATUS "Found Catch2")
 endif()
 
 # Add catch includes
