@@ -24,9 +24,6 @@ function(add_test name src)
 
     # Link
     target_link_libraries(${name} PRIVATE polygine)
-
-    # Install
-    install(TARGETS ${name} DESTINATION ${POLY_INSTALL_DIR}/test)
 endfunction()
 
 add_test(core_test "Core.cpp")

@@ -33,8 +33,8 @@ add_subdirectory(extlibs)
 install(TARGETS polygine DESTINATION "${CMAKE_INSTALL_LIBDIR}" EXPORT polygine)
 install(DIRECTORY "${PROJECT_SOURCE_DIR}/include/poly" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
 
-install(FILES license.md DESTINATION "${CMAKE_INSTALL_PREFIX}")
-install(FILES readme.md DESTINATION "${CMAKE_INSTALL_PREFIX}")
+install(FILES license.md DESTINATION "share/doc/polygine")
+install(FILES readme.md DESTINATION "share/doc/polygine")
 
 # Setup for find_package
 set(POLY_INCLUDE_DIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}")
