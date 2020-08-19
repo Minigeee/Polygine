@@ -1,3 +1,9 @@
 [submodule "extlibs/Catch2"]
 	path = extlibs/Catch2
 	url = https://github.com/catchorg/Catch2.git
+[submodule "extlibs/hopscotch-map"]
+	path = extlibs/hopscotch-map
+	url = https://github.com/Tessil/hopscotch-map.git
+[submodule "extlibs/sparse-map"]
+	path = extlibs/sparse-map
+	url = https://github.com/Tessil/sparse-map.git
