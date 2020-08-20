@@ -13,6 +13,8 @@ Scene::Scene() :
 
 Scene::~Scene()
 {
+	std::lock_guard<std::mutex> lock(m_entityMutex);
+
 	// Remove all entities
 	for (auto it = m_entityGroups.begin(); it != m_entityGroups.end(); ++it)
 	{
@@ -44,6 +46,9 @@ void Scene::removeEntity(Entity::Id id)
 	// Find the correct group
 	Uint32 groupId = id.m_group;
 
+	// Entity removal is protected by mutex
+	std::lock_guard<std::mutex> lock(m_entityMutex);
+
 	auto it = m_entityGroups.find(groupId);
 	ASSERT(it != m_entityGroups.end(), "Can not remove entity from unknown entity group: %d", groupId);
 
@@ -53,6 +58,9 @@ void Scene::removeEntity(Entity::Id id)
 
 void Scene::removeQueuedEntities()
 {
+	// Entity removal is protected by mutex
+	std::lock_guard<std::mutex> lock(m_entityMutex);
+
 	// Clear all queues
 	for (auto it = m_entityGroups.begin(); it != m_entityGroups.end(); ++it)
 		it.value().removeQueuedEntities();

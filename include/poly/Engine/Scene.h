@@ -68,6 +68,7 @@ private:
 
 	HashMap<Uint32, priv::EntityGroup> m_entityGroups;
 	HashMap<Uint32, HashSet<Entity::Id>> m_entityTags;
+	std::mutex m_entityMutex;
 
 	static HandleArray<bool> idArray;
 };

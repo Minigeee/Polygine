@@ -71,6 +71,9 @@ inline std::vector<Entity> Scene::createEntities(Uint32 num, Cs&&... components)
 	// Find the correct group
 	priv::EntityGroup* group = 0;
 
+	// Entity creation is protected by mutex
+	std::lock_guard<std::mutex> lock(m_entityMutex);
+
 	auto it = m_entityGroups.find(groupId);
 	if (it == m_entityGroups.end())
 	{
@@ -95,8 +98,7 @@ template <typename C>
 inline C* Scene::getComponent(Entity::Id id) const
 {
 	auto it = m_entityGroups.find(id.m_group);
-	ASSERT(it != m_entityGroups.end(), "Group id for component type not found: %d", id.m_group);
-	return it.value().getComponent<C>(id);
+	return it == m_entityGroups.end() ? 0 : it.value().getComponent<C>(id);
 }
 
 template <typename... Cs>
