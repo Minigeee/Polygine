@@ -1,7 +1,6 @@
 include(CMakeFindDependencyMacro)
 
-find_dependency(tsl-hopscotch-map)
-find_dependency(tsl-sparse-map)
+# Cmake dependencies
 
 set(polygine_INCLUDE_DIR "@POLY_INCLUDE_DIR@")
 set(polygine_INCLUDE_DIRS "${polygine_INCLUDE_DIR}")
