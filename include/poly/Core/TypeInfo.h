@@ -70,8 +70,8 @@ public:
 	bool m_isPolymorphic;	//!< True if the type is a polymorphic class
 
 private:
-	static Uint32 typeCounter;								//!< Used to assign type IDs
-	static std::unordered_map<Uint32, TypeInfo> idToInfo;	//!< Maps type ID to type info struct
+	static Uint32 typeCounter;						//!< Used to assign type IDs
+	static HashMap<Uint32, TypeInfo> idToInfo;		//!< Maps type ID to type info struct
 };
 
 }

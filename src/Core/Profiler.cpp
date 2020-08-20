@@ -3,7 +3,7 @@
 namespace poly
 {
 
-std::unordered_map<std::string, ProfilerData> Profiler::m_data;
+HashMap<std::string, ProfilerData> Profiler::m_data;
 std::mutex Profiler::m_mutex;
 
 ///////////////////////////////////////////////////////////
@@ -147,7 +147,7 @@ void Profiler::addMarker(const ProfilerMarker& marker)
 		data = &(m_data[name] = newEntry);
 	}
 	else
-		data = &it->second;
+		data = &it.value();
 
 	// Check if the interval list is full yet
 	if (data->m_interval.size() == 10)
@@ -192,7 +192,7 @@ const ProfilerData& Profiler::getData(const std::string& func, const std::string
 		data = &(m_data[name] = newEntry);
 	}
 	else
-		data = &it->second;
+		data = &it.value();
 
 	return *data;
 }

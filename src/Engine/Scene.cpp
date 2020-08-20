@@ -16,7 +16,7 @@ Scene::~Scene()
 	// Remove all entities
 	for (auto it = m_entityGroups.begin(); it != m_entityGroups.end(); ++it)
 	{
-		priv::EntityGroup& group = it->second;
+		priv::EntityGroup& group = it.value();
 
 		// Get list of entity ids
 		const std::vector<Entity::Id>& ids = group.getEntityIds();
@@ -48,14 +48,14 @@ void Scene::removeEntity(Entity::Id id)
 	ASSERT(it != m_entityGroups.end(), "Can not remove entity from unknown entity group: %d", groupId);
 
 	// This function adds it to a remove queue
-	it->second.removeEntity(id);
+	it.value().removeEntity(id);
 }
 
 void Scene::removeQueuedEntities()
 {
 	// Clear all queues
 	for (auto it = m_entityGroups.begin(); it != m_entityGroups.end(); ++it)
-		it->second.removeQueuedEntities();
+		it.value().removeQueuedEntities();
 }
 
 void Scene::addTag(Entity::Id id, Uint32 tag)
@@ -74,7 +74,7 @@ bool Scene::hasTag(Entity::Id id, Uint32 tag) const
 	return it->second.find(id) != it->second.end();
 }
 
-const std::unordered_set<Entity::Id>& Scene::getEntitiesWithTag(Uint32 tag)
+const HashSet<Entity::Id>& Scene::getEntitiesWithTag(Uint32 tag)
 {
 	return m_entityTags[tag];
 }

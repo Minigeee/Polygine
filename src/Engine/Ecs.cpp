@@ -51,7 +51,7 @@ bool EntityGroup::hasComponentType(Uint32 type) const
 
 }
 
-const std::unordered_set<Uint32>& ComponentTypeSet::getSet() const
+const HashSet<Uint32>& ComponentTypeSet::getSet() const
 {
 	return m_set;
 }

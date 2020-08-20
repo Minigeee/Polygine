@@ -15,7 +15,7 @@ template <typename... Cs>
 inline Uint32 generateGroupId()
 {
 	// Create type set
-	std::unordered_set<Uint32> types;
+	HashSet<Uint32> types;
 	PARAM_EXPAND(types.insert(TypeInfo::id<Cs>()));
 
 	// Generate hash
@@ -79,7 +79,7 @@ inline std::vector<Entity> Scene::createEntities(Uint32 num, Cs&&... components)
 		group->setComponentTypes<Cs...>(groupId);
 	}
 	else
-		group = &it->second;
+		group = &it.value();
 
 	// Create entity
 	return group->createEntities(num, std::forward<Cs>(components)...);
@@ -96,7 +96,7 @@ inline C* Scene::getComponent(Entity::Id id) const
 {
 	auto it = m_entityGroups.find(id.m_group);
 	ASSERT(it != m_entityGroups.end(), "Group id for component type not found: %d", id.m_group);
-	return it->second.getComponent<C>(id);
+	return it.value().getComponent<C>(id);
 }
 
 template <typename... Cs>
@@ -107,7 +107,7 @@ inline Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> Scene::getCompon
 	// Iterate all groups and find which ones contain the specified types
 	for (auto it = m_entityGroups.begin(); it != m_entityGroups.end(); ++it)
 	{
-		priv::EntityGroup& group = it->second;
+		priv::EntityGroup& group = it.value();
 
 		// Test if it has the correct components
 		bool matches = true;
@@ -136,14 +136,14 @@ inline Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> Scene::getCompon
 	// Iterate all groups and find which ones contain the specified types
 	for (auto it = m_entityGroups.begin(); it != m_entityGroups.end(); ++it)
 	{
-		priv::EntityGroup& group = it->second;
+		priv::EntityGroup& group = it.value();
 
 		// Test if it has the correct components
 		bool matches = true;
 		PARAM_EXPAND(matches &= group.hasComponentType<Cs>());
 
 		// Check exclusions
-		const std::unordered_set<Uint32>& excludeSet = exclude.getSet();
+		const HashSet<Uint32>& excludeSet = exclude.getSet();
 		if (excludeSet.size())
 		{
 			for (auto it = excludeSet.begin(); it != excludeSet.end(); ++it)

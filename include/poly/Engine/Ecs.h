@@ -1,7 +1,9 @@
 #ifndef POLY_ECS_H
 #define POLY_ECS_H
 
+#include <poly/Core/DataTypes.h>
 #include <poly/Core/HandleArray.h>
+
 #include <poly/Engine/Entity.h>
 
 #include <functional>
@@ -34,7 +36,7 @@ public:
 	static void removeScene(Uint16 sceneId);
 
 private:
-	typedef std::unordered_map<Uint32, std::vector<C>> Data;
+	typedef HashMap<Uint32, std::vector<C>> Data;
 
 	static std::vector<Data> m_data;
 };
@@ -78,7 +80,7 @@ private:
 	Uint32 m_groupId;
 
 	HandleArray<Entity::Id> m_entityIds;
-	std::unordered_set<Uint32> m_componentTypes;
+	HashSet<Uint32> m_componentTypes;
 	std::vector<Entity::Id> m_removeQueue;
 
 	std::function<void(const std::vector<Entity::Id>&)> m_removeFunc;
@@ -160,10 +162,10 @@ public:
 	template <typename C>
 	bool has() const;
 
-	const std::unordered_set<Uint32>& getSet() const;
+	const HashSet<Uint32>& getSet() const;
 
 private:
-	std::unordered_set<Uint32> m_set;
+	HashSet<Uint32> m_set;
 };
 
 }

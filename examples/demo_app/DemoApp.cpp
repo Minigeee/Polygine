@@ -3,26 +3,11 @@
 
 #include <poly/Engine/Ecs.h>
 #include <poly/Engine/Scene.h>
-#include <poly/Engine/System.h>
 
 #include <iostream>
 #include <math.h>
 
 using namespace poly;
-
-class Test : public System<int, float>
-{
-public:
-    Test(Scene* scene) :
-        System<int, float>(scene)
-    { }
-
-    void process(float dt, const Entity::Id& id, int& i, float& f) override
-    {
-        ++i;
-        f += 1.0f;
-    }
-};
 
 
 int main()
@@ -54,8 +39,6 @@ int main()
 
     for (int i = 0; i < numTests; ++i)
     {
-        Test sys(&scene);
-
         START_PROFILING(single);
 
         for (int j = 0; j < 20; ++j)

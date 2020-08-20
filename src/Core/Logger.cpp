@@ -16,7 +16,7 @@ std::ofstream Logger::m_file;
 
 Scheduler* Logger::m_scheduler = 0;
 Scheduler::Priority Logger::m_priority = Scheduler::Low;
-std::unordered_map<std::thread::id, std::string> Logger::m_threadNames;
+HashMap<std::thread::id, std::string> Logger::m_threadNames;
 std::queue<Logger::LogMsg> Logger::m_msgQueue;
 
 std::mutex Logger::m_mutex;

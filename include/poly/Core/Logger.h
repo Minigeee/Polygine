@@ -159,7 +159,7 @@ private:
 
 	static Scheduler* m_scheduler;			//!< Scheduler for asynchronous logging
 	static Scheduler::Priority m_priority;	//!< Priority level to give logging tasks
-	static std::unordered_map<std::thread::id, std::string> m_threadNames;	//!< Map of thread IDs to names for custom thread names
+	static HashMap<std::thread::id, std::string> m_threadNames;	//!< Map of thread IDs to names for custom thread names
 	static std::queue<LogMsg> m_msgQueue;	//!< The message queue used for asynchronous messages
 
 	static bool m_shouldFlush[5];			//!< Array that determines which message types should flush output
