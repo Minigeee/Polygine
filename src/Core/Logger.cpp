@@ -16,7 +16,7 @@ std::ofstream Logger::m_file;
 
 Scheduler* Logger::m_scheduler = 0;
 Scheduler::Priority Logger::m_priority = Scheduler::Low;
-std::unordered_map<std::thread::id, std::string> Logger::m_threadNames;
+HashMap<std::thread::id, std::string> Logger::m_threadNames;
 std::queue<Logger::LogMsg> Logger::m_msgQueue;
 
 std::mutex Logger::m_mutex;
@@ -186,26 +186,24 @@ void Logger::logMsg(Logger::MsgType type, const std::string& msg, std::thread::i
 
 void Logger::logAsync()
 {
-	m_queueMutex.lock();
+	std::unique_lock<std::mutex> lock(m_queueMutex);
 
 	// Loop through the queue and log everything
 	while (!m_msgQueue.empty())
 	{
 		LogMsg msg = std::move(m_msgQueue.front());
 		m_msgQueue.pop();
-		m_queueMutex.unlock();
+		lock.unlock();
 
 		// Use synchronous log
 		logMsg(msg.m_type, msg.m_msg, msg.m_threadId);
 
-		m_queueMutex.lock();
+		lock.lock();
 	}
 
 	// Mark that no tasks currently exist to handle async messages
 	// so next time a message is queued, a new task is created
 	m_taskExists = false;
-
-	m_queueMutex.unlock();
 }
 
 ///////////////////////////////////////////////////////////

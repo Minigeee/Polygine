@@ -4,7 +4,7 @@ namespace poly
 {
 
 Uint32 TypeInfo::typeCounter = 0;
-std::unordered_map<Uint32, TypeInfo> TypeInfo::idToInfo;
+HashMap<Uint32, TypeInfo> TypeInfo::idToInfo;
 
 ///////////////////////////////////////////////////////////
 

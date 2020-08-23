@@ -155,6 +155,44 @@ public:
 	///////////////////////////////////////////////////////////
 	std::vector<T>& getData();
 
+	///////////////////////////////////////////////////////////
+	/// \brief Get the internal index of a handle
+	///
+	/// This function is not needed in most cases, but it can
+	/// be useful in cases where many arrays depend on one handled
+	/// array to maintain the order of the elements.
+	///
+	/// It basically provides a mapping between a handle and
+	/// its internal corresponding index.
+	///
+	/// \note An index of 0xFFFF will be returned if the handle is invalid
+	///
+	/// \param handle A handle to retrieve an index
+	///
+	/// \return The internal index
+	///
+	///////////////////////////////////////////////////////////
+	Uint16 getIndex(Handle handle) const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the handle corresponding to an internal index
+	///
+	/// This function is not needed in most cases, but it can
+	/// be useful in cases where a handle of an object needs to
+	/// found again.
+	///
+	/// It basically provides a mapping between an internal index
+	/// and its corresponding handle.
+	///
+	/// \note An empty handle will be returned if the index is out of bounds
+	///
+	/// \param index An index to retrieve a handle for
+	///
+	/// \return The corresponding handle
+	///
+	///////////////////////////////////////////////////////////
+	Handle getHandle(Uint16 index) const;
+
 private:
 	std::vector<T> m_data;				//!< Internal data array
 	std::vector<Handle> m_handleToData;	//!< Maps handle index to actual index, also keeps a counter to detect invalid handles

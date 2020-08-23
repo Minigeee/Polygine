@@ -159,7 +159,7 @@ private:
 
 	static Scheduler* m_scheduler;			//!< Scheduler for asynchronous logging
 	static Scheduler::Priority m_priority;	//!< Priority level to give logging tasks
-	static std::unordered_map<std::thread::id, std::string> m_threadNames;	//!< Map of thread IDs to names for custom thread names
+	static HashMap<std::thread::id, std::string> m_threadNames;	//!< Map of thread IDs to names for custom thread names
 	static std::queue<LogMsg> m_msgQueue;	//!< The message queue used for asynchronous messages
 
 	static bool m_shouldFlush[5];			//!< Array that determines which message types should flush output
@@ -262,11 +262,35 @@ private:
 /// after the formatting string will be used to create the string.
 ///
 /// \param msg The message to log (the formatting string)
+///
 ///////////////////////////////////////////////////////////
 #ifndef NDEBUG
 #define LOG_DEBUG(msg, ...) poly::Logger::log(poly::Logger::Debug, poly::priv::format(msg, __VA_ARGS__), std::string(__FILE__) + ':' + std::to_string(__LINE__))
 #else
 #define LOG_DEBUG(msg, ...)
+#endif
+
+///////////////////////////////////////////////////////////
+/// \brief Check a condition and log a \link MsgType::Error \endlink message if the condition is false
+///
+/// This macro works in the same wasy as the standard assert(),
+/// but it logs using the logger system instead. Messages
+/// are logged with the \link MsgType::Error \endlink level,
+/// and abort() is called right after the condition fails.
+///
+/// This macro also uses printf style formatting like all
+/// the other logging functions.
+///
+/// This macro is disabled in release mode.
+///
+/// \param cond The condition to check
+/// \param msg The message to log (the formatting string)
+///
+///////////////////////////////////////////////////////////
+#ifndef NDEBUG
+#define ASSERT(cond, msg, ...) if (!(cond)) { LOG_ERROR(msg, __VA_ARGS__); abort(); }
+#else
+#define ASSERT(cond, msg, ...)
 #endif
 
 }
