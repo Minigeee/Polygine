@@ -293,6 +293,9 @@ inline ComponentTypeSet ComponentTypeSet::create()
 template <typename... Cs>
 inline void ComponentTypeSet::set()
 {
+	// Clear the set
+	m_set.clear();
+
 	// Insert all type ids
 	PARAM_EXPAND(m_set.insert(TypeInfo::id<Cs>()));
 }

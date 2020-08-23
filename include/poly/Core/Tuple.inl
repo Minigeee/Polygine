@@ -38,6 +38,12 @@ inline const T& Tuple<Ts...>::get() const
 	return static_cast<priv::TupleData<T>*>(this)->m_data;
 }
 
+template <typename... Ts>
+inline constexpr Uint32 Tuple<Ts...>::getNumElements() const
+{
+	return sizeof...(Ts);
+}
+
 ///////////////////////////////////////////////////////////
 
 template <typename... Ts>

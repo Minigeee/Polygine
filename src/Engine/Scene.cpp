@@ -66,13 +66,23 @@ void Scene::removeQueuedEntities()
 		it.value().removeQueuedEntities();
 }
 
-void Scene::addTag(Entity::Id id, Uint32 tag)
+void Scene::addTag(Entity::Id id, int tag)
 {
+	std::lock_guard<std::mutex> lock(m_tagMutex);
+
 	// Insert id into correct tag group
 	m_entityTags[tag].insert(id);
 }
 
-bool Scene::hasTag(Entity::Id id, Uint32 tag) const
+void Scene::removeTag(Entity::Id id, int tag)
+{
+	std::lock_guard<std::mutex> lock(m_tagMutex);
+
+	// Remove entity from tag group
+	m_entityTags[tag].erase(id);
+}
+
+bool Scene::hasTag(Entity::Id id, int tag) const
 {
 	// Get the tag group
 	auto it = m_entityTags.find(tag);
