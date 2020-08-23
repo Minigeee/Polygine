@@ -1,6 +1,8 @@
 #include <poly/Core/Macros.h>
 #include <poly/Core/TypeInfo.h>
 
+#include <poly/Engine/Events.h>
+
 #include <unordered_set>
 
 namespace poly
@@ -196,5 +198,21 @@ inline void Scene::system(Func&& func, const ComponentTypeSet& excludes)
 			func(idPtr[n], ptrs.get<Cs*>()[n]...);
 	}
 }
+
+///////////////////////////////////////////////////////////
+
+template <typename E>
+inline void Scene::addListener(std::function<void(const E&)>&& func)
+{
+	priv::EventSystem<E>::addListener(m_handle.m_index, std::forward<std::function<void(const E&)>>(func));
+}
+
+template <typename E>
+inline void Scene::sendEvent(const E& event)
+{
+	priv::EventSystem<E>::sendEvent(m_handle.m_index, event);
+}
+
+///////////////////////////////////////////////////////////
 
 }

@@ -89,9 +89,6 @@ private:
 	std::function<void(const std::vector<Entity::Id>&)> m_removeFunc;
 };
 
-template <typename C>
-std::vector<typename ComponentData<C>::Data> ComponentData<C>::m_data;
-
 }
 
 #endif

@@ -400,6 +400,12 @@ public:
 	template <typename... Cs, typename Func>
 	void system(Func&& func, const ComponentTypeSet& excludes = ComponentTypeSet());
 
+	template <typename E>
+	void addListener(std::function<void(const E&)>&& func);
+
+	template <typename E>
+	void sendEvent(const E& event);
+
 private:
 	Handle m_handle;									//!< The scene handle used for scene id
 
