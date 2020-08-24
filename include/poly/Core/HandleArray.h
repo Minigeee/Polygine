@@ -89,6 +89,23 @@ public:
 	Handle add(const T& element);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Add an element to the array and get its handle
+	///
+	/// Elements that are added to the array will be kept in a
+	/// internal contiguous array and are accessed by the returned
+	/// handle. The handle returned will always be valid until the
+	/// element being referenced by the handle is removed.
+	///
+	/// \param element The element to add
+	///
+	/// \return Handle used to access the added element
+	///
+	/// \see remove
+	///
+	///////////////////////////////////////////////////////////
+	Handle add(T&& element);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Remove the element being referenced by the handle
 	///
 	/// When removing an element, the internal array used to store

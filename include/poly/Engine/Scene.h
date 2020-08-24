@@ -317,7 +317,7 @@ public:
 	/// \return True if the specified entity has the tag
 	///
 	///////////////////////////////////////////////////////////
-	bool hasTag(Entity::Id id, int tag) const;
+	bool hasTag(Entity::Id id, int tag);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get entities that contain the specified tag
@@ -401,7 +401,10 @@ public:
 	void system(Func&& func, const ComponentTypeSet& excludes = ComponentTypeSet());
 
 	template <typename E>
-	void addListener(std::function<void(const E&)>&& func);
+	Handle addListener(std::function<void(const E&)>&& func);
+
+	template <typename E>
+	void removeListener(Handle handle);
 
 	template <typename E>
 	void sendEvent(const E& event);

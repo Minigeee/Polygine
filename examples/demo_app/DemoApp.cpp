@@ -14,19 +14,25 @@ int main()
 {
     Scene scene;
 
-    scene.addListener<int>(
+    Handle l1 = scene.addListener<int>(
         [](const int& event)
         {
             std::cout << "New Event: " << event << '\n';
         }
     );
 
-    scene.addListener<int>(
+    Handle l2 = scene.addListener<int>(
         [](const int& event)
         {
             std::cout << "I detect new event\n";
         }
     );
+
+    scene.sendEvent(3);
+    scene.sendEvent(1);
+    scene.sendEvent(4);
+
+    scene.removeListener<int>(l1);
 
     scene.sendEvent(3);
     scene.sendEvent(1);

@@ -202,9 +202,15 @@ inline void Scene::system(Func&& func, const ComponentTypeSet& excludes)
 ///////////////////////////////////////////////////////////
 
 template <typename E>
-inline void Scene::addListener(std::function<void(const E&)>&& func)
+inline Handle Scene::addListener(std::function<void(const E&)>&& func)
 {
-	priv::EventSystem<E>::addListener(m_handle.m_index, std::forward<std::function<void(const E&)>>(func));
+	return priv::EventSystem<E>::addListener(m_handle.m_index, std::move(func));
+}
+
+template <typename E>
+inline void Scene::removeListener(Handle handle)
+{
+	priv::EventSystem<E>::removeListener(m_handle.m_index, handle);
 }
 
 template <typename E>
