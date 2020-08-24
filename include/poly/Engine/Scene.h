@@ -285,6 +285,8 @@ public:
 	///
 	/// See the scene usage example for an example of empty components.
 	///
+	/// This function is thread-safe.
+	///
 	/// \param id The id of the entity to add a tag to
 	/// \param tag The tag to add
 	///
@@ -300,6 +302,8 @@ public:
 	///
 	/// See the scene usage example for an example of empty components.
 	///
+	/// This function is thread-safe.
+	///
 	/// \param id The id of the entity to remove a tag from
 	/// \param tag The tag to remove
 	///
@@ -311,13 +315,15 @@ public:
 	///
 	/// Tags should be an enum that can be cast to an integer
 	///
+	/// This function is thread-safe.
+	///
 	/// \param id The id of the entity to check
 	/// \param tag The tag to check for
 	///
 	/// \return True if the specified entity has the tag
 	///
 	///////////////////////////////////////////////////////////
-	bool hasTag(Entity::Id id, int tag) const;
+	bool hasTag(Entity::Id id, int tag);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get entities that contain the specified tag
@@ -399,6 +405,111 @@ public:
 	///////////////////////////////////////////////////////////
 	template <typename... Cs, typename Func>
 	void system(Func&& func, const ComponentTypeSet& excludes = ComponentTypeSet());
+
+	///////////////////////////////////////////////////////////
+	/// \brief Add an event listener function
+	///
+	/// The given function will be called every time the specified
+	/// event is sent, and it must be casted into a std::function.
+	/// This means the function can be a function pointer, a member
+	/// function pointer, lambda, or any other function created
+	/// with std::bind.
+	///
+	/// A handle to the event listener is returned in case the
+	/// listener needs to be removed later.
+	///
+	/// Usage example:
+	/// \code
+	///
+	/// using namespace poly;
+	///
+	/// // Events are structs that contain data about the event
+	/// struct MsgEvent
+	/// {
+	///		std::string m_message;
+	/// };
+	///
+	///
+	/// // Add a listener using a function
+	/// void listener1(const MsgEvent& event)
+	/// {
+	///		std::cout << "Listener 1: " << event.m_message << '\n';
+	/// }
+	///
+	/// scene.addListener<MsgEvent>(listener1);
+	///
+	///
+	/// // Add a listener using a member function
+	/// class Listener
+	/// {
+	/// public:
+	///		void onEvent(const MsgEvent& event)
+	///		{
+	///			std::cout << "Listener 2: " << event.m_message << '\n';
+	///		}
+	/// };
+	///
+	/// Listener listener;
+	/// scene.addListener<MsgEvent>(std::bind(&Listener::onEvent, listener));
+	///
+	///
+	/// // Add a listener using a lambda
+	/// Handle listener = scene.addListener<MsgEvent>(
+	///		[](const MsgEvent& event)
+	///		{
+	///			std::cout << "Listener 3: " << event.m_message << '\n';
+	///		}
+	/// );
+	///
+	/// \endcode
+	///
+	/// This function is thread-safe.
+	///
+	/// \tparam E The event type
+	///
+	/// \param func The listener function
+	///
+	/// \return A handle to the listener function, used to remove the listener
+	///
+	/// \see removeListener
+	///
+	///////////////////////////////////////////////////////////
+	template <typename E>
+	Handle addListener(std::function<void(const E&)>&& func);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Remove an event listener function
+	///
+	/// The handle must be acquired from addListener().
+	///
+	/// This function is thread-safe.
+	///
+	/// \tparam E The event type to remove a listener from
+	///
+	/// \param handle The handle of the listener to remove
+	///
+	/// \see addListener
+	///
+	///////////////////////////////////////////////////////////
+	template <typename E>
+	void removeListener(Handle handle);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Send an event to all registered event listener functions
+	///
+	/// All listener functions added under the specified event type
+	/// will be invoked, but not necessarily in the order the
+	/// listeners were added.
+	///
+	/// This function is thread-safe.
+	///
+	/// \tparam E The event type to send
+	///
+	/// \param event The event data to send
+	///
+	///////////////////////////////////////////////////////////
+	template <typename E>
+	void sendEvent(const E& event);
 
 private:
 	Handle m_handle;									//!< The scene handle used for scene id
@@ -502,6 +613,11 @@ private:
 ///
 /// Scene scene;
 ///
+///
+/// // ========================================================
+/// // ECS
+/// // ========================================================
+///
 /// // Create 100 entities with (int, float)
 /// std::vector<Entity> entities = scene.createEntities<int, float>(100, 314, 3.14f);
 ///
@@ -527,6 +643,31 @@ private:
 ///
 /// // Remove all queued entities
 /// scene.removeQueuedEntities();
+///
+///
+/// // ========================================================
+/// // Events
+/// // ========================================================
+///
+/// // Events are structs that contain data about the event
+/// struct MsgEvent
+/// {
+///		std::string m_message;
+/// };
+///
+/// // Add an event listener (std::function)
+/// Handle listener = scene.addListener<MsgEvent>(
+///		[](const MsgEvent& event)
+///		{
+///			std::cout << "New message: " << event.m_message << '\n';
+///		}
+/// );
+///
+/// // Send an event
+/// scene.sendEvent(MsgEvent{ "Hello World!" });
+///
+/// // Remove the listener
+/// scene.removeListener<MsgEvent>(listener);
 ///
 /// \endcode
 ///

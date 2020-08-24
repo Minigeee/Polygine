@@ -82,8 +82,10 @@ void Scene::removeTag(Entity::Id id, int tag)
 	m_entityTags[tag].erase(id);
 }
 
-bool Scene::hasTag(Entity::Id id, int tag) const
+bool Scene::hasTag(Entity::Id id, int tag)
 {
+	std::lock_guard<std::mutex> lock(m_tagMutex);
+
 	// Get the tag group
 	auto it = m_entityTags.find(tag);
 	if (it == m_entityTags.end()) return false;

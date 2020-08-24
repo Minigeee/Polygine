@@ -8,6 +8,9 @@ namespace poly
 namespace priv
 {
 
+template <typename C>
+std::vector<typename ComponentData<C>::Data> ComponentData<C>::m_data;
+
 ///////////////////////////////////////////////////////////
 
 template <typename... Cs>
