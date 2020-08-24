@@ -1,3 +1,4 @@
+#include <poly/Core/TypeInfo.h>
 
 namespace poly
 {
@@ -16,6 +17,8 @@ std::mutex EventSystem<E>::m_mutex;
 template <typename E>
 inline Handle EventSystem<E>::addListener(Uint16 sceneId, std::function<void(const E&)>&& func)
 {
+	static bool _init = (EventCleanup::registerType<E>(), true);
+
 	std::lock_guard<std::mutex> lock(m_mutex);
 
 	// Create enough scene slots
@@ -54,6 +57,29 @@ inline void EventSystem<E>::sendEvent(Uint16 sceneId, const E& event)
 	// Call all listeners
 	for (Uint32 i = 0; i < listeners.size(); ++i)
 		listeners[i](event);
+}
+
+template <typename E>
+inline void EventSystem<E>::cleanup(Uint16 sceneId)
+{
+	if (sceneId >= m_listeners.size() || !m_listeners[sceneId].size()) return;
+
+	std::lock_guard<std::mutex> lock(m_mutex);
+
+	// Clear the specified scene's listeners
+	m_listeners[sceneId].reset();
+}
+
+///////////////////////////////////////////////////////////
+
+template <typename E>
+inline void EventCleanup::registerType()
+{
+	Uint32 typeId = TypeInfo::id<E>();
+
+	// Set the cleanup function
+	if (m_cleanupFuncs.find(typeId) == m_cleanupFuncs.end())
+		m_cleanupFuncs[typeId] = EventSystem<E>::cleanup;
 }
 
 ///////////////////////////////////////////////////////////

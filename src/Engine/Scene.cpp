@@ -13,22 +13,14 @@ Scene::Scene() :
 
 Scene::~Scene()
 {
-	std::lock_guard<std::mutex> lock(m_entityMutex);
-
-	// Remove all entities
-	for (auto it = m_entityGroups.begin(); it != m_entityGroups.end(); ++it)
+	// Clean up ECS
 	{
-		priv::EntityGroup& group = it.value();
-
-		// Get list of entity ids
-		const std::vector<Entity::Id>& ids = group.getEntityIds();
-		// Add all to the remove queue
-		for (Uint32 i = 0; i < ids.size(); ++i)
-			group.removeEntity(ids[i]);
-
-		// Remove queued entities
-		group.removeQueuedEntities();
+		std::lock_guard<std::mutex> lock(m_entityMutex);
+		priv::ComponentCleanup::cleanup(m_handle.m_index);
 	}
+
+	// Clean up event systems
+	priv::EventCleanup::cleanup(m_handle.m_index);
 
 	// Remove from list to free up id
 	idArray.remove(m_handle);

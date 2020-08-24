@@ -100,6 +100,9 @@ inline bool EntityGroup::hasComponentType() const
 template <typename C>
 inline void ComponentData<C>::createComponents(Uint16 sceneId, Uint32 groupId, Uint16 num, const C& component)
 {
+	// Initialize cleanup
+	static bool _init = (ComponentCleanup::registerType<C>(), true);
+
 	// Create enough scene slots
 	if (sceneId >= m_data.size())
 	{
@@ -160,9 +163,24 @@ inline bool ComponentData<C>::hasGroup(Uint16 sceneId, Uint32 groupId)
 }
 
 template <typename C>
-inline void ComponentData<C>::removeScene(Uint16 sceneId)
+inline void ComponentData<C>::cleanup(Uint16 sceneId)
 {
+	if (sceneId >= m_data.size() || !m_data[sceneId].size()) return;
+
+	// Reset scene data
 	m_data[sceneId] = Data();
+}
+
+///////////////////////////////////////////////////////////
+
+template <typename C>
+inline void ComponentCleanup::registerType()
+{
+	Uint32 typeId = TypeInfo::id<C>();
+
+	// Set the cleanup function
+	if (m_cleanupFuncs.find(typeId) == m_cleanupFuncs.end())
+		m_cleanupFuncs[typeId] = ComponentData<C>::cleanup;
 }
 
 ///////////////////////////////////////////////////////////

@@ -22,6 +22,8 @@ class Scene;
 namespace priv
 {
 
+///////////////////////////////////////////////////////////
+
 template <typename C>
 class ComponentData
 {
@@ -36,13 +38,29 @@ public:
 
 	static bool hasGroup(Uint16 sceneId, Uint32 groupId);
 
-	static void removeScene(Uint16 sceneId);
+	static void cleanup(Uint16 sceneId);
 
 private:
 	typedef HashMap<Uint32, std::vector<C>> Data;
 
 	static std::vector<Data> m_data;
 };
+
+///////////////////////////////////////////////////////////
+
+class ComponentCleanup
+{
+public:
+	template <typename C>
+	static void registerType();
+
+	static void cleanup(Uint16 sceneId);
+
+private:
+	static HashMap<Uint32, std::function<void(Uint16)>> m_cleanupFuncs;
+};
+
+///////////////////////////////////////////////////////////
 
 class EntityGroup
 {
