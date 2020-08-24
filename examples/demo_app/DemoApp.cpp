@@ -9,34 +9,36 @@
 
 using namespace poly;
 
+struct MsgEvent
+{
+    std::string m_message;
+};
+
+void listener1(const MsgEvent& event)
+{
+    std::cout << "Listener 1: " << event.m_message << '\n';
+}
+
 
 int main()
 {
     Scene scene;
 
-    Handle l1 = scene.addListener<int>(
-        [](const int& event)
+    // Add an event listener (std::function)
+    Handle listener = scene.addListener<MsgEvent>(
+        [](const MsgEvent& event)
         {
-            std::cout << "New Event: " << event << '\n';
+            std::cout << "New message: " << event.m_message << '\n';
         }
     );
 
-    Handle l2 = scene.addListener<int>(
-        [](const int& event)
-        {
-            std::cout << "I detect new event\n";
-        }
-    );
+    scene.addListener<MsgEvent>(listener1);
 
-    scene.sendEvent(3);
-    scene.sendEvent(1);
-    scene.sendEvent(4);
+    // Send an event
+    scene.sendEvent(MsgEvent{ "Hello World!" });
 
-    scene.removeListener<int>(l1);
-
-    scene.sendEvent(3);
-    scene.sendEvent(1);
-    scene.sendEvent(4);
+    // Remove the listener
+    scene.removeListener<MsgEvent>(listener);
 
     return 0;
 }
