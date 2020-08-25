@@ -62,7 +62,6 @@ unsigned int MurmurHash2(const void* key, int len, unsigned int seed)
 
 ///////////////////////////////////////////////////////////
 
-Uint32 TypeInfo::typeCounter = 0;
 HashMap<Uint32, TypeInfo> TypeInfo::idToInfo;
 
 const TypeInfo& TypeInfo::get(Uint32 id)
