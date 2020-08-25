@@ -3,7 +3,7 @@
 
 #include <poly/Core/DataTypes.h>
 
-#include <unordered_map>
+#include <string>
 
 namespace poly
 {
@@ -16,26 +16,12 @@ struct TypeInfo
 {
 public:
 	///////////////////////////////////////////////////////////
-	/// \brief Add information for a data type, including its name
-	///
-	/// This will record data for the data type used in the template
-	/// parameter. The data is stored and can be accessed later
-	/// using one of the getInfo() functions.
-	///
-	/// \param name The name of the variable type
-	///
-	/// \see getInfo
-	///
-	///////////////////////////////////////////////////////////
-	template <typename T> static void addInfo(const char* name);
-
-	///////////////////////////////////////////////////////////
 	/// \brief Get the unique numerical ID of the variable type
 	///
 	/// \return The numerical ID of the type specified in the template parameter
 	///
 	///////////////////////////////////////////////////////////
-	template <typename T> static Uint32 id();
+	template <typename T> static Uint32 getId();
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the type info struct of the specified type
@@ -45,7 +31,7 @@ public:
 	/// \see addInfo
 	///
 	///////////////////////////////////////////////////////////
-	template <typename T> static const TypeInfo& getInfo();
+	template <typename T> static const TypeInfo& get();
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the type info struct of the specified type ID
@@ -57,12 +43,13 @@ public:
 	/// \see addInfo
 	///
 	///////////////////////////////////////////////////////////
-	static const TypeInfo& getInfo(Uint32 typeId);
+	static const TypeInfo& get(Uint32 typeId);
 
 	Uint32 m_id;			//!< The numerical ID of the variable type
 	Uint32 m_size;			//!< The size of the type in bytes
 	Uint32 m_align;			//!< The alignment of the type in bytes
-	const char* m_name;		//!< The name of the variable type (manually set by the user)
+	Uint32 m_hash;			//!< The hash value of the type's name (consistent)
+	std::string m_name;		//!< The name of the variable type
 
 	bool m_isPod;			//!< True if the type is POD (Plain old data)
 	bool m_isLiteral;		//!< True if the type is a literal type

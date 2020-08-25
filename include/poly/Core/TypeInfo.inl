@@ -3,40 +3,50 @@
 namespace poly
 {
 
-///////////////////////////////////////////////////////////
-
-template <typename T>
-inline void TypeInfo::addInfo(const char* name)
+namespace priv
 {
-	// Create info struct
-	TypeInfo info;
-	info.m_id = id<T>();
-	info.m_size = sizeof(T);
-	info.m_align = alignof(T);
-	info.m_name = name;
 
-	info.m_isPod = std::is_pod<T>::value;
-	info.m_isLiteral = std::is_literal_type<T>::value;
-	info.m_isAbstract = std::is_abstract<T>::value;
-	info.m_isPolymorphic = std::is_polymorphic<T>::value;
+// Code snippet from murmurhash: https://sites.google.com/site/murmurhash/
+unsigned int MurmurHash2(const void* key, int len, unsigned int seed);
 
-	// Add to map
-	idToInfo[info.m_id] = info;
-}
-
-template <typename T>
-inline Uint32 TypeInfo::id()
-{
-	static Uint32 id = ++typeCounter;
-	return id;
 }
 
 ///////////////////////////////////////////////////////////
 
 template <typename T>
-inline const TypeInfo& TypeInfo::getInfo()
+inline Uint32 TypeInfo::getId()
 {
-	return idToInfo[id<T>()];
+	static Uint32 typeId = [&]()
+	{
+		// Generate id
+		Uint32 id = ++typeCounter;
+
+		// Create info struct
+		TypeInfo info;
+		info.m_id = id;
+		info.m_size = sizeof(T);
+		info.m_align = alignof(T);
+		info.m_name = typeid(T).name();
+		info.m_hash = priv::MurmurHash2(info.m_name.c_str(), info.m_name.size(), 0x64F621AEu);
+
+		info.m_isPod = std::is_pod<T>::value;
+		info.m_isLiteral = std::is_literal_type<T>::value;
+		info.m_isAbstract = std::is_abstract<T>::value;
+		info.m_isPolymorphic = std::is_polymorphic<T>::value;
+
+		// Add to map
+		idToInfo[id] = info;
+
+		return id;
+	}();
+
+	return typeId;
+}
+
+template <typename T>
+inline const TypeInfo& TypeInfo::get()
+{
+	return idToInfo[getId<T>()];
 }
 
 ///////////////////////////////////////////////////////////

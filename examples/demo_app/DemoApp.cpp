@@ -40,6 +40,8 @@ int main()
     // Remove the listener
     scene.removeListener<MsgEvent>(listener);
 
+    std::cout << TypeInfo::get<Scene>().m_hash << '\n';
+
     return 0;
 }
 

@@ -18,7 +18,7 @@ inline Uint32 generateGroupId()
 {
 	// Create type set
 	HashSet<Uint32> types;
-	PARAM_EXPAND(types.insert(TypeInfo::id<Cs>()));
+	PARAM_EXPAND(types.insert(TypeInfo::getId<Cs>()));
 
 	// Generate hash
 	std::hash<Uint32> hasher;
