@@ -20,6 +20,13 @@ public:
 	Window();
 	~Window();
 
+#ifndef DOXYGEN_SKIP
+	Window(const Window&) = delete;
+	Window& operator=(const Window&) = delete;
+	Window(Window&&) = default;
+	Window& operator=(Window&&) = default;
+#endif
+
 	bool create(Uint32 w, Uint32 h, const std::string& title, bool fullscreen = false);
 
 	bool isOpen() const;
@@ -38,10 +45,11 @@ public:
 
 	Vector2u getResolution() const;
 
-	std::string getTitle() const;
+	const std::string& getTitle() const;
 
 private:
 	GLFWwindow* m_window;
+	std::string m_title;
 
 	static Uint32 numWindows;
 };

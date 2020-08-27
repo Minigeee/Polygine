@@ -21,7 +21,13 @@ int main()
     Window window;
     window.create(1280, 720, "Demo App");
 
-    sleep(5.0f);
+    while (window.isOpen())
+    {
+        window.pollEvents();
+        window.display();
+    }
+
+    window.close();
 
     return 0;
 }
