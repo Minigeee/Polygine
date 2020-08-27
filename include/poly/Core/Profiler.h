@@ -5,6 +5,7 @@
 #include <poly/Core/DataTypes.h>
 #include <poly/Core/Macros.h>
 
+#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -182,7 +183,8 @@ public:
 	static const ProfilerData& getData(const std::string& func, const std::string& label = "");
 
 private:
-	static std::unordered_map<std::string, ProfilerData> m_data; //!< Map used to store the data
+	static HashMap<std::string, ProfilerData> m_data; //!< Map used to store the data
+	static std::mutex m_mutex;									 //!< Mutex to protect access to profiler data
 };
 
 #ifdef ENABLE_PROFILING

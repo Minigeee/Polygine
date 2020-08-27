@@ -1,6 +1,7 @@
 #ifndef POLY_LOGGER_H
 #define POLY_LOGGER_H
 
+#include <poly/Core/Macros.h>
 #include <poly/Core/Scheduler.h>
 
 #include <fstream>
@@ -83,9 +84,10 @@ public:
 	///
 	/// \param type The message #Type
 	/// \param msg The message to log
+	/// \param loc The location string indicating file name and line
 	///
 	///////////////////////////////////////////////////////////
-	static void log(MsgType type, const std::string& msg);
+	static void log(MsgType type, const std::string& msg, const std::string& loc = "");
 
 	///////////////////////////////////////////////////////////
 	/// \brief Assign the logger a scheduler to use for asynchronous logging
@@ -136,6 +138,7 @@ private:
 	{
 		MsgType m_type;
 		std::string m_msg;
+		std::string m_loc;
 		std::thread::id m_threadId;
 	};
 
@@ -149,14 +152,14 @@ private:
 	/// \brief The function that does the synchronous logging
 	///
 	///////////////////////////////////////////////////////////
-	static void logMsg(MsgType type, const std::string& msg, std::thread::id threadId);
+	static void logMsg(MsgType type, const std::string& msg, std::thread::id threadId, const std::string& loc = "");
 
 
 	static std::ofstream m_file;			//!< The file stream to write the log to
 
 	static Scheduler* m_scheduler;			//!< Scheduler for asynchronous logging
 	static Scheduler::Priority m_priority;	//!< Priority level to give logging tasks
-	static std::unordered_map<std::thread::id, std::string> m_threadNames;	//!< Map of thread IDs to names for custom thread names
+	static HashMap<std::thread::id, std::string> m_threadNames;	//!< Map of thread IDs to names for custom thread names
 	static std::queue<LogMsg> m_msgQueue;	//!< The message queue used for asynchronous messages
 
 	static bool m_shouldFlush[5];			//!< Array that determines which message types should flush output
@@ -164,10 +167,11 @@ private:
 	static std::mutex m_mutex;				//!< Mutex to protect log outputs
 	static std::mutex m_threadMutex;		//!< Mutex to protect the thread names map
 	static std::mutex m_queueMutex;			//!< Mutex to protect the log queue
+	static std::atomic<bool> m_taskExists;	//!< Flag used to ensure only 1 logging thread exists at a time
 };
 
 ///////////////////////////////////////////////////////////
-/// \brief Log an \link MsgType::Info \endlink message
+/// \brief Log a \link MsgType::Info \endlink message
 ///
 /// Messages of this type show up in white in the console.
 /// If a scheduler is provided, then messages logged with
@@ -179,10 +183,14 @@ private:
 /// \param msg The message to log (the formatting string)
 ///
 ///////////////////////////////////////////////////////////
+#ifndef NDEBUG
+#define LOG(msg, ...) poly::Logger::log(poly::Logger::Info, poly::priv::format(msg, __VA_ARGS__), std::string(__FILE__) + ':' + std::to_string(__LINE__))
+#else
 #define LOG(msg, ...) poly::Logger::log(poly::Logger::Info, poly::priv::format(msg, __VA_ARGS__))
+#endif
 
 ///////////////////////////////////////////////////////////
-/// \brief Log an \link MsgType::Warning \endlink message
+/// \brief Log a \link MsgType::Warning \endlink message
 ///
 /// Messages of this type show up in yellow in the console.
 /// If a scheduler is provided, then messages logged with
@@ -194,10 +202,14 @@ private:
 /// \param msg The message to log (the formatting string)
 ///
 ///////////////////////////////////////////////////////////
+#ifndef NDEBUG
+#define LOG_WARNING(msg, ...) poly::Logger::log(poly::Logger::Warning, poly::priv::format(msg, __VA_ARGS__), std::string(__FILE__) + ':' + std::to_string(__LINE__))
+#else
 #define LOG_WARNING(msg, ...) poly::Logger::log(poly::Logger::Warning, poly::priv::format(msg, __VA_ARGS__))
+#endif
 
 ///////////////////////////////////////////////////////////
-/// \brief Log an \link MsgType::Error \endlink message
+/// \brief Log a \link MsgType::Error \endlink message
 ///
 /// Messages of this type show up in light red in the console.
 /// These messages will always be synchronous, even if a
@@ -210,10 +222,14 @@ private:
 /// \param msg The message to log (the formatting string)
 ///
 ///////////////////////////////////////////////////////////
+#ifndef NDEBUG
+#define LOG_ERROR(msg, ...) poly::Logger::log(poly::Logger::Error, poly::priv::format(msg, __VA_ARGS__), std::string(__FILE__) + ':' + std::to_string(__LINE__))
+#else
 #define LOG_ERROR(msg, ...) poly::Logger::log(poly::Logger::Error, poly::priv::format(msg, __VA_ARGS__))
+#endif
 
 ///////////////////////////////////////////////////////////
-/// \brief Log an \link MsgType::Fatal \endlink message
+/// \brief Log a \link Logger::MsgType::Fatal \endlink message
 ///
 /// Messages of this type show up in red in the console.
 /// These messages will always be synchronous, even if a
@@ -226,10 +242,14 @@ private:
 /// \param msg The message to log (the formatting string)
 ///
 ///////////////////////////////////////////////////////////
+#ifndef NDEBUG
+#define LOG_FATAL(msg, ...) poly::Logger::log(poly::Logger::Fatal, poly::priv::format(msg, __VA_ARGS__), std::string(__FILE__) + ':' + std::to_string(__LINE__))
+#else
 #define LOG_FATAL(msg, ...) poly::Logger::log(poly::Logger::Fatal, poly::priv::format(msg, __VA_ARGS__))
+#endif
 
 ///////////////////////////////////////////////////////////
-/// \brief Log an \link MsgType::Debug \endlink message
+/// \brief Log a \link MsgType::Debug \endlink message
 ///
 /// Messages of this type show up in green in the console.
 /// If a scheduler is provided, then messages logged with
@@ -242,11 +262,35 @@ private:
 /// after the formatting string will be used to create the string.
 ///
 /// \param msg The message to log (the formatting string)
+///
 ///////////////////////////////////////////////////////////
 #ifndef NDEBUG
-#define LOG_DEBUG(msg, ...) poly::Logger::log(poly::Logger::Debug, poly::priv::format(msg, __VA_ARGS__))
+#define LOG_DEBUG(msg, ...) poly::Logger::log(poly::Logger::Debug, poly::priv::format(msg, __VA_ARGS__), std::string(__FILE__) + ':' + std::to_string(__LINE__))
 #else
 #define LOG_DEBUG(msg, ...)
+#endif
+
+///////////////////////////////////////////////////////////
+/// \brief Check a condition and log a \link MsgType::Error \endlink message if the condition is false
+///
+/// This macro works in the same wasy as the standard assert(),
+/// but it logs using the logger system instead. Messages
+/// are logged with the \link MsgType::Error \endlink level,
+/// and abort() is called right after the condition fails.
+///
+/// This macro also uses printf style formatting like all
+/// the other logging functions.
+///
+/// This macro is disabled in release mode.
+///
+/// \param cond The condition to check
+/// \param msg The message to log (the formatting string)
+///
+///////////////////////////////////////////////////////////
+#ifndef NDEBUG
+#define ASSERT(cond, msg, ...) if (!(cond)) { LOG_ERROR(msg, __VA_ARGS__); abort(); }
+#else
+#define ASSERT(cond, msg, ...)
 #endif
 
 }
@@ -266,6 +310,7 @@ private:
 /// \li Message types: Info, Warning, Error, Fatal
 /// \li Asynchronous logging
 /// \li Colored console output
+/// \li File name and line number
 ///
 /// In order to log to a file, init() must be called and
 /// passed a file path. To use asynchronous logging,

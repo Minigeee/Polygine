@@ -5,9 +5,6 @@ function(add_example name src)
     # Setup includes and link
     target_include_directories(${name} PRIVATE ../include)
     target_link_libraries(${name} PRIVATE polygine)
-
-    # Install
-    install(TARGETS ${name} DESTINATION ${POLY_INSTALL_DIR}/examples)
 endfunction()
 
 add_example(demo_app "demo_app/DemoApp.cpp")

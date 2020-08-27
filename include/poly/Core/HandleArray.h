@@ -89,6 +89,23 @@ public:
 	Handle add(const T& element);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Add an element to the array and get its handle
+	///
+	/// Elements that are added to the array will be kept in a
+	/// internal contiguous array and are accessed by the returned
+	/// handle. The handle returned will always be valid until the
+	/// element being referenced by the handle is removed.
+	///
+	/// \param element The element to add
+	///
+	/// \return Handle used to access the added element
+	///
+	/// \see remove
+	///
+	///////////////////////////////////////////////////////////
+	Handle add(T&& element);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Remove the element being referenced by the handle
 	///
 	/// When removing an element, the internal array used to store
@@ -155,6 +172,44 @@ public:
 	///////////////////////////////////////////////////////////
 	std::vector<T>& getData();
 
+	///////////////////////////////////////////////////////////
+	/// \brief Get the internal index of a handle
+	///
+	/// This function is not needed in most cases, but it can
+	/// be useful in cases where many arrays depend on one handled
+	/// array to maintain the order of the elements.
+	///
+	/// It basically provides a mapping between a handle and
+	/// its internal corresponding index.
+	///
+	/// \note An index of 0xFFFF will be returned if the handle is invalid
+	///
+	/// \param handle A handle to retrieve an index
+	///
+	/// \return The internal index
+	///
+	///////////////////////////////////////////////////////////
+	Uint16 getIndex(Handle handle) const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the handle corresponding to an internal index
+	///
+	/// This function is not needed in most cases, but it can
+	/// be useful in cases where a handle of an object needs to
+	/// found again.
+	///
+	/// It basically provides a mapping between an internal index
+	/// and its corresponding handle.
+	///
+	/// \note An empty handle will be returned if the index is out of bounds
+	///
+	/// \param index An index to retrieve a handle for
+	///
+	/// \return The corresponding handle
+	///
+	///////////////////////////////////////////////////////////
+	Handle getHandle(Uint16 index) const;
+
 private:
 	std::vector<T> m_data;				//!< Internal data array
 	std::vector<Handle> m_handleToData;	//!< Maps handle index to actual index, also keeps a counter to detect invalid handles
@@ -162,9 +217,9 @@ private:
 	Uint16 m_nextFree;					//!< Index of the next free handle
 };
 
-#include <poly/Core/HandleArray.inl>
-
 }
+
+#include <poly/Core/HandleArray.inl>
 
 #endif
 

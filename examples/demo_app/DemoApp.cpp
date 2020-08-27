@@ -1,47 +1,85 @@
-#include <poly/Core/Clock.h>
-#include <poly/Core/HandleArray.h>
-#include <poly/Core/Logger.h>
 #include <poly/Core/Profiler.h>
-#include <poly/Core/Scheduler.h>
-#include <poly/Core/Sleep.h>
+#include <poly/Core/TypeInfo.h>
+
+#include <poly/Engine/Ecs.h>
+#include <poly/Engine/Scene.h>
+
+#include <iostream>
+#include <math.h>
 
 using namespace poly;
 
+struct MsgEvent
+{
+    std::string m_message;
+};
+
+
 int main()
 {
-    Scheduler scheduler;
-
     Logger::init("game.log");
-    Logger::setScheduler(&scheduler);
-    Logger::setThreadName("Main thread");
 
-    LOG("Starting demo...");
-    
-    LOG("Creating handle arrays...");
+    Scene scene;
 
-    HandleArray<int> arr;
+    // ========================================================
+    // ECS
+    // ========================================================
 
-    for (int i = 0; i < 100; ++i)
-        Handle h = arr.add(i);
+    LOG("Hello World!");
+    LOG_DEBUG("Hello World!");
+    LOG_WARNING("Hello World!");
+    LOG_ERROR("Hello World!");
+    LOG_FATAL("Hello World!");
+
+    // Create 100 entities with (int, float)
+    LOG("Creating 100 entities");
+    std::vector<Entity> entities = scene.createEntities<int, float>(100, 314, 3.14f);
+
+    // Accessing individual components
+    int* iPtr = entities[10].get<int>();                    // By using the Entity object
+    iPtr = scene.getComponent<int>(entities[10].getId());   // or by using id
+
+    // Apply changes using a system
+    scene.system<int, float>(
+        // This system will target entities that contain both integer and float
+        [&](const Entity::Id& id, int& i, float& f)
+        {
+            ++i;
+            f += 1.0f;
+
+            // Queue an entity for removal
+            scene.removeEntity(id);
+        },
+
+        // But exclude booleans
+        ComponentTypeSet::create<bool>()
+    );
+
+    // Remove all queued entities
+    scene.removeQueuedEntities();
 
 
-    LOG("Sleeping for 5 seconds...");
+    // ========================================================
+    // Events
+    // ========================================================
 
-    Clock clock;
-    sleep(Time::fromSeconds(5.0f));
-    Time elapsed = clock.getElapsedTime();
+    TypeInfo::setTypeName<MsgEvent>("MsgEvent");
 
-    LOG("Done sleeping!");
-    LOG_DEBUG("Actually slept for %fs", elapsed.toSeconds());
+    // Add an event listener (std::function)
+    Handle listener = scene.addListener<MsgEvent>(
+        [](const MsgEvent& event)
+        {
+            LOG("MsgEvent: %s", event.m_message.c_str());
+        }
+    );
+
+    // Send an event
+    scene.sendEvent(MsgEvent{ "Hello World!" });
+
+    // Remove the listener
+    scene.removeListener<MsgEvent>(listener);
 
 
-    LOG_WARNING("Now I will force crash!");
-    sleep(2.0f);
-    LOG_ERROR("Something went wrong...");
-    abort();
-
-    // Make sure all tasks are finished before quitting
-    scheduler.finish();
 
     return 0;
 }

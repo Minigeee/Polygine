@@ -46,6 +46,8 @@
 #define FILE_SEPERATOR '/'
 #endif
 
+#define PARAM_EXPAND(expr) { int _temp[] = {0, ((void)(expr), 0)...}; }
+
 ///////////////////////////////////////////////////////////
 
 #endif

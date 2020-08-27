@@ -1,0 +1,9 @@
+include(CMakeFindDependencyMacro)
+
+# Cmake dependencies
+
+set(polygine_INCLUDE_DIR "@POLY_INCLUDE_DIR@")
+set(polygine_INCLUDE_DIRS "${polygine_INCLUDE_DIR}")
+set(polygine_LIBRARY_DIRS "@POLY_LIB_DIR@")
+
+include("${CMAKE_CURRENT_LIST_DIR}/polygine.cmake")

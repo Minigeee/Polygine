@@ -1,6 +1,9 @@
 #ifndef POLY_DATA_TYPES_H
 #define POLY_DATA_TYPES_H
 
+#include <tsl/hopscotch_map.h>
+#include <tsl/hopscotch_set.h>
+
 #include <stdint.h>
 
 namespace poly
@@ -18,6 +21,13 @@ typedef uint32_t	Uint32;
 
 typedef int64_t		Int64;
 typedef uint64_t	Uint64;
+
+// Data structure implementations
+template<class Key, class T>
+using HashMap = tsl::hopscotch_map<Key, T>;
+
+template<class Key>
+using HashSet = tsl::hopscotch_set<Key>;
 
 }
 

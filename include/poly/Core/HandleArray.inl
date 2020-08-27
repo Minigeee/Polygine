@@ -1,3 +1,6 @@
+namespace poly
+{
+
 ///////////////////////////////////////////////////////////
 
 template <typename T>
@@ -23,11 +26,9 @@ inline HandleArray<T>::HandleArray(Uint16 size) :
 template <typename T>
 inline T& HandleArray<T>::operator[](Handle handle)
 {
+	ASSERT(handle.m_index < m_handleToData.size(), "Handle index out of bounds: %d", handle.m_index);
 	Handle entry = m_handleToData[handle.m_index];
-
-	// Make sure the handle is valid
-	if (entry.m_counter != handle.m_counter)
-		LOG_ERROR("Invalid handle: %d", handle.m_index);
+	ASSERT(entry.m_counter == handle.m_counter, "Invalid handle: %d", handle.m_index);
 
 	return m_data[entry.m_index];
 }
@@ -63,8 +64,39 @@ inline Handle HandleArray<T>::add(const T& element)
 }
 
 template <typename T>
+inline Handle HandleArray<T>::add(T&& element)
+{
+	// Resize the arrays if the next free handle is out of bounds
+	if (m_nextFree >= m_handleToData.size())
+	{
+		m_handleToData.push_back(Handle((Uint16)(m_handleToData.size() + 1)));
+		m_dataToHandle.push_back(0);
+	}
+
+	// Add element to data array
+	m_data.push_back(std::move(element));
+
+	// Now generate a handle
+	Handle handle(m_nextFree, m_handleToData[m_nextFree].m_counter);
+
+	// Map handle to actual position using the lookup table
+	// First, update the next free handle
+	m_nextFree = m_handleToData[handle.m_index].m_index;
+
+	// Then point to element position
+	m_handleToData[handle.m_index].m_index = (Uint16)(m_data.size() - 1);
+	// Point position to handle (required info for removal)
+	m_dataToHandle[m_data.size() - 1] = handle.m_index;
+
+	return handle;
+}
+
+template <typename T>
 inline void HandleArray<T>::remove(Handle handle)
 {
+	ASSERT(handle.m_index < m_handleToData.size(), "Handle index out of bounds: %d", handle.m_index);
+	ASSERT(m_handleToData[handle.m_index].m_counter == handle.m_counter, "Invalid handle: %d", handle.m_index);
+
 	Uint16 pos = m_handleToData[handle.m_index].m_index;
 
 	// Swap pop
@@ -129,4 +161,27 @@ inline std::vector<T>& HandleArray<T>::getData()
 	return m_data;
 }
 
+template <typename T>
+inline Uint16 HandleArray<T>::getIndex(Handle handle) const
+{
+	Handle entry = m_handleToData[handle.m_index];
+	ASSERT(entry.m_counter == handle.m_counter, "Invalid handle: %d", handle.m_index);
+
+	return entry.m_index;
+}
+
+template <typename T>
+inline Handle HandleArray<T>::getHandle(Uint16 index) const
+{
+	ASSERT(index < m_data.size(), "Handle index out of bounds: %d", index);
+
+	Uint16 handleIndex = m_dataToHandle[index];
+	Handle entry = m_handleToData[handleIndex];
+
+	// Make sure using a valid counter
+	return Handle(handleIndex, entry.m_counter);
+}
+
 ///////////////////////////////////////////////////////////
+
+}
