@@ -14,6 +14,12 @@ unsigned int MurmurHash2(const void* key, int len, unsigned int seed);
 ///////////////////////////////////////////////////////////
 
 template <typename T>
+inline void TypeInfo::setTypeName(const std::string& name)
+{
+	idToInfo[getId<T>()].m_name = name;
+}
+
+template <typename T>
 inline Uint32 TypeInfo::getId()
 {
 	static Uint32 typeId = [&]()

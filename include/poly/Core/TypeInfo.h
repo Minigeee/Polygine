@@ -16,6 +16,14 @@ struct TypeInfo
 {
 public:
 	///////////////////////////////////////////////////////////
+	/// \brief Assign a custom name to a data type
+	///
+	/// \param name The custom name to assign
+	///
+	///////////////////////////////////////////////////////////
+	template <typename T> static void setTypeName(const std::string& name);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the unique numerical ID of the variable type
 	///
 	/// \return The numerical ID of the type specified in the template parameter
