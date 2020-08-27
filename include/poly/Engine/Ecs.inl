@@ -20,7 +20,7 @@ inline void EntityGroup::setComponentTypes(Uint32 groupId)
 	m_groupId = groupId;
 
 	// Add component types
-	PARAM_EXPAND(m_componentTypes.insert(TypeInfo::id<Cs>()));
+	PARAM_EXPAND(m_componentTypes.insert(TypeInfo::getId<Cs>()));
 
 	// Set remove function
 	m_removeFunc = std::bind(&EntityGroup::removeEntitiesImpl<Cs...>, this, std::placeholders::_1);
@@ -92,7 +92,7 @@ inline std::vector<C>& EntityGroup::getComponentData() const
 template <typename C>
 inline bool EntityGroup::hasComponentType() const
 {
-	return m_componentTypes.find(TypeInfo::id<C>()) != m_componentTypes.end();
+	return m_componentTypes.find(TypeInfo::getId<C>()) != m_componentTypes.end();
 }
 
 ///////////////////////////////////////////////////////////
@@ -176,7 +176,7 @@ inline void ComponentData<C>::cleanup(Uint16 sceneId)
 template <typename C>
 inline void ComponentCleanup::registerType()
 {
-	Uint32 typeId = TypeInfo::id<C>();
+	Uint32 typeId = TypeInfo::getId<C>();
 
 	// Set the cleanup function
 	if (m_cleanupFuncs.find(typeId) == m_cleanupFuncs.end())
@@ -318,27 +318,27 @@ inline void ComponentTypeSet::set()
 	m_set.clear();
 
 	// Insert all type ids
-	PARAM_EXPAND(m_set.insert(TypeInfo::id<Cs>()));
+	PARAM_EXPAND(m_set.insert(TypeInfo::getId<Cs>()));
 }
 
 template <typename C>
 inline void ComponentTypeSet::add()
 {
 	// Insert type id
-	m_set.insert(TypeInfo::id<C>());
+	m_set.insert(TypeInfo::getId<C>());
 }
 
 template <typename C>
 inline void ComponentTypeSet::remove()
 {
 	// Remove type id
-	m_set.erase(TypeInfo::id<C>());
+	m_set.erase(TypeInfo::getId<C>());
 }
 
 template <typename C>
 inline bool ComponentTypeSet::has() const
 {
-	return m_set.find(TypeInfo::id<C>()) != m_set.end();
+	return m_set.find(TypeInfo::getId<C>()) != m_set.end();
 }
 
 }

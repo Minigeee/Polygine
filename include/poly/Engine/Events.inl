@@ -75,7 +75,7 @@ inline void EventSystem<E>::cleanup(Uint16 sceneId)
 template <typename E>
 inline void EventCleanup::registerType()
 {
-	Uint32 typeId = TypeInfo::id<E>();
+	Uint32 typeId = TypeInfo::getId<E>();
 
 	// Set the cleanup function
 	if (m_cleanupFuncs.find(typeId) == m_cleanupFuncs.end())

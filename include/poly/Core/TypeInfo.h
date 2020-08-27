@@ -3,7 +3,7 @@
 
 #include <poly/Core/DataTypes.h>
 
-#include <unordered_map>
+#include <string>
 
 namespace poly
 {
@@ -16,18 +16,12 @@ struct TypeInfo
 {
 public:
 	///////////////////////////////////////////////////////////
-	/// \brief Add information for a data type, including its name
+	/// \brief Assign a custom name to a data type
 	///
-	/// This will record data for the data type used in the template
-	/// parameter. The data is stored and can be accessed later
-	/// using one of the getInfo() functions.
-	///
-	/// \param name The name of the variable type
-	///
-	/// \see getInfo
+	/// \param name The custom name to assign
 	///
 	///////////////////////////////////////////////////////////
-	template <typename T> static void addInfo(const char* name);
+	template <typename T> static void setTypeName(const std::string& name);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the unique numerical ID of the variable type
@@ -35,7 +29,7 @@ public:
 	/// \return The numerical ID of the type specified in the template parameter
 	///
 	///////////////////////////////////////////////////////////
-	template <typename T> static Uint32 id();
+	template <typename T> static Uint32 getId();
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the type info struct of the specified type
@@ -45,7 +39,7 @@ public:
 	/// \see addInfo
 	///
 	///////////////////////////////////////////////////////////
-	template <typename T> static const TypeInfo& getInfo();
+	template <typename T> static const TypeInfo& get();
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the type info struct of the specified type ID
@@ -57,12 +51,12 @@ public:
 	/// \see addInfo
 	///
 	///////////////////////////////////////////////////////////
-	static const TypeInfo& getInfo(Uint32 typeId);
+	static const TypeInfo& get(Uint32 typeId);
 
 	Uint32 m_id;			//!< The numerical ID of the variable type
 	Uint32 m_size;			//!< The size of the type in bytes
 	Uint32 m_align;			//!< The alignment of the type in bytes
-	const char* m_name;		//!< The name of the variable type (manually set by the user)
+	std::string m_name;		//!< The name of the variable type
 
 	bool m_isPod;			//!< True if the type is POD (Plain old data)
 	bool m_isLiteral;		//!< True if the type is a literal type
@@ -70,7 +64,6 @@ public:
 	bool m_isPolymorphic;	//!< True if the type is a polymorphic class
 
 private:
-	static Uint32 typeCounter;						//!< Used to assign type IDs
 	static HashMap<Uint32, TypeInfo> idToInfo;		//!< Maps type ID to type info struct
 };
 
@@ -102,7 +95,7 @@ private:
 /// info for a specific type, the static function init<T>() must
 /// be called, where the template parameter T is the type
 /// you wish to retrieve type info for. Afterwards,
-/// using the static function getInfo<T>() will return a TypeInfo
+/// using the static function get<T>() will return a TypeInfo
 /// struct containing all the correct data.
 ///
 /// Usage example:
@@ -120,15 +113,15 @@ private:
 /// TypeInfo::init<B>("B");
 /// TypeInfo::init<C>("C");
 ///
-/// TypeInfo::getInfo<int>().m_name;		// "int"
-/// TypeInfo::getInfo<int>().m_size;		// 4
-/// TypeInfo::getInfo<float>().m_align;		// 4
-/// TypeInfo::getInfo<int>().m_isPod;		// true
-/// TypeInfo::getInfo<A>().m_isPod;			// true
-/// TypeInfo::getInfo<B>().m_isPod;			// false
-/// TypeInfo::getInfo<B>().m_isAbstract;	// true
-/// TypeInfo::getInfo<C>().m_isAbstract;	// true
-/// TypeInfo::getInfo<C>().m_isPolymorphic; // true
+/// TypeInfo::get<int>().m_name;		// "int"
+/// TypeInfo::get<int>().m_size;		// 4
+/// TypeInfo::get<float>().m_align;		// 4
+/// TypeInfo::get<int>().m_isPod;		// true
+/// TypeInfo::get<A>().m_isPod;			// true
+/// TypeInfo::get<B>().m_isPod;			// false
+/// TypeInfo::get<B>().m_isAbstract;	// true
+/// TypeInfo::get<C>().m_isAbstract;	// true
+/// TypeInfo::get<C>().m_isPolymorphic; // true
 ///
 /// \endcode
 ///

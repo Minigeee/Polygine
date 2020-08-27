@@ -155,11 +155,11 @@ void Logger::logMsg(Logger::MsgType type, const std::string& msg, std::thread::i
 
 	// Set console color
 	if (type == Warning)
-		SetConsoleTextAttribute(hConsole, 6);
+		SetConsoleTextAttribute(hConsole, 14);
 	else if (type == Error)
-		SetConsoleTextAttribute(hConsole, 12);
+		SetConsoleTextAttribute(hConsole, 13);
 	else if (type == Fatal)
-		SetConsoleTextAttribute(hConsole, 4);
+		SetConsoleTextAttribute(hConsole, 12);
 	else if (type == Debug)
 		SetConsoleTextAttribute(hConsole, 10);
 
