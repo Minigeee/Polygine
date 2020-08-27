@@ -4,17 +4,71 @@
 
 #include <glad/glad.h>
 
+
 namespace poly
 {
 
-Uint32 Window::numWindows = 0;
+///////////////////////////////////////////////////////////
+
+void onKeyEvent(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+	Window* win = (Window*)glfwGetWindowUserPointer(window);
+	win->sendEvent(E_KeyEvent((Keyboard)key, (InputAction)action));
+}
+
+void onMouseButton(GLFWwindow* window, int button, int action, int mods)
+{
+	Window* win = (Window*)glfwGetWindowUserPointer(window);
+	win->sendEvent(E_MouseButton((Mouse)button, (InputAction)action));
+}
+
+void onMouseMove(GLFWwindow* window, double x, double y)
+{
+	Window* win = (Window*)glfwGetWindowUserPointer(window);
+	win->sendEvent(E_MouseMove((float)x, (float)y));
+}
+
+void onMouseScroll(GLFWwindow* window, double dx, double dy)
+{
+	Window* win = (Window*)glfwGetWindowUserPointer(window);
+	win->sendEvent(E_MouseScroll((float)dx, (float)dy));
+}
 
 ///////////////////////////////////////////////////////////
+
+Uint32 Window::numWindows = 0;
 
 Window::Window() :
 	m_window	(0)
 {
 
+}
+
+Window::Window(Window&& other) :
+	m_window	(other.m_window),
+	m_title		(std::move(other.m_title))
+{
+	other.m_window = 0;
+
+	// Update window pointer
+	glfwSetWindowUserPointer(m_window, this);
+
+}
+
+Window& Window::operator=(Window&& other)
+{
+	if (&other != this)
+	{
+		m_window = other.m_window;
+		m_title = std::move(other.m_title);
+
+		other.m_window = 0;
+
+		// Update window pointer
+		glfwSetWindowUserPointer(m_window, this);
+	}
+
+	return *this;
 }
 
 Window::~Window()
@@ -76,6 +130,13 @@ bool Window::create(Uint32 w, Uint32 h, const std::string& title, bool fullscree
 	// Update member variables
 	m_title = title;
 	++numWindows;
+
+	// Setup input callbacks
+	glfwSetWindowUserPointer(m_window, this);
+	glfwSetKeyCallback(m_window, onKeyEvent);
+	glfwSetMouseButtonCallback(m_window, onMouseButton);
+	glfwSetCursorPosCallback(m_window, onMouseMove);
+	glfwSetScrollCallback(m_window, onMouseScroll);
 
 	return true;
 }

@@ -3,6 +3,9 @@
 
 #include <poly/Core/DataTypes.h>
 
+#include <poly/Engine/Events.h>
+#include <poly/Engine/Input.h>
+
 #include <poly/Math/Vector2.h>
 
 // Tell GLFW to not include opengl
@@ -14,7 +17,8 @@
 namespace poly
 {
 
-class Window
+class Window :
+	public EventSystem<E_KeyEvent, E_MouseButton, E_MouseMove, E_MouseScroll>
 {
 public:
 	Window();
@@ -23,8 +27,8 @@ public:
 #ifndef DOXYGEN_SKIP
 	Window(const Window&) = delete;
 	Window& operator=(const Window&) = delete;
-	Window(Window&&) = default;
-	Window& operator=(Window&&) = default;
+	Window(Window&&);
+	Window& operator=(Window&&);
 #endif
 
 	bool create(Uint32 w, Uint32 h, const std::string& title, bool fullscreen = false);

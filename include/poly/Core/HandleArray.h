@@ -173,6 +173,18 @@ public:
 	std::vector<T>& getData();
 
 	///////////////////////////////////////////////////////////
+	/// \brief Get the contiguous internal array
+	///
+	/// Data in this array is always kept contiguous. However,
+	/// its contents are not guarenteed to be in the same order
+	/// they were added to the array.
+	///
+	/// \return The internal array used to store the elements
+	///
+	///////////////////////////////////////////////////////////
+	const std::vector<T>& getData() const;
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the internal index of a handle
 	///
 	/// This function is not needed in most cases, but it can
