@@ -4,48 +4,36 @@
 #include <poly/Graphics/Window.h>
 
 #include <iostream>
-#include <math.h>
 
 using namespace poly;
 
 
 int main()
 {
-    Logger::init("game.log");
-
     Window window;
-    window.create(1280, 720, "Demo App");
 
+    // Create a new window
+    window.create(1280, 720, "My Game");
+
+    // Add an event listener
     window.addListener<E_KeyEvent>(
         [&](const E_KeyEvent& e)
         {
+            // This will be run every time a key event occurs
             if (e.m_action == InputAction::Press)
-                LOG("Key press: %d", e.m_key);
+                std::cout << "Key pressed: " << (int)e.m_key << '\n';
         }
     );
 
-    window.addListener<E_MouseButton>(
-        [&](const E_MouseButton& e)
-        {
-            if (e.m_action == InputAction::Press)
-                LOG("Button press: %d", e.m_button);
-        }
-    );
-
-    window.addListener<E_MouseScroll>(
-        [&](const E_MouseScroll& e)
-        {
-            LOG("Mouse scroll: %f", e.m_dy);
-        }
-    );
-
+    // Game loop
     while (window.isOpen())
     {
-        window.pollEvents();
+        // Poll events for all existing windows
+        Window::pollEvents();
+
+        // Display (swap buffers)
         window.display();
     }
-
-    window.close();
 
     return 0;
 }

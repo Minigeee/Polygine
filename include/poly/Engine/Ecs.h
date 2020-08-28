@@ -310,6 +310,43 @@ private:
 #endif
 
 ///////////////////////////////////////////////////////////
+/// \class poly::ComponentArray
+/// \ingroup Engine
+///
+/// A ComponentArray stores an array of components from several
+/// different entity groups. It works by storing pointers to
+/// each different group of entities, and by storing the number
+/// of components in each group.
+///
+/// It is not recommended to use this class directly, if component
+/// iteration is needed, use Scene::system() instead.
+///
+/// Usage example:
+/// \code
+///
+/// using namespace poly;
+///
+/// Scene scene;
+///
+/// // Create some entities
+/// scene.createEntity<int, float>(3, 3.14f);
+/// scene.createEntity<int, bool>(3, false);
+///
+/// // Get an int component array
+/// Tuple<ComponentArray<Entity::Id>, ComponentArray<int>> data = scene.getComponentData<int>();
+///
+/// // This array now contains the integers from both <int, float> and <int, bool>
+/// ComponentArray<int>& ints = data.get<ComponentArray<int>>();
+///
+/// // Iterate
+/// for (auto it = ints.getIterator(); !it.atEnd(); ++it)
+///		++it.get();
+///
+/// \endcode
+///
+///////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////
 /// \class poly::ComponentTypeSet
 /// \ingroup Engine
 ///

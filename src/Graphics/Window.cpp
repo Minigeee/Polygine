@@ -10,6 +10,13 @@ namespace poly
 
 ///////////////////////////////////////////////////////////
 
+void onWindowClose(GLFWwindow* window)
+{
+	Window* win = (Window*)glfwGetWindowUserPointer(window);
+	// Close the window
+	win->close();
+}
+
 void onKeyEvent(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
 	Window* win = (Window*)glfwGetWindowUserPointer(window);
@@ -42,6 +49,12 @@ Window::Window() :
 	m_window	(0)
 {
 
+}
+
+Window::Window(Uint32 w, Uint32 h, const std::string& title, bool fullscreen) :
+	m_window	(0)
+{
+	create(w, h, title, fullscreen);
 }
 
 Window::Window(Window&& other) :
@@ -133,6 +146,7 @@ bool Window::create(Uint32 w, Uint32 h, const std::string& title, bool fullscree
 
 	// Setup input callbacks
 	glfwSetWindowUserPointer(m_window, this);
+	glfwSetWindowCloseCallback(m_window, onWindowClose);
 	glfwSetKeyCallback(m_window, onKeyEvent);
 	glfwSetMouseButtonCallback(m_window, onMouseButton);
 	glfwSetCursorPosCallback(m_window, onMouseMove);
@@ -146,7 +160,7 @@ bool Window::create(Uint32 w, Uint32 h, const std::string& title, bool fullscree
 bool Window::isOpen() const
 {
 	// The pointer exists, the window is open
-	return (bool)m_window && !glfwWindowShouldClose(m_window);
+	return (bool)m_window;
 }
 
 void Window::close()
@@ -168,6 +182,9 @@ void Window::pollEvents()
 
 void Window::display()
 {
+	// Check if window is open
+	if (!m_window) return;
+
 	glfwSwapBuffers(m_window);
 }
 
@@ -175,16 +192,25 @@ void Window::display()
 
 void Window::setResolution(Uint32 w, Uint32 h)
 {
+	// Check if window is open
+	if (!m_window) return;
+
 	glfwSetWindowSize(m_window, w, h);
 }
 
 void Window::setResolution(const Vector2u& resolution)
 {
+	// Check if window is open
+	if (!m_window) return;
+
 	glfwSetWindowSize(m_window, resolution.x, resolution.y);
 }
 
 void Window::setTitle(const std::string& title)
 {
+	// Check if window is open
+	if (!m_window) return;
+
 	m_title = title;
 	glfwSetWindowTitle(m_window, title.c_str());
 }
@@ -193,6 +219,9 @@ void Window::setTitle(const std::string& title)
 
 Vector2u Window::getResolution() const
 {
+	// Check if window is open
+	if (!m_window) return Vector2u(0);
+
 	int w, h;
 	glfwGetWindowSize(m_window, &w, &h);
 	return Vector2u(w, h);
