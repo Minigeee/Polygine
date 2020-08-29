@@ -24,7 +24,7 @@ function(add_dependency name target src)
     target_link_libraries(polygine PUBLIC ${target})
 
     # Export
-    install(TARGETS ${target} EXPORT ${target})
+    install(TARGETS ${target} EXPORT polygine)
 endfunction()
 
 function(add_dependency_headers name src include_dir)
@@ -50,3 +50,12 @@ endfunction()
 
 # Cmake dependencies
 add_dependency_headers(tsl-hopscotch-map hopscotch-map tsl)
+
+add_dependency(glfw glfw glfw)
+
+# Glad
+target_include_directories(polygine PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extlibs/glad/include>
+    $<INSTALL_INTERFACE:include>)
+target_sources(polygine PRIVATE "${PROJECT_SOURCE_DIR}/extlibs/glad/src/glad.c")
+install(DIRECTORY "${PROJECT_SOURCE_DIR}/extlibs/glad/include/glad" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")

@@ -20,7 +20,7 @@ Scene::~Scene()
 	}
 
 	// Clean up event systems
-	priv::EventCleanup::cleanup(m_handle.m_index);
+	priv::SceneEventsCleanup::cleanup(m_handle.m_index);
 
 	// Remove from list to free up id
 	idArray.remove(m_handle);
