@@ -4,7 +4,8 @@ set(INC_DIR ${PROJECT_SOURCE_DIR}/include/poly)
 # Add sources
 file(GLOB AUDIO_SRC
     ${SRC_DIR}/Audio/*.cpp
-    ${INC_DIR}/Audio/*.h)
+    ${INC_DIR}/Audio/*.h
+    ${INC_DIR}/Audio/*.inl)
 file(GLOB CORE_SRC
     ${SRC_DIR}/Core/*.cpp
     ${INC_DIR}/Core/*.h
@@ -15,17 +16,20 @@ file(GLOB ENGINE_SRC
     ${INC_DIR}/Engine/*.inl)
 file(GLOB GRAPHICS_SRC
     ${SRC_DIR}/Graphics/*.cpp
-    ${INC_DIR}/Graphics/*.h)
+    ${INC_DIR}/Graphics/*.h
+    ${INC_DIR}/Graphics/*.inl)
 file(GLOB MATH_SRC
     ${SRC_DIR}/Math/*.cpp
     ${INC_DIR}/Math/*.h
     ${INC_DIR}/Math/*.inl)
 file(GLOB NETWORK_SRC
     ${SRC_DIR}/Network/*.cpp
-    ${INC_DIR}/Network/*.h)
+    ${INC_DIR}/Network/*.h
+    ${INC_DIR}/Network/*.inl)
 file(GLOB PHYSICS_SRC
     ${SRC_DIR}/Physics/*.cpp
-    ${INC_DIR}/Physics/*.h)
+    ${INC_DIR}/Physics/*.h
+    ${INC_DIR}/Physics/*.inl)
 
 source_group("Audio" FILES ${AUDIO_SRC})
 source_group("Core" FILES ${CORE_SRC})

@@ -1,6 +1,7 @@
 #include <poly/Core/Logger.h>
 #include <poly/Core/Sleep.h>
 
+#include <poly/Graphics/VertexBuffer.h>
 #include <poly/Graphics/Window.h>
 
 #include <iostream>
@@ -24,6 +25,12 @@ int main()
                 std::cout << "Key pressed: " << (int)e.m_key << '\n';
         }
     );
+
+    std::vector<float> vertices = { 1.0f, 2.0f, 3.0f };
+
+    VertexBuffer buffer;
+    buffer.bind();
+    buffer.create(vertices);
 
     // Game loop
     while (window.isOpen())
