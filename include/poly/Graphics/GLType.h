@@ -13,7 +13,8 @@ enum class GLType
 	Uint16	= 0x1403,
 	Int32	= 0x1404,
 	Uint32	= 0x1405,
-	Float	= 0x1406
+	Float	= 0x1406,
+	Double	= 0x140A
 };
 
 }

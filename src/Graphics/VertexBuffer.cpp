@@ -113,6 +113,14 @@ VertexBuffer& VertexBuffer::operator=(const VertexBuffer& other)
 
 
 ///////////////////////////////////////////////////////////
+void VertexBuffer::bind()
+{
+	// Bind to current target
+	bind(m_target);
+}
+
+
+///////////////////////////////////////////////////////////
 void VertexBuffer::bind(BufferTarget target)
 {
 	// Create a buffer if needed
@@ -188,7 +196,8 @@ void VertexBuffer::update(const VertexBuffer& buffer, Uint32 offset)
 ///////////////////////////////////////////////////////////
 void VertexBuffer::bufferData(const void* data, Uint32 size, BufferUsage usage)
 {
-	ASSERT(currentBound[(Uint32)m_target] == m_id, "Vertex buffer is not bound: %d", m_id);
+	// Ensure buffer is bound
+	bind();
 
 	// Buffer data
 	glCheck(glBufferData(targetToGLEnum(m_target), size, data, (GLenum)usage));
@@ -202,10 +211,18 @@ void VertexBuffer::bufferData(const void* data, Uint32 size, BufferUsage usage)
 ///////////////////////////////////////////////////////////
 void VertexBuffer::bufferSubData(const void* data, Uint32 size, Uint32 offset)
 {
-	ASSERT(currentBound[(Uint32)m_target] == m_id, "Vertex buffer is not bound: %d", m_id);
+	// Ensure buffer is bound
+	bind();
 
 	// Buffer data
 	glCheck(glBufferSubData(targetToGLEnum(m_target), offset, size, data));
+}
+
+
+///////////////////////////////////////////////////////////
+void VertexBuffer::setTarget(BufferTarget target)
+{
+	m_target = target;
 }
 
 

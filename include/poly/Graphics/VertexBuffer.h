@@ -35,7 +35,9 @@ public:
 
 	VertexBuffer& operator=(const VertexBuffer& other);
 
-	void bind(BufferTarget target = BufferTarget::Array);
+	void bind();
+
+	void bind(BufferTarget target);
 
 	void bind(BufferTarget target, Uint32 index);
 
@@ -53,6 +55,8 @@ public:
 
 	void update(const VertexBuffer& buffer, Uint32 offset = 0);
 
+	void setTarget(BufferTarget target);
+
 	Uint32 getId() const;
 
 	Uint32 getSize() const;
@@ -66,9 +70,6 @@ public:
 private:
 	template <typename T>
 	void setDataType();
-
-	template <typename T>
-	bool checkDataType() const;
 
 	void bufferData(const void* data, Uint32 size, BufferUsage usage);
 

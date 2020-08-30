@@ -1,6 +1,7 @@
 #include <poly/Core/Logger.h>
 #include <poly/Core/Sleep.h>
 
+#include <poly/Graphics/VertexArray.h>
 #include <poly/Graphics/VertexBuffer.h>
 #include <poly/Graphics/Window.h>
 
@@ -8,7 +9,7 @@
 
 using namespace poly;
 
-
+#include <glad/glad.h>
 int main()
 {
     Window window;
@@ -26,17 +27,30 @@ int main()
         }
     );
 
-    std::vector<float> vertices = { 1.0f, 2.0f, 3.0f };
+    std::vector<float> vertices =
+    {
+        -0.5f, 0.5f, 0.0f,
+        -0.5f, -0.5f, 0.0f,
+        0.5f, 0.5f, 0.0f,
+
+        -0.5f, -0.5f, 0.0f,
+        0.5f, -0.5f, 0.0f,
+        0.5f, 0.5f, 0.0f
+    };
 
     VertexBuffer buffer;
-    buffer.bind();
     buffer.create(vertices);
+
+    VertexArray vao;
+    vao.addBuffer(buffer, 0, 3);
 
     // Game loop
     while (window.isOpen())
     {
         // Poll events for all existing windows
         Window::pollEvents();
+
+        vao.draw();
 
         // Display (swap buffers)
         window.display();

@@ -18,7 +18,14 @@ std::string getGLErrorMsg(Uint32 err);
 }
 
 #ifndef NDEBUG
-#define glCheck(expr) do { expr; Uint32 err = glGetError(); if (err != GL_NO_ERROR) LOG_ERROR(poly::priv::getGLErrorMsg(err).c_str()); } while (false)
+#define glCheck(expr) \
+do \
+{ \
+	expr; \
+	Uint32 err = glGetError(); \
+	if (err != GL_NO_ERROR) \
+		LOG_ERROR("[%s] - %s", STR(expr), poly::priv::getGLErrorMsg(err).c_str()); \
+} while (false)
 #else
 #define glCheck(expr) (expr)
 #endif

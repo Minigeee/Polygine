@@ -19,7 +19,7 @@ template <typename T>
 inline void VertexBuffer::create(const T* data, Uint32 num, BufferUsage usage, GLType dtype)
 {
 	// Make sure parameters are valid
-	if (!m_id || !data || !num)
+	if (!data || !num)
 	{
 		LOG_WARNING("Skipping vertex buffer creation");
 		return;
@@ -50,7 +50,7 @@ template <typename T>
 inline void VertexBuffer::update(const T* data, Uint32 num, Uint32 offset)
 {
 	// Make sure parameters are valid
-	if (!m_id || !data || !num || checkDataType<T>() || (num + offset) * sizeof(T) > m_size)
+	if (!m_id || !data || !num || (num + offset) * sizeof(T) > m_size)
 	{
 		LOG_WARNING("Skipping vertex buffer update");
 		return;
@@ -118,58 +118,10 @@ inline void VertexBuffer::setDataType<Uint32>()
 
 
 ///////////////////////////////////////////////////////////
-template <typename T>
-inline bool VertexBuffer::checkDataType() const
-{
-	return m_type == GLType::Float;
-}
-
-
-///////////////////////////////////////////////////////////
 template <>
-inline bool VertexBuffer::checkDataType<Int8>() const
+inline void VertexBuffer::setDataType<double>()
 {
-	return m_type == GLType::Int8;
-}
-
-
-///////////////////////////////////////////////////////////
-template <>
-inline bool VertexBuffer::checkDataType<Uint8>() const
-{
-	return m_type == GLType::Uint8;
-}
-
-
-///////////////////////////////////////////////////////////
-template <>
-inline bool VertexBuffer::checkDataType<Int16>() const
-{
-	return m_type == GLType::Int16;
-}
-
-
-///////////////////////////////////////////////////////////
-template <>
-inline bool VertexBuffer::checkDataType<Uint16>() const
-{
-	return m_type == GLType::Uint16;
-}
-
-
-///////////////////////////////////////////////////////////
-template <>
-inline bool VertexBuffer::checkDataType<Int32>() const
-{
-	return m_type == GLType::Int32;
-}
-
-
-///////////////////////////////////////////////////////////
-template <>
-inline bool VertexBuffer::checkDataType<Uint32>() const
-{
-	return m_type == GLType::Uint32;
+	m_type = GLType::Double;
 }
 
 
