@@ -1,6 +1,7 @@
 #include <poly/Core/Logger.h>
 #include <poly/Core/Sleep.h>
 
+#include <poly/Graphics/Shader.h>
 #include <poly/Graphics/VertexArray.h>
 #include <poly/Graphics/VertexBuffer.h>
 #include <poly/Graphics/Window.h>
@@ -9,7 +10,6 @@
 
 using namespace poly;
 
-#include <glad/glad.h>
 int main()
 {
     Window window;
@@ -44,12 +44,18 @@ int main()
     VertexArray vao;
     vao.addBuffer(buffer, 0, 3);
 
+    Shader shader;
+    shader.load("shaders/default.vert", Shader::Vertex);
+    shader.load("shaders/default.frag", Shader::Fragment);
+    shader.compile();
+
     // Game loop
     while (window.isOpen())
     {
         // Poll events for all existing windows
         Window::pollEvents();
 
+        shader.bind();
         vao.draw();
 
         // Display (swap buffers)
