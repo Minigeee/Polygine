@@ -11,6 +11,7 @@ set(POLY_BUILD_EXAMPLES FALSE CACHE BOOL "Set TRUE to build Polygine examples")
 set(POLY_BUILD_TESTS FALSE CACHE BOOL "Set TRUE to build Polygine tests")
 set(POLY_INSTALL_DIR ${CMAKE_INSTALL_PREFIX} CACHE PATH "Location to install Polygine headers and binaries")
 set(POLY_ENABLE_PROFILING TRUE CACHE BOOL "Set TRUE to enable profiling")
+set(POLY_COLUMN_MAJOR TRUE CACHE BOOL "Set TRUE to use column major matrices")
 
 set(CMAKE_DEBUG_POSTFIX "-d")
 set(CMAKE_INSTALL_PREFIX ${POLY_INSTALL_DIR})
@@ -23,6 +24,10 @@ endif()
 
 if (POLY_ENABLE_PROFILING)
     add_definitions(-DENABLE_PROFILING)
+endif()
+
+if (POLY_COLUMN_MAJOR)
+    add_definitions(-DUSE_COLUMN_MAJOR)
 endif()
 
 # Build

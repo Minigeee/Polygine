@@ -13,7 +13,7 @@ HashMap<std::string, Uint32> Shader::loadedShaders;
 
 ///////////////////////////////////////////////////////////
 #ifdef USE_COLUMN_MAJOR
-GLboolean transpose = GL_FALSE;
+GLboolean shouldTranspose = GL_FALSE;
 #else
 GLboolean shouldTranspose = GL_TRUE;
 #endif
