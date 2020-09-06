@@ -99,4 +99,49 @@ Matrix4f toTransformMatrix(const Vector3f& t, const Quaternion& q, float k)
 }
 
 
+///////////////////////////////////////////////////////////
+Matrix4f toViewMatrix(const Vector3f& p, const Vector3f& f, const Vector3f& r)
+{
+	Vector3f u = normalize(cross(r, f));
+
+#ifdef USE_COLUMN_MAJOR
+	return Matrix4f(
+		r.x, u.x, -f.x, 0.0f,
+		r.y, u.y, -f.y, 0.0f,
+		r.z, u.z, -f.z, 0.0f,
+		-dot(r, p), -dot(u, p), dot(f, p), 1.0f
+	);
+#else
+	return Matrix4f(
+		r.x, r.y, r.z, -dot(r, p),
+		u.x, u.y, u.z, -dot(u, p),
+		-f.x, -f.y, -f.z, dot(f, p),
+		0.0f, 0.0f, 0.0f, 1.0f
+	);
+#endif
+}
+
+Matrix4f toPerspectiveMatrix(float fov, float ar, float near, float far)
+{
+	float fovy = fov / ar;
+	fovy = tan(rad(fovy * 0.5f));
+
+#ifdef USE_COLUMN_MAJOR
+	return Matrix4f(
+		1.0f / (ar * fovy), 0.0f, 0.0f, 0.0f,
+		0.0f, 1.0f / fovy, 0.0f, 0.0f,
+		0.0f, 0.0f, -(far + near) / (far - near), -1.0f,
+		0.0f, 0.0f, -2.0f * far * near / (far - near), 0.0f
+	);
+#else
+	return Matrix4f(
+		1.0f / (ar * fovy), 0.0f, 0.0f, 0.0f,
+		0.0f, 1.0f / fovy, 0.0f, 0.0f,
+		0.0f, 0.0f, -(far + near) / (far - near), -2.0f * far * near / (far - near),
+		0.0f, 0.0f, -1.0f, 0.0f
+	);
+#endif
+}
+
+
 }

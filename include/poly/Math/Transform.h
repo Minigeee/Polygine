@@ -12,6 +12,10 @@ Matrix4f toTransformMatrix(const Vector3f& t, const Vector3f& r, float s);
 
 Matrix4f toTransformMatrix(const Vector3f& t, const Quaternion& r, float s);
 
+Matrix4f toViewMatrix(const Vector3f& p, const Vector3f& f, const Vector3f& r);
+
+Matrix4f toPerspectiveMatrix(float fov, float ar, float near, float far);
+
 }
 
 #endif

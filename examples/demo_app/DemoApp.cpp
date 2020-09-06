@@ -1,6 +1,8 @@
+#include <poly/Core/Clock.h>
 #include <poly/Core/Logger.h>
 #include <poly/Core/Sleep.h>
 
+#include <poly/Graphics/Camera.h>
 #include <poly/Graphics/Shader.h>
 #include <poly/Graphics/VertexArray.h>
 #include <poly/Graphics/VertexBuffer.h>
@@ -33,13 +35,59 @@ int main()
 
     std::vector<float> vertices =
     {
-        -0.5f, 0.5f, 0.0f,
-        -0.5f, -0.5f, 0.0f,
-        0.5f, 0.5f, 0.0f,
+        // Front
+        -0.5f,  0.5f,  0.5f,
+        -0.5f, -0.5f,  0.5f,
+         0.5f,  0.5f,  0.5f,
 
-        -0.5f, -0.5f, 0.0f,
-        0.5f, -0.5f, 0.0f,
-        0.5f, 0.5f, 0.0f
+        -0.5f, -0.5f,  0.5f,
+         0.5f, -0.5f,  0.5f,
+         0.5f,  0.5f,  0.5f,
+         
+        // Back
+         0.5f,  0.5f, -0.5f,
+         0.5f, -0.5f, -0.5f,
+        -0.5f,  0.5f, -0.5f,
+
+         0.5f, -0.5f, -0.5f,
+        -0.5f, -0.5f, -0.5f,
+        -0.5f,  0.5f, -0.5f,
+
+        // Right
+         0.5f,  0.5f,  0.5f,
+         0.5f, -0.5f,  0.5f,
+         0.5f,  0.5f, -0.5f,
+
+         0.5f, -0.5f,  0.5f,
+         0.5f, -0.5f, -0.5f,
+         0.5f,  0.5f, -0.5f,
+
+        // Left
+        -0.5f,  0.5f, -0.5f,
+        -0.5f, -0.5f, -0.5f,
+        -0.5f,  0.5f,  0.5f,
+
+        -0.5f, -0.5f, -0.5f,
+        -0.5f, -0.5f,  0.5f,
+        -0.5f,  0.5f,  0.5f,
+
+        // Top
+        -0.5f,  0.5f, -0.5f,
+        -0.5f,  0.5f,  0.5f,
+         0.5f,  0.5f, -0.5f,
+
+        -0.5f,  0.5f,  0.5f,
+         0.5f,  0.5f,  0.5f,
+         0.5f,  0.5f, -0.5f,
+
+        // Bottom
+        -0.5f, -0.5f,  0.5f,
+        -0.5f, -0.5f, -0.5f,
+         0.5f, -0.5f,  0.5f,
+
+        -0.5f, -0.5f, -0.5f,
+         0.5f, -0.5f, -0.5f,
+         0.5f, -0.5f,  0.5f
     };
 
     VertexBuffer buffer;
@@ -53,8 +101,12 @@ int main()
     shader.load("shaders/default.frag", Shader::Fragment);
     shader.compile();
 
-    Vector3f p(0.0f);
-    float r = 0.0f;
+    Camera camera;
+
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+
+    Clock clock;
 
     // Game loop
     while (window.isOpen())
@@ -62,13 +114,13 @@ int main()
         // Poll events for all existing windows
         Window::pollEvents();
 
-        p.x += 0.001f;
-        r += 0.5f;
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        glClear(GL_COLOR_BUFFER_BIT);
+        camera.setPosition(sin(clock.getElapsedTime().toSeconds()) * 1.5f, 0.0f, 5.0f);
+        Matrix4f projView = camera.getProjMatrix() * camera.getViewMatrix();
 
         shader.bind();
-        shader.setUniform("transform", toTransformMatrix(p, Quaternion(normalize(Vector3f(1, 0, 1)), r), 1.0f));
+        shader.setUniform("m_projView", projView);
         vao.draw();
 
         // Display (swap buffers)
