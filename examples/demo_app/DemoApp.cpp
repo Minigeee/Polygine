@@ -3,7 +3,9 @@
 #include <poly/Core/Sleep.h>
 
 #include <poly/Graphics/Camera.h>
+#include <poly/Graphics/Image.h>
 #include <poly/Graphics/Shader.h>
+#include <poly/Graphics/Texture.h>
 #include <poly/Graphics/VertexArray.h>
 #include <poly/Graphics/VertexBuffer.h>
 #include <poly/Graphics/Window.h>

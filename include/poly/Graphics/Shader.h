@@ -13,6 +13,8 @@
 namespace poly
 {
 
+class Texture;
+
 class Shader
 {
 public:
@@ -65,6 +67,8 @@ public:
 
 	void setUniform(const std::string& name, const std::vector<Matrix4f>& values);
 
+	void setUniform(const std::string& name, Texture& texture);
+
 private:
 	int getUniformLocation(const std::string& name);
 
@@ -72,6 +76,7 @@ private:
 	Uint32 m_id;
 	std::vector<Uint32> m_shaders;
 	HashMap<std::string, int> m_uniforms;
+	HashMap<Uint32, Uint32> m_textures;
 
 	static Uint32 currentBound;
 	static HashMap<std::string, Uint32> loadedShaders;

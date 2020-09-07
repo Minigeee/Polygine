@@ -1,5 +1,6 @@
 #include <poly/Graphics/GLCheck.h>
 #include <poly/Graphics/Shader.h>
+#include <poly/Graphics/Texture.h>
 
 namespace poly
 {
@@ -339,6 +340,29 @@ void Shader::setUniform(const std::string& name, const std::vector<Matrix4f>& va
 		if (location != -1)
 			glCheck(glUniformMatrix4fv(location, values.size(), shouldTranspose, &values[0].x.x));
 	}
+}
+
+
+///////////////////////////////////////////////////////////
+void Shader::setUniform(const std::string& name, Texture& texture)
+{
+	int slot = 0;
+
+	// Get texture slot
+	auto it = m_textures.find(texture.getId());
+	if (it == m_textures.end())
+		slot = (int)(m_textures[texture.getId()] = m_textures.size());
+
+	else
+		slot = (int)it->second;
+
+	// Bind texture
+	texture.bind(slot);
+
+	// Set uniform
+	int location = getUniformLocation(name);
+	if (location != -1)
+		glCheck(glUniform1iv(location, 1, &slot));
 }
 
 
