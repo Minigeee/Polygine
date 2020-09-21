@@ -59,12 +59,15 @@ public:
 	void free();
 
 	///////////////////////////////////////////////////////////
-	/// \brief Set pixel data for the 2D image
+	/// \brief Create a new image from pixel data
 	///
 	/// Set a pointer to the pixel data and set width, height,
 	/// color channels, and data type. The user is responsible for
 	/// managing memory unless \a is et to true. This includes freeing
 	/// the memory.
+	///
+	/// If a NULL pointer is set for data, an empty black image will be
+	/// allocated and image will automatically manage the allocated memory.
 	///
 	/// \param data A pointer to the location pixel data is stored
 	/// \param w The width of the 2D image
@@ -74,7 +77,7 @@ public:
 	/// \param manage Determines if data is owned by image or by the user. If set to true, the data will be freed on destruction
 	///
 	///////////////////////////////////////////////////////////
-	void setData(void* data, Uint32 w, Uint32 h, Uint32 c, GLType dtype = GLType::Uint8, bool manage = false);
+	void create(void* data, Uint32 w, Uint32 h, Uint32 c, GLType dtype = GLType::Uint8, bool manage = false);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set image size

@@ -72,12 +72,17 @@ void Image::free()
 {
 	if (m_ownsData && m_data)
 		stbi_image_free(m_data);
+
+	m_data = 0;
 }
 
 
 ///////////////////////////////////////////////////////////
-void Image::setData(void* data, Uint32 w, Uint32 h, Uint32 c, GLType dtype, bool manage)
+void Image::create(void* data, Uint32 w, Uint32 h, Uint32 c, GLType dtype, bool manage)
 {
+	// 32-bit colors are not supported
+	ASSERT(dtype != GLType::Int32 && dtype != GLType::Uint32, "32-bit image colors are not supported");
+
 	// Free previous data
 	free();
 
@@ -87,6 +92,28 @@ void Image::setData(void* data, Uint32 w, Uint32 h, Uint32 c, GLType dtype, bool
 	m_numChannels = c;
 	m_dataType = dtype;
 	m_ownsData = manage;
+	
+	// Make sure the data type is an unsigned variant
+	if (m_dataType == GLType::Int8)
+		m_dataType = GLType::Uint8;
+	else if (m_dataType == GLType::Int16)
+		m_dataType = GLType::Uint16;
+
+	// Create an empty image if data is a null pointer
+	if (!m_data)
+	{
+		Uint32 typeSize = 1;
+		if (m_dataType == GLType::Uint16)
+			typeSize = 2;
+		else if (m_dataType == GLType::Float)
+			typeSize = 4;
+
+		// Allocate data
+		m_data = malloc(m_width * m_height * m_numChannels * typeSize);
+
+		// Image owns data
+		m_ownsData = true;
+	}
 }
 
 
