@@ -51,68 +51,6 @@ VertexBuffer::~VertexBuffer()
 
 
 ///////////////////////////////////////////////////////////
-VertexBuffer::VertexBuffer(const VertexBuffer& other) :
-	m_id		(0),
-	m_size		(other.m_size),
-	m_usage		(other.m_usage),
-	m_target	(other.m_target),
-	m_type		(other.m_type)
-{
-	// Bind this buffer
-	Uint32 prevId = currentBound[(Uint32)m_target];
-	bind(m_target);
-
-	// Create an empty buffer
-	bufferData(0, m_size, m_usage);
-
-	// Reset bound buffer
-	glCheck(glBindBuffer(targetToGLEnum(m_target), prevId));
-	currentBound[(Uint32)m_target] = prevId;
-
-	// Update the buffer
-	update(other);
-}
-
-
-///////////////////////////////////////////////////////////
-VertexBuffer& VertexBuffer::operator=(const VertexBuffer& other)
-{
-	if (&other != this)
-	{
-		// Check if array settings match
-		bool match = m_size == other.m_size && m_usage == other.m_usage;
-
-		if (m_id && !match)
-			// Delete previous buffer if it exists and doesn't match
-			glCheck(glDeleteBuffers(1, &m_id));
-
-		else if (!m_id)
-			// Create a new buffer it it doesn't exist
-			glCheck(glGenBuffers(1, &m_id));
-
-		// Resize buffer
-		if (!match)
-		{
-			// Bind buffer
-			Uint32 prevId = currentBound[(Uint32)m_target];
-			bind(m_target);
-
-			bufferData(0, other.m_size, other.m_usage);
-
-			// Reset bound buffer
-			glCheck(glBindBuffer(targetToGLEnum(m_target), prevId));
-			currentBound[(Uint32)m_target] = prevId;
-		}
-
-		// Update data
-		update(other);
-	}
-
-	return *this;
-}
-
-
-///////////////////////////////////////////////////////////
 void VertexBuffer::bind()
 {
 	// Bind to current target

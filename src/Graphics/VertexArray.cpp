@@ -129,17 +129,17 @@ void VertexArray::draw(Uint32 instances, Uint32 offset)
 	{
 		// Use the element buffer
 		if (instances == 1)
-			glDrawElements((GLenum)m_drawMode, m_numVertices, GL_UNSIGNED_INT, (const void*)offset);
+			glDrawElements((GLenum)m_drawMode, m_numVertices - offset, GL_UNSIGNED_INT, (const void*)offset);
 		else
-			glDrawElementsInstanced((GLenum)m_drawMode, m_numVertices, GL_UNSIGNED_INT, (const void*)offset, instances);
+			glDrawElementsInstanced((GLenum)m_drawMode, m_numVertices - offset, GL_UNSIGNED_INT, (const void*)offset, instances);
 	}
 	else
 	{
 		// Use regular array buffers
 		if (instances == 1)
-			glDrawArrays((GLenum)m_drawMode, offset, m_numVertices);
+			glDrawArrays((GLenum)m_drawMode, offset, m_numVertices - offset);
 		else
-			glDrawArraysInstanced((GLenum)m_drawMode, offset, m_numVertices, instances);
+			glDrawArraysInstanced((GLenum)m_drawMode, offset, m_numVertices - offset, instances);
 	}
 }
 

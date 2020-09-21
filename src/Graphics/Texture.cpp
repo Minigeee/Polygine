@@ -10,29 +10,29 @@ Uint32 Texture::currentBound[] = {};
 
 
 ///////////////////////////////////////////////////////////
-Uint32 getInternalFormat(TextureFormat format, GLType dtype)
+Uint32 getInternalFormat(PixelFormat format, GLType dtype)
 {
 	Uint32 fmt = (Uint32)format;
 	if (dtype == GLType::Uint16 || dtype == GLType::Int16)
 	{
-		if (format == TextureFormat::R)
+		if (format == PixelFormat::R)
 			fmt = GL_R16F;
-		else if (format == TextureFormat::Rg)
+		else if (format == PixelFormat::Rg)
 			fmt = GL_RG16F;
-		else if (format == TextureFormat::Rgb)
+		else if (format == PixelFormat::Rgb)
 			fmt = GL_RGB16F;
-		else if (format == TextureFormat::Rgba)
+		else if (format == PixelFormat::Rgba)
 			fmt = GL_RGBA16F;
 	}
 	else if (dtype == GLType::Float)
 	{
-		if (format == TextureFormat::R)
+		if (format == PixelFormat::R)
 			fmt = GL_R32F;
-		else if (format == TextureFormat::Rg)
+		else if (format == PixelFormat::Rg)
 			fmt = GL_RG32F;
-		else if (format == TextureFormat::Rgb)
+		else if (format == PixelFormat::Rgb)
 			fmt = GL_RGB32F;
-		else if (format == TextureFormat::Rgba)
+		else if (format == PixelFormat::Rgba)
 			fmt = GL_RGBA32F;
 	}
 
@@ -43,7 +43,14 @@ Uint32 getInternalFormat(TextureFormat format, GLType dtype)
 ///////////////////////////////////////////////////////////
 Texture::Texture() :
 	m_id			(0),
-	m_dimensions	(2)
+	m_width			(0),
+	m_height		(0),
+	m_depth			(0),
+	m_dimensions	(2),
+	m_format		(PixelFormat::Rgb),
+	m_dataType		(GLType::Uint8),
+	m_wrap			(TextureWrap::ClampToEdge),
+	m_filter		(TextureFilter::Linear)
 {
 
 }
@@ -91,7 +98,7 @@ void Texture::bind(Uint32 slot)
 
 
 ///////////////////////////////////////////////////////////
-void Texture::create(void* data, TextureFormat fmt, Uint32 w, Uint32 h, Uint32 d, TextureFilter filter, TextureWrap wrap, GLType dtype)
+void Texture::create(void* data, PixelFormat fmt, Uint32 w, Uint32 h, Uint32 d, GLType dtype, TextureFilter filter, TextureWrap wrap)
 {
 	// Can only create texture once
 	if (m_id) return;
@@ -144,6 +151,15 @@ void Texture::create(void* data, TextureFormat fmt, Uint32 w, Uint32 h, Uint32 d
 	glCheck(glTexParameteri(dims, GL_TEXTURE_WRAP_S, (GLint)wrap));
 	glCheck(glTexParameteri(dims, GL_TEXTURE_WRAP_T, (GLint)wrap));
 	glCheck(glTexParameteri(dims, GL_TEXTURE_WRAP_R, (GLint)wrap));
+
+	// Set member variables
+	m_width = w;
+	m_height = h;
+	m_depth = d;
+	m_format = fmt;
+	m_dataType = dtype;
+	m_wrap = wrap;
+	m_filter = filter;
 }
 
 
@@ -156,18 +172,18 @@ void Texture::create(const Image& image, TextureFilter filter, TextureWrap wrap)
 	ASSERT(image.getNumChannels() <= 4 && image.getNumChannels() > 0, "Image has invalid number of color channels");
 
 	// Get texture format
-	TextureFormat fmt;
+	PixelFormat fmt;
 	if (image.getNumChannels() == 1)
-		fmt = TextureFormat::R;
+		fmt = PixelFormat::R;
 
 	else if (image.getNumChannels() == 2)
-		fmt = TextureFormat::Rg;
+		fmt = PixelFormat::Rg;
 
 	else if (image.getNumChannels() == 3)
-		fmt = TextureFormat::Rgb;
+		fmt = PixelFormat::Rgb;
 
 	else
-		fmt = TextureFormat::Rgba;
+		fmt = PixelFormat::Rgba;
 
 	// Use the other create function
 	create(
@@ -176,9 +192,9 @@ void Texture::create(const Image& image, TextureFilter filter, TextureWrap wrap)
 		image.getWidth(),
 		image.getHeight(),
 		0,
+		image.getDataType(),
 		filter,
-		wrap,
-		image.getDataType()
+		wrap
 	);
 }
 
@@ -191,9 +207,58 @@ Uint32 Texture::getId() const
 
 
 ///////////////////////////////////////////////////////////
+Uint32 Texture::getWidth() const
+{
+	return m_width;
+}
+
+
+///////////////////////////////////////////////////////////
+Uint32 Texture::getHeight() const
+{
+	return m_height;
+}
+
+
+///////////////////////////////////////////////////////////
+Uint32 Texture::getDepth() const
+{
+	return m_depth;
+}
+
+
+///////////////////////////////////////////////////////////
 Uint32 Texture::getNumDimensions() const
 {
 	return m_dimensions;
+}
+
+
+///////////////////////////////////////////////////////////
+PixelFormat Texture::getFormat() const
+{
+	return m_format;
+}
+
+
+///////////////////////////////////////////////////////////
+GLType Texture::getDataType() const
+{
+	return m_dataType;
+}
+
+
+///////////////////////////////////////////////////////////
+TextureWrap Texture::getWrap() const
+{
+	return m_wrap;
+}
+
+
+///////////////////////////////////////////////////////////
+TextureFilter Texture::getFilter() const
+{
+	return m_filter;
 }
 
 

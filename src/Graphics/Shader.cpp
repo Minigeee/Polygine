@@ -366,4 +366,11 @@ void Shader::setUniform(const std::string& name, Texture& texture)
 }
 
 
+///////////////////////////////////////////////////////////
+Uint32 Shader::getId() const
+{
+	return m_id;
+}
+
+
 }

@@ -76,7 +76,7 @@ void Image::free()
 
 
 ///////////////////////////////////////////////////////////
-void Image::setData(void* data, Uint32 w, Uint32 h, Uint32 c, GLType dtype)
+void Image::setData(void* data, Uint32 w, Uint32 h, Uint32 c, GLType dtype, bool manage)
 {
 	// Free previous data
 	free();
@@ -86,7 +86,7 @@ void Image::setData(void* data, Uint32 w, Uint32 h, Uint32 c, GLType dtype)
 	m_height = h;
 	m_numChannels = c;
 	m_dataType = dtype;
-	m_ownsData = false;
+	m_ownsData = manage;
 }
 
 
