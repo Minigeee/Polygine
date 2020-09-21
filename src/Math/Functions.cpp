@@ -1,0 +1,21 @@
+#include <poly/Math/Functions.h>
+
+namespace poly
+{
+
+
+///////////////////////////////////////////////////////////
+float rad(float deg)
+{
+	return deg / 180.0f * PI;
+}
+
+
+///////////////////////////////////////////////////////////
+float deg(float rad)
+{
+	return rad / PI * 180.0f;
+}
+
+
+}

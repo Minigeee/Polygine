@@ -59,3 +59,19 @@ target_include_directories(polygine PUBLIC
     $<INSTALL_INTERFACE:include>)
 target_sources(polygine PRIVATE "${PROJECT_SOURCE_DIR}/extlibs/glad/src/glad.c")
 install(DIRECTORY "${PROJECT_SOURCE_DIR}/extlibs/glad/include/glad" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+
+# stb_image
+if (NOT EXISTS "${PROJECT_SOURCE_DIR}/extlibs/stb/stb_image.h")
+    message(STATUS "Getting stb_image.h...")
+
+    # Get submodule
+    execute_process(COMMAND git submodule update --init -- "${PROJECT_SOURCE_DIR}/extlibs/stb"
+                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+else()
+    message(STATUS "Found stb_image.h")
+endif()
+
+target_include_directories(polygine PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extlibs/stb>
+    $<INSTALL_INTERFACE:include>)
+install(DIRECTORY "${PROJECT_SOURCE_DIR}/extlibs/stb" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")

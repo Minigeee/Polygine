@@ -10,13 +10,6 @@ namespace poly
 
 ///////////////////////////////////////////////////////////
 
-void onWindowClose(GLFWwindow* window)
-{
-	Window* win = (Window*)glfwGetWindowUserPointer(window);
-	// Close the window
-	win->close();
-}
-
 void onKeyEvent(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
 	Window* win = (Window*)glfwGetWindowUserPointer(window);
@@ -146,7 +139,6 @@ bool Window::create(Uint32 w, Uint32 h, const std::string& title, bool fullscree
 
 	// Setup input callbacks
 	glfwSetWindowUserPointer(m_window, this);
-	glfwSetWindowCloseCallback(m_window, onWindowClose);
 	glfwSetKeyCallback(m_window, onKeyEvent);
 	glfwSetMouseButtonCallback(m_window, onMouseButton);
 	glfwSetCursorPosCallback(m_window, onMouseMove);
@@ -160,7 +152,7 @@ bool Window::create(Uint32 w, Uint32 h, const std::string& title, bool fullscree
 bool Window::isOpen() const
 {
 	// The pointer exists, the window is open
-	return (bool)m_window;
+	return (bool)m_window && !glfwWindowShouldClose(m_window);
 }
 
 void Window::close()
