@@ -79,7 +79,7 @@ void VertexArray::addBuffer(VertexBuffer& buffer, Uint32 index, Uint32 size, Uin
 	// Make sure parameters are good
 	if (!buffer.getSize() || buffer.getDataType() == GLType::Unknown || !size)
 	{
-		LOG_WARNING("Skipping add vertex buffer to vertex array");
+		LOG_ERROR("Skipping add vertex buffer to vertex array");
 		return;
 	}
 

@@ -4,6 +4,7 @@
 
 #include <poly/Graphics/Camera.h>
 #include <poly/Graphics/Image.h>
+#include <poly/Graphics/Model.h>
 #include <poly/Graphics/Shader.h>
 #include <poly/Graphics/Texture.h>
 #include <poly/Graphics/VertexArray.h>
@@ -35,68 +36,9 @@ int main()
         }
     );
 
-    std::vector<float> vertices =
-    {
-        // Front
-        -0.5f,  0.5f,  0.5f,
-        -0.5f, -0.5f,  0.5f,
-         0.5f,  0.5f,  0.5f,
-
-        -0.5f, -0.5f,  0.5f,
-         0.5f, -0.5f,  0.5f,
-         0.5f,  0.5f,  0.5f,
-         
-        // Back
-         0.5f,  0.5f, -0.5f,
-         0.5f, -0.5f, -0.5f,
-        -0.5f,  0.5f, -0.5f,
-
-         0.5f, -0.5f, -0.5f,
-        -0.5f, -0.5f, -0.5f,
-        -0.5f,  0.5f, -0.5f,
-
-        // Right
-         0.5f,  0.5f,  0.5f,
-         0.5f, -0.5f,  0.5f,
-         0.5f,  0.5f, -0.5f,
-
-         0.5f, -0.5f,  0.5f,
-         0.5f, -0.5f, -0.5f,
-         0.5f,  0.5f, -0.5f,
-
-        // Left
-        -0.5f,  0.5f, -0.5f,
-        -0.5f, -0.5f, -0.5f,
-        -0.5f,  0.5f,  0.5f,
-
-        -0.5f, -0.5f, -0.5f,
-        -0.5f, -0.5f,  0.5f,
-        -0.5f,  0.5f,  0.5f,
-
-        // Top
-        -0.5f,  0.5f, -0.5f,
-        -0.5f,  0.5f,  0.5f,
-         0.5f,  0.5f, -0.5f,
-
-        -0.5f,  0.5f,  0.5f,
-         0.5f,  0.5f,  0.5f,
-         0.5f,  0.5f, -0.5f,
-
-        // Bottom
-        -0.5f, -0.5f,  0.5f,
-        -0.5f, -0.5f, -0.5f,
-         0.5f, -0.5f,  0.5f,
-
-        -0.5f, -0.5f, -0.5f,
-         0.5f, -0.5f, -0.5f,
-         0.5f, -0.5f,  0.5f
-    };
-
-    VertexBuffer buffer;
-    buffer.create(vertices);
-
-    VertexArray vao;
-    vao.addBuffer(buffer, 0, 3);
+    Model model;
+    model.load("models/character/character.dae");
+    VertexArray& vao = model.getVertexArray();
 
     Shader shader;
     shader.load("shaders/default.vert", Shader::Vertex);
