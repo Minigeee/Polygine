@@ -24,7 +24,7 @@ function(add_dependency name target src)
     target_link_libraries(polygine PUBLIC ${target})
 
     # Export
-    install(TARGETS ${target} EXPORT polygine)
+    # install(TARGETS ${target} EXPORT polygine)
 endfunction()
 
 function(add_dependency_headers name src include_dir)
@@ -52,6 +52,7 @@ endfunction()
 add_dependency_headers(tsl-hopscotch-map hopscotch-map tsl)
 
 add_dependency(glfw glfw glfw)
+add_dependency(assimp assimp assimp)
 
 # Glad
 target_include_directories(polygine PUBLIC
