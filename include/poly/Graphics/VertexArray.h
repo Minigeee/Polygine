@@ -97,9 +97,10 @@ public:
 	/// \param stride The size of each element in bytes (only for interleaved data)
 	/// \param offset The offset of the targeted data in each element in bytes (only for interleaved data)
 	/// \param divisor The number of instances to render before changing the current instance data
+	/// \param dtype The data type used to override the vertex buffer data type
 	///
 	///////////////////////////////////////////////////////////
-	void addBuffer(VertexBuffer& buffer, Uint32 index, Uint32 size, Uint32 stride = 0, Uint32 offset = 0, Uint32 divisor = 0);
+	void addBuffer(VertexBuffer& buffer, Uint32 index, Uint32 size, Uint32 stride = 0, Uint32 offset = 0, Uint32 divisor = 0, GLType dtype = GLType::Unknown);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Render the contents of the vertex array

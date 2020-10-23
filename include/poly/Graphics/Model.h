@@ -5,6 +5,7 @@
 
 #include <poly/Math/Vector3.h>
 
+#include <poly/Graphics/Material.h>
 #include <poly/Graphics/VertexArray.h>
 #include <poly/Graphics/VertexBuffer.h>
 
@@ -13,6 +14,9 @@
 
 namespace poly
 {
+
+class Texture;
+
 
 struct Vertex
 {
@@ -26,6 +30,7 @@ struct Vertex
 	Vector3f m_normal;
 	Vector2f m_texCoord;
 	Colorf m_color;
+	int m_material;
 };
 
 
@@ -38,14 +43,19 @@ public:
 
 	void setVertices(const std::vector<Vertex>& vertices);
 
+	void setMaterial(const Material& material, Uint32 index = 0);
+
 	VertexArray& getVertexArray();
 
 	const std::vector<Vertex>& getVertices() const;
+
+	Material& getMaterial(Uint32 index = 0);
 
 private:
 	VertexArray m_vertexArray;
 	VertexBuffer m_vertexBuffer;
 	std::vector<Vertex> m_vertices;
+	std::vector<Material> m_materials;
 };
 
 }

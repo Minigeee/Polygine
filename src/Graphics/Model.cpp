@@ -1,6 +1,9 @@
 #include <poly/Core/Logger.h>
+#include <poly/Core/ObjectPool.h>
 
+#include <poly/Graphics/Image.h>
 #include <poly/Graphics/Model.h>
+#include <poly/Graphics/Texture.h>
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -9,12 +12,101 @@
 namespace poly
 {
 
+
+///////////////////////////////////////////////////////////
+ObjectPool texturePool(sizeof(Texture), 50);
+
+///////////////////////////////////////////////////////////
+HashMap<std::string, Texture*> textureMap;
+
+
 namespace priv
 {
 
 
 ///////////////////////////////////////////////////////////
-void processMesh(aiMesh* mesh, std::vector<Vertex>& vertices, const aiScene* scene)
+struct ModelLoadState
+{
+	std::vector<Vertex> m_vertices;
+	std::vector<Material> m_materials;
+	const aiScene* m_scene;
+	std::string m_directory;
+};
+
+
+///////////////////////////////////////////////////////////
+Texture* loadMaterialTexture(aiMaterial* material, aiTextureType type, ModelLoadState& state)
+{
+	// Only 1 texture per type is supported currently
+	if (!material->GetTextureCount(type)) return 0;
+
+	// Get texture path
+	aiString fname;
+	material->GetTexture(type, 0, &fname);
+	std::string path = state.m_directory  + '/' + fname.C_Str();
+
+	// If the texture has already been loaded, return it
+	auto it = textureMap.find(path);
+	if (it != textureMap.end())
+		return it.value();
+
+	// Otherwise load the image
+	Image image;
+	if (!image.load(path))
+		return 0;
+
+	// Create the texture
+	Texture*& texture = textureMap[path];
+	texture = (Texture*)texturePool.alloc();
+	texture->create(image);
+
+	return texture;
+}
+
+
+///////////////////////////////////////////////////////////
+void processMaterial(aiMaterial* material, ModelLoadState& state)
+{
+	Material modelMat;
+
+	// Diffuse
+	aiColor3D diffuse;
+	material->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse);
+	modelMat.setDiffuse(diffuse.r, diffuse.g, diffuse.b);
+
+	// Specular
+	aiColor3D specular;
+	material->Get(AI_MATKEY_COLOR_SPECULAR, specular);
+	modelMat.setSpecular(specular.r, specular.g, specular.b);
+
+	// Specular strength
+	float specStregth = 1.0f;
+	material->Get(AI_MATKEY_SHININESS_STRENGTH, specStregth);
+	modelMat.getSpecular() *= specStregth;
+
+	// Shininess
+	float specFactor;
+	material->Get(AI_MATKEY_SHININESS, specFactor);
+	modelMat.setShininess(specFactor);
+
+	// Load textures
+	Uint32 numMaterials = state.m_materials.size();
+	modelMat.addTexture(
+		"u_diffuseMaps[" + std::to_string(numMaterials) + ']',
+		loadMaterialTexture(material, aiTextureType_DIFFUSE, state)
+	);
+	modelMat.addTexture(
+		"u_specularMaps" + std::to_string(numMaterials) + ']',
+		loadMaterialTexture(material, aiTextureType_SPECULAR, state)
+	);
+
+	// Add material
+	state.m_materials.push_back(modelMat);
+}
+
+
+///////////////////////////////////////////////////////////
+void processMesh(aiMesh* mesh, ModelLoadState& state)
 {
 	// Process vertices
 	for (Uint32 i = 0; i < mesh->mNumVertices; ++i)
@@ -60,25 +152,32 @@ void processMesh(aiMesh* mesh, std::vector<Vertex>& vertices, const aiScene* sce
 			vertex.m_color.a = 1.0f;
 		}
 
+		// Material index
+		vertex.m_material = state.m_materials.size();
+
 		// Add to list
-		vertices.push_back(vertex);
+		state.m_vertices.push_back(vertex);
 	}
+
+	// Add material
+	if (mesh->mMaterialIndex >= 0)
+		processMaterial(state.m_scene->mMaterials[mesh->mMaterialIndex], state);
 }
 
 
 ///////////////////////////////////////////////////////////
-void processNode(aiNode* node, std::vector<Vertex>& vertices, const aiScene* scene)
+void processNode(aiNode* node, ModelLoadState& state)
 {
 	// Process all meshes in the node
 	for (Uint32 i = 0; i < node->mNumMeshes; ++i)
 	{
-		aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-		processMesh(mesh, vertices, scene);
+		aiMesh* mesh = state.m_scene->mMeshes[node->mMeshes[i]];
+		processMesh(mesh, state);
 	}
 
 	// Process all children nodes
 	for (Uint32 i = 0; i < node->mNumChildren; ++i)
-		processNode(node->mChildren[i], vertices, scene);
+		processNode(node->mChildren[i], state);
 }
 
 
@@ -90,7 +189,8 @@ Vertex::Vertex() :
 	m_position	(0.0f),
 	m_normal	(0.0f, 1.0f, 0.0f),
 	m_texCoord	(0.0f),
-	m_color		(1.0f)
+	m_color		(1.0f),
+	m_material	(0)
 { }
 
 
@@ -99,7 +199,8 @@ Vertex::Vertex(const Vector3f& pos, const Vector3f& normal) :
 	m_position	(pos),
 	m_normal	(normal),
 	m_texCoord	(0.0f),
-	m_color		(1.0f)
+	m_color		(1.0f),
+	m_material	(0)
 { }
 
 
@@ -108,7 +209,8 @@ Vertex::Vertex(const Vector3f& pos, const Vector3f& normal, const Vector2f& texC
 	m_position	(pos),
 	m_normal	(normal),
 	m_texCoord	(texCoord),
-	m_color		(1.0f)
+	m_color		(1.0f),
+	m_material	(0)
 { }
 
 
@@ -117,7 +219,8 @@ Vertex::Vertex(const Vector3f& pos, const Vector3f& normal, const Colorf& color)
 	m_position	(pos),
 	m_normal	(normal),
 	m_texCoord	(0.0f),
-	m_color		(color)
+	m_color		(color),
+	m_material	(0)
 { }
 
 
@@ -144,14 +247,15 @@ bool Model::load(const std::string& fname)
 		return false;
 	}
 
-
-	std::vector<Vertex> vertices;
-
 	// Process nodes
-	priv::processNode(scene->mRootNode, vertices, scene);
+	priv::ModelLoadState state;
+	state.m_scene = scene;
+	state.m_directory = fname.substr(0, fname.find_last_of("/\\"));
+	priv::processNode(scene->mRootNode, state);
 
 	// Create model based on nodes
-	create(vertices);
+	create(state.m_vertices);
+	m_materials = state.m_materials;
 
 	LOG("Loaded model: %s", fname.c_str());
 	return true;
@@ -172,6 +276,7 @@ void Model::create(const std::vector<Vertex>& vertices, BufferUsage usage)
 		m_vertexArray.addBuffer(m_vertexBuffer, 1, 3, sizeof(Vertex), 3 * sizeof(float));
 		m_vertexArray.addBuffer(m_vertexBuffer, 2, 2, sizeof(Vertex), 6 * sizeof(float));
 		m_vertexArray.addBuffer(m_vertexBuffer, 3, 4, sizeof(Vertex), 8 * sizeof(float));
+		m_vertexArray.addBuffer(m_vertexBuffer, 4, 1, sizeof(Vertex), 12 * sizeof(float), 0, GLType::Int32);
 	}
 }
 
@@ -196,6 +301,13 @@ void Model::setVertices(const std::vector<Vertex>& vertices)
 
 
 ///////////////////////////////////////////////////////////
+void Model::setMaterial(const Material& material, Uint32 index)
+{
+	m_materials[index] = material;
+}
+
+
+///////////////////////////////////////////////////////////
 VertexArray& Model::getVertexArray()
 {
 	return m_vertexArray;
@@ -206,6 +318,13 @@ VertexArray& Model::getVertexArray()
 const std::vector<Vertex>& Model::getVertices() const
 {
 	return m_vertices;
+}
+
+
+///////////////////////////////////////////////////////////
+Material& Model::getMaterial(Uint32 index)
+{
+	return m_materials[index];
 }
 
 

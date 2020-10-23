@@ -39,6 +39,7 @@ int main()
     Model model;
     model.load("models/character/character.dae");
     VertexArray& vao = model.getVertexArray();
+    Material& material = model.getMaterial();
 
     Shader shader;
     shader.load("shaders/default.vert", Shader::Vertex);
@@ -47,6 +48,7 @@ int main()
 
     Camera camera;
 
+    glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
 
@@ -60,11 +62,12 @@ int main()
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        camera.setPosition(sin(clock.getElapsedTime().toSeconds()) * 1.5f, 0.0f, 5.0f);
+        camera.setPosition(sin(clock.getElapsedTime().toSeconds()) * 1.5f, 5.0f, 15.0f);
         Matrix4f projView = camera.getProjMatrix() * camera.getViewMatrix();
 
         shader.bind();
-        shader.setUniform("m_projView", projView);
+        shader.setUniform("u_projView", projView);
+        material.apply(&shader);
         vao.draw();
 
         // Display (swap buffers)

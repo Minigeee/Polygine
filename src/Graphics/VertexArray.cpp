@@ -74,7 +74,7 @@ void VertexArray::bind()
 
 
 ///////////////////////////////////////////////////////////
-void VertexArray::addBuffer(VertexBuffer& buffer, Uint32 index, Uint32 size, Uint32 stride, Uint32 offset, Uint32 divisor)
+void VertexArray::addBuffer(VertexBuffer& buffer, Uint32 index, Uint32 size, Uint32 stride, Uint32 offset, Uint32 divisor, GLType dtype)
 {
 	// Make sure parameters are good
 	if (!buffer.getSize() || buffer.getDataType() == GLType::Unknown || !size)
@@ -90,7 +90,9 @@ void VertexArray::addBuffer(VertexBuffer& buffer, Uint32 index, Uint32 size, Uin
 	buffer.bind();
 
 	// Add attributes
-	GLType dtype = buffer.getDataType();
+	if (dtype == GLType::Unknown)
+		dtype = buffer.getDataType();
+
 	if (dtype == GLType::Float || dtype == GLType::Double)
 		glCheck(glVertexAttribPointer(index, size, (GLenum)dtype, GL_FALSE, stride, (void*)offset));
 	else
