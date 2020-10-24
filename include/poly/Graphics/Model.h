@@ -3,6 +3,7 @@
 
 #include <poly/Core/DataTypes.h>
 
+#include <poly/Math/BoundingBox.h>
 #include <poly/Math/Vector3.h>
 
 #include <poly/Graphics/Material.h>
@@ -34,6 +35,13 @@ struct Vertex
 };
 
 
+struct AnimatedVertex : public Vertex
+{
+	Vector4f m_boneWeights;
+	Vector4i m_boneIds;
+};
+
+
 class Model
 {
 public:
@@ -47,6 +55,8 @@ public:
 
 	VertexArray& getVertexArray();
 
+	const BoundingBox& getBoundingBox() const;
+
 	const std::vector<Vertex>& getVertices() const;
 
 	Material& getMaterial(Uint32 index = 0);
@@ -54,6 +64,9 @@ public:
 private:
 	VertexArray m_vertexArray;
 	VertexBuffer m_vertexBuffer;
+	VertexBuffer m_skeletalVertexBuffer;
+	BoundingBox m_boundingBox;
+
 	std::vector<Vertex> m_vertices;
 	std::vector<Material> m_materials;
 };

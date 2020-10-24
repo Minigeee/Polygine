@@ -42,7 +42,7 @@ int main()
     Material& material = model.getMaterial();
 
     Shader shader;
-    shader.load("shaders/default.vert", Shader::Vertex);
+    shader.load("shaders/animated.vert", Shader::Vertex);
     shader.load("shaders/default.frag", Shader::Fragment);
     shader.compile();
 
