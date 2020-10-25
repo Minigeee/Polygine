@@ -59,7 +59,7 @@ public:
 
 	const std::vector<Vertex>& getVertices() const;
 
-	Material& getMaterial(Uint32 index = 0);
+	const Material& getMaterial(Uint32 index = 0) const;
 
 private:
 	VertexArray m_vertexArray;

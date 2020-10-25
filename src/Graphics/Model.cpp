@@ -176,11 +176,11 @@ void processMesh(aiMesh* mesh, ModelLoadState& state)
 		// Position and normal
 		Vertex vertex;
 		vertex.m_position.x = p.x;
-		vertex.m_position.y = p.z;
-		vertex.m_position.z = -p.y;
+		vertex.m_position.y = p.y;
+		vertex.m_position.z = p.z;
 		vertex.m_normal.x = n.x;
-		vertex.m_normal.y = n.z;
-		vertex.m_normal.z = -n.y;
+		vertex.m_normal.y = n.y;
+		vertex.m_normal.z = n.z;
 
 		// Texture coords
 		if (mesh->mTextureCoords[0])
@@ -491,7 +491,7 @@ const std::vector<Vertex>& Model::getVertices() const
 
 
 ///////////////////////////////////////////////////////////
-Material& Model::getMaterial(Uint32 index)
+const Material& Model::getMaterial(Uint32 index) const
 {
 	return m_materials[index];
 }

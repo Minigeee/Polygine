@@ -14,10 +14,19 @@ flat out int v_materialIndex;
 
 uniform mat4 u_projView;
 uniform mat4 u_transform;
+uniform mat4 u_bones[20];
 
 void main()
 {
-    gl_Position =  u_projView * vec4(a_position, 1.0);
+    mat4 boneTransform = mat4(0.0f);
+    for (int i = 0; i < 4; i++)
+    {
+        if (a_boneIds[i] >= 0)
+            boneTransform += u_bones[a_boneIds[i]] * a_boneWeights[i];
+    }
+
+    vec4 pos = u_transform * boneTransform * vec4(a_position, 1.0);
+    gl_Position =  u_projView * pos;
 
     v_texCoord = a_texCoord;
     v_color = a_color;

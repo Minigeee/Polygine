@@ -6,6 +6,7 @@
 #include <poly/Graphics/Image.h>
 #include <poly/Graphics/Model.h>
 #include <poly/Graphics/Shader.h>
+#include <poly/Graphics/Skeleton.h>
 #include <poly/Graphics/Texture.h>
 #include <poly/Graphics/VertexArray.h>
 #include <poly/Graphics/VertexBuffer.h>
@@ -39,7 +40,10 @@ int main()
     Model model;
     model.load("models/character/character.dae");
     VertexArray& vao = model.getVertexArray();
-    Material& material = model.getMaterial();
+    const Material& material = model.getMaterial();
+
+    Skeleton skeleton;
+    skeleton.load("models/character/character.dae");
 
     Shader shader;
     shader.load("shaders/animated.vert", Shader::Vertex);
@@ -67,7 +71,9 @@ int main()
 
         shader.bind();
         shader.setUniform("u_projView", projView);
+        shader.setUniform("u_transform", Matrix4f(1.0f));
         material.apply(&shader);
+        skeleton.apply(&shader);
         vao.draw();
 
         // Display (swap buffers)
