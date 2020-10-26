@@ -1,5 +1,6 @@
 #include <poly/Core/Logger.h>
 
+#include <poly/Graphics/Animation.h>
 #include <poly/Graphics/Skeleton.h>
 
 #include <assimp/Importer.hpp>
@@ -11,26 +12,6 @@ namespace poly
 
 namespace priv
 {
-
-
-Matrix4f aiMatrixToMatrix4f(const aiMatrix4x4& t)
-{
-#ifdef USE_COLUMN_MAJOR
-	return Matrix4f(
-		t.a1, t.b1, t.c1, t.d1,
-		t.a2, t.b2, t.c2, t.d2,
-		t.a3, t.b3, t.c3, t.d3,
-		t.a4, t.b4, t.c4, t.d4
-	);
-#else
-	return Matrix4f(
-		t.a1, t.a2, t.a3, t.a4,
-		t.b1, t.b2, t.b3, t.b4,
-		t.c1, t.c2, t.c3, t.c4,
-		t.d1, t.d2, t.d3, t.d4
-	);
-#endif
-}
 
 
 ///////////////////////////////////////////////////////////
@@ -76,7 +57,7 @@ void addBones(aiNode* node, Bone* parent, const aiScene* scene, Skeleton* skelet
 
 		// Set root node
 		if (!parent)
-			skeleton->setRoot(bone, transform);
+			skeleton->setRoot(bone);
 		else
 			parent->addBone(bone);
 	}
@@ -87,6 +68,19 @@ void addBones(aiNode* node, Bone* parent, const aiScene* scene, Skeleton* skelet
 }
 
 
+///////////////////////////////////////////////////////////
+void applyAnimation(Bone* bone, Animation* animation, float time)
+{
+	// Apply transform
+	bone->setTransform(animation->getTransform(bone->getName(), time));
+	int test = 0;
+
+	// Apply transform for children
+	for (Uint32 i = 0; i < bone->getChildren().size(); ++i)
+		applyAnimation(bone->getChildren()[i], animation, time);
+}
+
+
 }
 
 
@@ -94,7 +88,9 @@ void addBones(aiNode* node, Bone* parent, const aiScene* scene, Skeleton* skelet
 Skeleton::Skeleton() :
 	m_root				(0),
 	m_bonePool			(sizeof(Bone), 10),
-	m_globalInverseBind	(1.0f)
+	m_animation			(0),
+	m_animTime			(0.0f),
+	m_animSpeed			(1.0f)
 {
 
 }
@@ -121,7 +117,44 @@ bool Skeleton::load(const std::string& fname)
 	// Create skeleton
 	priv::addBones(scene->mRootNode, 0, scene, this, offsets);
 
+	// Read animations
+	aiNodeAnim anim;
+
 	return true;
+}
+
+
+///////////////////////////////////////////////////////////
+void Skeleton::apply(Shader* shader)
+{
+	for (auto it = m_boneMap.begin(); it != m_boneMap.end(); ++it)
+	{
+		Bone* bone = it.value();
+
+		// Calculate final transform
+		Matrix4f transform = bone->getGlobalTransform() * bone->getOffset();
+
+		// Set bone transform
+		shader->setUniform("u_bones[" + std::to_string(bone->getId()) + "]", transform);
+	}
+}
+
+
+///////////////////////////////////////////////////////////
+void Skeleton::update(float dt)
+{
+	// Only apply atnimation if root node exists and animation exists
+	if (m_root && m_animation)
+	{
+		// Update animation time
+		float duration = m_animation->getDuration() / m_animation->getTicksPerSecond();
+		m_animTime += fmodf(dt * m_animSpeed, duration);
+		if (m_animTime < 0.0f)
+			m_animTime += duration;
+
+		// Recursively apply animation
+		priv::applyAnimation(m_root, m_animation, m_animTime);
+	}
 }
 
 
@@ -164,10 +197,31 @@ void Skeleton::removeBone(const std::string& name)
 
 
 ///////////////////////////////////////////////////////////
-void Skeleton::setRoot(Bone* bone, const Matrix4f& transform)
+void Skeleton::setRoot(Bone* bone)
 {
 	m_root = bone;
-	m_globalInverseBind = inverse(transform);
+}
+
+
+///////////////////////////////////////////////////////////
+void Skeleton::setAnimation(Animation* animation)
+{
+	m_animation = animation;
+	m_animTime = 0.0f;
+}
+
+
+///////////////////////////////////////////////////////////
+void Skeleton::setAnimationTime(float time)
+{
+	m_animTime = time;
+}
+
+
+///////////////////////////////////////////////////////////
+void Skeleton::setAnimationSpeed(float speed)
+{
+	m_animSpeed = speed;
 }
 
 
@@ -199,18 +253,23 @@ Uint32 Skeleton::getNumBones() const
 
 
 ///////////////////////////////////////////////////////////
-void Skeleton::apply(Shader* shader)
+Animation* Skeleton::getAnimation() const
 {
-	for (auto it = m_boneMap.begin(); it != m_boneMap.end(); ++it)
-	{
-		Bone* bone = it.value();
+	return m_animation;
+}
 
-		// Calculate final transform
-		Matrix4f transform = bone->getGlobalTransform() * bone->getOffset();
 
-		// Set bone transform
-		shader->setUniform("u_bones[" + std::to_string(bone->getId()) + "]", transform);
-	}
+///////////////////////////////////////////////////////////
+float Skeleton::getAnimationTime() const
+{
+	return m_animTime;
+}
+
+
+///////////////////////////////////////////////////////////
+float Skeleton::getAnimationSpeed() const
+{
+	return m_animSpeed;
 }
 
 

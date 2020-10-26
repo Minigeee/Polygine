@@ -18,6 +18,8 @@ public:
 
 	Quaternion(float x, float y, float z, float w);
 
+	Quaternion(const Matrix4f& m);
+
 	Quaternion& operator+=(const Quaternion& x);
 
 	Quaternion operator+(const Quaternion& x) const;
@@ -25,6 +27,8 @@ public:
 	Quaternion& operator*=(const Quaternion& x);
 
 	Quaternion operator*(const Quaternion& x) const;
+
+	Quaternion operator-() const;
 
 	float x, y, z, w;
 };

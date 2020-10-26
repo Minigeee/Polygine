@@ -27,6 +27,11 @@ namespace priv
 ///////////////////////////////////////////////////////////
 struct SkeletalData
 {
+	SkeletalData() :
+		m_boneWeights	(0.0f),
+		m_boneIds		(-1)
+	{ }
+
 	Vector4f m_boneWeights;
 	Vector4i m_boneIds;
 };
@@ -155,7 +160,7 @@ void processMesh(aiMesh* mesh, ModelLoadState& state)
 			if (weight.mWeight > *minWeight)
 			{
 				*minWeight = weight.mWeight;
-				*minId = id;
+				*minId = i;
 			}
 		}
 	}
@@ -263,12 +268,15 @@ void getBoneNames(aiNode* node, const aiScene* scene, HashMap<std::string, int>&
 
 
 ///////////////////////////////////////////////////////////
-void getBoneIds(aiNode* node, const aiScene* scene, HashMap<std::string, int>& bones, int numBones)
+void getBoneIds(aiNode* node, const aiScene* scene, HashMap<std::string, int>& bones, int& numBones)
 {
 	// If the node name matches a bone name, set the id
 	auto it = bones.find(node->mName.C_Str());
 	if (it != bones.end())
+	{
 		it.value() = numBones++;
+		LOG("%s: %d", node->mName.C_Str(), it.value());
+	}
 
 	// Process all children nodes
 	for (Uint32 i = 0; i < node->mNumChildren; ++i)
@@ -381,8 +389,9 @@ bool Model::load(const std::string& fname)
 	state.m_directory = fname.substr(0, fname.find_last_of("/\\"));
 
 	// Process bone data
+	int numBones = 0;
 	priv::getBoneNames(scene->mRootNode, scene, state.m_bones);
-	priv::getBoneIds(scene->mRootNode, scene, state.m_bones, 0);
+	priv::getBoneIds(scene->mRootNode, scene, state.m_bones, numBones);
 
 	// Process nodes
 	priv::processNode(scene->mRootNode, state);

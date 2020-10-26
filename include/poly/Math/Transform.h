@@ -18,7 +18,7 @@ namespace poly
 /// \return The resulting transform matrix
 ///
 ///////////////////////////////////////////////////////////
-Matrix4f toTransformMatrix(const Vector3f& t, const Vector3f& r, float s);
+Matrix4f toTransformMatrix(const Vector3f& t, const Vector3f& r, const Vector3f& s);
 
 ///////////////////////////////////////////////////////////
 /// \brief Create a transform matrix from position, quaternion, and scale
@@ -30,7 +30,7 @@ Matrix4f toTransformMatrix(const Vector3f& t, const Vector3f& r, float s);
 /// \return The resulting transform matrix
 ///
 ///////////////////////////////////////////////////////////
-Matrix4f toTransformMatrix(const Vector3f& t, const Quaternion& r, float s);
+Matrix4f toTransformMatrix(const Vector3f& t, const Quaternion& r, const Vector3f& s);
 
 ///////////////////////////////////////////////////////////
 /// \brief Create a view matrix based on a camera's position, front vector, and right vector

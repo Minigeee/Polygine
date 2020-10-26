@@ -10,6 +10,7 @@
 namespace poly
 {
 
+class Animation;
 class Bone;
 
 class Skeleton
@@ -19,11 +20,21 @@ public:
 
 	bool load(const std::string& fname);
 
+	void apply(Shader* shader);
+
+	void update(float dt);
+
 	Bone* createBone(const std::string& name);
 
 	void removeBone(const std::string& name);
 
-	void setRoot(Bone* bone, const Matrix4f& transform);
+	void setRoot(Bone* bone);
+
+	void setAnimation(Animation* animation);
+
+	void setAnimationTime(float time);
+
+	void setAnimationSpeed(float speed);
 
 	Bone* getBone(const std::string& name) const;
 
@@ -31,15 +42,20 @@ public:
 
 	Uint32 getNumBones() const;
 
-	void apply(Shader* shader);
+	Animation* getAnimation() const;
+
+	float getAnimationTime() const;
+
+	float getAnimationSpeed() const;
 	
 private:
 	Bone* m_root;
 	ObjectPool m_bonePool;
 	HashMap<std::string, Bone*> m_boneMap;
 
-public:
-	Matrix4f m_globalInverseBind;
+	Animation* m_animation;
+	float m_animTime;
+	float m_animSpeed;
 };
 
 }

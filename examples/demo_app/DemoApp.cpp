@@ -2,6 +2,7 @@
 #include <poly/Core/Logger.h>
 #include <poly/Core/Sleep.h>
 
+#include <poly/Graphics/Animation.h>
 #include <poly/Graphics/Camera.h>
 #include <poly/Graphics/Image.h>
 #include <poly/Graphics/Model.h>
@@ -45,6 +46,14 @@ int main()
     Skeleton skeleton;
     skeleton.load("models/character/character.dae");
 
+    Matrix4f t = toTransformMatrix(Vector3f(0.0f, 0.0f, 5.0f), Vector3f(0.0f), Vector3f(1.0f));
+    Bone* bone = skeleton.getBone("Armature_Chest");
+    // bone->setTransform(t);
+
+    Animation walk;
+    walk.load("models/character/character.dae", "Armature");
+    skeleton.setAnimation(&walk);
+
     Shader shader;
     shader.load("shaders/animated.vert", Shader::Vertex);
     shader.load("shaders/default.frag", Shader::Fragment);
@@ -57,6 +66,7 @@ int main()
     glCullFace(GL_BACK);
 
     Clock clock;
+    float time = 0.0f;
 
     // Game loop
     while (window.isOpen())
@@ -66,13 +76,18 @@ int main()
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        camera.setPosition(sin(clock.getElapsedTime().toSeconds()) * 1.5f, 5.0f, 15.0f);
+        float elapsed = clock.restart().toSeconds();
+        time += elapsed;
+
+        camera.setPosition(0.0f, 5.0f, 15.0f);
         Matrix4f projView = camera.getProjMatrix() * camera.getViewMatrix();
+        Matrix4f transform = toTransformMatrix(Vector3f(0.0f), Quaternion(Vector3f(0, 1, 0), time * 50.0f), Vector3f(1.0f));
 
         shader.bind();
         shader.setUniform("u_projView", projView);
-        shader.setUniform("u_transform", Matrix4f(1.0f));
+        shader.setUniform("u_transform", transform);
         material.apply(&shader);
+        skeleton.update(elapsed);
         skeleton.apply(&shader);
         vao.draw();
 

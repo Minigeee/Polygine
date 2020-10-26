@@ -65,6 +65,79 @@ Quaternion::Quaternion(float x, float y, float z, float w) :
 
 
 ///////////////////////////////////////////////////////////
+Quaternion::Quaternion(const Matrix4f& matrix) :
+	x(0.0f),
+	y(0.0f),
+	z(0.0f),
+	w(1.0f)
+{
+#ifdef USE_COLUMN_MAJOR
+	Matrix4f m = transpose(matrix);
+#else
+	Matrix4f m = matrix;
+#endif
+
+	float tr, u;
+	tr = m.x.x + m.y.y + m.z.z;
+
+	if (tr >= 0)
+	{
+		u = (float)sqrtf(tr + 1);
+		w = (float)0.5 * u;
+		u = (float)0.5 / u;
+		x = (m.z.y - m.y.z) * u;
+		y = (m.x.z - m.z.x) * u;
+		z = (m.y.x - m.x.y) * u;
+	}
+	else
+	{
+		int i = 0;
+		if (m.y.y > m.x.x)
+		{
+			i = 1;
+
+			if (m.z.z > m.y.y)
+				i = 2;
+		}
+
+		if (m.z.z > m.x.x)
+			i = 2;
+
+		switch (i)
+		{
+		case 0:
+			u = (float)sqrtf((m.x.x - (m.y.y + m.z.z)) + 1);
+			x = 0.5f * u;
+			u = 0.5f / u;
+			y = (m.y.x + m.x.y) * u;
+			z = (m.x.z + m.z.x) * u;
+			w = (m.z.y - m.y.z) * u;
+			break;
+
+		case 1:
+			u = (float)sqrtf((m.y.y - (m.z.z + m.x.x)) + 1);
+			y = 0.5f * u;
+			u = 0.5f / u;
+			z = (m.z.y + m.y.z) * u;
+			x = (m.y.x + m.x.y) * u;
+			w = (m.x.z - m.z.x) * u;
+			break;
+
+		case 2:
+			u = (float)sqrtf((m.z.z - (m.x.x + m.y.y)) + 1);
+			z = 0.5f * u;
+
+			u = 0.5f / u;
+			x = (m.x.z + m.z.x) * u;
+			y = (m.z.y + m.y.z) * u;
+			w = (m.y.x - m.x.y) * u;
+			break;
+		}
+	}
+}
+
+
+///////////////////////////////////////////////////////////
 Quaternion& Quaternion::operator+=(const Quaternion& x)
 {
 	return (*this = *this + x);
@@ -100,6 +173,13 @@ Quaternion Quaternion::operator*(const Quaternion& q) const
 
 
 ///////////////////////////////////////////////////////////
+Quaternion Quaternion::operator-() const
+{
+	return Quaternion(-x, -y, -z, -w);
+}
+
+
+///////////////////////////////////////////////////////////
 float magnitude(const Quaternion& q)
 {
 	return ::sqrt(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w);
@@ -110,7 +190,7 @@ float magnitude(const Quaternion& q)
 Quaternion normalize(const Quaternion& q)
 {
 	float n = 1.0f / magnitude(q);
-	return Quaternion(q.x * n, q.x * n, q.x * n, q.w);
+	return Quaternion(q.x * n, q.y * n, q.z * n, q.w);
 }
 
 
@@ -132,13 +212,14 @@ Quaternion inverse(const Quaternion& q)
 ///////////////////////////////////////////////////////////
 Quaternion slerp(const Quaternion& a, const Quaternion& b, float x)
 {
-	float dot = a.x * a.x + a.y * a.y + a.z * a.z + a.w * a.w;
-
-	x *= 0.5f;
+	float dot = a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+	if (dot < -1.0f) dot = -1.0f;
+	if (dot > 1.0f) dot = 1.0f;
 
 	// Calc theta
 	float theta = acos(dot);
 	if (theta < 0.0f) theta = -theta;
+	if (theta == 0.0f) theta = FLT_EPSILON;
 
 	float st = sin(theta);
 	float sut = sin(x * theta);
@@ -147,12 +228,13 @@ Quaternion slerp(const Quaternion& a, const Quaternion& b, float x)
 	float coeff2 = sut / st;
 
 	Quaternion result;
-	result.x = coeff1 * a.x + coeff2 * a.x;
-	result.y = coeff1 * a.y + coeff2 * a.y;
-	result.z = coeff1 * a.z + coeff2 * a.z;
-	result.w = coeff1 * a.w + coeff2 * a.w;
+	result.x = coeff1 * a.x + coeff2 * b.x;
+	result.y = coeff1 * a.y + coeff2 * b.y;
+	result.z = coeff1 * a.z + coeff2 * b.z;
+	result.w = coeff1 * a.w + coeff2 * b.w;
 
-	return normalize(result);
+	result = normalize(result);
+	return result;
 }
 
 
