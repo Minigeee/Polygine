@@ -288,7 +288,7 @@ private:
 ///
 ///////////////////////////////////////////////////////////
 #ifndef NDEBUG
-#define ASSERT(cond, msg, ...) if (!(cond)) { LOG_ERROR(msg, __VA_ARGS__); abort(); }
+#define ASSERT(cond, msg, ...) if (!(cond)) { LOG_ERROR("%s: %s", STR(cond), poly::priv::format(msg, __VA_ARGS__).c_str()); abort(); }
 #else
 #define ASSERT(cond, msg, ...)
 #endif

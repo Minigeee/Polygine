@@ -7,3 +7,9 @@
 [submodule "extlibs/glfw"]
 	path = extlibs/glfw
 	url = https://github.com/glfw/glfw.git
+[submodule "extlibs/stb"]
+	path = extlibs/stb
+	url = https://github.com/nothings/stb.git
+[submodule "extlibs/assimp"]
+	path = extlibs/assimp
+	url = https://github.com/assimp/assimp.git
