@@ -1,6 +1,7 @@
 #ifndef POLY_CAMERA_H
 #define POLY_CAMERA_H
 
+#include <poly/Math/Frustum.h>
 #include <poly/Math/Matrix4.h>
 #include <poly/Math/Vector3.h>
 
@@ -239,6 +240,19 @@ public:
 	const Matrix4f& getViewMatrix();
 
 	///////////////////////////////////////////////////////////
+	/// \brief Get the camera frustum
+	///
+	/// Every time one of the view parameters is changed (position,
+	/// direction, or zoom), or one of the projection parameters is
+	/// changed, the frustum will be recalculated and cached in this
+	/// function call.
+	///
+	/// \return The camera frustum
+	///
+	///////////////////////////////////////////////////////////
+	const Frustum& getFrustum();
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the camera field of view
 	///
 	/// \return The field of view along the x axis in degrees
@@ -273,6 +287,7 @@ public:
 private:
 	Matrix4f m_projMatrix;		//!< The projection matrix
 	Matrix4f m_viewMatrix;		//!< The view matrix
+	Frustum m_frustum;			//!< The camera frustum
 
 	Vector3f m_position;		//!< The position in world space
 	Vector3f m_direction;		//!< The direction vector

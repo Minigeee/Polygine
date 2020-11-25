@@ -4,6 +4,7 @@
 #include <poly/Core/DataTypes.h>
 
 #include <poly/Math/BoundingBox.h>
+#include <poly/Math/Sphere.h>
 #include <poly/Math/Vector3.h>
 
 #include <poly/Graphics/Material.h>
@@ -57,6 +58,8 @@ public:
 
 	const BoundingBox& getBoundingBox() const;
 
+	const Sphere& getBoundingSphere() const;
+
 	const std::vector<Vertex>& getVertices() const;
 
 	const Material& getMaterial(Uint32 index = 0) const;
@@ -68,6 +71,7 @@ private:
 	VertexBuffer m_vertexBuffer;
 	VertexBuffer m_skeletalVertexBuffer;
 	BoundingBox m_boundingBox;
+	Sphere m_boundingSphere;
 
 	std::vector<Vertex> m_vertices;
 	std::vector<Material> m_materials;

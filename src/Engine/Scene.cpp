@@ -202,12 +202,30 @@ void Scene::render()
 	// Keep track of the total number of visible entities
 	Uint32 numVisible = 0;
 
+	// Get the camera frustum
+	const Frustum& frustum = m_camera->getFrustum();
+
 	// Sort and cull all renderable entities
 	system<TransformComponent, RenderComponent>(
 		[&](const Entity::Id& id, TransformComponent& t, RenderComponent& r)
 		{
 			// Do culling here
 			bool culled = false;
+
+			// Get the scale
+			float scale = t.m_scale.x;
+			if (t.m_scale.y > scale)
+				scale = t.m_scale.y;
+			if (t.m_scale.z > scale)
+				scale = t.m_scale.z;
+
+			// Get the bounding sphere
+			Sphere sphere = r.m_model->getBoundingSphere();
+			sphere.m_position += t.m_position;
+			sphere.m_radius *= scale;
+
+			// Test if the sphere is in the frustum
+			culled |= !frustum.contains(sphere);
 
 			if (!culled)
 			{
@@ -217,6 +235,9 @@ void Scene::render()
 				// Increment number of visible
 				++numVisible;
 			}
+
+			// Update culled status
+			r.m_culled = culled;
 		}
 	);
 

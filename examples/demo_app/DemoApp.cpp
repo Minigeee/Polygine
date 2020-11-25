@@ -52,12 +52,18 @@ int main()
     shader.compile();
 
     Camera camera;
-    camera.setPosition(0.0f, 5.0f, 15.0f);
+    camera.setPosition(0.0f, 5.0f, 25.0f);
 
     // Setup scene
     Scene scene;
     scene.setCamera(&camera);
-    scene.createEntity(TransformComponent(), RenderComponent{ &model, &shader });
+
+    for (Uint32 i = 0; i < 100; ++i)
+    {
+        TransformComponent t;
+        t.m_position.x = (float)i - 50;
+        scene.createEntity(std::move(t), RenderComponent{ &model, &shader });
+    }
 
     Clock clock;
     float time = 0.0f;
@@ -84,6 +90,9 @@ int main()
         // Display (swap buffers)
         window.display();
     }
+
+    const ProfilerData& data = Profiler::getData("poly::Scene::render");
+    std::cout << data.mean().toMicroseconds() << '\n';
 
     return 0;
 }

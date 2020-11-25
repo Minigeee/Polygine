@@ -422,6 +422,10 @@ bool Model::load(const std::string& fname)
 	// Create bounding box
 	m_boundingBox = priv::calcBoundingBox(m_vertices);
 
+	// Create bounding sphere
+	m_boundingSphere.m_position = m_boundingBox.getCenter();
+	m_boundingSphere.m_radius = length(m_boundingBox.getDimensions()) * 0.5f;
+
 	// Set materials
 	m_materials = state.m_materials;
 
@@ -446,6 +450,10 @@ void Model::create(const std::vector<Vertex>& vertices, BufferUsage usage)
 
 	// Create bounding box
 	m_boundingBox = priv::calcBoundingBox(vertices);
+
+	// Create bounding sphere
+	m_boundingSphere.m_position = m_boundingBox.getCenter();
+	m_boundingSphere.m_radius = length(m_boundingBox.getDimensions()) * 0.5f;
 }
 
 
@@ -489,6 +497,13 @@ VertexArray& Model::getVertexArray()
 const BoundingBox& Model::getBoundingBox() const
 {
 	return m_boundingBox;
+}
+
+
+///////////////////////////////////////////////////////////
+const Sphere& Model::getBoundingSphere() const
+{
+	return m_boundingSphere;
 }
 
 

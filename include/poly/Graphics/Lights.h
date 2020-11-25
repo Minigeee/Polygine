@@ -9,25 +9,50 @@ namespace poly
 class Shader;
 
 
+///////////////////////////////////////////////////////////
+/// \brief The base light class that defines light diffuse and specular color
+///
+///////////////////////////////////////////////////////////
 class Light
 {
 public:
+	///////////////////////////////////////////////////////////
+	/// \brief Abstract apply function to apply a light to a shader
+	///
+	///////////////////////////////////////////////////////////
 	virtual void apply(Shader* shader, Uint32 id) = 0;
 
-	Vector3f m_diffuse;
-	Vector3f m_specular;
+	Vector3f m_diffuse;		//!< The diffuse color
+	Vector3f m_specular;	//!< The specular color
 };
 
 
+///////////////////////////////////////////////////////////
+/// \brief A directional light class that doesn't have a single source (i.e. sunlight)
+///
+///////////////////////////////////////////////////////////
 class DirectionLight : public Light
 {
 public:
+	///////////////////////////////////////////////////////////
+	/// \brief Default constructor that initializes direction pointing straight down
+	///
+	///////////////////////////////////////////////////////////
 	DirectionLight();
+
+	///////////////////////////////////////////////////////////
+	/// \brief Create a directional light from diffuse color, specular color, and direction
+	///
+	///////////////////////////////////////////////////////////
 	DirectionLight(const Vector3f& d, const Vector3f& s, const Vector3f& dir);
 
+	///////////////////////////////////////////////////////////
+	/// \brief Apply light settings to a shader
+	///
+	///////////////////////////////////////////////////////////
 	void apply(Shader* shader, Uint32 id = 0);
 
-	Vector3f m_direction;
+	Vector3f m_direction;	//!< The direction of the light, does not have to be normalized
 };
 
 }

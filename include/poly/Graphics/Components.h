@@ -14,8 +14,9 @@ class Shader;
 ///////////////////////////////////////////////////////////
 struct RenderComponent
 {
-	Model* m_model;		// The model to render
-	Shader* m_shader;	// The shader to render the model with
+	Model* m_model;		//!< The model to render
+	Shader* m_shader;	//!< The shader to render the model with
+	bool m_culled;		//!< This will be true if the entity is being culled
 };
 
 
