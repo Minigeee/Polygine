@@ -5,13 +5,6 @@ namespace poly
 
 
 ///////////////////////////////////////////////////////////
-Frustum::Frustum()
-{
-
-}
-
-
-///////////////////////////////////////////////////////////
 void Frustum::setPlane(const Plane& plane, Side side)
 {
 	mPlanes[side] = plane;
@@ -41,6 +34,7 @@ bool Frustum::contains(const BoundingBox& box) const
 }
 
 
+///////////////////////////////////////////////////////////
 bool Frustum::contains(const Sphere& sphere) const
 {
 	bool contains = true;

@@ -518,14 +518,50 @@ public:
 	template <typename E>
 	void sendEvent(const E& event);
 
-	Handle addLight(Light* light);
+	///////////////////////////////////////////////////////////
+	/// \brief Add a light to the scene
+	///
+	/// The subtype of the light must be one of the predefine light types.
+	/// Support for user-defined lights may be added in the future.
+	///
+	/// \param light A pointer to the light to add
+	///
+	///////////////////////////////////////////////////////////
+	void addLight(Light* light);
 
-	void removeLight(Handle handle);
+	///////////////////////////////////////////////////////////
+	/// \brief Remove a light from the scene
+	///
+	/// The subtype of the light must be one of the predefine light types.
+	/// Support for user-defined lights may be added in the future.
+	///
+	/// \param light A pointer to the light to remove
+	///
+	///////////////////////////////////////////////////////////
+	void removeLight(Light* light);
 
+	///////////////////////////////////////////////////////////
+	/// \brief Set the scene camera
+	///
+	/// \param camera A pointer to the camera
+	///
+	///////////////////////////////////////////////////////////
 	void setCamera(Camera* camera);
 
+	///////////////////////////////////////////////////////////
+	/// \brief Get the scene camera
+	///
+	/// \return A pointer to the camera
+	///
+	///////////////////////////////////////////////////////////
 	Camera* getCamera() const;
 
+	///////////////////////////////////////////////////////////
+	/// \brief Render the scene to a specified framebuffer
+	///
+	/// Still in progress... TODO
+	///
+	///////////////////////////////////////////////////////////
 	void render();
 
 private:
@@ -536,10 +572,10 @@ private:
 	std::mutex m_entityMutex;							//!< Mutex to protect creation and removal of entities
 	std::mutex m_tagMutex;								//!< Mutex to protect adding and removing tags
 
-	Camera* m_camera;
-	HandleArray<Light*> m_lights;
-	VertexBuffer m_instanceBuffer;
-	Uint32 m_instanceBufferOffset;
+	Camera* m_camera;									//!< A pointer to the scene camera
+	std::vector<DirectionLight*> m_dirLights;			//!< A list of directional lights
+	VertexBuffer m_instanceBuffer;						//!< The instance buffer that stores instance transform data
+	Uint32 m_instanceBufferOffset;						//!< The offset of the valid range of the instance buffer
 
 	static HandleArray<bool> idArray;					//!< HandleArray to handle scene id generation
 };

@@ -22,4 +22,18 @@ Sphere::Sphere(const Vector3f& p, float r) :
 }
 
 
+///////////////////////////////////////////////////////////
+bool Sphere::contains(const Vector3f& p) const
+{
+	return dist(m_position, p) < m_radius;
+}
+
+
+///////////////////////////////////////////////////////////
+bool Sphere::contains(const Sphere& s) const
+{
+	return dist(m_position, s.m_position) < m_radius + s.m_radius;
+}
+
+
 }

@@ -157,16 +157,32 @@ const HashSet<Entity::Id>& Scene::getEntitiesWithTag(Uint32 tag)
 
 
 ///////////////////////////////////////////////////////////
-Handle Scene::addLight(Light* light)
+void Scene::addLight(Light* light)
 {
-	return m_lights.add(light);
+	// Add the light to the correct subtype array
+
+	if (dynamic_cast<DirectionLight*>(light))
+		m_dirLights.push_back(light);
 }
 
 
 ///////////////////////////////////////////////////////////
-void Scene::removeLight(Handle handle)
+void Scene::removeLight(Light* light)
 {
-	m_lights.remove(handle);
+	// Remove the light from the correct array
+
+	if (dynamic_cast<DirectionLight*>(light))
+	{
+		for (Uint32 i = 0; i < m_dirLights.size(); ++i)
+		{
+			if (m_dirLights[i] == light)
+			{
+				// Do a swap pop
+				m_dirLights[i] = m_dirLights.back();
+				m_dirLights.pop_back();
+			}
+		}
+	}
 }
 
 
