@@ -162,7 +162,7 @@ void Scene::addLight(Light* light)
 	// Add the light to the correct subtype array
 
 	if (dynamic_cast<DirectionLight*>(light))
-		m_dirLights.push_back(light);
+		m_dirLights.push_back((DirectionLight*)light);
 }
 
 
@@ -200,18 +200,13 @@ Camera* Scene::getCamera() const
 }
 
 
-#include <poly/Graphics/OpenGL.h>
-
 ///////////////////////////////////////////////////////////
-void Scene::render()
+void Scene::render(const RenderState& state)
 {
 	START_PROFILING_FUNC;
 
-	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
-	glCullFace(GL_BACK);
-
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	// Apply render state
+	state.apply();
 
 	HashMap<Model*, std::vector<priv::RenderableEntity>> visibleEntities;
 

@@ -6,6 +6,7 @@
 #include <poly/Engine/Ecs.h>
 #include <poly/Engine/Entity.h>
 
+#include <poly/Graphics/RenderState.h>
 #include <poly/Graphics/VertexBuffer.h>
 
 #include <unordered_map>
@@ -14,6 +15,7 @@ namespace poly
 {
 
 class Camera;
+class DirectionLight;
 class Light;
 
 
@@ -562,7 +564,7 @@ public:
 	/// Still in progress... TODO
 	///
 	///////////////////////////////////////////////////////////
-	void render();
+	void render(const RenderState& state = RenderState::Default);
 
 private:
 	Handle m_handle;									//!< The scene handle used for scene id
