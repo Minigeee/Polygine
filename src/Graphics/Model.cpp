@@ -107,14 +107,8 @@ void processMaterial(aiMaterial* material, ModelLoadState& state)
 
 	// Load textures
 	Uint32 numMaterials = state.m_materials.size();
-	modelMat.addTexture(
-		"u_diffuseMaps[" + std::to_string(numMaterials) + ']',
-		loadMaterialTexture(material, aiTextureType_DIFFUSE, state)
-	);
-	modelMat.addTexture(
-		"u_specularMaps" + std::to_string(numMaterials) + ']',
-		loadMaterialTexture(material, aiTextureType_SPECULAR, state)
-	);
+	modelMat.setDiffTexture(loadMaterialTexture(material, aiTextureType_DIFFUSE, state));
+	modelMat.setSpecTexture(loadMaterialTexture(material, aiTextureType_SPECULAR, state));
 
 	// Add material
 	state.m_materials.push_back(modelMat);

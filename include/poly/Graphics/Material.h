@@ -26,6 +26,10 @@ public:
 
 	void setShininess(float shininess);
 
+	void setDiffTexture(Texture* texture);
+
+	void setSpecTexture(Texture* texture);
+
 	void addTexture(const std::string& uniform, Texture* texture);
 
 	void removeTexture(const std::string& uniform);
@@ -44,6 +48,9 @@ private:
 	Vector3f m_diffuse;
 	Vector3f m_specular;
 	float m_shininess;
+
+	Texture* m_diffTexture;
+	Texture* m_specTexture;
 
 	HashMap<std::string, Texture*> m_textures;
 };

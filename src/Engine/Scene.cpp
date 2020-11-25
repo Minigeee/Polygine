@@ -37,10 +37,15 @@ struct RenderData
 
 
 ///////////////////////////////////////////////////////////
-void bindShader(Shader* shader, Camera* camera)
+void bindShader(Shader* shader, Camera* camera, const std::vector<DirectionLight*>& dirLights)
 {
 	shader->bind();
 	shader->setUniform("u_projView", camera->getProjMatrix() * camera->getViewMatrix());
+
+	// Apply lights
+	shader->setUniform("u_numDirLights", (int)dirLights.size());
+	for (Uint32 i = 0; i < dirLights.size(); ++i)
+		dirLights[i]->apply(shader, i);
 }
 
 
@@ -319,7 +324,7 @@ void Scene::render(const RenderState& state)
 
 	// Bind the first shader
 	Shader* shader = renderData.front().m_shader;
-	priv::bindShader(shader, m_camera);
+	priv::bindShader(shader, m_camera, m_dirLights);
 
 	// Iterate through render data and render everything
 	for (Uint32 i = 0; i < renderData.size(); ++i)
@@ -330,7 +335,7 @@ void Scene::render(const RenderState& state)
 		if (data.m_shader != shader)
 		{
 			shader = data.m_shader;
-			priv::bindShader(shader, m_camera);
+			priv::bindShader(shader, m_camera, m_dirLights);
 		}
 
 		// Apply the materials

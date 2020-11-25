@@ -10,6 +10,7 @@
 #include <poly/Graphics/Camera.h>
 #include <poly/Graphics/Components.h>
 #include <poly/Graphics/Image.h>
+#include <poly/Graphics/Lights.h>
 #include <poly/Graphics/Model.h>
 #include <poly/Graphics/Shader.h>
 #include <poly/Graphics/Skeleton.h>
@@ -52,11 +53,16 @@ int main()
     shader.compile();
 
     Camera camera;
-    camera.setPosition(0.0f, 5.0f, 25.0f);
+    camera.setPosition(0.0f, 15.0f, 15.0f);
+    camera.setRotation(-45.0f, 0.0f);
+
+    DirectionLight sun;
+    sun.m_direction.z = -1.0f;
 
     // Setup scene
     Scene scene;
     scene.setCamera(&camera);
+    scene.addLight(&sun);
 
     for (Uint32 i = 0; i < 100; ++i)
     {
