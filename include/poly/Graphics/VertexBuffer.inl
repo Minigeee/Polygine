@@ -19,7 +19,7 @@ template <typename T>
 inline void VertexBuffer::create(const T* data, Uint32 num, BufferUsage usage, GLType dtype)
 {
 	// Make sure parameters are valid
-	if (!data || !num)
+	if (!num)
 	{
 		LOG_WARNING("Skipping vertex buffer creation");
 		return;

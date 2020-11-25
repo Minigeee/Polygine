@@ -506,4 +506,11 @@ const Material& Model::getMaterial(Uint32 index) const
 }
 
 
+///////////////////////////////////////////////////////////
+const std::vector<Material>& Model::getMaterials() const
+{
+	return m_materials;
+}
+
+
 }

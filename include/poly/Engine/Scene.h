@@ -2,13 +2,20 @@
 #define POLY_SCENE_H
 
 #include <poly/Core/Tuple.h>
+
 #include <poly/Engine/Ecs.h>
 #include <poly/Engine/Entity.h>
+
+#include <poly/Graphics/VertexBuffer.h>
 
 #include <unordered_map>
 
 namespace poly
 {
+
+class Camera;
+class Light;
+
 
 ///////////////////////////////////////////////////////////
 /// \brief A class that represent a game scene and stores all data on
@@ -511,6 +518,16 @@ public:
 	template <typename E>
 	void sendEvent(const E& event);
 
+	Handle addLight(Light* light);
+
+	void removeLight(Handle handle);
+
+	void setCamera(Camera* camera);
+
+	Camera* getCamera() const;
+
+	void render();
+
 private:
 	Handle m_handle;									//!< The scene handle used for scene id
 
@@ -518,6 +535,11 @@ private:
 	HashMap<int, HashSet<Entity::Id>> m_entityTags;		//!< Map of tags to sets of entity ids
 	std::mutex m_entityMutex;							//!< Mutex to protect creation and removal of entities
 	std::mutex m_tagMutex;								//!< Mutex to protect adding and removing tags
+
+	Camera* m_camera;
+	HandleArray<Light*> m_lights;
+	VertexBuffer m_instanceBuffer;
+	Uint32 m_instanceBufferOffset;
 
 	static HandleArray<bool> idArray;					//!< HandleArray to handle scene id generation
 };

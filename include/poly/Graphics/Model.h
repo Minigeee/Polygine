@@ -61,6 +61,8 @@ public:
 
 	const Material& getMaterial(Uint32 index = 0) const;
 
+	const std::vector<Material>& getMaterials() const;
+
 private:
 	VertexArray m_vertexArray;
 	VertexBuffer m_vertexBuffer;

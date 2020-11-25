@@ -1,16 +1,68 @@
+#include <poly/Core/Profiler.h>
+
+#include <poly/Engine/Components.h>
 #include <poly/Engine/Scene.h>
+
+#include <poly/Graphics/Camera.h>
+#include <poly/Graphics/Components.h>
+#include <poly/Graphics/Lights.h>
+#include <poly/Graphics/Model.h>
+#include <poly/Graphics/Shader.h>
+
+#include <poly/Math/Transform.h>
 
 namespace poly
 {
 
-HandleArray<bool> Scene::idArray;
+namespace priv
+{
+
 
 ///////////////////////////////////////////////////////////
+struct RenderableEntity
+{
+	TransformComponent* m_transform;
+	RenderComponent* m_render;
+};
 
+
+///////////////////////////////////////////////////////////
+struct RenderData
+{
+	Model* m_model;
+	Shader* m_shader;
+	Uint32 m_offset;
+	Uint32 m_instances;
+};
+
+
+///////////////////////////////////////////////////////////
+void bindShader(Shader* shader, Camera* camera)
+{
+	shader->bind();
+	shader->setUniform("u_projView", camera->getProjMatrix() * camera->getViewMatrix());
+}
+
+
+}
+
+
+///////////////////////////////////////////////////////////
+HandleArray<bool> Scene::idArray;
+
+
+///////////////////////////////////////////////////////////
 Scene::Scene() :
-	m_handle	(idArray.add(true))
-{ }
+	m_handle				(idArray.add(true)),
+	m_camera				(0),
+	m_instanceBufferOffset	(0)
+{
+	// Create stream type instance buffer
+	m_instanceBuffer.create<Matrix4f>(0, 65536, BufferUsage::Stream);
+}
 
+
+///////////////////////////////////////////////////////////
 Scene::~Scene()
 {
 	// Clean up ECS
@@ -26,13 +78,15 @@ Scene::~Scene()
 	idArray.remove(m_handle);
 }
 
+
+///////////////////////////////////////////////////////////
 Uint16 Scene::getId() const
 {
 	return m_handle.m_index;
 }
 
-///////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////
 void Scene::removeEntity(Entity::Id id)
 {
 	// Find the correct group
@@ -48,6 +102,8 @@ void Scene::removeEntity(Entity::Id id)
 	it.value().removeEntity(id);
 }
 
+
+///////////////////////////////////////////////////////////
 void Scene::removeQueuedEntities()
 {
 	// Entity removal is protected by mutex
@@ -58,6 +114,8 @@ void Scene::removeQueuedEntities()
 		it.value().removeQueuedEntities();
 }
 
+
+///////////////////////////////////////////////////////////
 void Scene::addTag(Entity::Id id, int tag)
 {
 	std::lock_guard<std::mutex> lock(m_tagMutex);
@@ -66,6 +124,8 @@ void Scene::addTag(Entity::Id id, int tag)
 	m_entityTags[tag].insert(id);
 }
 
+
+///////////////////////////////////////////////////////////
 void Scene::removeTag(Entity::Id id, int tag)
 {
 	std::lock_guard<std::mutex> lock(m_tagMutex);
@@ -74,6 +134,8 @@ void Scene::removeTag(Entity::Id id, int tag)
 	m_entityTags[tag].erase(id);
 }
 
+
+///////////////////////////////////////////////////////////
 bool Scene::hasTag(Entity::Id id, int tag)
 {
 	std::lock_guard<std::mutex> lock(m_tagMutex);
@@ -86,11 +148,177 @@ bool Scene::hasTag(Entity::Id id, int tag)
 	return it->second.find(id) != it->second.end();
 }
 
+
+///////////////////////////////////////////////////////////
 const HashSet<Entity::Id>& Scene::getEntitiesWithTag(Uint32 tag)
 {
 	return m_entityTags[tag];
 }
 
+
 ///////////////////////////////////////////////////////////
+Handle Scene::addLight(Light* light)
+{
+	return m_lights.add(light);
+}
+
+
+///////////////////////////////////////////////////////////
+void Scene::removeLight(Handle handle)
+{
+	m_lights.remove(handle);
+}
+
+
+///////////////////////////////////////////////////////////
+void Scene::setCamera(Camera* camera)
+{
+	m_camera = camera;
+}
+
+
+///////////////////////////////////////////////////////////
+Camera* Scene::getCamera() const
+{
+	return m_camera;
+}
+
+
+#include <poly/Graphics/OpenGL.h>
+
+///////////////////////////////////////////////////////////
+void Scene::render()
+{
+	START_PROFILING_FUNC;
+
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	HashMap<Model*, std::vector<priv::RenderableEntity>> visibleEntities;
+
+	// Keep track of the total number of visible entities
+	Uint32 numVisible = 0;
+
+	// Sort and cull all renderable entities
+	system<TransformComponent, RenderComponent>(
+		[&](const Entity::Id& id, TransformComponent& t, RenderComponent& r)
+		{
+			// Do culling here
+			bool culled = false;
+
+			if (!culled)
+			{
+				// Add it to the list of visible entities
+				visibleEntities[r.m_model].push_back(priv::RenderableEntity{ &t, &r });
+
+				// Increment number of visible
+				++numVisible;
+			}
+		}
+	);
+
+	// Do nothing if there is nothing to render
+	if (!numVisible) return;
+
+
+	// Stream instance data
+	Uint32 size = numVisible * sizeof(Matrix4f);
+	int flags = (int)MapBufferFlags::Write;
+
+	// Choose different flags based on how much space is left
+	if (m_instanceBufferOffset + size > m_instanceBuffer.getSize())
+	{
+		flags |= (int)MapBufferFlags::InvalidateBuffer;
+		m_instanceBufferOffset = 0;
+	}
+	else
+	{
+		flags |= (int)MapBufferFlags::Unsynchronized;
+	}
+
+	// Map the buffer
+	Matrix4f* buffer = (Matrix4f*)m_instanceBuffer.map(m_instanceBufferOffset, size, flags);
+
+	Uint32 numEntitiesMapped = 0;
+	std::vector<priv::RenderData> renderData;
+	renderData.reserve(visibleEntities.size());
+
+	// Iterate through visible entities and stream data
+	for (auto it = visibleEntities.begin(); it != visibleEntities.end(); ++it)
+	{
+		const std::vector<priv::RenderableEntity>& entities = it.value();
+
+		// Create render data
+		priv::RenderData data;
+		data.m_model = entities.front().m_render->m_model;
+		data.m_shader = entities.front().m_render->m_shader;
+		data.m_offset = m_instanceBufferOffset;
+		data.m_instances = entities.size();
+		renderData.push_back(data);
+
+		// Push instance data
+		for (Uint32 i = 0; i < entities.size(); ++i)
+		{
+			const TransformComponent& t = *entities[i].m_transform;
+			buffer[numEntitiesMapped + i] = toTransformMatrix(t.m_position, t.m_rotation, t.m_scale);
+		}
+
+		// Update instance buffer offset
+		m_instanceBufferOffset += entities.size() * sizeof(Matrix4f);
+		numEntitiesMapped += entities.size();
+	}
+
+	// After pushing all instance data, unmap the buffer
+	m_instanceBuffer.unmap();
+
+	// Sort by shader to minimize shader changes
+	std::sort(renderData.begin(), renderData.end(),
+		[](const priv::RenderData& a, const priv::RenderData& b) -> bool
+		{
+			if (a.m_shader == b.m_shader)
+				return a.m_offset < b.m_offset;
+			else
+				return a.m_shader < b.m_shader;
+		}
+	);
+
+	// Bind the first shader
+	Shader* shader = renderData.front().m_shader;
+	priv::bindShader(shader, m_camera);
+
+	// Iterate through render data and render everything
+	for (Uint32 i = 0; i < renderData.size(); ++i)
+	{
+		const priv::RenderData& data = renderData[i];
+
+		// If the shader changed, update to the new one
+		if (data.m_shader != shader)
+		{
+			shader = data.m_shader;
+			priv::bindShader(shader, m_camera);
+		}
+
+		// Apply the materials
+		const std::vector<Material>& materials = data.m_model->getMaterials();
+		for (Uint32 i = 0; i < materials.size(); ++i)
+			materials[i].apply(shader, i);
+
+		// Get vertex array and do an instanced render
+		VertexArray& vao = data.m_model->getVertexArray();
+
+		// Bind instance data
+		vao.bind();
+		vao.addBuffer(m_instanceBuffer, 5, 4, sizeof(Matrix4f), data.m_offset + 0 * sizeof(Vector4f), 1);
+		vao.addBuffer(m_instanceBuffer, 6, 4, sizeof(Matrix4f), data.m_offset + 1 * sizeof(Vector4f), 1);
+		vao.addBuffer(m_instanceBuffer, 7, 4, sizeof(Matrix4f), data.m_offset + 2 * sizeof(Vector4f), 1);
+		vao.addBuffer(m_instanceBuffer, 8, 4, sizeof(Matrix4f), data.m_offset + 3 * sizeof(Vector4f), 1);
+
+		// Draw
+		vao.draw(data.m_instances);
+	}
+}
 
 }

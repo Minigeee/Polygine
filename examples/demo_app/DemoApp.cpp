@@ -1,9 +1,14 @@
 #include <poly/Core/Clock.h>
 #include <poly/Core/Logger.h>
+#include <poly/Core/Profiler.h>
 #include <poly/Core/Sleep.h>
+
+#include <poly/Engine/Components.h>
+#include <poly/Engine/Scene.h>
 
 #include <poly/Graphics/Animation.h>
 #include <poly/Graphics/Camera.h>
+#include <poly/Graphics/Components.h>
 #include <poly/Graphics/Image.h>
 #include <poly/Graphics/Model.h>
 #include <poly/Graphics/Shader.h>
@@ -40,30 +45,19 @@ int main()
 
     Model model;
     model.load("models/character/character.dae");
-    VertexArray& vao = model.getVertexArray();
-    const Material& material = model.getMaterial();
-
-    Skeleton skeleton;
-    skeleton.load("models/character/character.dae");
-
-    Matrix4f t = toTransformMatrix(Vector3f(0.0f, 0.0f, 5.0f), Vector3f(0.0f), Vector3f(1.0f));
-    Bone* bone = skeleton.getBone("Armature_Chest");
-    // bone->setTransform(t);
-
-    Animation walk;
-    walk.load("models/character/character.dae", "Armature");
-    skeleton.setAnimation(&walk);
 
     Shader shader;
-    shader.load("shaders/animated.vert", Shader::Vertex);
+    shader.load("shaders/default.vert", Shader::Vertex);
     shader.load("shaders/default.frag", Shader::Fragment);
     shader.compile();
 
     Camera camera;
+    camera.setPosition(0.0f, 5.0f, 15.0f);
 
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
+    // Setup scene
+    Scene scene;
+    scene.setCamera(&camera);
+    scene.createEntity(TransformComponent(), RenderComponent{ &model, &shader });
 
     Clock clock;
     float time = 0.0f;
@@ -74,22 +68,18 @@ int main()
         // Poll events for all existing windows
         Window::pollEvents();
 
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
         float elapsed = clock.restart().toSeconds();
         time += elapsed;
 
-        camera.setPosition(0.0f, 5.0f, 15.0f);
-        Matrix4f projView = camera.getProjMatrix() * camera.getViewMatrix();
-        Matrix4f transform = toTransformMatrix(Vector3f(0.0f), Quaternion(Vector3f(0, 1, 0), time * 50.0f), Vector3f(1.0f));
+        scene.system<TransformComponent>(
+            [&](const Entity::Id& id, TransformComponent& t)
+            {
+                t.m_rotation.y = time * 60.0f;
+            }
+        );
 
-        shader.bind();
-        shader.setUniform("u_projView", projView);
-        shader.setUniform("u_transform", transform);
-        material.apply(&shader);
-        skeleton.update(elapsed);
-        skeleton.apply(&shader);
-        vao.draw();
+        // Render scene
+        scene.render();
 
         // Display (swap buffers)
         window.display();
