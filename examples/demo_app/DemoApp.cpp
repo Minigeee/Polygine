@@ -9,6 +9,7 @@
 #include <poly/Graphics/Animation.h>
 #include <poly/Graphics/Camera.h>
 #include <poly/Graphics/Components.h>
+#include <poly/Graphics/FrameBuffer.h>
 #include <poly/Graphics/Image.h>
 #include <poly/Graphics/Lights.h>
 #include <poly/Graphics/Model.h>
@@ -73,6 +74,12 @@ int main()
 
     Clock clock;
     float time = 0.0f;
+
+    FrameBuffer framebuffer;
+    framebuffer.create(1280, 720);
+    framebuffer.bind();
+    framebuffer.attachColor();
+    framebuffer.attachDepth();
 
     // Game loop
     while (window.isOpen())

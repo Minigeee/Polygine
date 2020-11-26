@@ -6,6 +6,7 @@
 #include <poly/Engine/Ecs.h>
 #include <poly/Engine/Entity.h>
 
+#include <poly/Graphics/FrameBuffer.h>
 #include <poly/Graphics/RenderState.h>
 #include <poly/Graphics/VertexBuffer.h>
 
@@ -564,7 +565,7 @@ public:
 	/// Still in progress... TODO
 	///
 	///////////////////////////////////////////////////////////
-	void render(const RenderState& state = RenderState::Default);
+	void render(FrameBuffer& target = FrameBuffer::Default, const RenderState& state = RenderState::Default);
 
 private:
 	Handle m_handle;									//!< The scene handle used for scene id

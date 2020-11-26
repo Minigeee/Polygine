@@ -1,5 +1,6 @@
 #include <poly/Core/Logger.h>
 
+#include <poly/Graphics/FrameBuffer.h>
 #include <poly/Graphics/Window.h>
 
 #include <glad/glad.h>
@@ -136,6 +137,11 @@ bool Window::create(Uint32 w, Uint32 h, const std::string& title, bool fullscree
 	// Update member variables
 	m_title = title;
 	++numWindows;
+
+	// Update default framebuffer
+	FrameBuffer::Default.m_size.x = w;
+	FrameBuffer::Default.m_size.y = h;
+	glViewport(0, 0, w, h);
 
 	// Setup input callbacks
 	glfwSetWindowUserPointer(m_window, this);

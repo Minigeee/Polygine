@@ -206,9 +206,12 @@ Camera* Scene::getCamera() const
 
 
 ///////////////////////////////////////////////////////////
-void Scene::render(const RenderState& state)
+void Scene::render(FrameBuffer& target, const RenderState& state)
 {
 	START_PROFILING_FUNC;
+
+	// Bind target framebuffer
+	target.bind();
 
 	// Apply render state
 	state.apply();
