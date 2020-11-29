@@ -13,6 +13,7 @@
 #include <poly/Graphics/Image.h>
 #include <poly/Graphics/Lights.h>
 #include <poly/Graphics/Model.h>
+#include <poly/Graphics/Octree.h>
 #include <poly/Graphics/Shader.h>
 #include <poly/Graphics/Skeleton.h>
 #include <poly/Graphics/Texture.h>
@@ -55,21 +56,23 @@ int main()
 
     Camera camera;
     camera.setPosition(0.0f, 15.0f, 15.0f);
-    camera.setRotation(-45.0f, 0.0f);
+    camera.setRotation(-30.0f, 90.0f);
 
     DirectionLight sun;
     sun.m_direction.z = -1.0f;
 
     // Setup scene
     Scene scene;
-    scene.setCamera(&camera);
-    scene.addLight(&sun);
+    Octree octree;
+    octree.init(&scene);
 
     for (Uint32 i = 0; i < 100; ++i)
     {
         TransformComponent t;
         t.m_position.x = (float)i - 50;
-        scene.createEntity(std::move(t), RenderComponent{ &model, &shader });
+        t.m_scale = Vector3f(0.25f);
+        Entity entity = scene.createEntity(std::move(t), RenderComponent(&model, &shader));
+        octree.add(entity.getId());
     }
 
     Clock clock;
@@ -98,7 +101,7 @@ int main()
         );
 
         // Render scene
-        scene.render();
+        // scene.render();
 
         // Display (swap buffers)
         window.display();

@@ -14,6 +14,20 @@ class Shader;
 ///////////////////////////////////////////////////////////
 struct RenderComponent
 {
+	///////////////////////////////////////////////////////////
+	/// \brief Default constructor
+	///
+	///////////////////////////////////////////////////////////
+	RenderComponent();
+
+	///////////////////////////////////////////////////////////
+	/// \brief Create the render component from a model, and a shader
+	///
+	/// If no shader is provided, the default shader will be used
+	///
+	///////////////////////////////////////////////////////////
+	RenderComponent(Model* model, Shader* shader = 0);
+
 	Model* m_model;		//!< The model to render
 	Shader* m_shader;	//!< The shader to render the model with
 	bool m_culled;		//!< This will be true if the entity is being culled

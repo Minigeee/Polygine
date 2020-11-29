@@ -58,12 +58,10 @@ HandleArray<bool> Scene::idArray;
 
 ///////////////////////////////////////////////////////////
 Scene::Scene() :
-	m_handle				(idArray.add(true)),
-	m_camera				(0),
-	m_instanceBufferOffset	(0)
+	m_handle				(idArray.add(true))
 {
 	// Create stream type instance buffer
-	m_instanceBuffer.create<Matrix4f>(0, 65536, BufferUsage::Stream);
+	// m_instanceBuffer.create<Matrix4f>(0, 65536, BufferUsage::Stream);
 }
 
 
@@ -162,50 +160,7 @@ const HashSet<Entity::Id>& Scene::getEntitiesWithTag(Uint32 tag)
 
 
 ///////////////////////////////////////////////////////////
-void Scene::addLight(Light* light)
-{
-	// Add the light to the correct subtype array
-
-	if (dynamic_cast<DirectionLight*>(light))
-		m_dirLights.push_back((DirectionLight*)light);
-}
-
-
-///////////////////////////////////////////////////////////
-void Scene::removeLight(Light* light)
-{
-	// Remove the light from the correct array
-
-	if (dynamic_cast<DirectionLight*>(light))
-	{
-		for (Uint32 i = 0; i < m_dirLights.size(); ++i)
-		{
-			if (m_dirLights[i] == light)
-			{
-				// Do a swap pop
-				m_dirLights[i] = m_dirLights.back();
-				m_dirLights.pop_back();
-			}
-		}
-	}
-}
-
-
-///////////////////////////////////////////////////////////
-void Scene::setCamera(Camera* camera)
-{
-	m_camera = camera;
-}
-
-
-///////////////////////////////////////////////////////////
-Camera* Scene::getCamera() const
-{
-	return m_camera;
-}
-
-
-///////////////////////////////////////////////////////////
+/*
 void Scene::render(FrameBuffer& target, const RenderState& state)
 {
 	START_PROFILING_FUNC;
@@ -360,5 +315,7 @@ void Scene::render(FrameBuffer& target, const RenderState& state)
 		vao.draw(data.m_instances);
 	}
 }
+
+*/
 
 }
