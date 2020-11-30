@@ -53,6 +53,7 @@ int main()
     Animation walk;
     walk.load("models/character/character.dae", "Armature");
     skeleton.setAnimation(&walk);
+    skeleton.setAnimationSpeed(0.1f);
 
     Shader shader;
     shader.load("shaders/animated.vert", Shader::Vertex);
@@ -81,7 +82,7 @@ int main()
 
         camera.setPosition(0.0f, 5.0f, 15.0f);
         Matrix4f projView = camera.getProjMatrix() * camera.getViewMatrix();
-        Matrix4f transform = toTransformMatrix(Vector3f(0.0f), Quaternion(Vector3f(0, 1, 0), time * 50.0f), Vector3f(1.0f));
+        Matrix4f transform = toTransformMatrix(Vector3f(0.0f), Quaternion(Vector3f(0, 1, 0), time * 0.0f), Vector3f(1.0f));
 
         shader.bind();
         shader.setUniform("u_projView", projView);

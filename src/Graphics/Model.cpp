@@ -273,10 +273,7 @@ void getBoneIds(aiNode* node, const aiScene* scene, HashMap<std::string, int>& b
 	// If the node name matches a bone name, set the id
 	auto it = bones.find(node->mName.C_Str());
 	if (it != bones.end())
-	{
 		it.value() = numBones++;
-		LOG("%s: %d", node->mName.C_Str(), it.value());
-	}
 
 	// Process all children nodes
 	for (Uint32 i = 0; i < node->mNumChildren; ++i)

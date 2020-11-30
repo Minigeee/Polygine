@@ -279,9 +279,6 @@ Matrix4f Animation::getTransform(const std::string& bone, float time) const
 
 	const Channel& channel = it.value();
 
-	if (bone == "Armature_Lower_Arm_R")
-		int test = 0;
-
 	// Adjust time from seconds to ticks
 	time = fmod(time * m_ticksPerSecond, m_duration);
 
