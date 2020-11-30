@@ -245,6 +245,25 @@ public:
 	C* getComponent(Entity::Id id) const;
 
 	///////////////////////////////////////////////////////////
+	/// \brief Get a tuple of pointers to component data associated with a certain entity
+	///
+	/// This function should not be used too often (it is slower
+	/// compared to other functions when bulk access is needed).
+	/// Use getComponentData() when bulk access is needed, or
+	/// use system() when bulk processing of component data is
+	/// needed.
+	///
+	/// \tparam Cs The component types to retrieve
+	///
+	/// \param id The id of the entity to retrieve a component for
+	///
+	/// \return A tuple of component pointers to retrieve
+	///
+	///////////////////////////////////////////////////////////
+	template <typename... Cs>
+	Tuple<Cs*...> getComponents(Entity::Id id) const;
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get component data for entities contain the specified component types
 	///
 	/// \tparam Cs The set of component types an entity must have to be

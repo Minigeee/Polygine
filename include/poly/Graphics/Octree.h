@@ -45,10 +45,12 @@ public:
 	);
 
 private:
+	struct Node;
+
 	struct EntityData
 	{
-		Entity::Id m_entity;
 		Uint32 m_group;
+		Node* m_node;
 		BoundingBox m_boundingBox;
 		Matrix4f m_transform;
 	};
@@ -64,9 +66,27 @@ private:
 		std::vector<EntityData*> m_data;
 	};
 
+	struct RenderGroup
+	{
+		Model* m_model;
+		Shader* m_shader;
+	};
+
+	struct RenderData
+	{
+		Model* m_model;
+		Shader* m_shader;
+		Uint32 m_offset;
+		Uint32 m_instances;
+	};
+
 	void expand();
 
 	void split(Node* node);
+
+	void insert(EntityData* data);
+
+	void getRenderData(Node* node, const Frustum& frustum, std::vector<std::vector<EntityData*>>& entityData);
 
 private:
 	ObjectPool m_nodePool;
@@ -80,6 +100,7 @@ private:
 
 	VertexBuffer m_instanceBuffer;						//!< The instance buffer that stores instance transform data
 	Uint32 m_instanceBufferOffset;						//!< The offset of the valid range of the instance buffer
+	std::vector<RenderGroup> m_renderGroups;			//!< A list of render groups
 
 	static Vector3f nodeOffsets[8];
 };

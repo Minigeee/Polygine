@@ -56,7 +56,6 @@ int main()
 
     Camera camera;
     camera.setPosition(0.0f, 15.0f, 15.0f);
-    camera.setRotation(-30.0f, 90.0f);
 
     DirectionLight sun;
     sun.m_direction.z = -1.0f;
@@ -66,13 +65,18 @@ int main()
     Octree octree;
     octree.init(&scene);
 
-    for (Uint32 i = 0; i < 100; ++i)
+    for (int r = -50; r < 50; ++r)
     {
-        TransformComponent t;
-        t.m_position.x = (float)i - 50;
-        t.m_scale = Vector3f(0.25f);
-        Entity entity = scene.createEntity(std::move(t), RenderComponent(&model, &shader));
-        octree.add(entity.getId());
+        for (int c = -50; c < 50; ++c)
+        {
+            TransformComponent t;
+            t.m_position.x = (float)c * 5.0f;
+            t.m_position.z = (float)r * 5.0f;
+            t.m_scale = Vector3f(0.25f);
+            Entity entity = scene.createEntity(std::move(t), RenderComponent(&model, &shader));
+            octree.add(entity.getId());
+            octree.remove(entity.getId());
+        }
     }
 
     Clock clock;
@@ -83,6 +87,39 @@ int main()
     framebuffer.bind();
     framebuffer.attachColor();
     framebuffer.attachDepth();
+
+    /*
+
+    Vector2f mousePos, cameraRot;
+    bool firstRun = true;
+    window.addListener<E_MouseMove>(
+        [&](const E_MouseMove& e)
+        {
+            const float sensitivity = 0.1f;
+
+            Vector2f pos = Vector2f(e.m_x, e.m_y);
+            if (firstRun)
+            {
+                mousePos = pos;
+                firstRun = false;
+            }
+
+            Vector2f delta = sensitivity * (pos - mousePos);
+            mousePos = pos;
+
+            // Update camera
+            cameraRot.x = fmod(cameraRot.x - delta.y, 360.0f);
+            cameraRot.y = fmod(cameraRot.y + delta.x, 360.0f);
+            if (cameraRot.x > 89.0f)
+                cameraRot.x = 89.0f;
+            else if (cameraRot.x < -89.0f)
+                cameraRot.x = -89.0f;
+
+            camera.setRotation(cameraRot);
+        }
+    );
+
+    */
 
     // Game loop
     while (window.isOpen())
@@ -101,13 +138,13 @@ int main()
         );
 
         // Render scene
-        // scene.render();
+        octree.render(camera);
 
         // Display (swap buffers)
         window.display();
     }
 
-    const ProfilerData& data = Profiler::getData("poly::Scene::render");
+    const ProfilerData& data = Profiler::getData("poly::Octree::render");
     std::cout << data.mean().toMicroseconds() << '\n';
 
     return 0;

@@ -118,6 +118,18 @@ inline C* Scene::getComponent(Entity::Id id) const
 
 ///////////////////////////////////////////////////////////
 template <typename... Cs>
+inline Tuple<Cs*...> Scene::getComponents(Entity::Id id) const
+{
+	auto it = m_entityGroups.find(id.m_group);
+	if (it == m_entityGroups.end())
+		return makeTuple((Cs*)(0)...);
+	else
+		return makeTuple(it.value().getComponent<Cs>(id)...);
+}
+
+
+///////////////////////////////////////////////////////////
+template <typename... Cs>
 inline Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> Scene::getComponentData()
 {
 	Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> t;

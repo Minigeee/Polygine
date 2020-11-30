@@ -1,9 +1,13 @@
+#include <poly/Core/Profiler.h>
+
 #include <poly/Engine/Components.h>
 #include <poly/Engine/Scene.h>
 
+#include <poly/Graphics/Camera.h>
 #include <poly/Graphics/Components.h>
 #include <poly/Graphics/Model.h>
 #include <poly/Graphics/Octree.h>
+#include <poly/Graphics/Shader.h>
 
 #include <poly/Math/Transform.h>
 
@@ -61,6 +65,14 @@ bool updateBoundingBox(BoundingBox& a, const BoundingBox& b)
 }
 
 
+///////////////////////////////////////////////////////////
+void bindShader(Shader* shader, Camera& camera)
+{
+	shader->bind();
+	shader->setUniform("u_projView", camera.getProjMatrix() * camera.getViewMatrix());
+	shader->setUniform("u_cameraPos", camera.getPosition());
+}
+
 }
 
 
@@ -114,6 +126,9 @@ void Octree::init(Scene* scene, Uint32 maxPerCell)
 	*m_root = Node();
 	m_root->m_boundingBox.m_min = Vector3f(-m_size * 0.5f);
 	m_root->m_boundingBox.m_max = Vector3f(m_size * 0.5f);
+
+	// Instance buffer
+	m_instanceBuffer.create<Matrix4f>(NULL, 65536, BufferUsage::Stream);
 }
 
 
@@ -252,8 +267,9 @@ void Octree::split(Node* node)
 void Octree::add(Entity::Id entity)
 {
 	// Get component data
-	RenderComponent& r = *m_scene->getComponent<RenderComponent>(entity);
-	TransformComponent& t = *m_scene->getComponent<TransformComponent>(entity);
+	auto components = m_scene->getComponents<TransformComponent, RenderComponent>(entity);
+	RenderComponent& r = *components.get<RenderComponent*>();
+	TransformComponent& t = *components.get<TransformComponent*>();
 
 	// Get transform matrix
 	Matrix4f transform = toTransformMatrix(t.m_position, t.m_rotation, t.m_scale);
@@ -295,6 +311,45 @@ void Octree::add(Entity::Id entity)
 			bbox.m_max.z = v.z;
 	}
 
+	// Create entity data
+	EntityData* data = (EntityData*)m_dataPool.alloc();
+	data->m_boundingBox = bbox;
+	data->m_transform = transform;
+
+	// Add to map
+	m_dataMap[entity] = data;
+
+	// Add render group
+	bool groupExists = false;
+	for (Uint32 i = 0; i < m_renderGroups.size(); ++i)
+	{
+		const RenderGroup& group = m_renderGroups[i];
+		if (group.m_model == r.m_model && group.m_shader == r.m_shader)
+		{
+			data->m_group = i;
+			groupExists = true;
+		}
+	}
+
+	if (!groupExists)
+	{
+		data->m_group = m_renderGroups.size();
+
+		RenderGroup group;
+		group.m_model = r.m_model;
+		group.m_shader = r.m_shader;
+		m_renderGroups.push_back(group);
+	}
+
+	insert(data);
+}
+
+
+///////////////////////////////////////////////////////////
+void Octree::insert(EntityData* data)
+{
+	const BoundingBox& bbox = data->m_boundingBox;
+
 	// Get box size (max)
 	Vector3f dims = bbox.getDimensions();
 	float boxSize = dims.x;
@@ -302,17 +357,6 @@ void Octree::add(Entity::Id entity)
 		boxSize = dims.y;
 	if (dims.z > boxSize)
 		boxSize = dims.z;
-
-	// Create entity data
-	EntityData* data = (EntityData*)m_dataPool.alloc();
-	data->m_entity = entity;
-	data->m_boundingBox = bbox;
-	data->m_transform = transform;
-	data->m_group = 0;
-
-	// Add to map
-	m_dataMap[entity] = data;
-
 
 	// Determine the min level for entity
 	int minLevel = 0;
@@ -342,7 +386,7 @@ void Octree::add(Entity::Id entity)
 
 			inside =
 				bbox.m_min.x > rootMin.x && bbox.m_min.y > rootMin.y && bbox.m_min.z > rootMin.z &&
-				bbox.m_max.x < rootMax.x&& bbox.m_max.y < rootMax.y&& bbox.m_max.z < rootMax.z;
+				bbox.m_max.x < rootMax.x && bbox.m_max.y < rootMax.y && bbox.m_max.z < rootMax.z;
 		}
 	}
 
@@ -362,6 +406,7 @@ void Octree::add(Entity::Id entity)
 		if (current->m_level == minLevel || !hasChildren)
 		{
 			current->m_data.push_back(data);
+			data->m_node = current;
 
 			// If at or over max, attempt to split the node
 			if (current->m_data.size() >= m_maxPerCell)
@@ -416,6 +461,258 @@ void Octree::add(Entity::Id entity)
 
 			current = current->m_children[index];
 		}
+	}
+}
+
+
+///////////////////////////////////////////////////////////
+void Octree::update(Entity::Id entity)
+{
+	// Get component data
+	auto components = m_scene->getComponents<TransformComponent, RenderComponent>(entity);
+	RenderComponent& r = *components.get<RenderComponent*>();
+	TransformComponent& t = *components.get<TransformComponent*>();
+
+	// Get transform matrix
+	Matrix4f transform = toTransformMatrix(t.m_position, t.m_rotation, t.m_scale);
+
+	// Get bounding box
+	BoundingBox bbox = r.m_model->getBoundingBox();
+	Vector3f vertices[] =
+	{
+		Vector3f(bbox.m_min.x, bbox.m_min.y, bbox.m_min.z),
+		Vector3f(bbox.m_max.x, bbox.m_min.y, bbox.m_min.z),
+		Vector3f(bbox.m_min.x, bbox.m_max.y, bbox.m_min.z),
+		Vector3f(bbox.m_max.x, bbox.m_max.y, bbox.m_min.z),
+		Vector3f(bbox.m_min.x, bbox.m_min.y, bbox.m_max.z),
+		Vector3f(bbox.m_max.x, bbox.m_min.y, bbox.m_max.z),
+		Vector3f(bbox.m_min.x, bbox.m_max.y, bbox.m_max.z),
+		Vector3f(bbox.m_max.x, bbox.m_max.y, bbox.m_max.z)
+	};
+
+	// Transform bounding box
+	bbox.m_min = Vector3f(transform * Vector4f(vertices[0], 1.0f));
+	bbox.m_max = bbox.m_min;
+	for (Uint32 i = 1; i < 8; ++i)
+	{
+		Vector4f v = transform * Vector4f(vertices[i], 1.0f);
+
+		if (v.x < bbox.m_min.x)
+			bbox.m_min.x = v.x;
+		else if (v.x > bbox.m_max.x)
+			bbox.m_max.x = v.x;
+
+		if (v.y < bbox.m_min.y)
+			bbox.m_min.y = v.y;
+		else if (v.y > bbox.m_max.y)
+			bbox.m_max.y = v.y;
+
+		if (v.z < bbox.m_min.z)
+			bbox.m_min.z = v.z;
+		else if (v.z > bbox.m_max.z)
+			bbox.m_max.z = v.z;
+	}
+
+
+	// Get node
+	EntityData* data = m_dataMap[entity];
+	data->m_boundingBox = bbox;
+	data->m_transform = transform;
+
+	Node* node = data->m_node;
+
+	// Get cell info
+	float cellSize = BASE_SIZE * powf(2.0f, (float)node->m_level - 1.0f);
+	Vector3f cellMin = node->m_boundingBox.m_min / cellSize;
+	Vector3f cellMax = cellMin + Vector3f(cellSize);
+	cellMin = Vector3f(roundf(cellMin.x), roundf(cellMin.y), roundf(cellMin.z)) * cellSize;
+
+	// Check if the bounding box is still inside correct area
+	Vector3f pos = bbox.getCenter();
+	bool inside =
+		pos.x > cellMin.x && pos.x < cellMax.x &&
+		pos.y > cellMin.y && pos.y < cellMax.y &&
+		pos.z > cellMin.z && pos.z < cellMax.z;
+
+	// If the entity is not in the box anymore, update it
+	if (!inside)
+	{
+		// Search for data in node
+		std::vector<EntityData*>& nodeData = node->m_data;
+		for (Uint32 i = 0; i < nodeData.size(); ++i)
+		{
+			if (nodeData[i] == data)
+			{
+				// Remove it
+				nodeData[i] = nodeData.back();
+				nodeData.pop_back();
+			}
+		}
+
+		// Insert again
+		insert(data);
+	}
+}
+
+
+///////////////////////////////////////////////////////////
+void Octree::remove(Entity::Id entity)
+{
+	// Get node
+	EntityData* data = m_dataMap[entity];
+	Node* node = data->m_node;
+
+	// Search for data in node
+	std::vector<EntityData*>& nodeData = node->m_data;
+	for (Uint32 i = 0; i < nodeData.size(); ++i)
+	{
+		if (nodeData[i] == data)
+		{
+			// Remove it
+			nodeData[i] = nodeData.back();
+			nodeData.pop_back();
+		}
+	}
+
+	// Remove from pool
+	m_dataPool.free(data);
+}
+
+
+///////////////////////////////////////////////////////////
+void Octree::render(Camera& camera, FrameBuffer& target, const RenderState& state)
+{
+	START_PROFILING_FUNC;
+
+	// Bind target framebuffer
+	target.bind();
+
+	// Apply render state
+	state.apply();
+
+
+	// Get entity data
+	std::vector<std::vector<EntityData*>> entityData(m_renderGroups.size());
+	const Frustum& frustum = camera.getFrustum();
+	getRenderData(m_root, frustum, entityData);
+	
+	// Get number of visible entities
+	Uint32 numVisible = 0;
+	for (Uint32 i = 0; i < entityData.size(); ++i)
+		numVisible += entityData[i].size();
+
+	if (!numVisible) return;
+
+
+	// Stream instance data
+	Uint32 size = numVisible * sizeof(Matrix4f);
+	int flags = (int)MapBufferFlags::Write | (int)MapBufferFlags::Unsynchronized;
+
+	// Choose different flags based on how much space is left
+	if (m_instanceBufferOffset + size > m_instanceBuffer.getSize())
+	{
+		flags |= (int)MapBufferFlags::InvalidateBuffer;
+		m_instanceBufferOffset = 0;
+	}
+
+	// Map the buffer
+	Matrix4f* buffer = (Matrix4f*)m_instanceBuffer.map(m_instanceBufferOffset, size, flags);
+
+	Uint32 numEntitiesMapped = 0;
+	std::vector<RenderData> renderData;
+	renderData.reserve(m_renderGroups.size());
+
+	// Iterate through visible entities and stream data
+	for (Uint32 i = 0; i < entityData.size(); ++i)
+	{
+		const std::vector<EntityData*>& entities = entityData[i];
+
+		// Create render data
+		RenderData data;
+		data.m_model = m_renderGroups[i].m_model;
+		data.m_shader = m_renderGroups[i].m_shader;
+		data.m_offset = m_instanceBufferOffset;
+		data.m_instances = entities.size();
+		renderData.push_back(data);
+
+		// Push instance data
+		for (Uint32 j = 0; j < entities.size(); ++j)
+			buffer[numEntitiesMapped + j] = entities[j]->m_transform;
+
+		// Update instance buffer offset
+		m_instanceBufferOffset += entities.size() * sizeof(Matrix4f);
+		numEntitiesMapped += entities.size();
+	}
+
+	// After pushing all instance data, unmap the buffer
+	m_instanceBuffer.unmap();
+
+	// Sort by shader to minimize shader changes
+	std::sort(renderData.begin(), renderData.end(),
+		[](const RenderData& a, const RenderData& b) -> bool
+		{
+			if (a.m_shader == b.m_shader)
+				return a.m_offset < b.m_offset;
+			else
+				return a.m_shader < b.m_shader;
+		}
+	);
+
+	// Bind the first shader
+	Shader* shader = renderData.front().m_shader;
+	priv::bindShader(shader, camera);
+
+	// Iterate through render data and render everything
+	for (Uint32 i = 0; i < renderData.size(); ++i)
+	{
+		const RenderData& data = renderData[i];
+
+		// If the shader changed, update to the new one
+		if (data.m_shader != shader)
+		{
+			shader = data.m_shader;
+			priv::bindShader(shader, camera);
+		}
+
+		// Apply the materials
+		const std::vector<Material>& materials = data.m_model->getMaterials();
+		for (Uint32 i = 0; i < materials.size(); ++i)
+			materials[i].apply(shader, i);
+
+		// Get vertex array and do an instanced render
+		VertexArray& vao = data.m_model->getVertexArray();
+
+		// Bind instance data
+		vao.bind();
+		vao.addBuffer(m_instanceBuffer, 5, 4, sizeof(Matrix4f), data.m_offset + 0 * sizeof(Vector4f), 1);
+		vao.addBuffer(m_instanceBuffer, 6, 4, sizeof(Matrix4f), data.m_offset + 1 * sizeof(Vector4f), 1);
+		vao.addBuffer(m_instanceBuffer, 7, 4, sizeof(Matrix4f), data.m_offset + 2 * sizeof(Vector4f), 1);
+		vao.addBuffer(m_instanceBuffer, 8, 4, sizeof(Matrix4f), data.m_offset + 3 * sizeof(Vector4f), 1);
+
+		// Draw
+		vao.draw(data.m_instances);
+	}
+}
+
+
+///////////////////////////////////////////////////////////
+void Octree::getRenderData(Node* node, const Frustum& frustum, std::vector<std::vector<EntityData*>>& entityData)
+{
+	// Add all data inside the frustum
+	for (Uint32 i = 0; i < node->m_data.size(); ++i)
+	{
+		EntityData* data = node->m_data[i];
+
+		if (frustum.contains(data->m_boundingBox))
+			entityData[data->m_group].push_back(data);
+	}
+
+	// Call for children
+	for (Uint32 i = 0; i < 8; ++i)
+	{
+		Node* child = node->m_children[i];
+		if (child && frustum.contains(child->m_boundingBox))
+			getRenderData(child, frustum, entityData);
 	}
 }
 
