@@ -66,11 +66,25 @@ bool updateBoundingBox(BoundingBox& a, const BoundingBox& b)
 
 
 ///////////////////////////////////////////////////////////
-void bindShader(Shader* shader, Camera& camera)
+void bindShader(Shader* shader, Camera& camera, Scene* scene)
 {
 	shader->bind();
 	shader->setUniform("u_projView", camera.getProjMatrix() * camera.getViewMatrix());
 	shader->setUniform("u_cameraPos", camera.getPosition());
+
+	// Apply directional lights
+	int i = 0;
+	scene->system<DirLightComponent>(
+		[&](const Entity::Id id, DirLightComponent& light)
+		{
+			std::string prefix = "u_dirLights[" + std::to_string(i++) + "].";
+
+			shader->setUniform(prefix + "diffuse", light.m_diffuse);
+			shader->setUniform(prefix + "specular", light.m_specular);
+			shader->setUniform(prefix + "direction", normalize(light.m_direction));
+		}
+	);
+	shader->setUniform("u_numDirLights", i);
 }
 
 }
@@ -266,6 +280,8 @@ void Octree::split(Node* node)
 ///////////////////////////////////////////////////////////
 void Octree::add(Entity::Id entity)
 {
+	ASSERT(m_scene, "The octree must be initialized before using, by calling the init() function");
+
 	// Get component data
 	auto components = m_scene->getComponents<TransformComponent, RenderComponent>(entity);
 	RenderComponent& r = *components.get<RenderComponent*>();
@@ -468,6 +484,8 @@ void Octree::insert(EntityData* data)
 ///////////////////////////////////////////////////////////
 void Octree::update(Entity::Id entity)
 {
+	ASSERT(m_scene, "The octree must be initialized before using, by calling the init() function");
+
 	// Get component data
 	auto components = m_scene->getComponents<TransformComponent, RenderComponent>(entity);
 	RenderComponent& r = *components.get<RenderComponent*>();
@@ -558,6 +576,8 @@ void Octree::update(Entity::Id entity)
 ///////////////////////////////////////////////////////////
 void Octree::remove(Entity::Id entity)
 {
+	ASSERT(m_scene, "The octree must be initialized before using, by calling the init() function");
+
 	// Get node
 	EntityData* data = m_dataMap[entity];
 	Node* node = data->m_node;
@@ -582,6 +602,8 @@ void Octree::remove(Entity::Id entity)
 ///////////////////////////////////////////////////////////
 void Octree::render(Camera& camera, FrameBuffer& target, const RenderState& state)
 {
+	ASSERT(m_scene, "The octree must be initialized before using, by calling the init() function");
+
 	START_PROFILING_FUNC;
 
 	// Bind target framebuffer
@@ -660,7 +682,7 @@ void Octree::render(Camera& camera, FrameBuffer& target, const RenderState& stat
 
 	// Bind the first shader
 	Shader* shader = renderData.front().m_shader;
-	priv::bindShader(shader, camera);
+	priv::bindShader(shader, camera, m_scene);
 
 	// Iterate through render data and render everything
 	for (Uint32 i = 0; i < renderData.size(); ++i)
@@ -671,7 +693,7 @@ void Octree::render(Camera& camera, FrameBuffer& target, const RenderState& stat
 		if (data.m_shader != shader)
 		{
 			shader = data.m_shader;
-			priv::bindShader(shader, camera);
+			priv::bindShader(shader, camera, m_scene);
 		}
 
 		// Apply the materials

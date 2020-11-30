@@ -1,6 +1,8 @@
 #ifndef POLY_GRAPHICS_COMPONENTS_H
 #define POLY_GRAPHICS_COMPONENTS_H
 
+#include <poly/Math/Vector3.h>
+
 namespace poly
 {
 
@@ -30,7 +32,24 @@ struct RenderComponent
 
 	Model* m_model;		//!< The model to render
 	Shader* m_shader;	//!< The shader to render the model with
-	bool m_culled;		//!< This will be true if the entity is being culled
+};
+
+
+///////////////////////////////////////////////////////////
+/// \brief A component that defines properties of a directional light
+///
+///////////////////////////////////////////////////////////
+struct DirLightComponent
+{
+	///////////////////////////////////////////////////////////
+	/// \brief Default constructor
+	///
+	///////////////////////////////////////////////////////////
+	DirLightComponent();
+
+	Vector3f m_diffuse;		//!< The color of the diffuse lighting
+	Vector3f m_specular;	//!< The color of the specular lighting
+	Vector3f m_direction;	//!< The direction of the light
 };
 
 

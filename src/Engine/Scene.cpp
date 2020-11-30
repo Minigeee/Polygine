@@ -3,14 +3,6 @@
 #include <poly/Engine/Components.h>
 #include <poly/Engine/Scene.h>
 
-#include <poly/Graphics/Camera.h>
-#include <poly/Graphics/Components.h>
-#include <poly/Graphics/Lights.h>
-#include <poly/Graphics/Model.h>
-#include <poly/Graphics/Shader.h>
-
-#include <poly/Math/Transform.h>
-
 namespace poly
 {
 

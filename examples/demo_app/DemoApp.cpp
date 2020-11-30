@@ -11,7 +11,6 @@
 #include <poly/Graphics/Components.h>
 #include <poly/Graphics/FrameBuffer.h>
 #include <poly/Graphics/Image.h>
-#include <poly/Graphics/Lights.h>
 #include <poly/Graphics/Model.h>
 #include <poly/Graphics/Octree.h>
 #include <poly/Graphics/Shader.h>
@@ -56,14 +55,16 @@ int main()
 
     Camera camera;
     camera.setPosition(0.0f, 15.0f, 15.0f);
-
-    DirectionLight sun;
-    sun.m_direction.z = -1.0f;
+    camera.setRotation(0.0f, 0.0f);
 
     // Setup scene
     Scene scene;
     Octree octree;
     octree.init(&scene);
+
+    DirLightComponent sun;
+    sun.m_direction.z = -1.0f;
+    scene.createEntity(std::move(sun));
 
     for (int r = -50; r < 50; ++r)
     {
@@ -75,7 +76,6 @@ int main()
             t.m_scale = Vector3f(0.25f);
             Entity entity = scene.createEntity(std::move(t), RenderComponent(&model, &shader));
             octree.add(entity.getId());
-            octree.remove(entity.getId());
         }
     }
 
