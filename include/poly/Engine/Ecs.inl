@@ -11,8 +11,8 @@ namespace priv
 template <typename C>
 std::vector<typename ComponentData<C>::Data> ComponentData<C>::m_data;
 
-///////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////
 template <typename... Cs>
 inline void EntityGroup::setComponentTypes(Uint32 groupId)
 {
@@ -22,15 +22,19 @@ inline void EntityGroup::setComponentTypes(Uint32 groupId)
 	// Add component types
 	PARAM_EXPAND(m_componentTypes.insert(TypeInfo::getId<Cs>()));
 
-	// Set remove function
+	// Set function bindings
 	m_removeFunc = std::bind(&EntityGroup::removeEntitiesImpl<Cs...>, this, std::placeholders::_1);
+	m_copyFunc = std::bind(&EntityGroup::copyTypeSetImpl<Cs...>, this, std::placeholders::_1, std::placeholders::_2);
+	m_moveFunc = std::bind(&EntityGroup::moveEntityImpl<Cs...>, this, std::placeholders::_1, std::placeholders::_2);
 }
 
+
+///////////////////////////////////////////////////////////
 template <typename... Cs>
-inline std::vector<Entity> EntityGroup::createEntities(Uint16 num, Cs&&... components)
+inline std::vector<Entity> EntityGroup::createEntities(Uint16 num, const Cs&... components)
 {
 	// Add components
-	PARAM_EXPAND(ComponentData<Cs>::createComponents(m_sceneId, m_groupId, num, std::forward<Cs>(components)));
+	PARAM_EXPAND(ComponentData<Cs>::createComponents(m_sceneId, m_groupId, num, components));
 
 	// Create entities
 	std::vector<Entity> entities;
@@ -52,6 +56,8 @@ inline std::vector<Entity> EntityGroup::createEntities(Uint16 num, Cs&&... compo
 	return entities;
 }
 
+
+///////////////////////////////////////////////////////////
 template <typename... Cs>
 inline void EntityGroup::removeEntitiesImpl(const std::vector<Entity::Id>& ids)
 {
@@ -77,26 +83,62 @@ inline void EntityGroup::removeEntitiesImpl(const std::vector<Entity::Id>& ids)
 	PARAM_EXPAND(ComponentData<Cs>::removeComponents(m_sceneId, m_groupId, indices));
 }
 
+
+///////////////////////////////////////////////////////////
+template <typename... Cs>
+inline void EntityGroup::copyTypeSetImpl(EntityGroup& group, Uint32 groupId)
+{
+	group.setComponentTypes<Cs...>(groupId);
+
+	// Copy tag set
+	group.m_tags = m_tags;
+}
+
+
+///////////////////////////////////////////////////////////
+template <typename... Cs>
+inline Entity EntityGroup::moveEntityImpl(Entity::Id id, EntityGroup& group)
+{
+	// Create a new entity and copy components
+	Uint16 index = m_entityIds.getIndex(id.m_handle);
+	Entity entity = group.createEntities(1, *ComponentData<Cs>::getComponent(m_sceneId, m_groupId, index)...)[0];
+
+	// Remove the old entity
+	std::vector<Uint16> indices = { index };
+	PARAM_EXPAND(ComponentData<Cs>::removeComponents(m_sceneId, m_groupId, indices));
+
+	// Remove entity id
+	m_entityIds.remove(id.m_handle);
+
+	return entity;
+}
+
+
+///////////////////////////////////////////////////////////
 template <typename C>
 inline C* EntityGroup::getComponent(Entity::Id id) const
 {
 	return ComponentData<C>::getComponent(m_sceneId, m_groupId, m_entityIds.getIndex(id.m_handle));
 }
 
+
+///////////////////////////////////////////////////////////
 template <typename C>
 inline std::vector<C>& EntityGroup::getComponentData() const
 {
 	return ComponentData<C>::getGroup(m_sceneId, m_groupId);
 }
 
+
+///////////////////////////////////////////////////////////
 template <typename C>
 inline bool EntityGroup::hasComponentType() const
 {
 	return m_componentTypes.find(TypeInfo::getId<C>()) != m_componentTypes.end();
 }
 
-///////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////
 template <typename C>
 inline void ComponentData<C>::createComponents(Uint16 sceneId, Uint32 groupId, Uint16 num, const C& component)
 {
@@ -118,6 +160,8 @@ inline void ComponentData<C>::createComponents(Uint16 sceneId, Uint32 groupId, U
 		group.push_back(component);
 }
 
+
+///////////////////////////////////////////////////////////
 template <typename C>
 inline void ComponentData<C>::removeComponents(Uint16 sceneId, Uint32 groupId, const std::vector<Uint16>& indices)
 {
@@ -135,6 +179,8 @@ inline void ComponentData<C>::removeComponents(Uint16 sceneId, Uint32 groupId, c
 	}
 }
 
+
+///////////////////////////////////////////////////////////
 template <typename C>
 inline C* ComponentData<C>::getComponent(Uint16 sceneId, Uint32 groupId, Uint16 index)
 {
@@ -145,6 +191,8 @@ inline C* ComponentData<C>::getComponent(Uint16 sceneId, Uint32 groupId, Uint16 
 	return index < group.size() ? &group[index] : 0;
 }
 
+
+///////////////////////////////////////////////////////////
 template <typename C>
 inline std::vector<C>& ComponentData<C>::getGroup(Uint16 sceneId, Uint32 groupId)
 {
@@ -152,6 +200,8 @@ inline std::vector<C>& ComponentData<C>::getGroup(Uint16 sceneId, Uint32 groupId
 	return m_data[sceneId][groupId];
 }
 
+
+///////////////////////////////////////////////////////////
 template <typename C>
 inline bool ComponentData<C>::hasGroup(Uint16 sceneId, Uint32 groupId)
 {
@@ -162,6 +212,8 @@ inline bool ComponentData<C>::hasGroup(Uint16 sceneId, Uint32 groupId)
 	return data.find(groupId) != data.end();
 }
 
+
+///////////////////////////////////////////////////////////
 template <typename C>
 inline void ComponentData<C>::cleanup(Uint16 sceneId)
 {
@@ -171,8 +223,8 @@ inline void ComponentData<C>::cleanup(Uint16 sceneId)
 	m_data[sceneId] = Data();
 }
 
-///////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////
 template <typename C>
 inline void ComponentCleanup::registerType()
 {
@@ -183,10 +235,10 @@ inline void ComponentCleanup::registerType()
 		m_cleanupFuncs[typeId] = ComponentData<C>::cleanup;
 }
 
-///////////////////////////////////////////////////////////
-
 }
 
+
+///////////////////////////////////////////////////////////
 template <typename C>
 inline ComponentArray<C>::Group::Group() :
 	m_data		(0),
@@ -195,6 +247,8 @@ inline ComponentArray<C>::Group::Group() :
 
 }
 
+
+///////////////////////////////////////////////////////////
 template <typename C>
 inline ComponentArray<C>::Group::Group(std::vector<C>& data) :
 	m_data		(0),
@@ -204,6 +258,8 @@ inline ComponentArray<C>::Group::Group(std::vector<C>& data) :
 		m_data = &data[0];
 }
 
+
+///////////////////////////////////////////////////////////
 template <typename C>
 inline ComponentArray<C>::Iterator::Iterator() :
 	m_array		(0),
@@ -215,6 +271,8 @@ inline ComponentArray<C>::Iterator::Iterator() :
 
 }
 
+
+///////////////////////////////////////////////////////////
 template <typename C>
 inline ComponentArray<C>::Iterator::Iterator(ComponentArray<C>* arr) :
 	m_array		(arr),
@@ -231,6 +289,8 @@ inline ComponentArray<C>::Iterator::Iterator(ComponentArray<C>* arr) :
 	}
 }
 
+
+///////////////////////////////////////////////////////////
 template <typename C>
 inline C& ComponentArray<C>::Iterator::get()
 {
@@ -238,6 +298,8 @@ inline C& ComponentArray<C>::Iterator::get()
 	return *m_ptr;
 }
 
+
+///////////////////////////////////////////////////////////
 template <typename C>
 inline typename ComponentArray<C>::Iterator& ComponentArray<C>::Iterator::operator++()
 {
@@ -259,6 +321,8 @@ inline typename ComponentArray<C>::Iterator& ComponentArray<C>::Iterator::operat
 	return *this;
 }
 
+
+///////////////////////////////////////////////////////////
 template <typename C>
 inline typename ComponentArray<C>::Iterator ComponentArray<C>::Iterator::operator++(int)
 {
@@ -268,6 +332,8 @@ inline typename ComponentArray<C>::Iterator ComponentArray<C>::Iterator::operato
 	return it;
 }
 
+
+///////////////////////////////////////////////////////////
 template <typename C>
 inline bool ComponentArray<C>::Iterator::atEnd() const
 {
@@ -275,34 +341,41 @@ inline bool ComponentArray<C>::Iterator::atEnd() const
 	return m_index >= m_size && m_group + 1 >= m_array->m_groups.size();
 }
 
-///////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////
 template <typename C>
 inline void ComponentArray<C>::addGroup(std::vector<C>& group)
 {
-	m_groups.push_back(Group(group));
+	if (group.size())
+		m_groups.push_back(Group(group));
 }
 
+
+///////////////////////////////////////////////////////////
 template <typename C>
 inline typename ComponentArray<C>::Group& ComponentArray<C>::getGroup(Uint32 index)
 {
 	return m_groups[index];
 }
 
+
+///////////////////////////////////////////////////////////
 template <typename C>
 inline Uint32 ComponentArray<C>::getNumGroups() const
 {
 	return m_groups.size();
 }
 
+
+///////////////////////////////////////////////////////////
 template <typename C>
 inline typename ComponentArray<C>::Iterator ComponentArray<C>::getIterator()
 {
 	return Iterator(this);
 }
 
-///////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////
 template <typename... Cs>
 inline ComponentTypeSet ComponentTypeSet::create()
 {
@@ -311,6 +384,8 @@ inline ComponentTypeSet ComponentTypeSet::create()
 	return set;
 }
 
+
+///////////////////////////////////////////////////////////
 template <typename... Cs>
 inline void ComponentTypeSet::set()
 {
@@ -321,6 +396,8 @@ inline void ComponentTypeSet::set()
 	PARAM_EXPAND(m_set.insert(TypeInfo::getId<Cs>()));
 }
 
+
+///////////////////////////////////////////////////////////
 template <typename C>
 inline void ComponentTypeSet::add()
 {
@@ -328,6 +405,8 @@ inline void ComponentTypeSet::add()
 	m_set.insert(TypeInfo::getId<C>());
 }
 
+
+///////////////////////////////////////////////////////////
 template <typename C>
 inline void ComponentTypeSet::remove()
 {
@@ -335,10 +414,34 @@ inline void ComponentTypeSet::remove()
 	m_set.erase(TypeInfo::getId<C>());
 }
 
+
+///////////////////////////////////////////////////////////
 template <typename C>
 inline bool ComponentTypeSet::has() const
 {
 	return m_set.find(TypeInfo::getId<C>()) != m_set.end();
+}
+
+
+///////////////////////////////////////////////////////////
+template <typename... T>
+inline TagSet TagSet::create(const T&... tags)
+{
+	TagSet set;
+	set.set(tags...);
+	return set;
+}
+
+
+///////////////////////////////////////////////////////////
+template <typename... T>
+inline void TagSet::set(const T&... tags)
+{
+	// Clear the set
+	m_set.clear();
+
+	// Insert all type ids
+	PARAM_EXPAND(m_set.insert(std::hash<std::string>()(tags)));
 }
 
 }

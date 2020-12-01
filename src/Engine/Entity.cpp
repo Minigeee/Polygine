@@ -41,17 +41,12 @@ void Entity::remove() const
 
 ///////////////////////////////////////////////////////////
 
-void Entity::addTag(int tag)
+void Entity::addTag(const std::string& tag)
 {
-	m_scene->addTag(m_id, tag);
+	*this = m_scene->addTag(m_id, tag);
 }
 
-void Entity::removeTag(int tag)
-{
-	m_scene->removeTag(m_id, tag);
-}
-
-bool Entity::hasTag(int tag) const
+bool Entity::hasTag(const std::string& tag) const
 {
 	return m_scene->hasTag(m_id, tag);
 }

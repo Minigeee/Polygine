@@ -77,7 +77,22 @@ int main()
 
     DirLightComponent sun;
     sun.m_direction.z = -1.0f;
-    scene.createEntity(sun);
+    Entity e = scene.createEntity(sun);
+    e.addTag("Light");
+
+    Uint32 tag = (Uint32)std::hash<std::string>()("Light");
+
+    scene.system<DirLightComponent>(
+        [&](const Entity::Id& id, DirLightComponent& light)
+        {
+            std::cout << "Hello\n";
+        },
+
+        [&](const ComponentTypeSet& components, const TagSet& tags) -> bool
+        {
+            return !tags.has("Light") || !tags.has("Camera");
+        }
+    );
 
     TransformComponent t;
     t.m_scale = Vector3f(0.25f);

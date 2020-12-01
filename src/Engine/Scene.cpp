@@ -13,7 +13,8 @@ HandleArray<bool> Scene::idArray;
 
 ///////////////////////////////////////////////////////////
 Scene::Scene() :
-	m_handle				(idArray.add(true))
+	m_handle				(idArray.add(true)),
+	m_groupPool				(sizeof(priv::EntityGroup), 16)
 {
 	// Create stream type instance buffer
 	// m_instanceBuffer.create<Matrix4f>(0, 65536, BufferUsage::Stream);
@@ -57,7 +58,7 @@ void Scene::removeEntity(Entity::Id id)
 	ASSERT(it != m_entityGroups.end(), "Can not remove entity from unknown entity group: %d", groupId);
 
 	// This function adds it to a remove queue
-	it.value().removeEntity(id);
+	it.value()->removeEntity(id);
 }
 
 
@@ -69,48 +70,56 @@ void Scene::removeQueuedEntities()
 
 	// Clear all queues
 	for (auto it = m_entityGroups.begin(); it != m_entityGroups.end(); ++it)
-		it.value().removeQueuedEntities();
+		it.value()->removeQueuedEntities();
 }
 
 
 ///////////////////////////////////////////////////////////
-void Scene::addTag(Entity::Id id, int tag)
+Entity Scene::addTag(Entity::Id id, const std::string& tag)
 {
-	std::lock_guard<std::mutex> lock(m_tagMutex);
+	// Tag hash
+	Uint32 hash = (Uint32)std::hash<std::string>()(tag);
 
-	// Insert id into correct tag group
-	m_entityTags[tag].insert(id);
+	std::lock_guard<std::mutex> lock(m_entityMutex);
+
+	// Find original group to check if it has a tag
+	auto it = m_entityGroups.find(id.m_group);
+	ASSERT(it != m_entityGroups.end(), "Entity group does not exist");
+	if (it.value()->hasTag(hash))
+		// Return the original id if it already has the tag
+		return Entity(this, id);
+
+	// Try to find the new group
+	Uint32 groupId = id.m_group * hash;
+	priv::EntityGroup* group = 0;
+
+	it = m_entityGroups.find(groupId);
+	if (it == m_entityGroups.end())
+	{
+		// Initialize new group
+		group = m_entityGroups[groupId] = (priv::EntityGroup*)m_groupPool.alloc();
+		new(group)priv::EntityGroup(this, m_handle.m_index);
+		m_entityGroups[id.m_group]->copyTypeSetTo(*group, groupId);
+
+		// Add the tag to the set
+		group->addTag(hash);
+	}
+	else
+		group = it.value();
+
+	// Move entity
+	return m_entityGroups[id.m_group]->moveEntity(id, *group);
 }
 
 
 ///////////////////////////////////////////////////////////
-void Scene::removeTag(Entity::Id id, int tag)
+bool Scene::hasTag(Entity::Id id, const std::string& tag)
 {
-	std::lock_guard<std::mutex> lock(m_tagMutex);
+	// Get entity group
+	auto it = m_entityGroups.find(id.m_group);
+	if (it == m_entityGroups.end()) return false;
 
-	// Remove entity from tag group
-	m_entityTags[tag].erase(id);
-}
-
-
-///////////////////////////////////////////////////////////
-bool Scene::hasTag(Entity::Id id, int tag)
-{
-	std::lock_guard<std::mutex> lock(m_tagMutex);
-
-	// Get the tag group
-	auto it = m_entityTags.find(tag);
-	if (it == m_entityTags.end()) return false;
-
-	// Return if the id has been found
-	return it->second.find(id) != it->second.end();
-}
-
-
-///////////////////////////////////////////////////////////
-const HashSet<Entity::Id>& Scene::getEntitiesWithTag(Uint32 tag)
-{
-	return m_entityTags[tag];
+	return it.value()->hasTag(std::hash<std::string>()(tag));
 }
 
 }

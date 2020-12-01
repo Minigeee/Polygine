@@ -96,19 +96,7 @@ public:
 	/// \see Scene::addTag
 	///
 	///////////////////////////////////////////////////////////
-	void addTag(int tag);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Remove a tag from the entity
-	///
-	/// Tags should be an enum that can be cast to an integer.
-	///
-	/// \param tag The tag to remove
-	///
-	/// \see Scene::removeTag
-	///
-	///////////////////////////////////////////////////////////
-	void removeTag(int tag);
+	void addTag(const std::string& tag);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Check if the entity has a certain tag
@@ -120,7 +108,7 @@ public:
 	/// \see Scene::hasTag
 	///
 	///////////////////////////////////////////////////////////
-	bool hasTag(int tag) const;
+	bool hasTag(const std::string& tag) const;
 
 private:
 	Scene* m_scene;	//!< Scene pointer
