@@ -34,6 +34,19 @@ enum class BufferUsage
 };
 
 ///////////////////////////////////////////////////////////
+/// \brief An enum defining flags used when mapping a buffer
+///
+///////////////////////////////////////////////////////////
+enum class MapBufferFlags
+{
+	Write				= 0x0002,	//!< Map the buffer for writing data
+	Read				= 0x0001,	//!< Map the buffer for reading data
+	Unsynchronized		= 0x0020,	//!< Map the buffer in an unsynchronized manner, meaning that the mapped data may still be in use (unsafe)
+	InvalidateBuffer	= 0x0008,	//!< Indicate that any data stored in the buffer before mapping may be discarded
+	InvalidateRange		= 0x0004	//!< Indicate that any data stored in the specified range before mapping may be discarded
+};
+
+///////////////////////////////////////////////////////////
 /// \brief A class that stores and manages vertex data on the GPU
 ///
 ///////////////////////////////////////////////////////////
@@ -175,6 +188,28 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	void update(const VertexBuffer& buffer, Uint32 offset = 0);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Map data from the specified range to an address in memory
+	///
+	/// This function uses glMapBufferRange() and returns an address
+	/// to the mapped data. Map flags may be used to determine what
+	/// occurs before mapping the data.
+	///
+	/// \param offset The offset of the range to map in bytes
+	/// \param size The size of the range to map in bytes
+	/// \param flags The set of flags to pass to the mapping function
+	///
+	/// \return A pointer to the mapped data
+	///
+	///////////////////////////////////////////////////////////
+	void* map(Uint32 offset, Uint32 size, int flags);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Unmap all previously mapped ranges
+	///
+	///////////////////////////////////////////////////////////
+	void unmap();
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the vertex buffer's bind target without binding

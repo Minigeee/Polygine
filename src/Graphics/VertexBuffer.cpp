@@ -158,6 +158,31 @@ void VertexBuffer::bufferSubData(const void* data, Uint32 size, Uint32 offset)
 
 
 ///////////////////////////////////////////////////////////
+void* VertexBuffer::map(Uint32 offset, Uint32 size, int flags)
+{
+	// Ensure buffer is bound
+	bind();
+
+	// Map data
+	void* map = 0;
+	glCheck(map = glMapBufferRange(targetToGLEnum(m_target), offset, size, flags));
+
+	return map;
+}
+
+
+///////////////////////////////////////////////////////////
+void VertexBuffer::unmap()
+{
+	// Ensure buffer is bound
+	bind();
+
+	// Unmap buffer
+	glUnmapBuffer(targetToGLEnum(m_target));
+}
+
+
+///////////////////////////////////////////////////////////
 void VertexBuffer::setTarget(BufferTarget target)
 {
 	m_target = target;

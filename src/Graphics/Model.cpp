@@ -107,14 +107,8 @@ void processMaterial(aiMaterial* material, ModelLoadState& state)
 
 	// Load textures
 	Uint32 numMaterials = state.m_materials.size();
-	modelMat.addTexture(
-		"u_diffuseMaps[" + std::to_string(numMaterials) + ']',
-		loadMaterialTexture(material, aiTextureType_DIFFUSE, state)
-	);
-	modelMat.addTexture(
-		"u_specularMaps" + std::to_string(numMaterials) + ']',
-		loadMaterialTexture(material, aiTextureType_SPECULAR, state)
-	);
+	modelMat.setDiffTexture(loadMaterialTexture(material, aiTextureType_DIFFUSE, state));
+	modelMat.setSpecTexture(loadMaterialTexture(material, aiTextureType_SPECULAR, state));
 
 	// Add material
 	state.m_materials.push_back(modelMat);
@@ -412,12 +406,16 @@ bool Model::load(const std::string& fname)
 		m_skeletalVertexBuffer.create(state.m_skeletalData);
 
 		// Add attributes
-		m_vertexArray.addBuffer(m_skeletalVertexBuffer, 5, 4, sizeof(priv::SkeletalData), 0 * sizeof(float));
-		m_vertexArray.addBuffer(m_skeletalVertexBuffer, 6, 4, sizeof(priv::SkeletalData), 4 * sizeof(float), 0, GLType::Int32);
+		m_vertexArray.addBuffer(m_skeletalVertexBuffer, 9, 4, sizeof(priv::SkeletalData), 0 * sizeof(float));
+		m_vertexArray.addBuffer(m_skeletalVertexBuffer, 10, 4, sizeof(priv::SkeletalData), 4 * sizeof(float), 0, GLType::Int32);
 	}
 
 	// Create bounding box
 	m_boundingBox = priv::calcBoundingBox(m_vertices);
+
+	// Create bounding sphere
+	m_boundingSphere.m_position = m_boundingBox.getCenter();
+	m_boundingSphere.m_radius = length(m_boundingBox.getDimensions()) * 0.5f;
 
 	// Set materials
 	m_materials = state.m_materials;
@@ -443,6 +441,10 @@ void Model::create(const std::vector<Vertex>& vertices, BufferUsage usage)
 
 	// Create bounding box
 	m_boundingBox = priv::calcBoundingBox(vertices);
+
+	// Create bounding sphere
+	m_boundingSphere.m_position = m_boundingBox.getCenter();
+	m_boundingSphere.m_radius = length(m_boundingBox.getDimensions()) * 0.5f;
 }
 
 
@@ -490,6 +492,13 @@ const BoundingBox& Model::getBoundingBox() const
 
 
 ///////////////////////////////////////////////////////////
+const Sphere& Model::getBoundingSphere() const
+{
+	return m_boundingSphere;
+}
+
+
+///////////////////////////////////////////////////////////
 const std::vector<Vertex>& Model::getVertices() const
 {
 	return m_vertices;
@@ -500,6 +509,13 @@ const std::vector<Vertex>& Model::getVertices() const
 const Material& Model::getMaterial(Uint32 index) const
 {
 	return m_materials[index];
+}
+
+
+///////////////////////////////////////////////////////////
+const std::vector<Material>& Model::getMaterials() const
+{
+	return m_materials;
 }
 
 

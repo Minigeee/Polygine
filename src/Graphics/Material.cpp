@@ -11,9 +11,11 @@ namespace poly
 
 ///////////////////////////////////////////////////////////
 Material::Material() :
-	m_diffuse	(1.0f),
-	m_specular	(0.1f),
-	m_shininess	(16.0f)
+	m_diffuse		(1.0f),
+	m_specular		(0.1f),
+	m_shininess		(16.0f),
+	m_diffTexture	(0),
+	m_specTexture	(0)
 { }
 
 
@@ -49,6 +51,20 @@ void Material::setSpecular(float r, float g, float b)
 void Material::setShininess(float shininess)
 {
 	m_shininess = shininess;
+}
+
+
+///////////////////////////////////////////////////////////
+void Material::setDiffTexture(Texture* texture)
+{
+	m_diffTexture = texture;
+}
+
+
+///////////////////////////////////////////////////////////
+void Material::setSpecTexture(Texture* texture)
+{
+	m_specTexture = texture;
 }
 
 
@@ -104,12 +120,29 @@ Texture* Material::getTexture(const std::string& uniform) const
 ///////////////////////////////////////////////////////////
 void Material::apply(Shader* shader, int index) const
 {
-	shader->setUniform("u_materials[" + std::to_string(index) + "].diffuse", m_diffuse);
-	shader->setUniform("u_materials[" + std::to_string(index) + "].specular", m_specular);
-	shader->setUniform("u_materials[" + std::to_string(index) + "].shininess", m_shininess);
+	std::string prefix = "u_materials[" + std::to_string(index) + "].";
+	shader->setUniform(prefix + "diffuse", m_diffuse);
+	shader->setUniform(prefix + "specular", m_specular);
+	shader->setUniform(prefix + "shininess", m_shininess);
+	shader->setUniform(prefix + "hasDiffTexture", (int)m_diffTexture);
+	shader->setUniform(prefix + "hasSpecTexture", (int)m_specTexture);
+
+	// Bind diffuse texture
+	if (m_diffTexture)
+	{
+		m_diffTexture->bind(0);
+		shader->setUniform("u_diffuseMaps[" + std::to_string(index) + ']', 0);
+	}
+
+	// Bind specular texture
+	if (m_specTexture)
+	{
+		m_specTexture->bind(1);
+		shader->setUniform("u_specularMaps[" + std::to_string(index) + ']', 1);
+	}
 
 	auto it = m_textures.begin();
-	for (int i = 0; it != m_textures.end(); ++it, ++i)
+	for (int i = 2; it != m_textures.end(); ++it, ++i)
 	{
 		// Bind texture
 		Texture* texture = it->second;

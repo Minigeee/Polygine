@@ -4,6 +4,7 @@
 #include <poly/Core/DataTypes.h>
 
 #include <poly/Math/BoundingBox.h>
+#include <poly/Math/Sphere.h>
 #include <poly/Math/Vector3.h>
 
 #include <poly/Graphics/Material.h>
@@ -112,6 +113,14 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	const BoundingBox& getBoundingBox() const;
+	
+	///////////////////////////////////////////////////////////
+	/// \brief Get the local bounding sphere
+	///
+	/// \brief The bounding sphere
+	///
+	///////////////////////////////////////////////////////////
+	const Sphere& getBoundingSphere() const;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the list of vertices
@@ -131,11 +140,20 @@ public:
 	///////////////////////////////////////////////////////////
 	const Material& getMaterial(Uint32 index = 0) const;
 
+	///////////////////////////////////////////////////////////
+	/// \brief Get the list of materials
+	///
+	/// \return The list of materials
+	///
+	///////////////////////////////////////////////////////////
+	const std::vector<Material>& getMaterials() const;
+
 private:
 	VertexArray m_vertexArray;				//!< The vertex array used to render the model
 	VertexBuffer m_vertexBuffer;			//!< The vertex buffer used to store the main vertex data
 	VertexBuffer m_skeletalVertexBuffer;	//!< The vertex buffer used to store skeletal vertex data
 	BoundingBox m_boundingBox;				//!< The bounding box surrounding the model
+	Sphere m_boundingSphere;				//!< The bounding sphere surrounding te model
 
 	std::vector<Vertex> m_vertices;			//!< The list of vertex data excluding skeletal data
 	std::vector<Material> m_materials;		//!< The list of materials

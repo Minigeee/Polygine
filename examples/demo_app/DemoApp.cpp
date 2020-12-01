@@ -1,11 +1,18 @@
 #include <poly/Core/Clock.h>
 #include <poly/Core/Logger.h>
+#include <poly/Core/Profiler.h>
 #include <poly/Core/Sleep.h>
+
+#include <poly/Engine/Components.h>
+#include <poly/Engine/Scene.h>
 
 #include <poly/Graphics/Animation.h>
 #include <poly/Graphics/Camera.h>
+#include <poly/Graphics/Components.h>
+#include <poly/Graphics/FrameBuffer.h>
 #include <poly/Graphics/Image.h>
 #include <poly/Graphics/Model.h>
+#include <poly/Graphics/Octree.h>
 #include <poly/Graphics/Shader.h>
 #include <poly/Graphics/Skeleton.h>
 #include <poly/Graphics/Texture.h>
@@ -40,20 +47,19 @@ int main()
 
     Model model;
     model.load("models/character/character.dae");
-    VertexArray& vao = model.getVertexArray();
-    const Material& material = model.getMaterial();
 
-    Skeleton skeleton;
-    skeleton.load("models/character/character.dae");
+    Skeleton s1, s2, s3;
+    s1.load("models/character/character.dae");
+    s2.load("models/character/character.dae");
+    s3.load("models/character/character.dae");
 
-    Matrix4f t = toTransformMatrix(Vector3f(0.0f, 0.0f, 5.0f), Vector3f(0.0f), Vector3f(1.0f));
-    Bone* bone = skeleton.getBone("Armature_Chest");
-    // bone->setTransform(t);
-
-    Animation walk;
-    walk.load("models/character/character.dae", "Armature");
-    skeleton.setAnimation(&walk);
-    skeleton.setAnimationSpeed(0.1f);
+    Animation anim;
+    anim.load("models/character/character.dae", "Armature");
+    s1.setAnimation(&anim);
+    s2.setAnimation(&anim);
+    s2.setAnimationTime(1.0f);
+    s3.setAnimation(&anim);
+    s3.setAnimationSpeed(1.5f);
 
     Shader shader;
     shader.load("shaders/animated.vert", Shader::Vertex);
@@ -61,13 +67,79 @@ int main()
     shader.compile();
 
     Camera camera;
+    camera.setPosition(0.0f, 5.0f, 15.0f);
+    camera.setRotation(0.0f, 0.0f);
 
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
+    // Setup scene
+    Scene scene;
+    Octree octree;
+    octree.init(&scene);
+
+    DirLightComponent sun;
+    sun.m_direction.z = -1.0f;
+    scene.createEntity(sun);
+
+    TransformComponent t;
+    t.m_scale = Vector3f(0.25f);
+    RenderComponent r(&model, &shader);
+    r.m_skeleton = &s1;
+    octree.add(scene.createEntity(t, r));
+    t.m_position.x = 5.0f;
+    r.m_skeleton = &s2;
+    octree.add(scene.createEntity(t, r));
+    t.m_position.x = -5.0f;
+    r.m_skeleton = &s3;
+    octree.add(scene.createEntity(t, r));
 
     Clock clock;
     float time = 0.0f;
+
+    FrameBuffer framebuffer;
+    framebuffer.create(1280, 720);
+    framebuffer.bind();
+    framebuffer.attachColor();
+    framebuffer.attachDepth();
+
+
+    bool mouseDown = false;
+    window.addListener<E_MouseButton>(
+        [&](const E_MouseButton& e)
+        {
+            if (e.m_button == Mouse::Left)
+                mouseDown = e.m_action == InputAction::Press;
+        }
+    );
+
+    Vector2f mousePos, cameraRot;
+    bool firstRun = true;
+    window.addListener<E_MouseMove>(
+        [&](const E_MouseMove& e)
+        {
+            const float sensitivity = 0.1f;
+
+            Vector2f pos = Vector2f(e.m_x, e.m_y);
+            if (firstRun)
+            {
+                mousePos = pos;
+                firstRun = false;
+            }
+
+            Vector2f delta = sensitivity * (pos - mousePos);
+            mousePos = pos;
+
+            if (!mouseDown) return;
+
+            // Update camera
+            cameraRot.x = fmod(cameraRot.x - delta.y, 360.0f);
+            cameraRot.y = fmod(cameraRot.y + delta.x, 360.0f);
+            if (cameraRot.x > 89.0f)
+                cameraRot.x = 89.0f;
+            else if (cameraRot.x < -89.0f)
+                cameraRot.x = -89.0f;
+
+            camera.setRotation(cameraRot);
+        }
+    );
 
     // Game loop
     while (window.isOpen())
@@ -75,26 +147,30 @@ int main()
         // Poll events for all existing windows
         Window::pollEvents();
 
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
         float elapsed = clock.restart().toSeconds();
         time += elapsed;
 
-        camera.setPosition(0.0f, 5.0f, 15.0f);
-        Matrix4f projView = camera.getProjMatrix() * camera.getViewMatrix();
-        Matrix4f transform = toTransformMatrix(Vector3f(0.0f), Quaternion(Vector3f(0, 1, 0), time * 0.0f), Vector3f(1.0f));
+        scene.system<TransformComponent>(
+            [&](const Entity::Id& id, TransformComponent& t)
+            {
+                t.m_rotation.y = time * 60.0f;
+            }
+        );
 
-        shader.bind();
-        shader.setUniform("u_projView", projView);
-        shader.setUniform("u_transform", transform);
-        material.apply(&shader);
-        skeleton.update(elapsed);
-        skeleton.apply(&shader);
-        vao.draw();
+        // Render scene
+        s1.update(elapsed);
+        s2.update(elapsed);
+        s3.update(elapsed);
+        octree.render(camera);
 
         // Display (swap buffers)
         window.display();
     }
 
+    const ProfilerData& data = Profiler::getData("poly::Octree::render");
+    std::cout << data.mean().toMicroseconds() << '\n';
+
     return 0;
 }
+
+// TODO : Copyable skeletons

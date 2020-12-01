@@ -94,6 +94,28 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	void setShininess(float shininess);
+	
+	///////////////////////////////////////////////////////////
+	/// \brief Set the material diffuse texture
+	///
+	/// The diffuse texture is similar to the diffuse color,
+	/// except the diffuse colors are sampled from a texture.
+	///
+	/// \param texture The diffuse texture
+	///
+	///////////////////////////////////////////////////////////
+	void setDiffTexture(Texture* texture);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the material specular texture
+	///
+	/// The specular texture is similar to the specular color,
+	/// except the specular colors are sampled from a texture.
+	///
+	/// \param texture The specular texture
+	///
+	///////////////////////////////////////////////////////////
+	void setSpecTexture(Texture* texture);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Add a texture to the material to map to a shader uniform
@@ -197,6 +219,9 @@ private:
 	Vector3f m_diffuse;							//!< The diffuse color
 	Vector3f m_specular;						//!< The specular color
 	float m_shininess;							//!< The shininess value
+
+	Texture* m_diffTexture;						//!< The diffuse texture
+	Texture* m_specTexture;						//!< The specular texture
 
 	HashMap<std::string, Texture*> m_textures;	//!< Map of uniform to texture
 };

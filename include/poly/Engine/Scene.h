@@ -2,13 +2,13 @@
 #define POLY_SCENE_H
 
 #include <poly/Core/Tuple.h>
+
 #include <poly/Engine/Ecs.h>
 #include <poly/Engine/Entity.h>
 
-#include <unordered_map>
-
 namespace poly
 {
+
 
 ///////////////////////////////////////////////////////////
 /// \brief A class that represent a game scene and stores all data on
@@ -96,6 +96,29 @@ public:
 	template <typename... Cs>
 	Entity createEntity(Cs&&... components);
 
+	///////////////////////////////////////////////////////////
+	/// \brief Create a new entity with the specified component types
+	///
+	/// An entity with a unique id is created and returned. All
+	/// componenents that are associated with the entity are initialized
+	/// with the given values.
+	///
+	/// Accessing the component data using the returned Entity
+	/// object is possible, but is slow. When processing large
+	/// amounts of entities, use system() instead.
+	///
+	/// This function is thread-safe.
+	///
+	/// \tparam Cs The component types to attach to the entity
+	///
+	/// \param components The list of component data values (in order) to initialize the entity with
+	///
+	/// \return An Entity object with the specified components attached
+	///
+	///////////////////////////////////////////////////////////
+	template <typename... Cs>
+	Entity createEntity(Cs&... components);
+
 
 	///////////////////////////////////////////////////////////
 	/// \brief Create a new entity with the specified component types
@@ -166,6 +189,30 @@ public:
 	///////////////////////////////////////////////////////////
 	template <typename... Cs>
 	std::vector<Entity> createEntities(Uint32 num, Cs&&... components);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Create several entities with the specified component types
+	///
+	/// A list of entity with unique ids is created and returned. All
+	/// componenents that are associated with the entities are initialized
+	/// with the given values.
+	///
+	/// Accessing the component data using the returned Entity
+	/// object is possible, but is slow. When processing large
+	/// amounts of entities, use system() instead.
+	///
+	/// This function is thread-safe.
+	///
+	/// \tparam Cs The component types to attach to the entity
+	///
+	/// \param num The number of entities to create
+	/// \param components The list of component data values (in order) to initialize the entities with
+	///
+	/// \return A list of Entity objects with the specified components attached
+	///
+	///////////////////////////////////////////////////////////
+	template <typename... Cs>
+	std::vector<Entity> createEntities(Uint32 num, Cs&... components);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Create several entities with the specified component types
@@ -243,6 +290,25 @@ public:
 	///////////////////////////////////////////////////////////
 	template <typename C>
 	C* getComponent(Entity::Id id) const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get a tuple of pointers to component data associated with a certain entity
+	///
+	/// This function should not be used too often (it is slower
+	/// compared to other functions when bulk access is needed).
+	/// Use getComponentData() when bulk access is needed, or
+	/// use system() when bulk processing of component data is
+	/// needed.
+	///
+	/// \tparam Cs The component types to retrieve
+	///
+	/// \param id The id of the entity to retrieve a component for
+	///
+	/// \return A tuple of component pointers to retrieve
+	///
+	///////////////////////////////////////////////////////////
+	template <typename... Cs>
+	Tuple<Cs*...> getComponents(Entity::Id id) const;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get component data for entities contain the specified component types
