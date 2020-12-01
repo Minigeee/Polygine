@@ -53,6 +53,14 @@ inline Entity Scene::createEntity(Cs&&... components)
 
 ///////////////////////////////////////////////////////////
 template <typename... Cs>
+inline Entity Scene::createEntity(Cs&... components)
+{
+	return createEntities(1, std::forward<Cs>(components)...)[0];
+}
+
+
+///////////////////////////////////////////////////////////
+template <typename... Cs>
 inline Entity Scene::createEntity(Tuple<Cs...>& components)
 {
 	return createEntity(std::forward<Cs>(components.get<Cs>())...);
@@ -96,6 +104,14 @@ inline std::vector<Entity> Scene::createEntities(Uint32 num, Cs&&... components)
 
 	// Create entity
 	return group->createEntities(num, std::forward<Cs>(components)...);
+}
+
+
+///////////////////////////////////////////////////////////
+template <typename... Cs>
+inline std::vector<Entity> Scene::createEntities(Uint32 num, Cs&... components)
+{
+	return createEntities(num, std::forward<Cs>(components)...);
 }
 
 

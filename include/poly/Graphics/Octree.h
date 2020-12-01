@@ -26,6 +26,8 @@ public:
 
 	void init(Scene* scene, Uint32 maxPerCell = 30);
 
+	void add(Entity entity);
+
 	void add(Entity::Id entity);
 
 	void update(Entity::Id entity);
@@ -70,12 +72,14 @@ private:
 	{
 		Model* m_model;
 		Shader* m_shader;
+		Skeleton* m_skeleton;
 	};
 
 	struct RenderData
 	{
 		Model* m_model;
 		Shader* m_shader;
+		Skeleton* m_skeleton;
 		Uint32 m_offset;
 		Uint32 m_instances;
 	};

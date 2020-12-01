@@ -58,7 +58,7 @@ vec3 calcDirLight(DirLight light, vec3 viewDir, vec3 diffColor, vec3 specColor)
     vec3 diffuse = diff * light.diffuse * diffColor;
 
     // Get specular factor
-    vec3 reflectDir = reflect(light.direction, v_normal);
+    vec3 reflectDir = reflect(-light.direction, v_normal);
     float spec = pow(max(dot(viewDir, reflectDir), 0.0f), material.shininess);
 
     // Specular color

@@ -96,6 +96,29 @@ public:
 	template <typename... Cs>
 	Entity createEntity(Cs&&... components);
 
+	///////////////////////////////////////////////////////////
+	/// \brief Create a new entity with the specified component types
+	///
+	/// An entity with a unique id is created and returned. All
+	/// componenents that are associated with the entity are initialized
+	/// with the given values.
+	///
+	/// Accessing the component data using the returned Entity
+	/// object is possible, but is slow. When processing large
+	/// amounts of entities, use system() instead.
+	///
+	/// This function is thread-safe.
+	///
+	/// \tparam Cs The component types to attach to the entity
+	///
+	/// \param components The list of component data values (in order) to initialize the entity with
+	///
+	/// \return An Entity object with the specified components attached
+	///
+	///////////////////////////////////////////////////////////
+	template <typename... Cs>
+	Entity createEntity(Cs&... components);
+
 
 	///////////////////////////////////////////////////////////
 	/// \brief Create a new entity with the specified component types
@@ -166,6 +189,30 @@ public:
 	///////////////////////////////////////////////////////////
 	template <typename... Cs>
 	std::vector<Entity> createEntities(Uint32 num, Cs&&... components);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Create several entities with the specified component types
+	///
+	/// A list of entity with unique ids is created and returned. All
+	/// componenents that are associated with the entities are initialized
+	/// with the given values.
+	///
+	/// Accessing the component data using the returned Entity
+	/// object is possible, but is slow. When processing large
+	/// amounts of entities, use system() instead.
+	///
+	/// This function is thread-safe.
+	///
+	/// \tparam Cs The component types to attach to the entity
+	///
+	/// \param num The number of entities to create
+	/// \param components The list of component data values (in order) to initialize the entities with
+	///
+	/// \return A list of Entity objects with the specified components attached
+	///
+	///////////////////////////////////////////////////////////
+	template <typename... Cs>
+	std::vector<Entity> createEntities(Uint32 num, Cs&... components);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Create several entities with the specified component types

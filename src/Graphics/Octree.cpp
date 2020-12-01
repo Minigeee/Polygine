@@ -8,6 +8,7 @@
 #include <poly/Graphics/Model.h>
 #include <poly/Graphics/Octree.h>
 #include <poly/Graphics/Shader.h>
+#include <poly/Graphics/Skeleton.h>
 
 #include <poly/Math/Transform.h>
 
@@ -278,6 +279,13 @@ void Octree::split(Node* node)
 
 
 ///////////////////////////////////////////////////////////
+void Octree::add(Entity entity)
+{
+	add(entity.getId());
+}
+
+
+///////////////////////////////////////////////////////////
 void Octree::add(Entity::Id entity)
 {
 	ASSERT(m_scene, "The octree must be initialized before using, by calling the init() function");
@@ -340,10 +348,14 @@ void Octree::add(Entity::Id entity)
 	for (Uint32 i = 0; i < m_renderGroups.size(); ++i)
 	{
 		const RenderGroup& group = m_renderGroups[i];
-		if (group.m_model == r.m_model && group.m_shader == r.m_shader)
+		if (
+			group.m_model == r.m_model &&
+			group.m_shader == r.m_shader && 
+			group.m_skeleton == r.m_skeleton)
 		{
 			data->m_group = i;
 			groupExists = true;
+			break;
 		}
 	}
 
@@ -354,6 +366,7 @@ void Octree::add(Entity::Id entity)
 		RenderGroup group;
 		group.m_model = r.m_model;
 		group.m_shader = r.m_shader;
+		group.m_skeleton = r.m_skeleton;
 		m_renderGroups.push_back(group);
 	}
 
@@ -653,6 +666,7 @@ void Octree::render(Camera& camera, FrameBuffer& target, const RenderState& stat
 		RenderData data;
 		data.m_model = m_renderGroups[i].m_model;
 		data.m_shader = m_renderGroups[i].m_shader;
+		data.m_skeleton = m_renderGroups[i].m_skeleton;
 		data.m_offset = m_instanceBufferOffset;
 		data.m_instances = entities.size();
 		renderData.push_back(data);
@@ -704,15 +718,40 @@ void Octree::render(Camera& camera, FrameBuffer& target, const RenderState& stat
 		// Get vertex array and do an instanced render
 		VertexArray& vao = data.m_model->getVertexArray();
 
-		// Bind instance data
-		vao.bind();
-		vao.addBuffer(m_instanceBuffer, 5, 4, sizeof(Matrix4f), data.m_offset + 0 * sizeof(Vector4f), 1);
-		vao.addBuffer(m_instanceBuffer, 6, 4, sizeof(Matrix4f), data.m_offset + 1 * sizeof(Vector4f), 1);
-		vao.addBuffer(m_instanceBuffer, 7, 4, sizeof(Matrix4f), data.m_offset + 2 * sizeof(Vector4f), 1);
-		vao.addBuffer(m_instanceBuffer, 8, 4, sizeof(Matrix4f), data.m_offset + 3 * sizeof(Vector4f), 1);
+		// Different rendering behavior based on if the model is animated or not
+		if (!data.m_skeleton)
+		{
+			// Bind instance data
+			vao.bind();
+			vao.addBuffer(m_instanceBuffer, 5, 4, sizeof(Matrix4f), data.m_offset + 0 * sizeof(Vector4f), 1);
+			vao.addBuffer(m_instanceBuffer, 6, 4, sizeof(Matrix4f), data.m_offset + 1 * sizeof(Vector4f), 1);
+			vao.addBuffer(m_instanceBuffer, 7, 4, sizeof(Matrix4f), data.m_offset + 2 * sizeof(Vector4f), 1);
+			vao.addBuffer(m_instanceBuffer, 8, 4, sizeof(Matrix4f), data.m_offset + 3 * sizeof(Vector4f), 1);
 
-		// Draw
-		vao.draw(data.m_instances);
+			// Draw
+			vao.draw(data.m_instances);
+		}
+		else
+		{
+			vao.bind();
+
+			// Have to render each animated model individually
+			for (Uint32 e = 0; e < data.m_instances; ++e)
+			{
+				// Bind transform data
+				Uint32 offset = data.m_offset + e * sizeof(Matrix4f);
+				vao.addBuffer(m_instanceBuffer, 5, 4, sizeof(Matrix4f), offset + 0 * sizeof(Vector4f), 1);
+				vao.addBuffer(m_instanceBuffer, 6, 4, sizeof(Matrix4f), offset + 1 * sizeof(Vector4f), 1);
+				vao.addBuffer(m_instanceBuffer, 7, 4, sizeof(Matrix4f), offset + 2 * sizeof(Vector4f), 1);
+				vao.addBuffer(m_instanceBuffer, 8, 4, sizeof(Matrix4f), offset + 3 * sizeof(Vector4f), 1);
+
+				// Apply skeleton
+				data.m_skeleton->apply(shader);
+
+				// Render model
+				vao.draw();
+			}
+		}
 	}
 }
 

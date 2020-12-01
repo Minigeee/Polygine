@@ -48,13 +48,26 @@ int main()
     Model model;
     model.load("models/character/character.dae");
 
+    Skeleton s1, s2, s3;
+    s1.load("models/character/character.dae");
+    s2.load("models/character/character.dae");
+    s3.load("models/character/character.dae");
+
+    Animation anim;
+    anim.load("models/character/character.dae", "Armature");
+    s1.setAnimation(&anim);
+    s2.setAnimation(&anim);
+    s2.setAnimationTime(1.0f);
+    s3.setAnimation(&anim);
+    s3.setAnimationSpeed(1.5f);
+
     Shader shader;
-    shader.load("shaders/default.vert", Shader::Vertex);
+    shader.load("shaders/animated.vert", Shader::Vertex);
     shader.load("shaders/default.frag", Shader::Fragment);
     shader.compile();
 
     Camera camera;
-    camera.setPosition(0.0f, 15.0f, 15.0f);
+    camera.setPosition(0.0f, 5.0f, 15.0f);
     camera.setRotation(0.0f, 0.0f);
 
     // Setup scene
@@ -64,20 +77,19 @@ int main()
 
     DirLightComponent sun;
     sun.m_direction.z = -1.0f;
-    scene.createEntity(std::move(sun));
+    scene.createEntity(sun);
 
-    for (int r = -50; r < 50; ++r)
-    {
-        for (int c = -50; c < 50; ++c)
-        {
-            TransformComponent t;
-            t.m_position.x = (float)c * 5.0f;
-            t.m_position.z = (float)r * 5.0f;
-            t.m_scale = Vector3f(0.25f);
-            Entity entity = scene.createEntity(std::move(t), RenderComponent(&model, &shader));
-            octree.add(entity.getId());
-        }
-    }
+    TransformComponent t;
+    t.m_scale = Vector3f(0.25f);
+    RenderComponent r(&model, &shader);
+    r.m_skeleton = &s1;
+    octree.add(scene.createEntity(t, r));
+    t.m_position.x = 5.0f;
+    r.m_skeleton = &s2;
+    octree.add(scene.createEntity(t, r));
+    t.m_position.x = -5.0f;
+    r.m_skeleton = &s3;
+    octree.add(scene.createEntity(t, r));
 
     Clock clock;
     float time = 0.0f;
@@ -88,7 +100,15 @@ int main()
     framebuffer.attachColor();
     framebuffer.attachDepth();
 
-    /*
+
+    bool mouseDown = false;
+    window.addListener<E_MouseButton>(
+        [&](const E_MouseButton& e)
+        {
+            if (e.m_button == Mouse::Left)
+                mouseDown = e.m_action == InputAction::Press;
+        }
+    );
 
     Vector2f mousePos, cameraRot;
     bool firstRun = true;
@@ -107,6 +127,8 @@ int main()
             Vector2f delta = sensitivity * (pos - mousePos);
             mousePos = pos;
 
+            if (!mouseDown) return;
+
             // Update camera
             cameraRot.x = fmod(cameraRot.x - delta.y, 360.0f);
             cameraRot.y = fmod(cameraRot.y + delta.x, 360.0f);
@@ -118,8 +140,6 @@ int main()
             camera.setRotation(cameraRot);
         }
     );
-
-    */
 
     // Game loop
     while (window.isOpen())
@@ -138,6 +158,9 @@ int main()
         );
 
         // Render scene
+        s1.update(elapsed);
+        s2.update(elapsed);
+        s3.update(elapsed);
         octree.render(camera);
 
         // Display (swap buffers)
@@ -149,3 +172,5 @@ int main()
 
     return 0;
 }
+
+// TODO : Copyable skeletons

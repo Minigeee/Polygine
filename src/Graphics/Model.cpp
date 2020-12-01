@@ -409,8 +409,8 @@ bool Model::load(const std::string& fname)
 		m_skeletalVertexBuffer.create(state.m_skeletalData);
 
 		// Add attributes
-		m_vertexArray.addBuffer(m_skeletalVertexBuffer, 5, 4, sizeof(priv::SkeletalData), 0 * sizeof(float));
-		m_vertexArray.addBuffer(m_skeletalVertexBuffer, 6, 4, sizeof(priv::SkeletalData), 4 * sizeof(float), 0, GLType::Int32);
+		m_vertexArray.addBuffer(m_skeletalVertexBuffer, 9, 4, sizeof(priv::SkeletalData), 0 * sizeof(float));
+		m_vertexArray.addBuffer(m_skeletalVertexBuffer, 10, 4, sizeof(priv::SkeletalData), 4 * sizeof(float), 0, GLType::Int32);
 	}
 
 	// Create bounding box

@@ -8,6 +8,7 @@ namespace poly
 
 class Model;
 class Shader;
+class Skeleton;
 
 ///////////////////////////////////////////////////////////
 /// \brief A component that contains data that describes how to
@@ -30,8 +31,9 @@ struct RenderComponent
 	///////////////////////////////////////////////////////////
 	RenderComponent(Model* model, Shader* shader = 0);
 
-	Model* m_model;		//!< The model to render
-	Shader* m_shader;	//!< The shader to render the model with
+	Model* m_model;			//!< The model to render
+	Shader* m_shader;		//!< The shader to render the model with
+	Skeleton* m_skeleton;	//!< The skeleton to apply to the model
 };
 
 
