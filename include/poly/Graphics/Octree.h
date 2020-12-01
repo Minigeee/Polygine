@@ -26,9 +26,11 @@ public:
 
 	void init(Scene* scene, Uint32 maxPerCell = 30);
 
-	void add(Entity entity);
+	Entity add(Entity entity, bool dynamic = false);
 
-	void add(Entity::Id entity);
+	Entity add(Entity::Id entity, bool dynamic = false);
+
+	void update();
 
 	void update(Entity::Id entity);
 
@@ -89,6 +91,8 @@ private:
 	void split(Node* node);
 
 	void insert(EntityData* data);
+
+	void update(const Entity::Id& id, RenderComponent& r, TransformComponent& t);
 
 	void getRenderData(Node* node, const Frustum& frustum, std::vector<std::vector<EntityData*>>& entityData);
 

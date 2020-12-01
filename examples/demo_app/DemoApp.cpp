@@ -48,21 +48,8 @@ int main()
     Model model;
     model.load("models/character/character.dae");
 
-    Skeleton s1, s2, s3;
-    s1.load("models/character/character.dae");
-    s2.load("models/character/character.dae");
-    s3.load("models/character/character.dae");
-
-    Animation anim;
-    anim.load("models/character/character.dae", "Armature");
-    s1.setAnimation(&anim);
-    s2.setAnimation(&anim);
-    s2.setAnimationTime(1.0f);
-    s3.setAnimation(&anim);
-    s3.setAnimationSpeed(1.5f);
-
     Shader shader;
-    shader.load("shaders/animated.vert", Shader::Vertex);
+    shader.load("shaders/default.vert", Shader::Vertex);
     shader.load("shaders/default.frag", Shader::Fragment);
     shader.compile();
 
@@ -77,34 +64,16 @@ int main()
 
     DirLightComponent sun;
     sun.m_direction.z = -1.0f;
-    Entity e = scene.createEntity(sun);
-    e.addTag("Light");
-
-    Uint32 tag = (Uint32)std::hash<std::string>()("Light");
-
-    scene.system<DirLightComponent>(
-        [&](const Entity::Id& id, DirLightComponent& light)
-        {
-            std::cout << "Hello\n";
-        },
-
-        [&](const ComponentTypeSet& components, const TagSet& tags) -> bool
-        {
-            return !tags.has("Light") || !tags.has("Camera");
-        }
-    );
+    scene.createEntity(sun);
 
     TransformComponent t;
     t.m_scale = Vector3f(0.25f);
     RenderComponent r(&model, &shader);
-    r.m_skeleton = &s1;
     octree.add(scene.createEntity(t, r));
     t.m_position.x = 5.0f;
-    r.m_skeleton = &s2;
-    octree.add(scene.createEntity(t, r));
+    octree.add(scene.createEntity(t, r), true);
     t.m_position.x = -5.0f;
-    r.m_skeleton = &s3;
-    octree.add(scene.createEntity(t, r));
+    octree.add(scene.createEntity(t, r), true);
 
     Clock clock;
     float time = 0.0f;
@@ -173,9 +142,7 @@ int main()
         );
 
         // Render scene
-        s1.update(elapsed);
-        s2.update(elapsed);
-        s3.update(elapsed);
+        octree.update();
         octree.render(camera);
 
         // Display (swap buffers)

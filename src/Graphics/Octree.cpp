@@ -279,16 +279,20 @@ void Octree::split(Node* node)
 
 
 ///////////////////////////////////////////////////////////
-void Octree::add(Entity entity)
+Entity Octree::add(Entity entity, bool dynamic)
 {
-	add(entity.getId());
+	return add(entity.getId(), dynamic);
 }
 
 
 ///////////////////////////////////////////////////////////
-void Octree::add(Entity::Id entity)
+Entity Octree::add(Entity::Id entity, bool dynamic)
 {
 	ASSERT(m_scene, "The octree must be initialized before using, by calling the init() function");
+
+	// If dynamic entity is requested, add the tag
+	if (dynamic)
+		entity = m_scene->addTag(entity, "_DynOctree").getId();
 
 	// Get component data
 	auto components = m_scene->getComponents<TransformComponent, RenderComponent>(entity);
@@ -370,7 +374,10 @@ void Octree::add(Entity::Id entity)
 		m_renderGroups.push_back(group);
 	}
 
+	// Insert into the octree
 	insert(data);
+
+	return Entity(m_scene, entity);
 }
 
 
@@ -495,6 +502,28 @@ void Octree::insert(EntityData* data)
 
 
 ///////////////////////////////////////////////////////////
+void Octree::update()
+{
+	ASSERT(m_scene, "The octree must be initialized before using, by calling the init() function");
+
+	// Use a system update for entities with the dynamic tag
+	m_scene->system<TransformComponent, RenderComponent>(
+		[&](const Entity::Id& id, TransformComponent& t, RenderComponent& r)
+		{
+			// Call update for each entity
+			update(id, r, t);
+		},
+
+		// Filter function
+		[&](const ComponentTypeSet& components, const TagSet& tags) -> bool
+		{
+			return tags.has("_DynOctree");
+		}
+	);
+}
+
+
+///////////////////////////////////////////////////////////
 void Octree::update(Entity::Id entity)
 {
 	ASSERT(m_scene, "The octree must be initialized before using, by calling the init() function");
@@ -504,6 +533,14 @@ void Octree::update(Entity::Id entity)
 	RenderComponent& r = *components.get<RenderComponent*>();
 	TransformComponent& t = *components.get<TransformComponent*>();
 
+	// Update entity
+	update(entity, r, t);
+}
+
+
+///////////////////////////////////////////////////////////
+void Octree::update(const Entity::Id& entity, RenderComponent& r, TransformComponent& t)
+{
 	// Get transform matrix
 	Matrix4f transform = toTransformMatrix(t.m_position, t.m_rotation, t.m_scale);
 
@@ -561,8 +598,8 @@ void Octree::update(Entity::Id entity)
 	// Check if the bounding box is still inside correct area
 	Vector3f pos = bbox.getCenter();
 	bool inside =
-		pos.x > cellMin.x && pos.x < cellMax.x &&
-		pos.y > cellMin.y && pos.y < cellMax.y &&
+		pos.x > cellMin.x && pos.x < cellMax.x&&
+		pos.y > cellMin.y && pos.y < cellMax.y&&
 		pos.z > cellMin.z && pos.z < cellMax.z;
 
 	// If the entity is not in the box anymore, update it

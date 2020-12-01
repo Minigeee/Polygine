@@ -21,7 +21,7 @@ void main()
     gl_Position =  u_projView * worldPos;
 
     v_fragPos = worldPos.xyz;
-    v_normal = mat3(a_transform) * a_normal;
+    v_normal = normalize(mat3(a_transform) * a_normal);
     v_texCoord = a_texCoord;
     v_color = a_color;
     v_materialIndex = a_materialIndex;
