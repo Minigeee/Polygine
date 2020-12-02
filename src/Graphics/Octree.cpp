@@ -130,9 +130,37 @@ Octree::Octree() :
 
 
 ///////////////////////////////////////////////////////////
-void Octree::init(Scene* scene, Uint32 maxPerCell)
+void Octree::init(Scene* scene)
 {
+	ASSERT(m_root, "Call Octree::create() before calling Octree::init()");
+
 	m_scene = scene;
+
+	// Add all renderables upon initialization
+	m_scene->system<TransformComponent, RenderComponent>(
+		[&](const Entity::Id& id, TransformComponent& t, RenderComponent& r)
+		{
+			add(id);
+		}
+	);
+
+	// Add any new renderables from scene automatically
+	m_scene->addListener<E_EntitiesCreated>(
+		[&](const E_EntitiesCreated& e)
+		{
+			if (e.m_entities->has<RenderComponent>())
+			{
+				for (Uint32 i = 0; i < e.m_numEntities; ++i)
+					add(e.m_entities[i]);
+			}
+		}
+	);
+}
+
+
+///////////////////////////////////////////////////////////
+void Octree::create(Uint32 maxPerCell)
+{
 	m_size = BASE_SIZE;
 	m_maxPerCell = maxPerCell;
 
@@ -279,20 +307,16 @@ void Octree::split(Node* node)
 
 
 ///////////////////////////////////////////////////////////
-Entity Octree::add(Entity entity, bool dynamic)
+void Octree::add(Entity entity)
 {
-	return add(entity.getId(), dynamic);
+	add(entity.getId());
 }
 
 
 ///////////////////////////////////////////////////////////
-Entity Octree::add(Entity::Id entity, bool dynamic)
+void Octree::add(Entity::Id entity)
 {
 	ASSERT(m_scene, "The octree must be initialized before using, by calling the init() function");
-
-	// If dynamic entity is requested, add the tag
-	if (dynamic)
-		entity = m_scene->addTag(entity, "_DynOctree").getId();
 
 	// Get component data
 	auto components = m_scene->getComponents<TransformComponent, RenderComponent>(entity);
@@ -376,8 +400,6 @@ Entity Octree::add(Entity::Id entity, bool dynamic)
 
 	// Insert into the octree
 	insert(data);
-
-	return Entity(m_scene, entity);
 }
 
 
@@ -517,7 +539,7 @@ void Octree::update()
 		// Filter function
 		[&](const ComponentTypeSet& components, const TagSet& tags) -> bool
 		{
-			return tags.has("_DynOctree");
+			return tags.has("DynamicRenderable");
 		}
 	);
 }
@@ -650,7 +672,7 @@ void Octree::remove(Entity::Id entity)
 
 
 ///////////////////////////////////////////////////////////
-void Octree::render(Camera& camera, FrameBuffer& target, const RenderState& state)
+void Octree::render(Camera& camera, FrameBuffer& target)
 {
 	ASSERT(m_scene, "The octree must be initialized before using, by calling the init() function");
 
@@ -658,9 +680,6 @@ void Octree::render(Camera& camera, FrameBuffer& target, const RenderState& stat
 
 	// Bind target framebuffer
 	target.bind();
-
-	// Apply render state
-	state.apply();
 
 
 	// Get entity data

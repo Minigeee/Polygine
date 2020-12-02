@@ -96,7 +96,12 @@ inline std::vector<Entity> Scene::createEntities(Uint32 num, const Cs&... compon
 		group = it.value();
 
 	// Create entity
-	return group->createEntities(num, components...);
+	std::vector<Entity> entities = group->createEntities(num, components...);
+
+	// Send the event
+	sendEvent(E_EntitiesCreated(entities));
+
+	return entities;
 }
 
 

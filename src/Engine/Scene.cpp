@@ -3,6 +3,8 @@
 #include <poly/Engine/Components.h>
 #include <poly/Engine/Scene.h>
 
+#include <poly/Graphics/RenderSystem.h>
+
 namespace poly
 {
 
@@ -12,12 +14,29 @@ HandleArray<bool> Scene::idArray;
 
 
 ///////////////////////////////////////////////////////////
+E_EntitiesCreated::E_EntitiesCreated() :
+	m_numEntities	(0),
+	m_entities		(0)
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
+E_EntitiesCreated::E_EntitiesCreated(std::vector<Entity>& entities) :
+	m_numEntities	(entities.size()),
+	m_entities		(&entities[0])
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
 Scene::Scene() :
 	m_handle				(idArray.add(true)),
 	m_groupPool				(sizeof(priv::EntityGroup), 16)
 {
-	// Create stream type instance buffer
-	// m_instanceBuffer.create<Matrix4f>(0, 65536, BufferUsage::Stream);
+
 }
 
 
@@ -120,6 +139,31 @@ bool Scene::hasTag(Entity::Id id, const std::string& tag)
 	if (it == m_entityGroups.end()) return false;
 
 	return it.value()->hasTag(std::hash<std::string>()(tag));
+}
+
+
+///////////////////////////////////////////////////////////
+void Scene::addRenderSystem(RenderSystem* system)
+{
+	// Initialize the system
+	system->init(this);
+
+	m_renderSystems.push_back(system);
+}
+
+
+///////////////////////////////////////////////////////////
+void Scene::render(Camera& camera, FrameBuffer& target)
+{
+	// Bind framebuffer
+	target.bind();
+
+	// Render state
+	RenderState::Default.apply();
+
+	// Render all render systems
+	for (Uint32 i = 0; i < m_renderSystems.size(); ++i)
+		m_renderSystems[i]->render(camera, target);
 }
 
 }

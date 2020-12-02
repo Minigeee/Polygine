@@ -17,7 +17,7 @@ std::mutex SceneEvents<E>::m_mutex;
 template <typename E>
 inline Handle SceneEvents<E>::addListener(Uint16 sceneId, std::function<void(const E&)>&& func)
 {
-	static bool _init = (EventCleanup::registerType<E>(), true);
+	static bool _init = (SceneEventsCleanup::registerType<E>(), true);
 
 	std::lock_guard<std::mutex> lock(m_mutex);
 

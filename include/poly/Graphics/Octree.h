@@ -8,8 +8,7 @@
 #include <poly/Math/BoundingBox.h>
 #include <poly/Math/Matrix4.h>
 
-#include <poly/Graphics/FrameBuffer.h>
-#include <poly/Graphics/RenderState.h>
+#include <poly/Graphics/RenderSystem.h>
 #include <poly/Graphics/VertexBuffer.h>
 
 namespace poly
@@ -19,16 +18,18 @@ class Camera;
 class Model;
 class Shader;
 
-class Octree
+class Octree : public RenderSystem
 {
 public:
 	Octree();
 
-	void init(Scene* scene, Uint32 maxPerCell = 30);
+	void init(Scene* scene) override;
 
-	Entity add(Entity entity, bool dynamic = false);
+	void create(Uint32 maxPerCell = 30);
 
-	Entity add(Entity::Id entity, bool dynamic = false);
+	void add(Entity entity);
+
+	void add(Entity::Id entity);
 
 	void update();
 
@@ -42,11 +43,7 @@ public:
 	/// Still in progress... TODO
 	///
 	///////////////////////////////////////////////////////////
-	void render(
-		Camera& camera,
-		FrameBuffer& target = FrameBuffer::Default,
-		const RenderState& state = RenderState::Default
-	);
+	void render(Camera& camera, FrameBuffer& target = FrameBuffer::Default) override;
 
 private:
 	struct Node;

@@ -60,8 +60,10 @@ int main()
 
     // Setup scene
     Scene scene;
+
     Octree octree;
-    octree.init(&scene);
+    octree.create();
+    scene.addRenderSystem(&octree);
 
     DirLightComponent sun;
     sun.m_direction.z = -1.0f;
@@ -70,11 +72,11 @@ int main()
     TransformComponent t;
     t.m_scale = Vector3f(0.25f);
     RenderComponent r(&model, &shader);
-    octree.add(scene.createEntity(t, r));
+    scene.createEntity(t, r);
     t.m_position.x = 5.0f;
-    octree.add(scene.createEntity(t, r), true);
+    scene.createEntity(t, r);
     t.m_position.x = -5.0f;
-    octree.add(scene.createEntity(t, r), true);
+    scene.createEntity(t, r);
 
     Clock clock;
     float time = 0.0f;
@@ -148,8 +150,7 @@ int main()
         );
 
         // Render scene
-        octree.update();
-        octree.render(camera, framebuffer);
+        scene.render(camera, framebuffer);
         colorAdjust.render(framebuffer);
 
         // Display (swap buffers)
@@ -165,3 +166,5 @@ int main()
 // TODO : Copyable skeletons
 // TODO : Document Octree
 // TODO : Document FrameBuffer
+// TODO : Document PostProcess
+// TODO : Document RenderSystem

@@ -7,8 +7,37 @@
 #include <poly/Engine/Ecs.h>
 #include <poly/Engine/Entity.h>
 
+#include <poly/Graphics/Camera.h>
+#include <poly/Graphics/FrameBuffer.h>
+
 namespace poly
 {
+
+
+class RenderSystem;
+
+
+///////////////////////////////////////////////////////////
+/// \brief An event that occurs whenever entities are created in a scene
+///
+///////////////////////////////////////////////////////////
+struct E_EntitiesCreated
+{
+	///////////////////////////////////////////////////////////
+	/// \brief Default constructor
+	///
+	///////////////////////////////////////////////////////////
+	E_EntitiesCreated();
+
+	///////////////////////////////////////////////////////////
+	/// \brief Create an event from a list of entities
+	///
+	///////////////////////////////////////////////////////////
+	E_EntitiesCreated(std::vector<Entity>& entities);
+
+	Uint32 m_numEntities;	//!< Number of entities
+	Entity* m_entities;		//!< Pointer to the first entity in the list
+};
 
 
 ///////////////////////////////////////////////////////////
@@ -586,12 +615,22 @@ public:
 	template <typename E>
 	void sendEvent(const E& event);
 
+	///////////////////////////////////////////////////////////
+	/// \brief Add a render system
+	///
+	///////////////////////////////////////////////////////////
+	void addRenderSystem(RenderSystem* system);
+
+	void render(Camera& camera, FrameBuffer& target);
+
 private:
 	Handle m_handle;									//!< The scene handle used for scene id
 
 	ObjectPool m_groupPool;
 	HashMap<Uint32, priv::EntityGroup*> m_entityGroups;	//!< Map of group id to priv::EntityGroup
 	std::mutex m_entityMutex;							//!< Mutex to protect creation and removal of entities
+
+	std::vector<RenderSystem*> m_renderSystems;			//!< List of render systems
 
 	static HandleArray<bool> idArray;					//!< HandleArray to handle scene id generation
 };
