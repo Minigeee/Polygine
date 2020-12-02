@@ -5,6 +5,8 @@
 
 #include <poly/Graphics/OpenGL.h>
 
+#include <GLFW/glfw3.h>
+
 #include <string>
 
 namespace poly
@@ -23,7 +25,7 @@ do \
 { \
 	expr; \
 	Uint32 err = glGetError(); \
-	if (err != GL_NO_ERROR) \
+	if (err != GL_NO_ERROR && glfwGetCurrentContext()) \
 		LOG_ERROR("[%s] - %s", STR(expr), poly::priv::getGLErrorMsg(err).c_str()); \
 } while (false)
 #else

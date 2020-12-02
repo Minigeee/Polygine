@@ -13,6 +13,7 @@
 #include <poly/Graphics/Image.h>
 #include <poly/Graphics/Model.h>
 #include <poly/Graphics/Octree.h>
+#include <poly/Graphics/PostProcess.h>
 #include <poly/Graphics/Shader.h>
 #include <poly/Graphics/Skeleton.h>
 #include <poly/Graphics/Texture.h>
@@ -78,11 +79,16 @@ int main()
     Clock clock;
     float time = 0.0f;
 
+    Texture texture[8];
+
     FrameBuffer framebuffer;
     framebuffer.create(1280, 720);
     framebuffer.bind();
-    framebuffer.attachColor();
+    framebuffer.attachColor(&texture[0]);
     framebuffer.attachDepth();
+
+    // Post process stuff
+    ColorAdjust colorAdjust;
 
 
     bool mouseDown = false;
@@ -143,7 +149,8 @@ int main()
 
         // Render scene
         octree.update();
-        octree.render(camera);
+        octree.render(camera, framebuffer);
+        colorAdjust.render(framebuffer);
 
         // Display (swap buffers)
         window.display();
@@ -156,3 +163,5 @@ int main()
 }
 
 // TODO : Copyable skeletons
+// TODO : Document Octree
+// TODO : Document FrameBuffer
