@@ -1,7 +1,6 @@
 #ifndef POLY_SCENE_H
 #define POLY_SCENE_H
 
-#include <poly/Core/ObjectPool.h>
 #include <poly/Core/Tuple.h>
 
 #include <poly/Engine/Ecs.h>
@@ -124,7 +123,30 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	template <typename... Cs>
-	Entity createEntity(const Cs&... components);
+	Entity createEntity(Cs&&... components);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Create a new entity with the specified component types
+	///
+	/// An entity with a unique id is created and returned. All
+	/// componenents that are associated with the entity are initialized
+	/// with the given values.
+	///
+	/// Accessing the component data using the returned Entity
+	/// object is possible, but is slow. When processing large
+	/// amounts of entities, use system() instead.
+	///
+	/// This function is thread-safe.
+	///
+	/// \tparam Cs The component types to attach to the entity
+	///
+	/// \param components The list of component data values (in order) to initialize the entity with
+	///
+	/// \return An Entity object with the specified components attached
+	///
+	///////////////////////////////////////////////////////////
+	template <typename... Cs>
+	Entity createEntity(Cs&... components);
 
 
 	///////////////////////////////////////////////////////////
@@ -195,7 +217,31 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	template <typename... Cs>
-	std::vector<Entity> createEntities(Uint32 num, const Cs&... components);
+	std::vector<Entity> createEntities(Uint32 num, Cs&&... components);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Create several entities with the specified component types
+	///
+	/// A list of entity with unique ids is created and returned. All
+	/// componenents that are associated with the entities are initialized
+	/// with the given values.
+	///
+	/// Accessing the component data using the returned Entity
+	/// object is possible, but is slow. When processing large
+	/// amounts of entities, use system() instead.
+	///
+	/// This function is thread-safe.
+	///
+	/// \tparam Cs The component types to attach to the entity
+	///
+	/// \param num The number of entities to create
+	/// \param components The list of component data values (in order) to initialize the entities with
+	///
+	/// \return A list of Entity objects with the specified components attached
+	///
+	///////////////////////////////////////////////////////////
+	template <typename... Cs>
+	std::vector<Entity> createEntities(Uint32 num, Cs&... components);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Create several entities with the specified component types
@@ -303,8 +349,8 @@ public:
 	/// component type, as well as a ComponentArray of entity ids
 	///
 	///////////////////////////////////////////////////////////
-	template <typename... Cs, typename Filter>
-	Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> getComponentData(Filter&& filter);
+	template <typename... Cs>
+	Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> getComponentData();
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get component data for entities contain the specified component types
@@ -323,13 +369,14 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	template <typename... Cs>
-	Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> getComponentData(const ComponentTypeSet& exclude, const TagSet& inclTags, const TagSet& exclTags);
+	Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> getComponentData(const ComponentTypeSet& exclude);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Add a tag to an entity
 	///
-	/// Tags should be a string. It is possible to filter entities
-	/// by tag when using system().
+	/// Tags should be an enum that can be cast to an integer.
+	/// If entities need to be filtered by tags for processing
+	/// by system(), use empty components as tags instead.
 	///
 	/// See the scene usage example for an example of empty components.
 	///
@@ -339,12 +386,29 @@ public:
 	/// \param tag The tag to add
 	///
 	///////////////////////////////////////////////////////////
-	Entity addTag(Entity::Id id, const std::string& tag);
+	void addTag(Entity::Id id, int tag);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Remove a tag from an entity
+	///
+	/// Tags should be an enum that can be cast to an integer.
+	/// If entities need to be filtered by tags for processing
+	/// by system(), use empty components as tags instead.
+	///
+	/// See the scene usage example for an example of empty components.
+	///
+	/// This function is thread-safe.
+	///
+	/// \param id The id of the entity to remove a tag from
+	/// \param tag The tag to remove
+	///
+	///////////////////////////////////////////////////////////
+	void removeTag(Entity::Id id, int tag);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Check if an entity has a tag
 	///
-	/// Tags should be a string
+	/// Tags should be an enum that can be cast to an integer
 	///
 	/// This function is thread-safe.
 	///
@@ -354,7 +418,19 @@ public:
 	/// \return True if the specified entity has the tag
 	///
 	///////////////////////////////////////////////////////////
-	bool hasTag(Entity::Id id, const std::string& tag);
+	bool hasTag(Entity::Id id, int tag);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get entities that contain the specified tag
+	///
+	/// Tags should be an enum that can be cast to an integer
+	///
+	/// \param tag The tag to retrieve entities for
+	///
+	/// \return The set of entitties that contain the tag
+	///
+	///////////////////////////////////////////////////////////
+	const HashSet<Entity::Id>& getEntitiesWithTag(Uint32 tag);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Process or modify a set of component data
@@ -364,8 +440,6 @@ public:
 	/// entity that match the required component types. Only entities
 	/// that contain the specified component types and don't contain
 	/// the specified exclude types will be included in this update.
-	/// Optionally, entities can be filtered by tags as well, by specifying
-	/// the tags to include, and the tags to exclude.
 	///
 	/// The update function passed into this function should have
 	/// the signature of:
@@ -425,90 +499,7 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	template <typename... Cs, typename Func>
-	void system(Func&& func, const ComponentTypeSet& excludes = ComponentTypeSet(), const TagSet& inclTags = TagSet(), const TagSet& exclTags = TagSet());
-
-	///////////////////////////////////////////////////////////
-	/// \brief Process or modify a set of component data
-	///
-	/// This is the "system" implementation of ECS. Functions that
-	/// are passed into this will be executed once for every
-	/// entity that match the required component types. Only entities
-	/// that contain the specified component types and pass the custom
-	/// filter function will be included in the system.
-	///
-	/// The update function passed into this function should have
-	/// the signature of:
-	/// \code
-	/// void update(const poly::Entity::Id& id, Cs&... components);
-	/// \endcode
-	///
-	/// Where Cs&... is expanded for the specified component types.
-	/// This function can be any type of callable, such as function
-	/// pointers, functors, std::function, or lambdas. Lambda is
-	/// recommended as it is the most performant, but any callable
-	/// will work.
-	///
-	/// The filter function should have the signature of:
-	/// \code
-	/// bool filter(const ComponentTypeSet& components, const TagSet& tags);
-	/// \endcode
-	///
-	/// Where the \a components parameter is a set of components type ids
-	/// the current group contains, and the \a tags parameter is a
-	/// set of tag hashes the current group contains.
-	///
-	/// Every component parameter in the update function belongs
-	/// to the given entity id. So it is possible to access
-	/// components that are not specified in the required component
-	/// types, but access to individual component data is much slower.
-	///
-	/// Usage example:
-	/// \code
-	///
-	/// using namespace poly;
-	///
-	/// Scene scene;
-	///
-	/// // Create 100 entities with (int, float)
-	/// scene.createEntities<int, float>(100, 314, 3.14f);
-	///
-	/// // int and float should be replaced with actual components
-	///
-	/// // Apply changes using a system
-	/// scene.system<int, float>(
-	///		// This system will target entities that contain both integer and float
-	///		[](const Entity::Id& id, int& i, float& f)
-	///		{
-	///			++i;
-	///			f += 1.0f;
-	///		},
-	///
-	///		// Custom filter function
-	///		[](const ComponentTypeSet& components, const TagSet& tags) -> bool
-	///		{
-	///			// Include this group in the system loop if it doesn't have a double type,
-	///			// or it has the "AlwaysInclude" tag
-	///			return !components.has<double>() || tags.has("AlwaysInclude");
-	///		}
-	/// );
-	///
-	/// \endcode
-	///
-	/// \note Access to components during the update function is
-	/// not protected by a mutex, so make sure code inside the update
-	/// functions are thread-safe. This can be done by not accessing
-	/// the same data at the same time from multiple threads, or by
-	/// using mutexes (or other methods) to protect the shared data.
-	///
-	/// \tparam Cs The component types required for entities
-	/// \tparam Func A callable type
-	///
-	/// \param func The update function
-	/// \param excludes The set of component types to exclude
-	///
-	///////////////////////////////////////////////////////////
-	template <typename... Cs, typename Func, typename Filter>
-	void system(Func&& func, Filter&& filter);
+	void system(Func&& func, const ComponentTypeSet& excludes = ComponentTypeSet());
 
 	///////////////////////////////////////////////////////////
 	/// \brief Add an event listener function
@@ -626,9 +617,10 @@ public:
 private:
 	Handle m_handle;									//!< The scene handle used for scene id
 
-	ObjectPool m_groupPool;
-	HashMap<Uint32, priv::EntityGroup*> m_entityGroups;	//!< Map of group id to priv::EntityGroup
+	HashMap<Uint32, priv::EntityGroup> m_entityGroups;	//!< Map of group id to priv::EntityGroup
+	HashMap<int, HashSet<Entity::Id>> m_entityTags;		//!< Map of tags to sets of entity ids
 	std::mutex m_entityMutex;							//!< Mutex to protect creation and removal of entities
+	std::mutex m_tagMutex;								//!< Mutex to protect adding and removing tags
 
 	std::vector<RenderSystem*> m_renderSystems;			//!< List of render systems
 

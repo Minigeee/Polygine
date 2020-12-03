@@ -45,9 +45,17 @@ inline Entity Scene::createEntity()
 
 ///////////////////////////////////////////////////////////
 template <typename... Cs>
-inline Entity Scene::createEntity(const Cs&... components)
+inline Entity Scene::createEntity(Cs&&... components)
 {
-	return createEntities(1, components...)[0];
+	return createEntities(1, std::forward<Cs>(components)...)[0];
+}
+
+
+///////////////////////////////////////////////////////////
+template <typename... Cs>
+inline Entity Scene::createEntity(Cs&... components)
+{
+	return createEntities(1, std::forward<Cs>(components)...)[0];
 }
 
 
@@ -55,7 +63,7 @@ inline Entity Scene::createEntity(const Cs&... components)
 template <typename... Cs>
 inline Entity Scene::createEntity(Tuple<Cs...>& components)
 {
-	return createEntity(components.get<Cs>()...);
+	return createEntity(std::forward<Cs>(components.get<Cs>())...);
 }
 
 
@@ -70,7 +78,7 @@ inline std::vector<Entity> Scene::createEntities(Uint32 num)
 
 ///////////////////////////////////////////////////////////
 template <typename... Cs>
-inline std::vector<Entity> Scene::createEntities(Uint32 num, const Cs&... components)
+inline std::vector<Entity> Scene::createEntities(Uint32 num, Cs&&... components)
 {
 	static_assert(sizeof...(Cs), "Entities must have at least one component type");
 	static_assert(priv::IsUnique<Cs...>::value, "Entities are not allowed to have duplicate component types");
@@ -88,12 +96,11 @@ inline std::vector<Entity> Scene::createEntities(Uint32 num, const Cs&... compon
 	if (it == m_entityGroups.end())
 	{
 		// Initialize group
-		group = m_entityGroups[groupId] = (priv::EntityGroup*)m_groupPool.alloc();
-		new(group)priv::EntityGroup(this, m_handle.m_index);
+		group = &(m_entityGroups[groupId] = priv::EntityGroup(this, m_handle.m_index));
 		group->setComponentTypes<Cs...>(groupId);
 	}
 	else
-		group = it.value();
+		group = &it.value();
 
 	// Create entity
 	std::vector<Entity> entities = group->createEntities(num, components...);
@@ -109,7 +116,7 @@ inline std::vector<Entity> Scene::createEntities(Uint32 num, const Cs&... compon
 template <typename... Cs>
 inline std::vector<Entity> Scene::createEntities(Uint32 num, Tuple<Cs...>& components)
 {
-	return createEntities(num, components.get<Cs>()...);
+	return createEntities(num, std::forward<Cs>(components.get<Cs>())...);
 }
 
 
@@ -118,7 +125,7 @@ template <typename C>
 inline C* Scene::getComponent(Entity::Id id) const
 {
 	auto it = m_entityGroups.find(id.m_group);
-	return it == m_entityGroups.end() ? 0 : it.value()->getComponent<C>(id);
+	return it == m_entityGroups.end() ? 0 : it.value().getComponent<C>(id);
 }
 
 
@@ -130,27 +137,24 @@ inline Tuple<Cs*...> Scene::getComponents(Entity::Id id) const
 	if (it == m_entityGroups.end())
 		return makeTuple((Cs*)(0)...);
 	else
-		return makeTuple(it.value()->getComponent<Cs>(id)...);
+		return makeTuple(it.value().getComponent<Cs>(id)...);
 }
 
 
 ///////////////////////////////////////////////////////////
-template <typename... Cs, typename Filter>
-inline Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> Scene::getComponentData(Filter&& filter)
+template <typename... Cs>
+inline Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> Scene::getComponentData()
 {
 	Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> t;
 
 	// Iterate all groups and find which ones contain the specified types
 	for (auto it = m_entityGroups.begin(); it != m_entityGroups.end(); ++it)
 	{
-		priv::EntityGroup& group = *it.value();
+		priv::EntityGroup& group = it.value();
 
 		// Test if it has the correct components
 		bool matches = true;
 		PARAM_EXPAND(matches &= group.hasComponentType<Cs>());
-
-		// Use filter func
-		matches &= filter(ComponentTypeSet(group.getComponentTypes()), TagSet(group.getTags()));
 
 		// Add the group if it matches
 		if (matches)
@@ -170,14 +174,14 @@ inline Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> Scene::getCompon
 
 ///////////////////////////////////////////////////////////
 template <typename... Cs>
-inline Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> Scene::getComponentData(const ComponentTypeSet& exclude, const TagSet& inclTags, const TagSet& exclTags)
+inline Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> Scene::getComponentData(const ComponentTypeSet& exclude)
 {
 	Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> t;
 
 	// Iterate all groups and find which ones contain the specified types
 	for (auto it = m_entityGroups.begin(); it != m_entityGroups.end(); ++it)
 	{
-		priv::EntityGroup& group = *it.value();
+		priv::EntityGroup& group = it.value();
 
 		// Test if it has the correct components
 		bool matches = true;
@@ -189,25 +193,6 @@ inline Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> Scene::getCompon
 		{
 			for (auto it = excludeSet.begin(); it != excludeSet.end(); ++it)
 				matches &= !group.hasComponentType(*it);
-		}
-
-		// Check include tags
-		const HashSet<Uint32>& inclTagSet = inclTags.getSet();
-		if (inclTagSet.size())
-		{
-			for (auto it = inclTagSet.begin(); it != inclTagSet.end(); ++it)
-				matches &= group.hasTag(*it);
-		}
-
-		// Check exclude tags
-		const HashSet<Uint32>& exclTagSet = exclTags.getSet();
-		if (exclTagSet.size())
-		{
-			for (auto it = exclTagSet.begin(); it != exclTagSet.end(); ++it)
-			{
-				Uint32 tag = *it;
-				matches &= !group.hasTag(tag);
-			}
 		}
 
 		// Add the group if it matches
@@ -228,41 +213,10 @@ inline Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> Scene::getCompon
 
 ///////////////////////////////////////////////////////////
 template <typename... Cs, typename Func>
-inline void Scene::system(Func&& func, const ComponentTypeSet& excludes, const TagSet& inclTags, const TagSet& exclTags)
+inline void Scene::system(Func&& func, const ComponentTypeSet& excludes)
 {
 	// Get component data
-	Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> data = getComponentData<Cs...>(excludes, inclTags, exclTags);
-
-	// Get component info
-	typename ComponentArray<Entity::Id>& entityArray = get<0>(data);
-	Uint32 numGroups = entityArray.getNumGroups();
-
-	// Iterate through groups
-	for (Uint32 i = 0; i < numGroups; ++i)
-	{
-		// Group size
-		Uint16 size = entityArray.getGroup(i).m_size;
-
-		// Data pointers
-		Entity::Id* idPtr = entityArray.getGroup(i).m_data;
-
-		// For some reason tuple constructor with parameter pack doesn't work
-		// so using the set function
-		Tuple<Cs*...> ptrs;
-		PARAM_EXPAND(ptrs.set<Cs*>(data.get<ComponentArray<Cs>>().getGroup(i).m_data));
-
-		// Process all data in the group
-		for (Uint16 n = 0; n < size; ++n)
-			func(idPtr[n], ptrs.get<Cs*>()[n]...);
-	}
-}
-
-
-template <typename... Cs, typename Func, typename Filter>
-inline void Scene::system(Func&& func, Filter&& filter)
-{
-	// Get component data
-	Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> data = getComponentData<Cs...>(std::forward<Filter>(filter));
+	Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> data = getComponentData<Cs...>(excludes);
 
 	// Get component info
 	typename ComponentArray<Entity::Id>& entityArray = get<0>(data);

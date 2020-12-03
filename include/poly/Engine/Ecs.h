@@ -7,7 +7,6 @@
 #include <poly/Engine/Entity.h>
 
 #include <functional>
-#include <string>
 #include <tuple>
 #include <unordered_set>
 #include <vector>
@@ -70,15 +69,11 @@ public:
 	EntityGroup(Scene* scene, Uint16 sceneId);
 
 	template <typename... Cs>
-	std::vector<Entity> createEntities(Uint16 num, const Cs&... components);
+	std::vector<Entity> createEntities(Uint16 num, Cs&&... components);
 
 	void removeEntity(Entity::Id id);
 
 	void removeQueuedEntities();
-
-	void copyTypeSetTo(EntityGroup& group, Uint32 groupId);
-
-	Entity moveEntity(Entity::Id id, EntityGroup& group);
 
 	template <typename C>
 	C* getComponent(Entity::Id id) const;
@@ -94,23 +89,9 @@ public:
 
 	bool hasComponentType(Uint32 type) const;
 
-	void addTag(Uint32 tag);
-
-	bool hasTag(Uint32 tag) const;
-
 	std::vector<Entity::Id>& getEntityIds();
 
-	const HashSet<Uint32>& getComponentTypes() const;
-
-	const HashSet<Uint32>& getTags() const;
-
 private:
-	template <typename... Cs>
-	void copyTypeSetImpl(EntityGroup& group, Uint32 groupId);
-
-	template <typename... Cs>
-	Entity moveEntityImpl(Entity::Id id, EntityGroup& group);
-
 	template <typename... Cs>
 	void removeEntitiesImpl(const std::vector<Entity::Id>& ids);
 
@@ -121,12 +102,9 @@ private:
 
 	HandleArray<Entity::Id> m_entityIds;
 	HashSet<Uint32> m_componentTypes;
-	HashSet<Uint32> m_tags;
 	std::vector<Entity::Id> m_removeQueue;
 
 	std::function<void(const std::vector<Entity::Id>&)> m_removeFunc;
-	std::function<void(EntityGroup&, Uint32)> m_copyFunc;
-	std::function<Entity(Entity::Id, EntityGroup&)> m_moveFunc;
 };
 
 }
@@ -275,20 +253,6 @@ class ComponentTypeSet
 {
 public:
 	///////////////////////////////////////////////////////////
-	/// \brief Default constructor
-	///
-	///////////////////////////////////////////////////////////
-	ComponentTypeSet() = default;
-
-	///////////////////////////////////////////////////////////
-	/// \brief Create a component type set from a set
-	///
-	/// \param set The set to create
-	///
-	///////////////////////////////////////////////////////////
-	ComponentTypeSet(const HashSet<Uint32>& set);
-
-	///////////////////////////////////////////////////////////
 	/// \brief Create a component type set
 	///
 	/// \return A component type set containg the specified data types
@@ -337,76 +301,6 @@ public:
 
 private:
 	HashSet<Uint32> m_set; //!< Hash set of type ids
-};
-
-
-///////////////////////////////////////////////////////////
-/// \brief A class that can store a set of tags
-///
-///////////////////////////////////////////////////////////
-class TagSet
-{
-public:
-	///////////////////////////////////////////////////////////
-	/// \brief Default constructor
-	///
-	///////////////////////////////////////////////////////////
-	TagSet() = default;
-
-	///////////////////////////////////////////////////////////
-	/// \brief Create a tag set from a set
-	///
-	/// \param set The set to create
-	///
-	///////////////////////////////////////////////////////////
-	TagSet(const HashSet<Uint32> & set);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Create a tag set
-	///
-	/// \return A component type set containg the specified data types
-	///
-	///////////////////////////////////////////////////////////
-	template <typename... T>
-	static TagSet create(const T&... tags);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Set the tags to include in the set
-	///
-	///////////////////////////////////////////////////////////
-	template <typename... T>
-	void set(const T&... tags);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Add a tag to the set
-	///
-	///////////////////////////////////////////////////////////
-	void add(const std::string& tag);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Remove a tag from the set
-	///
-	///////////////////////////////////////////////////////////
-	void remove(const std::string& tag);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Check if a ceratin tag is in the set
-	///
-	/// \return True if the specified tag is in the set
-	///
-	///////////////////////////////////////////////////////////
-	bool has(const std::string& tag) const;
-
-	///////////////////////////////////////////////////////////
-	/// \brief Get a hash set containing tag hashes
-	///
-	/// \return A hash set
-	///
-	///////////////////////////////////////////////////////////
-	const HashSet<Uint32>& getSet() const;
-
-private:
-	HashSet<Uint32> m_set; //!< Hash set of tags
 };
 
 }
