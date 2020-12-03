@@ -93,47 +93,6 @@ void Scene::removeQueuedEntities()
 
 
 ///////////////////////////////////////////////////////////
-void Scene::addTag(Entity::Id id, int tag)
-{
-	std::lock_guard<std::mutex> lock(m_tagMutex);
-
-	// Insert id into correct tag group
-	m_entityTags[tag].insert(id);
-}
-
-
-///////////////////////////////////////////////////////////
-void Scene::removeTag(Entity::Id id, int tag)
-{
-	std::lock_guard<std::mutex> lock(m_tagMutex);
-
-	// Remove entity from tag group
-	m_entityTags[tag].erase(id);
-}
-
-
-///////////////////////////////////////////////////////////
-bool Scene::hasTag(Entity::Id id, int tag)
-{
-	std::lock_guard<std::mutex> lock(m_tagMutex);
-
-	// Get the tag group
-	auto it = m_entityTags.find(tag);
-	if (it == m_entityTags.end()) return false;
-
-	// Return if the id has been found
-	return it->second.find(id) != it->second.end();
-}
-
-
-///////////////////////////////////////////////////////////
-const HashSet<Entity::Id>& Scene::getEntitiesWithTag(Uint32 tag)
-{
-	return m_entityTags[tag];
-}
-
-
-///////////////////////////////////////////////////////////
 void Scene::addRenderSystem(RenderSystem* system)
 {
 	// Initialize the system

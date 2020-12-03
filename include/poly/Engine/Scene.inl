@@ -45,17 +45,9 @@ inline Entity Scene::createEntity()
 
 ///////////////////////////////////////////////////////////
 template <typename... Cs>
-inline Entity Scene::createEntity(Cs&&... components)
+inline Entity Scene::createEntity(const Cs&... components)
 {
-	return createEntities(1, std::forward<Cs>(components)...)[0];
-}
-
-
-///////////////////////////////////////////////////////////
-template <typename... Cs>
-inline Entity Scene::createEntity(Cs&... components)
-{
-	return createEntities(1, std::forward<Cs>(components)...)[0];
+	return createEntities(1, components...)[0];
 }
 
 
@@ -78,7 +70,7 @@ inline std::vector<Entity> Scene::createEntities(Uint32 num)
 
 ///////////////////////////////////////////////////////////
 template <typename... Cs>
-inline std::vector<Entity> Scene::createEntities(Uint32 num, Cs&&... components)
+inline std::vector<Entity> Scene::createEntities(Uint32 num, const Cs&... components)
 {
 	static_assert(sizeof...(Cs), "Entities must have at least one component type");
 	static_assert(priv::IsUnique<Cs...>::value, "Entities are not allowed to have duplicate component types");

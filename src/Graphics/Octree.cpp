@@ -529,17 +529,11 @@ void Octree::update()
 	ASSERT(m_scene, "The octree must be initialized before using, by calling the init() function");
 
 	// Use a system update for entities with the dynamic tag
-	m_scene->system<TransformComponent, RenderComponent>(
-		[&](const Entity::Id& id, TransformComponent& t, RenderComponent& r)
+	m_scene->system<TransformComponent, RenderComponent, DynamicTag>(
+		[&](const Entity::Id& id, TransformComponent& t, RenderComponent& r, DynamicTag&)
 		{
 			// Call update for each entity
 			update(id, r, t);
-		},
-
-		// Filter function
-		[&](const ComponentTypeSet& components, const TagSet& tags) -> bool
-		{
-			return tags.has("DynamicRenderable");
 		}
 	);
 }

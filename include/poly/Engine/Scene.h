@@ -123,30 +123,7 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	template <typename... Cs>
-	Entity createEntity(Cs&&... components);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Create a new entity with the specified component types
-	///
-	/// An entity with a unique id is created and returned. All
-	/// componenents that are associated with the entity are initialized
-	/// with the given values.
-	///
-	/// Accessing the component data using the returned Entity
-	/// object is possible, but is slow. When processing large
-	/// amounts of entities, use system() instead.
-	///
-	/// This function is thread-safe.
-	///
-	/// \tparam Cs The component types to attach to the entity
-	///
-	/// \param components The list of component data values (in order) to initialize the entity with
-	///
-	/// \return An Entity object with the specified components attached
-	///
-	///////////////////////////////////////////////////////////
-	template <typename... Cs>
-	Entity createEntity(Cs&... components);
+	Entity createEntity(const Cs&... components);
 
 
 	///////////////////////////////////////////////////////////
@@ -217,31 +194,7 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	template <typename... Cs>
-	std::vector<Entity> createEntities(Uint32 num, Cs&&... components);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Create several entities with the specified component types
-	///
-	/// A list of entity with unique ids is created and returned. All
-	/// componenents that are associated with the entities are initialized
-	/// with the given values.
-	///
-	/// Accessing the component data using the returned Entity
-	/// object is possible, but is slow. When processing large
-	/// amounts of entities, use system() instead.
-	///
-	/// This function is thread-safe.
-	///
-	/// \tparam Cs The component types to attach to the entity
-	///
-	/// \param num The number of entities to create
-	/// \param components The list of component data values (in order) to initialize the entities with
-	///
-	/// \return A list of Entity objects with the specified components attached
-	///
-	///////////////////////////////////////////////////////////
-	template <typename... Cs>
-	std::vector<Entity> createEntities(Uint32 num, Cs&... components);
+	std::vector<Entity> createEntities(Uint32 num, const Cs&... components);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Create several entities with the specified component types
@@ -370,67 +323,6 @@ public:
 	///////////////////////////////////////////////////////////
 	template <typename... Cs>
 	Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> getComponentData(const ComponentTypeSet& exclude);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Add a tag to an entity
-	///
-	/// Tags should be an enum that can be cast to an integer.
-	/// If entities need to be filtered by tags for processing
-	/// by system(), use empty components as tags instead.
-	///
-	/// See the scene usage example for an example of empty components.
-	///
-	/// This function is thread-safe.
-	///
-	/// \param id The id of the entity to add a tag to
-	/// \param tag The tag to add
-	///
-	///////////////////////////////////////////////////////////
-	void addTag(Entity::Id id, int tag);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Remove a tag from an entity
-	///
-	/// Tags should be an enum that can be cast to an integer.
-	/// If entities need to be filtered by tags for processing
-	/// by system(), use empty components as tags instead.
-	///
-	/// See the scene usage example for an example of empty components.
-	///
-	/// This function is thread-safe.
-	///
-	/// \param id The id of the entity to remove a tag from
-	/// \param tag The tag to remove
-	///
-	///////////////////////////////////////////////////////////
-	void removeTag(Entity::Id id, int tag);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Check if an entity has a tag
-	///
-	/// Tags should be an enum that can be cast to an integer
-	///
-	/// This function is thread-safe.
-	///
-	/// \param id The id of the entity to check
-	/// \param tag The tag to check for
-	///
-	/// \return True if the specified entity has the tag
-	///
-	///////////////////////////////////////////////////////////
-	bool hasTag(Entity::Id id, int tag);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Get entities that contain the specified tag
-	///
-	/// Tags should be an enum that can be cast to an integer
-	///
-	/// \param tag The tag to retrieve entities for
-	///
-	/// \return The set of entitties that contain the tag
-	///
-	///////////////////////////////////////////////////////////
-	const HashSet<Entity::Id>& getEntitiesWithTag(Uint32 tag);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Process or modify a set of component data
@@ -618,9 +510,7 @@ private:
 	Handle m_handle;									//!< The scene handle used for scene id
 
 	HashMap<Uint32, priv::EntityGroup> m_entityGroups;	//!< Map of group id to priv::EntityGroup
-	HashMap<int, HashSet<Entity::Id>> m_entityTags;		//!< Map of tags to sets of entity ids
 	std::mutex m_entityMutex;							//!< Mutex to protect creation and removal of entities
-	std::mutex m_tagMutex;								//!< Mutex to protect adding and removing tags
 
 	std::vector<RenderSystem*> m_renderSystems;			//!< List of render systems
 

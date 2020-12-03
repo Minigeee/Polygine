@@ -72,7 +72,7 @@ int main()
     TransformComponent t;
     t.m_scale = Vector3f(0.25f);
     RenderComponent r(&model, &shader);
-    scene.createEntity(t, r);
+    scene.createEntity(t, r, DynamicTag());
     t.m_position.x = 5.0f;
     scene.createEntity(t, r);
     t.m_position.x = -5.0f;
@@ -150,6 +150,7 @@ int main()
         );
 
         // Render scene
+        octree.update();
         scene.render(camera, framebuffer);
         colorAdjust.render(framebuffer);
 

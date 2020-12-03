@@ -55,6 +55,15 @@ struct DirLightComponent
 };
 
 
+///////////////////////////////////////////////////////////
+/// \brief Dynamic renderable component tag
+///
+/// Notifies octree that the entity will be updated many times.
+///
+///////////////////////////////////////////////////////////
+struct DynamicTag { };
+
+
 }
 
 #endif

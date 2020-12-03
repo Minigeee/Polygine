@@ -69,7 +69,7 @@ public:
 	EntityGroup(Scene* scene, Uint16 sceneId);
 
 	template <typename... Cs>
-	std::vector<Entity> createEntities(Uint16 num, Cs&&... components);
+	std::vector<Entity> createEntities(Uint16 num, const Cs&... components);
 
 	void removeEntity(Entity::Id id);
 
