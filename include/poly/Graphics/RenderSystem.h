@@ -15,7 +15,7 @@ class RenderSystem
 public:
 	virtual void init(Scene* scene) = 0;
 
-	virtual void render(Camera& camera, FrameBuffer& target = FrameBuffer::Default) = 0;
+	virtual void render(Camera& camera) = 0;
 };
 
 }

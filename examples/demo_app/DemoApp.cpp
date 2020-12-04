@@ -16,6 +16,7 @@
 #include <poly/Graphics/PostProcess.h>
 #include <poly/Graphics/Shader.h>
 #include <poly/Graphics/Skeleton.h>
+#include <poly/Graphics/Terrain.h>
 #include <poly/Graphics/Texture.h>
 #include <poly/Graphics/VertexArray.h>
 #include <poly/Graphics/VertexBuffer.h>
@@ -37,12 +38,18 @@ int main()
     window.create(1280, 720, "My Game");
 
     // Add an event listener
+    HashMap<Keyboard, bool> keyMap;
     window.addListener<E_KeyEvent>(
         [&](const E_KeyEvent& e)
         {
             // This will be run every time a key event occurs
             if (e.m_action == InputAction::Press)
+            {
                 std::cout << "Key pressed: " << (int)e.m_key << '\n';
+                keyMap[e.m_key] = true;
+            }
+            else if (e.m_action == InputAction::Release)
+                keyMap[e.m_key] = false;
         }
     );
 
@@ -55,15 +62,19 @@ int main()
     shader.compile();
 
     Camera camera;
-    camera.setPosition(0.0f, 5.0f, 15.0f);
+    camera.setPosition(0.0f, 5.0f, 0.0f);
     camera.setRotation(0.0f, 0.0f);
 
     // Setup scene
     Scene scene;
 
+    Terrain terrain;
+    terrain.create(4000.0f, 100.0f);
+    scene.addRenderSystem(&terrain);
+
     Octree octree;
     octree.create();
-    scene.addRenderSystem(&octree);
+    // scene.addRenderSystem(&octree);
 
     DirLightComponent sun;
     sun.m_direction.z = -1.0f;
@@ -149,8 +160,21 @@ int main()
             }
         );
 
+        Vector3f move;
+        if (keyMap[Keyboard::W])
+            move += camera.getDirection();
+        if (keyMap[Keyboard::S])
+            move -= camera.getDirection();
+        if (keyMap[Keyboard::A])
+            move -= camera.getRight();
+        if (keyMap[Keyboard::D])
+            move += camera.getRight();
+
+        if (length(move) != 0.0f)
+            camera.move(normalize(move) * elapsed);
+
         // Render scene
-        octree.update();
+        // octree.update();
         scene.render(camera, framebuffer);
         colorAdjust.render(framebuffer);
 
@@ -158,7 +182,7 @@ int main()
         window.display();
     }
 
-    const ProfilerData& data = Profiler::getData("poly::Octree::render");
+    const ProfilerData& data = Profiler::getData("poly::Terrain::render");
     std::cout << data.mean().toMicroseconds() << '\n';
 
     return 0;

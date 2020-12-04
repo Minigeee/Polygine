@@ -666,14 +666,11 @@ void Octree::remove(Entity::Id entity)
 
 
 ///////////////////////////////////////////////////////////
-void Octree::render(Camera& camera, FrameBuffer& target)
+void Octree::render(Camera& camera)
 {
 	ASSERT(m_scene, "The octree must be initialized before using, by calling the init() function");
 
 	START_PROFILING_FUNC;
-
-	// Bind target framebuffer
-	target.bind();
 
 
 	// Get entity data
