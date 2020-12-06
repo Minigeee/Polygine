@@ -49,6 +49,12 @@ private:
 		Uint32 m_lod;
 	};
 
+	struct InstanceData
+	{
+		float m_lodDist;
+		Matrix4f m_transform;
+	};
+
 private:
 	Scene* m_scene;
 	float m_size;
@@ -71,6 +77,7 @@ private:
 
 	std::vector<TerrainTile> m_normalTiles;
 	std::vector<TerrainTile> m_edgeTiles;
+	std::vector<float> m_lodDists;
 
 	static Shader s_shader;
 };

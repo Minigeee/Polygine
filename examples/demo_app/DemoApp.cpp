@@ -70,13 +70,13 @@ int main()
     Scene scene;
 
     Terrain terrain;
-    terrain.create(4000.0f, 100.0f, 1.5f);
+    terrain.create(4000.0f, 200.0f, 1.5f);
     scene.addRenderSystem(&terrain);
 
     FractalNoise noise;
     noise.setFrequency(0.002f);
     noise.setOctaves(10);
-    noise.setGain(0.6f);
+    noise.setGain(0.5f);
     float* heightMapData = (float*)malloc(1024 * 1024 * sizeof(float));
     noise.generateImage(heightMapData, 1024, 1024);
     Image heightMap;

@@ -17,6 +17,10 @@ namespace priv
 
 
 ///////////////////////////////////////////////////////////
+float terrainLodDists[] = { 20.0f, 100.0f, 300.0f };
+
+
+///////////////////////////////////////////////////////////
 struct TerrainVertex
 {
 	TerrainVertex() = default;
@@ -284,7 +288,6 @@ void Terrain::create(float size, float height, float resolution, float lodScale,
 
 	// Set up lod rings
 	int lodLevel = 0;
-	float lodDists[] = { 20.0f, 100.0f, 300.0f, m_maxDist };
 	Uint32 numTiles = 0;
 	bool changedLodLevel = false;
 
@@ -381,12 +384,14 @@ void Terrain::create(float size, float height, float resolution, float lodScale,
 			changedLodLevel = false;
 
 		// Update lod level
-		if (-tl.x - 0.5f * tileSize > lodDists[lodLevel] * m_lodScale + tileSize && numTiles % 4 == 0)
+		if (-tl.x - 0.5f * tileSize > priv::terrainLodDists[lodLevel] * m_lodScale + tileSize && numTiles % 4 == 0)
 		{
 			++lodLevel;
 			tileSize *= 2.0f;
 			numTiles /= 2;
 			changedLodLevel = true;
+
+			m_lodDists.push_back(-tl.x - tileSize * 0.25f);
 		}
 
 		tl -= Vector2f(tileSize);
@@ -440,7 +445,7 @@ void Terrain::render(Camera& camera)
 
 
 	// Stream instance data
-	Uint32 size = (normalTiles.size() + edgeTiles.size()) * sizeof(Matrix4f);
+	Uint32 size = (normalTiles.size() + edgeTiles.size()) * sizeof(InstanceData);
 	int flags = (int)MapBufferFlags::Write | (int)MapBufferFlags::Unsynchronized;
 
 	// Choose different flags based on how much space is left
@@ -451,20 +456,26 @@ void Terrain::render(Camera& camera)
 	}
 
 	// Map the buffer
-	Matrix4f* buffer = (Matrix4f*)m_instanceBuffer.map(m_instanceBufferOffset, size, flags);
+	InstanceData* buffer = (InstanceData*)m_instanceBuffer.map(m_instanceBufferOffset, size, flags);
 
 	for (Uint32 i = 0; i < normalTiles.size(); ++i)
 	{
 		TerrainTile* tile = normalTiles[i];
 		Vector3f tilePos = Vector3f(tile->m_position.x, 0.0f, tile->m_position.y) + pos;
-		buffer[i] = toTransformMatrix(tilePos, Vector3f(0.0f, tile->m_rotation, 0.0f), Vector3f(tile->m_scale));
+
+		InstanceData& data = buffer[i];
+		data.m_lodDist = m_lodDists[tile->m_lod];
+		data.m_transform = toTransformMatrix(tilePos, Vector3f(0.0f, tile->m_rotation, 0.0f), Vector3f(tile->m_scale));
 	}
 
 	for (Uint32 i = 0; i < edgeTiles.size(); ++i)
 	{
 		TerrainTile* tile = edgeTiles[i];
 		Vector3f tilePos = Vector3f(tile->m_position.x, 0.0f, tile->m_position.y) + pos;
-		buffer[normalTiles.size() + i] = toTransformMatrix(tilePos, Vector3f(0.0f, tile->m_rotation, 0.0f), Vector3f(tile->m_scale));
+
+		InstanceData& data = buffer[normalTiles.size() + i];
+		data.m_lodDist = m_lodDists[tile->m_lod];
+		data.m_transform = toTransformMatrix(tilePos, Vector3f(0.0f, tile->m_rotation, 0.0f), Vector3f(tile->m_scale));
 	}
 
 	// After pushing all instance data, unmap the buffer
@@ -503,21 +514,24 @@ void Terrain::render(Camera& camera)
 	// Terrain parameters
 	shader.setUniform("u_size", m_size);
 	shader.setUniform("u_height", m_height);
+	shader.setUniform("u_resolution", m_resolution);
 
 	// Attach instance buffer and render
 	m_normalTile.bind();
-	m_normalTile.addBuffer(m_instanceBuffer, 3, 4, sizeof(Matrix4f), m_instanceBufferOffset + 0 * sizeof(Vector4f), 1);
-	m_normalTile.addBuffer(m_instanceBuffer, 4, 4, sizeof(Matrix4f), m_instanceBufferOffset + 1 * sizeof(Vector4f), 1);
-	m_normalTile.addBuffer(m_instanceBuffer, 5, 4, sizeof(Matrix4f), m_instanceBufferOffset + 2 * sizeof(Vector4f), 1);
-	m_normalTile.addBuffer(m_instanceBuffer, 6, 4, sizeof(Matrix4f), m_instanceBufferOffset + 3 * sizeof(Vector4f), 1);
+	m_normalTile.addBuffer(m_instanceBuffer, 3, 1, sizeof(InstanceData), m_instanceBufferOffset, 1);
+	m_normalTile.addBuffer(m_instanceBuffer, 4, 4, sizeof(InstanceData), m_instanceBufferOffset + 4 + 0 * sizeof(Vector4f), 1);
+	m_normalTile.addBuffer(m_instanceBuffer, 5, 4, sizeof(InstanceData), m_instanceBufferOffset + 4 + 1 * sizeof(Vector4f), 1);
+	m_normalTile.addBuffer(m_instanceBuffer, 6, 4, sizeof(InstanceData), m_instanceBufferOffset + 4 + 2 * sizeof(Vector4f), 1);
+	m_normalTile.addBuffer(m_instanceBuffer, 7, 4, sizeof(InstanceData), m_instanceBufferOffset + 4 + 3 * sizeof(Vector4f), 1);
 	m_normalTile.draw(normalTiles.size());
 
-	Uint32 offset = m_instanceBufferOffset + normalTiles.size() * sizeof(Matrix4f);
+	Uint32 offset = m_instanceBufferOffset + normalTiles.size() * sizeof(InstanceData);
 	m_edgeTile.bind();
-	m_edgeTile.addBuffer(m_instanceBuffer, 3, 4, sizeof(Matrix4f), offset + 0 * sizeof(Vector4f), 1);
-	m_edgeTile.addBuffer(m_instanceBuffer, 4, 4, sizeof(Matrix4f), offset + 1 * sizeof(Vector4f), 1);
-	m_edgeTile.addBuffer(m_instanceBuffer, 5, 4, sizeof(Matrix4f), offset + 2 * sizeof(Vector4f), 1);
-	m_edgeTile.addBuffer(m_instanceBuffer, 6, 4, sizeof(Matrix4f), offset + 3 * sizeof(Vector4f), 1);
+	m_edgeTile.addBuffer(m_instanceBuffer, 3, 1, sizeof(InstanceData), offset, 1);
+	m_edgeTile.addBuffer(m_instanceBuffer, 4, 4, sizeof(InstanceData), offset + 4 + 0 * sizeof(Vector4f), 1);
+	m_edgeTile.addBuffer(m_instanceBuffer, 5, 4, sizeof(InstanceData), offset + 4 + 1 * sizeof(Vector4f), 1);
+	m_edgeTile.addBuffer(m_instanceBuffer, 6, 4, sizeof(InstanceData), offset + 4 + 2 * sizeof(Vector4f), 1);
+	m_edgeTile.addBuffer(m_instanceBuffer, 7, 4, sizeof(InstanceData), offset + 4 + 3 * sizeof(Vector4f), 1);
 	m_edgeTile.draw(edgeTiles.size());
 
 	// Update buffer offset
