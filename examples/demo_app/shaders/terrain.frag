@@ -46,7 +46,7 @@ vec3 calcDirLight(DirLight light, vec3 viewDir, vec3 diffColor)
     float spec = pow(max(dot(viewDir, reflectDir), 0.0f), 2.0f);
 
     // Specular color
-    vec3 specular = spec * light.specular;
+    vec3 specular = spec * light.specular * 0.2f;
 
     return diffuse + specular;
 }

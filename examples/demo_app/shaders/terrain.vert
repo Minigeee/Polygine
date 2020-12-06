@@ -37,10 +37,11 @@ void main()
     float dist = max(abs(u_cameraPos.x - nearTexCoord.x), abs(u_cameraPos.z - nearTexCoord.y));
     float factor = (dist - (a_lodDist - 4.0f * u_resolution)) / (4.0f * u_resolution);
     factor = clamp(factor, 0.0f, 1.0f);
+
     vec2 texCoord = mix(nearTexCoord, farTexCoord, factor);
     texCoord = texCoord / u_size + 0.5f;
 
     v_fragPos = worldPos.xyz;
     v_normal = texture(u_normalMap, texCoord).rgb;
-    v_color = vec4(1.0f);
+    v_color = vec4(texture(u_colorMap, texCoord).rgb, 1.0f);
 }

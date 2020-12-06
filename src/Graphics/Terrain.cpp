@@ -294,7 +294,7 @@ void Terrain::create(float size, float height, float resolution, float lodScale,
 	tileSize *= 8.0f;
 	Vector2f tl = Vector2f(-tileSize);
 
-	while (-tl.x - 0.5f * tileSize < m_maxDist)
+	while (-tl.x < m_maxDist)
 	{
 		numTiles += 2;
 
@@ -384,7 +384,7 @@ void Terrain::create(float size, float height, float resolution, float lodScale,
 			changedLodLevel = false;
 
 		// Update lod level
-		if (-tl.x - 0.5f * tileSize > priv::terrainLodDists[lodLevel] * m_lodScale + tileSize && numTiles % 4 == 0)
+		if (-tl.x > priv::terrainLodDists[lodLevel] * m_lodScale + tileSize && numTiles % 4 == 0)
 		{
 			++lodLevel;
 			tileSize *= 2.0f;
@@ -509,7 +509,7 @@ void Terrain::render(Camera& camera)
 	shader.setUniform("u_colorMap", 2);
 	m_heightMap.bind(0);
 	m_normalMap.bind(1);
-	// m_colorMap.bind(2);
+	m_colorMap.bind(2);
 
 	// Terrain parameters
 	shader.setUniform("u_size", m_size);
@@ -559,8 +559,8 @@ void Terrain::setHeightMap(const Image& map)
 			// Calculate normal
 			float h01 = *(float*)map.getPixel(r, c - (c == 0 ? 0 : 1)) * m_height;
 			float h21 = *(float*)map.getPixel(r, c + (c == size.x - 1 ? 0 : 1)) * m_height;
-			float h10 = *(float*)map.getPixel(r - (r == 0 ? 0 : 1), c) * m_height;
-			float h12 = *(float*)map.getPixel(r + (r == size.y - 1 ? 0 : 1), c) * m_height;
+			float h10 = *(float*)map.getPixel(r + (r == size.y - 1 ? 0 : 1), c) * m_height;
+			float h12 = *(float*)map.getPixel(r - (r == 0 ? 0 : 1), c) * m_height;
 
 			Vector3f v1(sizeFactor.x, h21 - h01, 0.0f);
 			Vector3f v2(0.0f, h12 - h10, -sizeFactor.y);
@@ -572,6 +572,14 @@ void Terrain::setHeightMap(const Image& map)
 
 	// Upload normal data
 	m_normalMap.create(m_normalMapData, PixelFormat::Rgb, size.x, size.y, 0, GLType::Float);
+}
+
+
+///////////////////////////////////////////////////////////
+void Terrain::setColorMap(const Image& map)
+{
+	// Upload data to texture
+	m_colorMap.create(map);
 }
 
 

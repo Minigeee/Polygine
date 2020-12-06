@@ -35,7 +35,7 @@ public:
 
 	void setHeightMap(const Image& map);
 
-	void setColorMap(Texture* map);
+	void setColorMap(const Image& map);
 
 private:
 	static Shader& getShader();

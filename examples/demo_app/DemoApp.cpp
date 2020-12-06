@@ -77,11 +77,30 @@ int main()
     noise.setFrequency(0.002f);
     noise.setOctaves(10);
     noise.setGain(0.5f);
+
+    Image heightMap;
     float* heightMapData = (float*)malloc(1024 * 1024 * sizeof(float));
     noise.generateImage(heightMapData, 1024, 1024);
-    Image heightMap;
     heightMap.create(heightMapData, 1024, 1024, 1, GLType::Float, true);
     terrain.setHeightMap(heightMap);
+
+    Image colorMap;
+    noise.setOctaves(1);
+    noise.setFrequency(0.05f);
+    Vector3<Uint8>* colorMapData = (Vector3<Uint8>*)malloc(1024 * 1024 * sizeof(Vector3<Uint8>));
+    for (Uint32 r = 0, i = 0; r < 1024; ++r)
+    {
+        for (Uint32 c = 0; c < 1024; ++c, ++i)
+        {
+            Vector3f color = Vector3f(0.169f, 0.431f, 0.188f);
+            color.r += noise.generate(c, r) * 0.015f;
+            color.b += noise.generate(c + 2000, r + 2000) * 0.015f;
+
+            colorMapData[i] = Vector3<Uint8>(color * 255.0f);
+        }
+    }
+    heightMap.create(colorMapData, 1024, 1024, 3, GLType::Uint8, true);
+    terrain.setColorMap(heightMap);
 
     Octree octree;
     octree.create();
@@ -110,7 +129,7 @@ int main()
     FrameBuffer framebuffer;
     framebuffer.create(1280, 720);
     framebuffer.bind();
-    framebuffer.attachColor(&texture[0]);
+    framebuffer.attachColor(&texture[0], PixelFormat::Rgb, GLType::Uint16);
     framebuffer.attachDepth();
 
     // Post process stuff
