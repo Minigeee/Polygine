@@ -64,5 +64,5 @@ void main()
     for (int i = 0; i < u_numDirLights; ++i)
         result += calcDirLight(u_dirLights[i], viewDir, v_color.rgb);
 
-    f_color = vec4(v_color.rgb, 1.0f);
+    f_color = vec4(result, 1.0f);
 }

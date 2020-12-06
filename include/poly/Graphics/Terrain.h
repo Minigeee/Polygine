@@ -15,6 +15,8 @@ class Terrain : public RenderSystem
 public:
 	Terrain();
 
+	~Terrain();
+
 	void init(Scene* scene) override;
 
 	void create(float size, float height, float resolution = 1.0f, float lodScale = 1.0f, float maxDist = 800.0f);
@@ -31,7 +33,7 @@ public:
 
 	void setMaxDist(float maxDist);
 
-	void setHeightMap(Texture* map);
+	void setHeightMap(const Image& map);
 
 	void setColorMap(Texture* map);
 
@@ -55,9 +57,10 @@ private:
 	float m_lodScale;
 	float m_maxDist;
 
-	Texture* m_heightMap;
+	Texture m_heightMap;
 	Texture m_normalMap;
-	Texture* m_colorMap;
+	Texture m_colorMap;
+	Vector3f* m_normalMapData;
 
 	VertexArray m_normalTile;
 	VertexArray m_edgeTile;

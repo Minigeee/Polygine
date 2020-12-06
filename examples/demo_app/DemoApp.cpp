@@ -22,6 +22,7 @@
 #include <poly/Graphics/VertexBuffer.h>
 #include <poly/Graphics/Window.h>
 
+#include <poly/Math/Noise.h>
 #include <poly/Math/Transform.h>
 
 #include <iostream>
@@ -69,18 +70,30 @@ int main()
     Scene scene;
 
     Terrain terrain;
-    terrain.create(4000.0f, 100.0f);
+    terrain.create(4000.0f, 100.0f, 1.5f);
     scene.addRenderSystem(&terrain);
+
+    FractalNoise noise;
+    noise.setFrequency(0.002f);
+    noise.setOctaves(10);
+    noise.setGain(0.6f);
+    float* heightMapData = (float*)malloc(1024 * 1024 * sizeof(float));
+    noise.generateImage(heightMapData, 1024, 1024);
+    Image heightMap;
+    heightMap.create(heightMapData, 1024, 1024, 1, GLType::Float, true);
+    terrain.setHeightMap(heightMap);
 
     Octree octree;
     octree.create();
-    // scene.addRenderSystem(&octree);
+    scene.addRenderSystem(&octree);
 
     DirLightComponent sun;
-    sun.m_direction.z = -1.0f;
+    sun.m_specular = Vector3f(0.2f);
+    sun.m_direction.z = -2.0f;
     scene.createEntity(sun);
 
     TransformComponent t;
+    t.m_position.y = 65.0f;
     t.m_scale = Vector3f(0.25f);
     RenderComponent r(&model, &shader);
     scene.createEntity(t, r, DynamicTag());
@@ -169,9 +182,13 @@ int main()
             move -= camera.getRight();
         if (keyMap[Keyboard::D])
             move += camera.getRight();
+        if (keyMap[Keyboard::Space])
+            move.y += 1.0f;
+        if (keyMap[Keyboard::LeftShift])
+            move.y -= 1.0f;
 
         if (length(move) != 0.0f)
-            camera.move(normalize(move) * elapsed);
+            camera.move(normalize(move) * elapsed * 3.4f);
 
         // Render scene
         // octree.update();

@@ -75,10 +75,18 @@ Terrain::Terrain() :
 	m_resolution			(0.0f),
 	m_lodScale				(0.0f),
 	m_maxDist				(0.0f),
-	m_heightMap				(0),
+	m_normalMapData			(0),
 	m_instanceBufferOffset	(0)
 {
 
+}
+
+
+///////////////////////////////////////////////////////////
+Terrain::~Terrain()
+{
+	if (m_normalMapData)
+		free(m_normalMapData);
 }
 
 
@@ -101,14 +109,14 @@ void Terrain::create(float size, float height, float resolution, float lodScale,
 	std::vector<priv::TerrainVertex> vertices;
 
 	Uint32 edgeTileOffset = 0;
-	float tileSize = m_resolution;
+	float tileSize = 2.0f * m_resolution;
 
 	// Create vertices for tiles
 	for (int i = 0; i < 2; ++i)
 	{
-		for (int row = -8; row < 8; row += 2)
+		for (int row = -4; row < 4; row += 2)
 		{
-			for (int col = -8; col < 8; col += 2)
+			for (int col = -4; col < 4; col += 2)
 			{
 				// Vertex positions
 				float l = col * tileSize;
@@ -179,14 +187,7 @@ void Terrain::create(float size, float height, float resolution, float lodScale,
 					Vector2f(l, t), Vector2f(l, b), m,
 					Vector2f(l, t - tileSize), Vector2f(l, b), Vector2f(r, t));
 
-				if (i == 0)
-				{
-					priv::addTerrainTriangle(
-						vertices,
-						Vector2f(l, b), Vector2f(r, b), m,
-						Vector2f(l, b), Vector2f(r + tileSize, b), Vector2f(r, t));
-				}
-				else
+				if (i == 1 && row == 3)
 				{
 					priv::addTerrainTriangle(
 						vertices,
@@ -196,6 +197,13 @@ void Terrain::create(float size, float height, float resolution, float lodScale,
 					priv::addTerrainTriangle(
 						vertices,
 						Vector2f(l + 0.5f * tileSize, b), Vector2f(r, b), m,
+						Vector2f(l, b), Vector2f(r + tileSize, b), Vector2f(r, t));
+				}
+				else
+				{
+					priv::addTerrainTriangle(
+						vertices,
+						Vector2f(l, b), Vector2f(r, b), m,
 						Vector2f(l, b), Vector2f(r + tileSize, b), Vector2f(r, t));
 				}
 
@@ -222,14 +230,7 @@ void Terrain::create(float size, float height, float resolution, float lodScale,
 					Vector2f(l, t), Vector2f(l, b), m,
 					Vector2f(l, b - tileSize), Vector2f(r, b), Vector2f(l, t));
 
-				if (i == 0)
-				{
-					priv::addTerrainTriangle(
-						vertices,
-						Vector2f(l, b), Vector2f(r, b), m,
-						Vector2f(l, b - tileSize), Vector2f(r, b), Vector2f(l, t));
-				}
-				else
+				if (i == 1 && row == 3)
 				{
 					priv::addTerrainTriangle(
 						vertices,
@@ -239,6 +240,13 @@ void Terrain::create(float size, float height, float resolution, float lodScale,
 					priv::addTerrainTriangle(
 						vertices,
 						Vector2f(l + 0.5f * tileSize, b), Vector2f(r, b), m,
+						Vector2f(l, b - tileSize), Vector2f(r, b), Vector2f(l, t));
+				}
+				else
+				{
+					priv::addTerrainTriangle(
+						vertices,
+						Vector2f(l, b), Vector2f(r, b), m,
 						Vector2f(l, b - tileSize), Vector2f(r, b), Vector2f(l, t));
 				}
 
@@ -276,11 +284,11 @@ void Terrain::create(float size, float height, float resolution, float lodScale,
 
 	// Set up lod rings
 	int lodLevel = 0;
-	float lodDists[] = { 20.0f, 100.0f, 200.0f, m_maxDist };
+	float lodDists[] = { 20.0f, 100.0f, 300.0f, m_maxDist };
 	Uint32 numTiles = 0;
 	bool changedLodLevel = false;
 
-	tileSize *= 16.0f;
+	tileSize *= 8.0f;
 	Vector2f tl = Vector2f(-tileSize);
 
 	while (-tl.x - 0.5f * tileSize < m_maxDist)
@@ -402,7 +410,7 @@ void Terrain::render(Camera& camera)
 	const Frustum& frustum = camera.getFrustum();
 
 	// Snap terrain position
-	float resolutionFactor = 8.0f * m_resolution;
+	float resolutionFactor = 16.0f * m_resolution;
 	Vector3f pos = camera.getPosition();
 	pos.x = roundf(pos.x / resolutionFactor) * resolutionFactor;
 	pos.z = roundf(pos.z / resolutionFactor) * resolutionFactor;
@@ -427,6 +435,9 @@ void Terrain::render(Camera& camera)
 		if (frustum.contains(bbox))
 			edgeTiles.push_back(&m_edgeTiles[i]);
 	}
+
+	if (normalTiles.size() + edgeTiles.size() == 0) return;
+
 
 	// Stream instance data
 	Uint32 size = (normalTiles.size() + edgeTiles.size()) * sizeof(Matrix4f);
@@ -481,6 +492,18 @@ void Terrain::render(Camera& camera)
 	);
 	shader.setUniform("u_numDirLights", i);
 
+	// Terrain maps
+	shader.setUniform("u_heightMap", 0);
+	shader.setUniform("u_normalMap", 1);
+	shader.setUniform("u_colorMap", 2);
+	m_heightMap.bind(0);
+	m_normalMap.bind(1);
+	// m_colorMap.bind(2);
+
+	// Terrain parameters
+	shader.setUniform("u_size", m_size);
+	shader.setUniform("u_height", m_height);
+
 	// Attach instance buffer and render
 	m_normalTile.bind();
 	m_normalTile.addBuffer(m_instanceBuffer, 3, 4, sizeof(Matrix4f), m_instanceBufferOffset + 0 * sizeof(Vector4f), 1);
@@ -499,6 +522,42 @@ void Terrain::render(Camera& camera)
 
 	// Update buffer offset
 	m_instanceBufferOffset += size;
+}
+
+
+///////////////////////////////////////////////////////////
+void Terrain::setHeightMap(const Image& map)
+{
+	// Upload data to texture
+	m_heightMap.create(map);
+
+	// Iterate through data and generate normals
+	Vector2u size = Vector2u(map.getWidth(), map.getHeight());
+	if (!m_normalMapData)
+	m_normalMapData = (Vector3f*)malloc(size.x * size.y * sizeof(Vector3f));
+
+	Vector2f sizeFactor = m_size / Vector2f(size);
+
+	for (Uint32 r = 0, i = 0; r < size.y; ++r)
+	{
+		for (Uint32 c = 0; c < size.x; ++c, ++i)
+		{
+			// Calculate normal
+			float h01 = *(float*)map.getPixel(r, c - (c == 0 ? 0 : 1)) * m_height;
+			float h21 = *(float*)map.getPixel(r, c + (c == size.x - 1 ? 0 : 1)) * m_height;
+			float h10 = *(float*)map.getPixel(r - (r == 0 ? 0 : 1), c) * m_height;
+			float h12 = *(float*)map.getPixel(r + (r == size.y - 1 ? 0 : 1), c) * m_height;
+
+			Vector3f v1(sizeFactor.x, h21 - h01, 0.0f);
+			Vector3f v2(0.0f, h12 - h10, -sizeFactor.y);
+			Vector3f normal = normalize(cross(v1, v2));
+
+			m_normalMapData[i] = normal;
+		}
+	}
+
+	// Upload normal data
+	m_normalMap.create(m_normalMapData, PixelFormat::Rgb, size.x, size.y, 0, GLType::Float);
 }
 
 

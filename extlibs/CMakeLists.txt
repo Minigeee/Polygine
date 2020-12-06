@@ -50,6 +50,7 @@ endfunction()
 
 # Cmake dependencies
 add_dependency_headers(tsl-hopscotch-map hopscotch-map tsl)
+add_dependency_headers(FastNoise FastNoise FastNoise)
 
 add_dependency(glfw glfw glfw)
 add_dependency(assimp assimp assimp)
@@ -76,3 +77,19 @@ target_include_directories(polygine PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extlibs/stb>
     $<INSTALL_INTERFACE:include>)
 install(DIRECTORY "${PROJECT_SOURCE_DIR}/extlibs/stb" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+
+# FastNoise
+if (NOT EXISTS "${PROJECT_SOURCE_DIR}/extlibs/FastNoise/Cpp/FastNoiseLite.h")
+    message(STATUS "Getting FastNoiseLite.h...")
+
+    # Get submodule
+    execute_process(COMMAND git submodule update --init -- "${PROJECT_SOURCE_DIR}/extlibs/FastNoise"
+                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+else()
+    message(STATUS "Found FastNoiseLite.h")
+endif()
+
+target_include_directories(polygine PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extlibs/FastNoise/Cpp>
+    $<INSTALL_INTERFACE:include>)
+install(FILES "${PROJECT_SOURCE_DIR}/extlibs/FastNoise/Cpp/FastNoiseLite.h" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
