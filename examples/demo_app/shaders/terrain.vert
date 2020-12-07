@@ -15,7 +15,7 @@ uniform vec3 u_cameraPos;
 
 uniform float u_size;
 uniform float u_height;
-uniform float u_resolution;
+uniform float u_tileScale;
 uniform sampler2D u_heightMap;
 uniform sampler2D u_normalMap;
 uniform sampler2D u_colorMap;
@@ -35,7 +35,7 @@ void main()
     vec2 farTexCoord = (a_transform * vec4(a_farTexCoord.x, 0.0f, a_farTexCoord.y, 1.0f)).xz;
 
     float dist = max(abs(u_cameraPos.x - nearTexCoord.x), abs(u_cameraPos.z - nearTexCoord.y));
-    float factor = (dist - (a_lodDist - 4.0f * u_resolution)) / (4.0f * u_resolution);
+    float factor = (dist - (a_lodDist - 4.0f * u_tileScale)) / (4.0f * u_tileScale);
     factor = clamp(factor, 0.0f, 1.0f);
 
     vec2 texCoord = mix(nearTexCoord, farTexCoord, factor);

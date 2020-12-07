@@ -17,10 +17,6 @@ namespace priv
 
 
 ///////////////////////////////////////////////////////////
-float terrainLodDists[] = { 20.0f, 100.0f, 300.0f };
-
-
-///////////////////////////////////////////////////////////
 struct TerrainVertex
 {
 	TerrainVertex() = default;
@@ -76,7 +72,7 @@ Shader& Terrain::getShader()
 Terrain::Terrain() :
 	m_size					(0.0f),
 	m_height				(0.0f),
-	m_resolution			(0.0f),
+	m_tileScale				(0.0f),
 	m_lodScale				(0.0f),
 	m_maxDist				(0.0f),
 	m_normalMapData			(0),
@@ -102,18 +98,21 @@ void Terrain::init(Scene* scene)
 
 
 ///////////////////////////////////////////////////////////
-void Terrain::create(float size, float height, float resolution, float lodScale, float maxDist)
+void Terrain::create(float size, float height, float tileScale, float lodScale, float maxDist)
 {
+	// Only create once
+	if (m_instanceBuffer.getId()) return;
+
 	m_size = size;
 	m_height = height;
-	m_resolution = resolution;
+	m_tileScale = tileScale;
 	m_lodScale = lodScale;
 	m_maxDist = maxDist;
 
 	std::vector<priv::TerrainVertex> vertices;
 
 	Uint32 edgeTileOffset = 0;
-	float tileSize = 2.0f * m_resolution;
+	float tileSize = 2.0f;
 
 	// Create vertices for tiles
 	for (int i = 0; i < 2; ++i)
@@ -286,13 +285,31 @@ void Terrain::create(float size, float height, float resolution, float lodScale,
 	m_edgeTile.addBuffer(m_edgeBuffer, 1, 2, sizeof(priv::TerrainVertex), 2 * sizeof(float));
 	m_edgeTile.addBuffer(m_edgeBuffer, 2, 2, sizeof(priv::TerrainVertex), 4 * sizeof(float));
 
+	// Create tile layout
+	createTileLayout();
+
+	// Create instance buffer
+	m_instanceBuffer.create((Matrix4f*)0, 32768, BufferUsage::Dynamic);
+}
+
+
+///////////////////////////////////////////////////////////
+void Terrain::createTileLayout()
+{
+	// Clear tile lists
+	m_normalTiles.clear();
+	m_edgeTiles.clear();
+	m_lodDists.clear();
+
 	// Set up lod rings
 	int lodLevel = 0;
 	Uint32 numTiles = 0;
 	bool changedLodLevel = false;
 
-	tileSize *= 8.0f;
+	float tileSize = 16.0f * m_tileScale;
 	Vector2f tl = Vector2f(-tileSize);
+
+	float lodDists[] = { 20.0f, 100.0f, 300.0f };
 
 	while (-tl.x < m_maxDist)
 	{
@@ -307,7 +324,7 @@ void Terrain::create(float size, float height, float resolution, float lodScale,
 		{
 			TerrainTile tile;
 			tile.m_position = Vector2f(tl.x + ((float)c + 0.5f) * tileSize, tl.y + 0.5f * tileSize);
-			tile.m_scale = powf(2.0f, (float)lodLevel);
+			tile.m_scale = powf(2.0f, (float)lodLevel) * m_tileScale;
 			tile.m_lod = lodLevel;
 			tile.m_boundingBox.m_min = Vector3f(tile.m_position.x - 0.5f * tileSize, 0.0f, tile.m_position.y - 0.5f * tileSize);
 			tile.m_boundingBox.m_max = Vector3f(tile.m_position.x + 0.5f * tileSize, m_height, tile.m_position.y + 0.5f * tileSize);
@@ -324,7 +341,7 @@ void Terrain::create(float size, float height, float resolution, float lodScale,
 			}
 
 			tile.m_position = Vector2f(tl.x + ((float)c + 0.5f) * tileSize, bl.y + 0.5f * tileSize);
-			tile.m_scale = powf(2.0f, (float)lodLevel);
+			tile.m_scale = powf(2.0f, (float)lodLevel) * m_tileScale;
 			tile.m_lod = lodLevel;
 			tile.m_boundingBox.m_min = Vector3f(tile.m_position.x - 0.5f * tileSize, 0.0f, tile.m_position.y - 0.5f * tileSize);
 			tile.m_boundingBox.m_max = Vector3f(tile.m_position.x + 0.5f * tileSize, m_height, tile.m_position.y + 0.5f * tileSize);
@@ -346,7 +363,7 @@ void Terrain::create(float size, float height, float resolution, float lodScale,
 		{
 			TerrainTile tile;
 			tile.m_position = Vector2f(tl.x + 0.5f * tileSize, tl.y + ((float)r + 0.5f) * tileSize);
-			tile.m_scale = powf(2.0f, (float)lodLevel);
+			tile.m_scale = powf(2.0f, (float)lodLevel) * m_tileScale;
 			tile.m_lod = lodLevel;
 			tile.m_boundingBox.m_min = Vector3f(tile.m_position.x - 0.5f * tileSize, 0.0f, tile.m_position.y - 0.5f * tileSize);
 			tile.m_boundingBox.m_max = Vector3f(tile.m_position.x + 0.5f * tileSize, m_height, tile.m_position.y + 0.5f * tileSize);
@@ -363,7 +380,7 @@ void Terrain::create(float size, float height, float resolution, float lodScale,
 			}
 
 			tile.m_position = Vector2f(tr.x + 0.5f * tileSize, tl.y + ((float)r + 0.5f) * tileSize);
-			tile.m_scale = powf(2.0f, (float)lodLevel);
+			tile.m_scale = powf(2.0f, (float)lodLevel) * m_tileScale;
 			tile.m_lod = lodLevel;
 			tile.m_boundingBox.m_min = Vector3f(tile.m_position.x - 0.5f * tileSize, 0.0f, tile.m_position.y - 0.5f * tileSize);
 			tile.m_boundingBox.m_max = Vector3f(tile.m_position.x + 0.5f * tileSize, m_height, tile.m_position.y + 0.5f * tileSize);
@@ -384,21 +401,21 @@ void Terrain::create(float size, float height, float resolution, float lodScale,
 			changedLodLevel = false;
 
 		// Update lod level
-		if (-tl.x > priv::terrainLodDists[lodLevel] * m_lodScale + tileSize && numTiles % 4 == 0)
+		if (lodLevel < 3 && -tl.x > lodDists[lodLevel] * m_lodScale + tileSize && numTiles % 4 == 0)
 		{
-			++lodLevel;
-			tileSize *= 2.0f;
-			numTiles /= 2;
-			changedLodLevel = true;
+			if (lodLevel < 2)
+			{
+				++lodLevel;
+				tileSize *= 2.0f;
+				numTiles /= 2;
+				changedLodLevel = true;
+			}
 
 			m_lodDists.push_back(-tl.x - tileSize * 0.25f);
 		}
 
 		tl -= Vector2f(tileSize);
 	}
-
-	// Create instance buffer
-	m_instanceBuffer.create((Matrix4f*)0, 32768, BufferUsage::Dynamic);
 }
 
 
@@ -415,7 +432,7 @@ void Terrain::render(Camera& camera)
 	const Frustum& frustum = camera.getFrustum();
 
 	// Snap terrain position
-	float resolutionFactor = 16.0f * m_resolution;
+	float resolutionFactor = 16.0f * m_tileScale;
 	Vector3f pos = camera.getPosition();
 	pos.x = roundf(pos.x / resolutionFactor) * resolutionFactor;
 	pos.z = roundf(pos.z / resolutionFactor) * resolutionFactor;
@@ -514,7 +531,7 @@ void Terrain::render(Camera& camera)
 	// Terrain parameters
 	shader.setUniform("u_size", m_size);
 	shader.setUniform("u_height", m_height);
-	shader.setUniform("u_resolution", m_resolution);
+	shader.setUniform("u_tileScale", m_tileScale);
 
 	// Attach instance buffer and render
 	m_normalTile.bind();
@@ -536,6 +553,66 @@ void Terrain::render(Camera& camera)
 
 	// Update buffer offset
 	m_instanceBufferOffset += size;
+}
+
+
+///////////////////////////////////////////////////////////
+void Terrain::setSize(float size)
+{
+	// Calculate change in scale
+	Vector3f scale(size / m_size);
+	scale.y = 1.0f;
+
+	// Update size
+	m_size = size;
+
+	// Update normal map
+	updateNormalMap(scale);
+}
+
+
+///////////////////////////////////////////////////////////
+void Terrain::setHeight(float height)
+{
+	// Calculate change in scale
+	Vector3f scale(1.0f);
+	scale.y = height / m_height;
+
+	// Update size
+	m_height = height;
+
+	// Update normal map
+	updateNormalMap(scale);
+}
+
+
+///////////////////////////////////////////////////////////
+void Terrain::setTileScale(float scale)
+{
+	m_tileScale = scale;
+
+	// Update tile layout
+	createTileLayout();
+}
+
+
+///////////////////////////////////////////////////////////
+void Terrain::setLodScale(float scale)
+{
+	m_lodScale = scale;
+
+	// Update tile layout
+	createTileLayout();
+}
+
+
+///////////////////////////////////////////////////////////
+void Terrain::setMaxDist(float dist)
+{
+	m_maxDist = dist;
+
+	// Update tile layout
+	createTileLayout();
 }
 
 
@@ -576,10 +653,84 @@ void Terrain::setHeightMap(const Image& map)
 
 
 ///////////////////////////////////////////////////////////
+void Terrain::updateNormalMap(const Vector3f& scale)
+{
+	if (!m_normalMap.getId()) return;
+
+	// Get normal transform matrix
+	Matrix3f transform = Matrix3f(transpose(inverse(toTransformMatrix(Vector3f(0.0f), Vector3f(0.0f), scale))));
+
+	// Multiply every normal by transform
+	Uint32 size = m_normalMap.getWidth() * m_normalMap.getHeight();
+	for (Uint32 i = 0; i < size; ++i)
+		m_normalMapData[i] = transform * m_normalMapData[i];
+
+	// Update texture data
+	m_normalMap.update(m_normalMapData);
+}
+
+
+///////////////////////////////////////////////////////////
 void Terrain::setColorMap(const Image& map)
 {
 	// Upload data to texture
 	m_colorMap.create(map);
+}
+
+
+///////////////////////////////////////////////////////////
+float Terrain::getSize() const
+{
+	return m_size;
+}
+
+
+///////////////////////////////////////////////////////////
+float Terrain::getHeight() const
+{
+	return m_height;
+}
+
+
+///////////////////////////////////////////////////////////
+float Terrain::getTileScale() const
+{
+	return m_tileScale;
+}
+
+
+///////////////////////////////////////////////////////////
+float Terrain::getLodScale() const
+{
+	return m_lodScale;
+}
+
+
+///////////////////////////////////////////////////////////
+float Terrain::getMaxDist() const
+{
+	return m_maxDist;
+}
+
+
+///////////////////////////////////////////////////////////
+const Texture& Terrain::getHeightMap() const
+{
+	return m_heightMap;
+}
+
+
+///////////////////////////////////////////////////////////
+const Texture& Terrain::getColorMap() const
+{
+	return m_colorMap;
+}
+
+
+///////////////////////////////////////////////////////////
+const Texture& Terrain::getNormalMap() const
+{
+	return m_normalMap;
 }
 
 

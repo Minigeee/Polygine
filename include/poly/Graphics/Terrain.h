@@ -19,7 +19,7 @@ public:
 
 	void init(Scene* scene) override;
 
-	void create(float size, float height, float resolution = 1.0f, float lodScale = 1.0f, float maxDist = 800.0f);
+	void create(float size, float height, float tileScale = 1.0f, float lodScale = 1.0f, float maxDist = 800.0f);
 
 	void render(Camera& camera) override;
 
@@ -27,7 +27,7 @@ public:
 
 	void setHeight(float height);
 
-	void setResolution(float resolution);
+	void setTileScale(float scale);
 
 	void setLodScale(float scale);
 
@@ -36,6 +36,22 @@ public:
 	void setHeightMap(const Image& map);
 
 	void setColorMap(const Image& map);
+
+	float getSize() const;
+
+	float getHeight() const;
+
+	float getTileScale() const;
+
+	float getLodScale() const;
+
+	float getMaxDist() const;
+
+	const Texture& getHeightMap() const;
+
+	const Texture& getColorMap() const;
+
+	const Texture& getNormalMap() const;
 
 private:
 	static Shader& getShader();
@@ -55,11 +71,23 @@ private:
 		Matrix4f m_transform;
 	};
 
+	///////////////////////////////////////////////////////////
+	/// \brief Create ring layout of terrain, depends on tile scale, lod scale, and max distance
+	///
+	///////////////////////////////////////////////////////////
+	void createTileLayout();
+
+	///////////////////////////////////////////////////////////
+	/// \brief Update normal map, depends on height and size
+	///
+	///////////////////////////////////////////////////////////
+	void updateNormalMap(const Vector3f& scale);
+
 private:
 	Scene* m_scene;
 	float m_size;
 	float m_height;
-	float m_resolution;
+	float m_tileScale;
 	float m_lodScale;
 	float m_maxDist;
 
