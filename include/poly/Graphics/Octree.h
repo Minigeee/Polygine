@@ -43,7 +43,7 @@ public:
 	/// Still in progress... TODO
 	///
 	///////////////////////////////////////////////////////////
-	void render(Camera& camera, FrameBuffer& target = FrameBuffer::Default) override;
+	void render(Camera& camera) override;
 
 private:
 	struct Node;

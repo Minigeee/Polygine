@@ -113,7 +113,7 @@ void Scene::render(Camera& camera, FrameBuffer& target)
 
 	// Render all render systems
 	for (Uint32 i = 0; i < m_renderSystems.size(); ++i)
-		m_renderSystems[i]->render(camera, target);
+		m_renderSystems[i]->render(camera);
 }
 
 }

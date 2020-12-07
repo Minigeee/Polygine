@@ -200,6 +200,30 @@ void Texture::create(const Image& image, TextureFilter filter, TextureWrap wrap)
 
 
 ///////////////////////////////////////////////////////////
+void Texture::update(void* data)
+{
+	// Don't update before creating
+	if (!m_id) return;
+
+	// Bind the texture
+	bind();
+
+	// Get the internal format
+	Uint32 internalFmt = getInternalFormat(m_format, m_dataType);
+
+	// Buffer data
+	if (m_dimensions == 1)
+		glCheck(glTexImage1D(GL_TEXTURE_1D, 0, internalFmt, m_width, 0, (GLenum)m_format, (GLenum)m_dataType, data));
+
+	else if (m_dimensions == 2)
+		glCheck(glTexImage2D(GL_TEXTURE_2D, 0, internalFmt, m_width, m_height, 0, (GLenum)m_format, (GLenum)m_dataType, data));
+
+	else
+		glCheck(glTexImage3D(GL_TEXTURE_3D, 0, internalFmt, m_width, m_height, m_depth, 0, (GLenum)m_format, (GLenum)m_dataType, data));
+}
+
+
+///////////////////////////////////////////////////////////
 Uint32 Texture::getId() const
 {
 	return m_id;

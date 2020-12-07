@@ -115,6 +115,17 @@ public:
 	);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Update all of texture data
+	///
+	/// This will cause data to be uploaded to the texture, but maintain
+	/// the same properties as when the texture was created.
+	///
+	/// \param data A pointer to the texture data
+	///
+	///////////////////////////////////////////////////////////
+	void update(void* data);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the internal texture id
 	///
 	/// \return The internal OpenGL texture id

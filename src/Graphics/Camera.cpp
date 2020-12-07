@@ -20,7 +20,7 @@ Camera::Camera() :
 	m_fov			(90.0f),
 	m_aspectRatio	(16.0f / 9.0f),
 	m_near			(0.1f),
-	m_far			(500.0f),
+	m_far			(1000.0f),
 
 	m_isProjDirty	(true),
 	m_isViewDirty	(true)
