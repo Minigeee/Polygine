@@ -63,7 +63,7 @@ int main()
     shader.compile();
 
     Camera camera;
-    camera.setPosition(0.0f, 5.0f, 0.0f);
+    camera.setPosition(0.0f, 50.0f, 0.0f);
     camera.setRotation(0.0f, 0.0f);
 
     // Setup scene

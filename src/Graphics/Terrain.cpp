@@ -309,7 +309,7 @@ void Terrain::createTileLayout()
 	float tileSize = 16.0f * m_tileScale;
 	Vector2f tl = Vector2f(-tileSize);
 
-	float lodDists[] = { 20.0f, 100.0f, 300.0f };
+	float lodDists[] = { 20.0f, 100.0f, 200.0f };
 
 	while (-tl.x < m_maxDist)
 	{
@@ -403,19 +403,18 @@ void Terrain::createTileLayout()
 		// Update lod level
 		if (lodLevel < 3 && -tl.x > lodDists[lodLevel] * m_lodScale + tileSize && numTiles % 4 == 0)
 		{
-			if (lodLevel < 2)
-			{
-				++lodLevel;
-				tileSize *= 2.0f;
-				numTiles /= 2;
-				changedLodLevel = true;
-			}
+			++lodLevel;
+			tileSize *= 2.0f;
+			numTiles /= 2;
+			changedLodLevel = true;
 
 			m_lodDists.push_back(-tl.x - tileSize * 0.25f);
 		}
 
 		tl -= Vector2f(tileSize);
 	}
+
+	m_lodDists.push_back(-tl.x);
 }
 
 
@@ -532,6 +531,7 @@ void Terrain::render(Camera& camera)
 	shader.setUniform("u_size", m_size);
 	shader.setUniform("u_height", m_height);
 	shader.setUniform("u_tileScale", m_tileScale);
+	shader.setUniform("u_blendLodDist", m_lodDists[m_lodDists.size() - 2]);
 
 	// Attach instance buffer and render
 	m_normalTile.bind();
