@@ -112,7 +112,7 @@ int main()
 
     DirLightComponent sun;
     sun.m_specular = Vector3f(0.2f);
-    sun.m_direction.z = 2.0f;
+    sun.m_direction.z = -10.0f;
     scene.createEntity(sun);
 
     TransformComponent t;

@@ -83,9 +83,11 @@ VertexArray& Skybox::getVertexArray()
 ///////////////////////////////////////////////////////////
 ProceduralSkybox::ProceduralSkybox() :
 	m_zenithColor		(0.172f, 0.448f, 0.675f),
-	m_horizonColor		(0.7f, 1.0f, 0.95f),
+	m_horizonColor		(0.9f, 1.0f, 0.75f),
+    m_groundColor       (0.12f, 0.22f, 0.25f),
 	m_bloomColor		(0.8f, 0.75f, 0.5f),
 	m_bloomStrength		(0.8f),
+	m_lightStrength		(12.0f),
     m_topRadius         (6420.0f),
     m_botRadius         (6360.0f),
     m_altitude          (0.2f)
@@ -129,8 +131,10 @@ void ProceduralSkybox::render(Camera& camera)
     // Skybox parameters
     shader.setUniform("u_zenithColor", m_zenithColor);
     shader.setUniform("u_horizonColor", m_horizonColor);
+    shader.setUniform("u_groundColor", m_groundColor);
     shader.setUniform("u_bloomColor", m_bloomColor);
     shader.setUniform("u_bloomStrength", m_bloomStrength);
+    shader.setUniform("u_lightStrength", m_lightStrength);
     shader.setUniform("u_topRadius", m_topRadius);
     shader.setUniform("u_botRadius", m_botRadius);
     shader.setUniform("u_radius", m_altitude + m_botRadius);

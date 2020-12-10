@@ -44,8 +44,10 @@ private:
 
 	Vector3f m_zenithColor;
 	Vector3f m_horizonColor;
+	Vector3f m_groundColor;
 	Vector3f m_bloomColor;
 	float m_bloomStrength;
+	float m_lightStrength;
 
 	float m_topRadius;
 	float m_botRadius;
