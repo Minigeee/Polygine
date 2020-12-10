@@ -16,6 +16,7 @@
 #include <poly/Graphics/PostProcess.h>
 #include <poly/Graphics/Shader.h>
 #include <poly/Graphics/Skeleton.h>
+#include <poly/Graphics/Skybox.h>
 #include <poly/Graphics/Terrain.h>
 #include <poly/Graphics/Texture.h>
 #include <poly/Graphics/VertexArray.h>
@@ -106,9 +107,12 @@ int main()
     octree.create();
     scene.addRenderSystem(&octree);
 
+    ProceduralSkybox skybox;
+    scene.addRenderSystem(&skybox);
+
     DirLightComponent sun;
     sun.m_specular = Vector3f(0.2f);
-    sun.m_direction.z = -2.0f;
+    sun.m_direction.z = 2.0f;
     scene.createEntity(sun);
 
     TransformComponent t;
