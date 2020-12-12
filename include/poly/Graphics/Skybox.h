@@ -13,6 +13,7 @@ namespace poly
 
 class ProceduralSkybox;
 
+
 class Skybox
 {
 	friend ProceduralSkybox;
@@ -34,6 +35,42 @@ public:
 
 	void render(Camera& camera) override;
 
+	void setZenithColor(const Vector3f& color);
+
+	void setHorizonColor(const Vector3f& color);
+
+	void setGroundColor(const Vector3f& color);
+
+	void setBloomColor(const Vector3f& color);
+
+	void setBloomSize(float size);
+
+	void setLightStrength(float strength);
+
+	void setTopRadius(float radius);
+
+	void setBotRadius(float radius);
+
+	void setAltitude(float alt);
+
+	const Vector3f& getZenithColor() const;
+
+	const Vector3f& getHorizonColor() const;
+
+	const Vector3f& getGroundColor() const;
+
+	const Vector3f& getBloomColor() const;
+
+	float getBloomSize() const;
+
+	float getLightStrength() const;
+
+	float getTopRadius() const;
+
+	float getBotRadius() const;
+
+	float getAltitude() const;
+
 private:
 	static Shader s_shader;
 
@@ -46,7 +83,7 @@ private:
 	Vector3f m_horizonColor;
 	Vector3f m_groundColor;
 	Vector3f m_bloomColor;
-	float m_bloomStrength;
+	float m_bloomSize;
 	float m_lightStrength;
 
 	float m_topRadius;

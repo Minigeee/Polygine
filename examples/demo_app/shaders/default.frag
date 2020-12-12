@@ -85,7 +85,7 @@ void main()
         specColor *= texture(u_specularMaps[v_materialIndex], v_texCoord).rgb;
         
     // Calculate lighting
-    vec3 result = diffColor * vec3(0.1f);
+    vec3 result = diffColor * vec3(0.05f);
     
     // Calculate directional lighting
     for (int i = 0; i < u_numDirLights; ++i)

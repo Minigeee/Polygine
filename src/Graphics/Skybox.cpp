@@ -80,14 +80,34 @@ VertexArray& Skybox::getVertexArray()
 }
 
 
+/*
+
 ///////////////////////////////////////////////////////////
 ProceduralSkybox::ProceduralSkybox() :
-	m_zenithColor		(0.172f, 0.448f, 0.675f),
+	m_zenithColor		(0.172f, 0.448f, 0.775f),
 	m_horizonColor		(0.9f, 1.0f, 0.75f),
     m_groundColor       (0.12f, 0.22f, 0.25f),
 	m_bloomColor		(0.8f, 0.75f, 0.5f),
-	m_bloomStrength		(0.8f),
+	m_bloomSize 		(0.8f),
 	m_lightStrength		(12.0f),
+    m_topRadius         (6420.0f),
+    m_botRadius         (6360.0f),
+    m_altitude          (0.2f)
+{
+
+}
+
+*/
+
+
+///////////////////////////////////////////////////////////
+ProceduralSkybox::ProceduralSkybox() :
+	m_zenithColor		(0.12f, 0.2f, 0.5f),
+	m_horizonColor		(0.05f, 0.15f, 0.25f),
+    m_groundColor       (0.12f, 0.22f, 0.25f),
+	m_bloomColor		(0.05f, 0.05f, 0.06f),
+	m_bloomSize 		(0.0f),
+	m_lightStrength		(0.5f),
     m_topRadius         (6420.0f),
     m_botRadius         (6360.0f),
     m_altitude          (0.2f)
@@ -133,7 +153,7 @@ void ProceduralSkybox::render(Camera& camera)
     shader.setUniform("u_horizonColor", m_horizonColor);
     shader.setUniform("u_groundColor", m_groundColor);
     shader.setUniform("u_bloomColor", m_bloomColor);
-    shader.setUniform("u_bloomStrength", m_bloomStrength);
+    shader.setUniform("u_bloomSize", m_bloomSize);
     shader.setUniform("u_lightStrength", m_lightStrength);
     shader.setUniform("u_topRadius", m_topRadius);
     shader.setUniform("u_botRadius", m_botRadius);
@@ -155,6 +175,132 @@ Shader& ProceduralSkybox::getShader()
     }
 
 	return s_shader;
+}
+
+
+///////////////////////////////////////////////////////////
+void ProceduralSkybox::setZenithColor(const Vector3f& color)
+{
+    m_zenithColor = color;
+}
+
+
+///////////////////////////////////////////////////////////
+void ProceduralSkybox::setHorizonColor(const Vector3f& color)
+{
+    m_horizonColor = color;
+}
+
+
+///////////////////////////////////////////////////////////
+void ProceduralSkybox::setGroundColor(const Vector3f& color)
+{
+    m_groundColor = color;
+}
+
+
+///////////////////////////////////////////////////////////
+void ProceduralSkybox::setBloomColor(const Vector3f& color)
+{
+    m_bloomColor = color;
+}
+
+
+///////////////////////////////////////////////////////////
+void ProceduralSkybox::setBloomSize(float size)
+{
+    m_bloomSize = size;
+}
+
+
+///////////////////////////////////////////////////////////
+void ProceduralSkybox::setLightStrength(float strength)
+{
+    m_lightStrength = strength;
+}
+
+
+///////////////////////////////////////////////////////////
+void ProceduralSkybox::setTopRadius(float radius)
+{
+    m_topRadius = radius;
+}
+
+
+///////////////////////////////////////////////////////////
+void ProceduralSkybox::setBotRadius(float radius)
+{
+    m_botRadius = radius;
+}
+
+
+///////////////////////////////////////////////////////////
+void ProceduralSkybox::setAltitude(float alt)
+{
+    m_altitude = alt;
+}
+
+
+///////////////////////////////////////////////////////////
+const Vector3f& ProceduralSkybox::getZenithColor() const
+{
+    return m_zenithColor;
+}
+
+
+///////////////////////////////////////////////////////////
+const Vector3f& ProceduralSkybox::getHorizonColor() const
+{
+    return m_horizonColor;
+}
+
+
+///////////////////////////////////////////////////////////
+const Vector3f& ProceduralSkybox::getGroundColor() const
+{
+    return m_groundColor;
+}
+
+
+///////////////////////////////////////////////////////////
+const Vector3f& ProceduralSkybox::getBloomColor() const
+{
+    return m_bloomColor;
+}
+
+
+///////////////////////////////////////////////////////////
+float ProceduralSkybox::getBloomSize() const
+{
+    return m_bloomSize;
+}
+
+
+///////////////////////////////////////////////////////////
+float ProceduralSkybox::getLightStrength() const
+{
+    return m_lightStrength;
+}
+
+
+///////////////////////////////////////////////////////////
+float ProceduralSkybox::getTopRadius() const
+{
+    return m_topRadius;
+}
+
+
+///////////////////////////////////////////////////////////
+float ProceduralSkybox::getBotRadius() const
+{
+    return m_botRadius;
+}
+
+
+///////////////////////////////////////////////////////////
+float ProceduralSkybox::getAltitude() const
+{
+    return m_altitude;
 }
 
 

@@ -8,7 +8,7 @@ uniform vec3 u_zenithColor;
 uniform vec3 u_horizonColor;
 uniform vec3 u_groundColor;
 uniform vec3 u_bloomColor;
-uniform float u_bloomStrength;
+uniform float u_bloomSize;
 uniform float u_lightStrength;
 
 uniform float u_topRadius;
@@ -78,7 +78,7 @@ void main()
     color *= phaseFunction_R(nu) * u_lightStrength;
 
     // Bloom (mie scattering) effect
-    color += u_bloomColor * phaseFunction_M(u_bloomStrength, nu) * factor;
+    color += u_bloomColor * phaseFunction_M(u_bloomSize, nu) * (factor * 0.2f + 0.2f) * heightFactor;
 
     // Final color
     f_color.rgb = color;

@@ -58,7 +58,7 @@ void main()
     vec3 viewDir = normalize(v_fragPos - u_cameraPos);
         
     // Calculate lighting
-    vec3 result = v_color.rgb * vec3(0.1f);
+    vec3 result = v_color.rgb * vec3(0.02f);
     
     // Calculate directional lighting
     for (int i = 0; i < u_numDirLights; ++i)
