@@ -37,6 +37,8 @@ public:
 
 	void setColorMap(const Image& map);
 
+	void setAmbientColor(const Vector3f& color);
+
 	float getSize() const;
 
 	float getHeight() const;
@@ -52,6 +54,8 @@ public:
 	const Texture& getColorMap() const;
 
 	const Texture& getNormalMap() const;
+
+	const Vector3f& getAmbientColor() const;
 
 private:
 	static Shader& getShader();
@@ -106,6 +110,8 @@ private:
 	std::vector<TerrainTile> m_normalTiles;
 	std::vector<TerrainTile> m_edgeTiles;
 	std::vector<float> m_lodDists;
+
+	Vector3f m_ambientColor;
 
 	static Shader s_shader;
 };

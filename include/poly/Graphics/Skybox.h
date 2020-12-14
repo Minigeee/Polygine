@@ -14,15 +14,43 @@ namespace poly
 class ProceduralSkybox;
 
 
-class Skybox
+class Skybox : public RenderSystem
 {
 	friend ProceduralSkybox;
+
+public:
+	enum Side
+	{
+		Right,
+		Left,
+		Top,
+		Bottom,
+		Front,
+		Back
+	};
+
+public:
+	Skybox();
+
+	~Skybox();
+
+	void init(Scene* scene) override;
+
+	void render(Camera& camera) override;
+
+	bool load(const std::string& fname, Side side);
 
 private:
 	static VertexArray s_vertexArray;
 	static VertexBuffer s_vertexBuffer;
+	static Shader s_shader;
 
 	static VertexArray& getVertexArray();
+
+	Shader& getShader();
+
+private:
+	Uint32 m_id;
 };
 
 
@@ -71,6 +99,8 @@ public:
 
 	float getAltitude() const;
 
+	const Vector3f& getAmbientColor();
+
 private:
 	static Shader s_shader;
 
@@ -89,6 +119,9 @@ private:
 	float m_topRadius;
 	float m_botRadius;
 	float m_altitude;
+
+	Vector3f m_ambient;
+	bool m_colorsChanged;
 };
 
 }

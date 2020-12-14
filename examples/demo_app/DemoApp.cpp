@@ -108,11 +108,12 @@ int main()
     scene.addRenderSystem(&octree);
 
     ProceduralSkybox skybox;
+    terrain.setAmbientColor(skybox.getAmbientColor() * 0.1f);
     scene.addRenderSystem(&skybox);
 
     DirLightComponent sun;
-    sun.m_diffuse = Vector3f(0.08f, 0.15f, 0.25f) * 0.4f;
-    // sun.m_diffuse = Vector3f(0.9f, 0.9f, 0.8f);
+    // sun.m_diffuse = Vector3f(0.08f, 0.15f, 0.25f) * 0.2f;
+    sun.m_diffuse = Vector3f(0.9f, 0.9f, 0.8f);
     sun.m_specular = sun.m_diffuse * 0.2f;
     sun.m_direction.z = 2.0f;
     scene.createEntity(sun);

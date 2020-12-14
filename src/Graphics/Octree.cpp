@@ -67,11 +67,12 @@ bool updateBoundingBox(BoundingBox& a, const BoundingBox& b)
 
 
 ///////////////////////////////////////////////////////////
-void bindShader(Shader* shader, Camera& camera, Scene* scene)
+void bindShader(Shader* shader, Camera& camera, Scene* scene, const Vector3f& ambient)
 {
 	shader->bind();
 	shader->setUniform("u_projView", camera.getProjMatrix() * camera.getViewMatrix());
 	shader->setUniform("u_cameraPos", camera.getPosition());
+	shader->setUniform("u_ambient", ambient);
 
 	// Apply directional lights
 	int i = 0;
@@ -123,7 +124,8 @@ Octree::Octree() :
 	m_root					(0),
 	m_size					(0.0f),
 	m_maxPerCell			(0),
-	m_instanceBufferOffset	(0)
+	m_instanceBufferOffset	(0),
+	m_ambientColor			(0.02f)
 {
 
 }
@@ -743,7 +745,7 @@ void Octree::render(Camera& camera)
 
 	// Bind the first shader
 	Shader* shader = renderData.front().m_shader;
-	priv::bindShader(shader, camera, m_scene);
+	priv::bindShader(shader, camera, m_scene, m_ambientColor);
 
 	// Iterate through render data and render everything
 	for (Uint32 i = 0; i < renderData.size(); ++i)
@@ -754,7 +756,7 @@ void Octree::render(Camera& camera)
 		if (data.m_shader != shader)
 		{
 			shader = data.m_shader;
-			priv::bindShader(shader, camera, m_scene);
+			priv::bindShader(shader, camera, m_scene, m_ambientColor);
 		}
 
 		// Apply the materials
@@ -822,6 +824,20 @@ void Octree::getRenderData(Node* node, const Frustum& frustum, std::vector<std::
 		if (child && frustum.contains(child->m_boundingBox))
 			getRenderData(child, frustum, entityData);
 	}
+}
+
+
+///////////////////////////////////////////////////////////
+void Octree::setAmbientColor(const Vector3f& color)
+{
+	m_ambientColor = color;
+}
+
+
+///////////////////////////////////////////////////////////
+const Vector3f& Octree::getAmbientColor() const
+{
+	return m_ambientColor;
 }
 
 

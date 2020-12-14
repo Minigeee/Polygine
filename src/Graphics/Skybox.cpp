@@ -2,7 +2,10 @@
 
 #include <poly/Graphics/Components.h>
 #include <poly/Graphics/GLCheck.h>
+#include <poly/Graphics/Image.h>
 #include <poly/Graphics/Skybox.h>
+
+#include <poly/Math/Functions.h>
 
 namespace poly
 {
@@ -15,7 +18,94 @@ VertexArray Skybox::s_vertexArray;
 VertexBuffer Skybox::s_vertexBuffer;
 
 ///////////////////////////////////////////////////////////
+Shader Skybox::s_shader;
+
+///////////////////////////////////////////////////////////
 Shader ProceduralSkybox::s_shader;
+
+
+///////////////////////////////////////////////////////////
+Skybox::Skybox() :
+    m_id    (0)
+{
+
+}
+
+///////////////////////////////////////////////////////////
+Skybox::~Skybox()
+{
+    if (m_id)
+        glCheck(glDeleteTextures(1, &m_id));
+}
+
+
+///////////////////////////////////////////////////////////
+void Skybox::init(Scene* scene)
+{
+    // Nothing to do here
+}
+
+
+///////////////////////////////////////////////////////////
+void Skybox::render(Camera& camera)
+{
+    Shader& shader = getShader();
+
+    shader.bind();
+
+    // Projection view
+    Matrix4f view = Matrix4f(Matrix3f(camera.getViewMatrix()), 1.0f);
+    shader.setUniform("u_projView", camera.getProjMatrix() * view);
+
+    // Draw cubemap
+    Skybox::getVertexArray().draw();
+}
+
+
+///////////////////////////////////////////////////////////
+bool Skybox::load(const std::string& fname, Side side)
+{
+    // Load the image
+    Image image;
+    bool success = image.load(fname);
+    if (!success) return false;
+
+    // Create cube map if not create yet
+    if (!m_id)
+    {
+        // Create texture
+        glCheck(glGenTextures(1, &m_id));
+        glCheck(glBindTexture(GL_TEXTURE_CUBE_MAP, m_id));
+
+        // Set texture parameters
+        glCheck(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+        glCheck(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+        glCheck(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
+        glCheck(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
+        glCheck(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE));
+    }
+
+    // Bind texture
+    glCheck(glBindTexture(GL_TEXTURE_CUBE_MAP, m_id));
+
+    // Set texture
+    GLenum dtype = (GLenum)image.getDataType();
+    glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + (int)side, 0, GL_RGB, image.getWidth(), image.getHeight(), 0, GL_RGB, dtype, image.getData());
+}
+
+
+///////////////////////////////////////////////////////////
+Shader& Skybox::getShader()
+{
+    if (!s_shader.getId())
+    {
+        s_shader.load("shaders/cubemap.vert", Shader::Vertex);
+        s_shader.load("shaders/skybox.frag", Shader::Fragment);
+        s_shader.compile();
+    }
+
+    return s_shader;
+}
 
 
 ///////////////////////////////////////////////////////////
@@ -80,8 +170,6 @@ VertexArray& Skybox::getVertexArray()
 }
 
 
-/*
-
 ///////////////////////////////////////////////////////////
 ProceduralSkybox::ProceduralSkybox() :
 	m_zenithColor		(0.172f, 0.448f, 0.775f),
@@ -92,13 +180,13 @@ ProceduralSkybox::ProceduralSkybox() :
 	m_lightStrength		(12.0f),
     m_topRadius         (6420.0f),
     m_botRadius         (6360.0f),
-    m_altitude          (0.2f)
+    m_altitude          (0.2f),
+    m_colorsChanged     (true)
 {
 
 }
 
-*/
-
+/*
 
 ///////////////////////////////////////////////////////////
 ProceduralSkybox::ProceduralSkybox() :
@@ -110,10 +198,13 @@ ProceduralSkybox::ProceduralSkybox() :
 	m_lightStrength		(0.5f),
     m_topRadius         (6420.0f),
     m_botRadius         (6360.0f),
-    m_altitude          (0.2f)
+    m_altitude          (0.2f),
+    m_colorsChanged     (true)
 {
 
 }
+
+*/
 
 
 ///////////////////////////////////////////////////////////
@@ -126,8 +217,6 @@ void ProceduralSkybox::init(Scene* scene)
 ///////////////////////////////////////////////////////////
 void ProceduralSkybox::render(Camera& camera)
 {
-    // glCullFace(GL_FRONT);
-
     Shader& shader = getShader();
 
     shader.bind();
@@ -182,6 +271,7 @@ Shader& ProceduralSkybox::getShader()
 void ProceduralSkybox::setZenithColor(const Vector3f& color)
 {
     m_zenithColor = color;
+    m_colorsChanged = true;
 }
 
 
@@ -189,6 +279,7 @@ void ProceduralSkybox::setZenithColor(const Vector3f& color)
 void ProceduralSkybox::setHorizonColor(const Vector3f& color)
 {
     m_horizonColor = color;
+    m_colorsChanged = true;
 }
 
 
@@ -301,6 +392,49 @@ float ProceduralSkybox::getBotRadius() const
 float ProceduralSkybox::getAltitude() const
 {
     return m_altitude;
+}
+
+
+///////////////////////////////////////////////////////////
+const Vector3f& ProceduralSkybox::getAmbientColor()
+{
+    if (m_colorsChanged)
+    {
+        m_ambient = Vector3f(0.0f);
+
+        const Uint32 NUM_SAMPLES = 50;
+
+        // Get min and max distances
+        float r = m_botRadius + m_altitude;
+        float d_min = m_topRadius - r;
+        float distToHorizon = std::sqrt(r * r - m_botRadius * m_botRadius);
+        float distBotToTop = std::sqrt(m_topRadius * m_topRadius - m_botRadius * m_botRadius);
+        float d_max = distToHorizon + distBotToTop;
+
+        // Get integration length
+        float arc = 0.5f * PI + acosf(m_botRadius / r);
+        float dtheta = arc / NUM_SAMPLES;
+
+        for (Uint32 i = 0; i < NUM_SAMPLES; ++i)
+        {
+            float mu = cosf(dtheta * (i + 0.5f));
+
+            // Get distance to top of atmosphere
+            float d = -r * mu + std::sqrt(r * r * (mu * mu - 1.0f) + m_topRadius * m_topRadius);
+
+            // Calculate factor and final color
+            float factor = (d - d_min) / (d_max - d_min);
+            Vector3f color = m_zenithColor * (1.0f - factor) + m_horizonColor * factor;
+
+            // Add to final color
+            float weight = (i == 0 || i == NUM_SAMPLES - 1) ? 0.5f : 1.0f;
+            m_ambient += color * weight / (float)NUM_SAMPLES;
+        }
+
+        m_colorsChanged = false;
+    }
+
+    return m_ambient;
 }
 
 
