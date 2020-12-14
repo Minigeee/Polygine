@@ -76,7 +76,8 @@ Terrain::Terrain() :
 	m_lodScale				(0.0f),
 	m_maxDist				(0.0f),
 	m_normalMapData			(0),
-	m_instanceBufferOffset	(0)
+	m_instanceBufferOffset	(0),
+	m_ambientColor			(0.02f)
 {
 
 }
@@ -504,6 +505,7 @@ void Terrain::render(Camera& camera)
 	shader.bind();
 	shader.setUniform("u_projView", camera.getProjMatrix() * camera.getViewMatrix());
 	shader.setUniform("u_cameraPos", camera.getPosition());
+	shader.setUniform("u_ambient", m_ambientColor);
 
 	// Apply directional lights
 	int i = 0;
@@ -679,6 +681,13 @@ void Terrain::setColorMap(const Image& map)
 
 
 ///////////////////////////////////////////////////////////
+void Terrain::setAmbientColor(const Vector3f& color)
+{
+	m_ambientColor = color;
+}
+
+
+///////////////////////////////////////////////////////////
 float Terrain::getSize() const
 {
 	return m_size;
@@ -731,6 +740,13 @@ const Texture& Terrain::getColorMap() const
 const Texture& Terrain::getNormalMap() const
 {
 	return m_normalMap;
+}
+
+
+///////////////////////////////////////////////////////////
+const Vector3f& Terrain::getAmbientColor() const
+{
+	return m_ambientColor;
 }
 
 

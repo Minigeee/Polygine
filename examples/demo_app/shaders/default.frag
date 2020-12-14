@@ -33,6 +33,7 @@ out vec4 f_color;
 
 uniform vec3 u_cameraPos;
 
+uniform vec3 u_ambient;
 uniform Material u_materials[MAX_NUM_MATERIALS];
 uniform sampler2D u_diffuseMaps[MAX_NUM_MATERIALS];
 uniform sampler2D u_specularMaps[MAX_NUM_MATERIALS];
@@ -85,7 +86,7 @@ void main()
         specColor *= texture(u_specularMaps[v_materialIndex], v_texCoord).rgb;
         
     // Calculate lighting
-    vec3 result = diffColor * vec3(0.1f);
+    vec3 result = diffColor * u_ambient;
     
     // Calculate directional lighting
     for (int i = 0; i < u_numDirLights; ++i)

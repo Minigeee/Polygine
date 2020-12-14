@@ -504,7 +504,7 @@ public:
 	///////////////////////////////////////////////////////////
 	void addRenderSystem(RenderSystem* system);
 
-	void render(Camera& camera, FrameBuffer& target);
+	void render(Camera& camera, FrameBuffer& target = FrameBuffer::Default);
 
 private:
 	Handle m_handle;									//!< The scene handle used for scene id

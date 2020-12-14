@@ -22,6 +22,7 @@ out vec4 f_color;
 
 uniform vec3 u_cameraPos;
 
+uniform vec3 u_ambient;
 uniform DirLight u_dirLights[MAX_NUM_DIR_LIGHTS];
 uniform int u_numDirLights;
 
@@ -58,7 +59,7 @@ void main()
     vec3 viewDir = normalize(v_fragPos - u_cameraPos);
         
     // Calculate lighting
-    vec3 result = v_color.rgb * vec3(0.1f);
+    vec3 result = v_color.rgb * u_ambient;
     
     // Calculate directional lighting
     for (int i = 0; i < u_numDirLights; ++i)
