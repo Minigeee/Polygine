@@ -147,6 +147,13 @@ void VertexArray::draw(Uint32 instances, Uint32 offset)
 
 
 ///////////////////////////////////////////////////////////
+void VertexArray::setNumVertices(Uint32 numVertices)
+{
+	m_numVertices = numVertices;
+}
+
+
+///////////////////////////////////////////////////////////
 void VertexArray::setDrawMode(DrawMode mode)
 {
 	m_drawMode = mode;

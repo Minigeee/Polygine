@@ -117,6 +117,14 @@ public:
 	void draw(Uint32 instances = 1, Uint32 offset = 0);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Set the number of vertices
+	///
+	/// \param numVertices Set the number of vertices
+	///
+	///////////////////////////////////////////////////////////
+	void setNumVertices(Uint32 numVertices);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Set the draw mode
 	///
 	/// \param mode The draw mode
