@@ -22,7 +22,7 @@ struct Particle
 {
 	int m_type;					//!< The type of particle (standard or emitter)
 	Vector3f m_position;		//!< The position of the particle
-	Vector2f m_scale;			//!< The scale of the particle quad
+	Vector2f m_size;			//!< The size of the particle quad
 	float m_rotation;			//!< The rotation of the particle in degrees (along the z-axis relative to the camera)
 	Vector2f m_texCoords;		//!< The top left position of the texture rectangle (in texture coordinate space)
 	Vector2f m_texSize;			//!< The size of the texture rectangle (in texture coordinate space)
@@ -69,7 +69,6 @@ private:
 	};
 
 	static VertexArray s_vertexArray;
-	static VertexBuffer s_vertexBuffer;
 	static Shader s_shader;
 
 	VertexArray& getVertexArray();

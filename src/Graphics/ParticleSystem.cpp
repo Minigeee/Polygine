@@ -13,7 +13,7 @@ void bindParticleBuffer(VertexArray& vao, VertexBuffer& vbo)
 {
 	vao.addBuffer(vbo, 0, 1, sizeof(Particle), 0 * sizeof(float), 1, GLType::Int32);	// Type
 	vao.addBuffer(vbo, 1, 3, sizeof(Particle), 1 * sizeof(float), 1);					// Position
-	vao.addBuffer(vbo, 2, 2, sizeof(Particle), 4 * sizeof(float), 1);					// Scale
+	vao.addBuffer(vbo, 2, 2, sizeof(Particle), 4 * sizeof(float), 1);					// Size
 	vao.addBuffer(vbo, 3, 1, sizeof(Particle), 6 * sizeof(float), 1);					// Rotation
 	vao.addBuffer(vbo, 4, 2, sizeof(Particle), 7 * sizeof(float), 1);					// Tex coords
 	vao.addBuffer(vbo, 5, 2, sizeof(Particle), 8 * sizeof(float), 1);					// Tex size
@@ -195,22 +195,10 @@ VertexArray& ParticleSystem::getVertexArray()
 {
 	if (!s_vertexArray.getId())
 	{
-		float vertices[] =
-		{
-			-1.0f,  1.0f,
-			-1.0f, -1.0f,
-			 1.0f,  1.0f,
-
-			-1.0f, -1.0f,
-			 1.0f, -1.0f,
-			 1.0f,  1.0f
-		};
-
-		// Create vertex buffer
-		s_vertexBuffer.create(vertices, 12);
-
-		// Add to buffer
-		s_vertexArray.addBuffer(s_vertexBuffer, 8, 2);
+		// Set vertex array parameters
+		s_vertexArray.bind();
+		s_vertexArray.setDrawMode(DrawMode::Points);
+		s_vertexArray.setNumVertices(1);
 	}
 
 	return s_vertexArray;
@@ -223,6 +211,7 @@ Shader& ParticleSystem::getShader()
 	if (!s_shader.getId())
 	{
 		s_shader.load("particles/particle.vert", Shader::Vertex);
+		s_shader.load("particles/particle.geom", Shader::Geometry);
 		s_shader.load("particles/particle.frag", Shader::Fragment);
 		s_shader.compile();
 	}
