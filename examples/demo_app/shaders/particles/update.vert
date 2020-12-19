@@ -11,7 +11,7 @@ layout (location = 7) in vec3 a_velocity;
 layout (location = 8) in float a_angularVelocity;
 layout (location = 9) in float a_elapsed;
 
-out flat int v_type;
+flat out int v_type;
 out vec3 v_position;
 out vec2 v_size;
 out float v_rotation;

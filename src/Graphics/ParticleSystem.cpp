@@ -11,6 +11,7 @@ namespace priv
 ///////////////////////////////////////////////////////////
 void bindParticleBuffer(VertexArray& vao, VertexBuffer& vbo)
 {
+	vbo.bind(BufferTarget::Array);
 	vao.addBuffer(vbo, 0, 1, sizeof(Particle), 0 * sizeof(float), 1, GLType::Int32);	// Type
 	vao.addBuffer(vbo, 1, 3, sizeof(Particle), 1 * sizeof(float), 1);					// Position
 	vao.addBuffer(vbo, 2, 2, sizeof(Particle), 4 * sizeof(float), 1);					// Size
@@ -23,6 +24,27 @@ void bindParticleBuffer(VertexArray& vao, VertexBuffer& vbo)
 	vao.addBuffer(vbo, 9, 1, sizeof(Particle), 19 * sizeof(float), 1);					// Time elapsed
 }
 
+
+}
+
+
+///////////////////////////////////////////////////////////
+Shader ParticleSystem::s_shader;
+
+
+///////////////////////////////////////////////////////////
+Particle::Particle() :
+	m_type				(0),
+	m_position			(0.0f),
+	m_size				(1.0f),
+	m_rotation			(0.0f),
+	m_texCoord			(0.0f),
+	m_texSize			(1.0f),
+	m_color				(1.0f),
+	m_velocity			(0.0f),
+	m_angularVelocity	(0.0f),
+	m_elapsed			(0.0f)
+{
 
 }
 
@@ -62,9 +84,6 @@ void ParticleSystem::update(float dt)
 	// Disable fragment shader
 	glCheck(glEnable(GL_RASTERIZER_DISCARD));
 
-	// Begin transform feedback
-	glCheck(glBeginTransformFeedback(GL_POINTS));
-
 	// Iterate through particle types
 	for (auto it = m_particleTypes.begin(); it != m_particleTypes.end(); ++it)
 	{
@@ -90,6 +109,9 @@ void ParticleSystem::update(float dt)
 		// Output buffer
 		outputBuffer.bind(BufferTarget::TransformFeedback, 0);
 
+		// Begin transform feedback
+		glCheck(glBeginTransformFeedback(GL_POINTS));
+
 		// Need to keep track of how many particles are output
 		Uint32 query;
 		glCheck(glGenQueries(1, &query));
@@ -102,12 +124,12 @@ void ParticleSystem::update(float dt)
 		// Update the number of particles
 		glCheck(glGetQueryObjectuiv(query, GL_QUERY_RESULT, &type->m_numInstances));
 
+		// End transform feedback
+		glCheck(glEndTransformFeedback());
+
 		// Update the type's current buffer
 		type->m_currentBuffer = nextBuffer;
 	}
-
-	// End transform feedback
-	glCheck(glEndTransformFeedback());
 
 	// Enable fragment shader
 	glCheck(glDisable(GL_RASTERIZER_DISCARD));
@@ -117,27 +139,32 @@ void ParticleSystem::update(float dt)
 ///////////////////////////////////////////////////////////
 void ParticleSystem::render(Camera& camera)
 {
+	// Bind shader and set uniforms
+	Shader& shader = getShader();
+	shader.bind();
+	shader.setUniform("u_projView", camera.getProjMatrix() * camera.getViewMatrix());
+	shader.setUniform("u_cameraPos", camera.getPosition());
+
 	// Iterate through particle types
 	for (auto it = m_particleTypes.begin(); it != m_particleTypes.end(); ++it)
 	{
 		// Get particle type struct
 		ParticleType* type = it.value();
 
-		// Bind shader and set uniforms
-		Shader& shader = getShader();
-		type->m_shader.bind();
-		type->m_shader.setUniform("u_projView", camera.getProjMatrix() * camera.getViewMatrix());
+		// Skip if no particles exist
+		if (!type->m_numInstances) continue;
+
 		// Bind the particle texture
+		shader.setUniform("u_hasTexture", (int)type->m_texture);
 		if (type->m_texture)
-			type->m_shader.setUniform("u_texture", *type->m_texture);
+			shader.setUniform("u_texture", *type->m_texture);
 
 		// Bind particle buffer
-		VertexArray& vertexArray = getVertexArray();
 		VertexBuffer& inputBuffer = type->m_vertexBuffers[type->m_currentBuffer];
-		priv::bindParticleBuffer(vertexArray, inputBuffer);
+		priv::bindParticleBuffer(type->m_vertexArray, inputBuffer);
 
 		// Draw the particles
-		vertexArray.draw(type->m_numInstances);
+		type->m_vertexArray.draw(type->m_numInstances);
 	}
 }
 
@@ -150,15 +177,29 @@ void ParticleSystem::addParticleType(const std::string& shader, Uint32 maxPartic
 
 	// Allocate particle type
 	ParticleType* type = (ParticleType*)m_typePool.alloc();
+	new(type)ParticleType();
+
+	// Specify transform feedback variables
+	std::vector<const char*> varyings;
+	varyings.push_back("g_type");
+	varyings.push_back("g_position");
+	varyings.push_back("g_size");
+	varyings.push_back("g_rotation");
+	varyings.push_back("g_texCoord");
+	varyings.push_back("g_texSize");
+	varyings.push_back("g_color");
+	varyings.push_back("g_velocity");
+	varyings.push_back("g_angularVelocity");
+	varyings.push_back("g_elapsed");
 
 	// Load update shader
-	type->m_shader.load("particles/update.vert", Shader::Vertex);
+	type->m_shader.load("shaders/particles/update.vert", Shader::Vertex);
 	type->m_shader.load(shader, Shader::Geometry);
-	type->m_shader.compile();
+	type->m_shader.compile(varyings);
 
 	// Create vertex buffer
-	type->m_vertexBuffers[0].create((ParticleType*)0, maxParticles, BufferUsage::Dynamic);
-	type->m_vertexBuffers[1].create((ParticleType*)0, maxParticles, BufferUsage::Dynamic);
+	type->m_vertexBuffers[0].create((Particle*)0, maxParticles, BufferUsage::Dynamic);
+	type->m_vertexBuffers[1].create((Particle*)0, maxParticles, BufferUsage::Dynamic);
 
 	// Create vertex array
 	priv::bindParticleBuffer(type->m_vertexArray, type->m_vertexBuffers[0]);
@@ -191,28 +232,13 @@ void ParticleSystem::createEmitter(const std::string& shader, const Particle& em
 
 
 ///////////////////////////////////////////////////////////
-VertexArray& ParticleSystem::getVertexArray()
-{
-	if (!s_vertexArray.getId())
-	{
-		// Set vertex array parameters
-		s_vertexArray.bind();
-		s_vertexArray.setDrawMode(DrawMode::Points);
-		s_vertexArray.setNumVertices(1);
-	}
-
-	return s_vertexArray;
-}
-
-
-///////////////////////////////////////////////////////////
 Shader& ParticleSystem::getShader()
 {
 	if (!s_shader.getId())
 	{
-		s_shader.load("particles/particle.vert", Shader::Vertex);
-		s_shader.load("particles/particle.geom", Shader::Geometry);
-		s_shader.load("particles/particle.frag", Shader::Fragment);
+		s_shader.load("shaders/particles/particle.vert", Shader::Vertex);
+		s_shader.load("shaders/particles/particle.geom", Shader::Geometry);
+		s_shader.load("shaders/particles/particle.frag", Shader::Fragment);
 		s_shader.compile();
 	}
 

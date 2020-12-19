@@ -27,16 +27,16 @@ void main()
     float s = sin(v_rotation[0] * PI / 180.0f);
 
     // Calculate the three local cardinal vectors of the particle
-    vec3 front = normalize(v_position - u_cameraPos);
+    vec3 front = normalize(v_position[0] - u_cameraPos);
     vec3 right = cross(front, vec3(0, 1, 0));
     right = right * c + cross(front, right) * s + front * dot(front, right) * (1.0f - c);
     vec3 up = cross(right, front);
 
     // Get corner vertices
-    vec4 v1 = vec4(v_position - right * v_size[0].x + up * v_size[0].y, 1.0f);
-    vec4 v2 = vec4(v_position - right * v_size[0].x - up * v_size[0].y, 1.0f);
-    vec4 v3 = vec4(v_position + right * v_size[0].x + up * v_size[0].y, 1.0f);
-    vec4 v4 = vec4(v_position + right * v_size[0].x - up * v_size[0].y, 1.0f);
+    vec4 v1 = vec4(v_position[0] - right * v_size[0].x + up * v_size[0].y, 1.0f);
+    vec4 v2 = vec4(v_position[0] - right * v_size[0].x - up * v_size[0].y, 1.0f);
+    vec4 v3 = vec4(v_position[0] + right * v_size[0].x + up * v_size[0].y, 1.0f);
+    vec4 v4 = vec4(v_position[0] + right * v_size[0].x - up * v_size[0].y, 1.0f);
     v1 = u_projView * v1;
     v2 = u_projView * v2;
     v3 = u_projView * v3;

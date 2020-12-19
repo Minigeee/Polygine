@@ -20,11 +20,13 @@ namespace poly
 ///////////////////////////////////////////////////////////
 struct Particle
 {
+	Particle();
+
 	int m_type;					//!< The type of particle (standard or emitter)
 	Vector3f m_position;		//!< The position of the particle
 	Vector2f m_size;			//!< The size of the particle quad
 	float m_rotation;			//!< The rotation of the particle in degrees (along the z-axis relative to the camera)
-	Vector2f m_texCoords;		//!< The top left position of the texture rectangle (in texture coordinate space)
+	Vector2f m_texCoord;		//!< The top left position of the texture rectangle (in texture coordinate space)
 	Vector2f m_texSize;			//!< The size of the texture rectangle (in texture coordinate space)
 	Colorf m_color;				//!< The color of the particle
 	Vector3f m_velocity;		//!< The velocity of the particle
@@ -68,10 +70,7 @@ private:
 		std::function<void(Shader&)> m_updateFunc;
 	};
 
-	static VertexArray s_vertexArray;
 	static Shader s_shader;
-
-	VertexArray& getVertexArray();
 
 	Shader& getShader();
 

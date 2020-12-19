@@ -118,7 +118,7 @@ bool Shader::load(const std::string& fname, Shader::Type type)
 
 
 ///////////////////////////////////////////////////////////
-bool Shader::compile()
+bool Shader::compile(const std::vector<const char*>& feedback)
 {
 	// Don't compile if already compiled before
 	if (m_id) return true;
@@ -128,7 +128,11 @@ bool Shader::compile()
 
 	// Attach shaders
 	for (Uint32 i = 0; i < m_shaders.size(); ++i)
-		glAttachShader(m_id, m_shaders[i]);
+		glCheck(glAttachShader(m_id, m_shaders[i]));
+
+	// Add feedback variables
+	if (feedback.size())
+		glCheck(glTransformFeedbackVaryings(m_id, feedback.size(), &feedback[0], GL_INTERLEAVED_ATTRIBS));
 
 	// Link the program
 	glCheck(glLinkProgram(m_id));

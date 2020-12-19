@@ -6,10 +6,13 @@ in vec4 g_color;
 out vec4 f_color;
 
 uniform sampler2D u_texture;
+uniform bool u_hasTexture;
 
 
 ///////////////////////////////////////////////////////////
 void main()
 {
-    f_color = texture(u_texture, g_texCoord) * g_color;
+    f_color = g_color;
+    if (u_hasTexture)
+        f_color *= texture(u_texture, g_texCoord);
 }

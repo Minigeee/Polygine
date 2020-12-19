@@ -13,6 +13,7 @@
 #include <poly/Graphics/Image.h>
 #include <poly/Graphics/Model.h>
 #include <poly/Graphics/Octree.h>
+#include <poly/Graphics/ParticleSystem.h>
 #include <poly/Graphics/PostProcess.h>
 #include <poly/Graphics/Shader.h>
 #include <poly/Graphics/Skeleton.h>
@@ -106,6 +107,17 @@ int main()
     Octree octree;
     octree.create();
     scene.addRenderSystem(&octree);
+
+    Particle particle;
+    particle.m_type = 0;
+    particle.m_size = Vector2f(0.05f);
+    particle.m_position = Vector3f(0.0f, 55.0f, 0.0f);
+    particle.m_velocity = Vector3f(0.0f);
+
+    ParticleSystem particles;
+    particles.addParticleType("shaders/particles/test.geom", 500);
+    particles.createEmitter("shaders/particles/test.geom", particle);
+    scene.addRenderSystem(&particles);
 
     ProceduralSkybox skybox;
     terrain.setAmbientColor(skybox.getAmbientColor() * 0.2f);
@@ -218,6 +230,7 @@ int main()
 
         // Render scene
         // octree.update();
+        particles.update(elapsed);
         scene.render(camera, framebuffer);
         colorAdjust.render(framebuffer);
 
