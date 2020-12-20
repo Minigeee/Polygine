@@ -4,48 +4,51 @@
 namespace poly
 {
 
-namespace priv
-{
-
-
-///////////////////////////////////////////////////////////
-void bindParticleBuffer(VertexArray& vao, VertexBuffer& vbo)
-{
-	vbo.bind(BufferTarget::Array);
-	vao.addBuffer(vbo, 0, 1, sizeof(Particle), 0 * sizeof(float), 1, GLType::Int32);	// Type
-	vao.addBuffer(vbo, 1, 3, sizeof(Particle), 1 * sizeof(float), 1);					// Position
-	vao.addBuffer(vbo, 2, 2, sizeof(Particle), 4 * sizeof(float), 1);					// Size
-	vao.addBuffer(vbo, 3, 1, sizeof(Particle), 6 * sizeof(float), 1);					// Rotation
-	vao.addBuffer(vbo, 4, 2, sizeof(Particle), 7 * sizeof(float), 1);					// Tex coords
-	vao.addBuffer(vbo, 5, 2, sizeof(Particle), 8 * sizeof(float), 1);					// Tex size
-	vao.addBuffer(vbo, 6, 4, sizeof(Particle), 11 * sizeof(float), 1);					// Color
-	vao.addBuffer(vbo, 7, 3, sizeof(Particle), 15 * sizeof(float), 1);					// Velocity
-	vao.addBuffer(vbo, 8, 1, sizeof(Particle), 18 * sizeof(float), 1);					// Angular velocity
-	vao.addBuffer(vbo, 9, 1, sizeof(Particle), 19 * sizeof(float), 1);					// Time elapsed
-}
-
-
-}
-
 
 ///////////////////////////////////////////////////////////
 Shader ParticleSystem::s_shader;
 
 
 ///////////////////////////////////////////////////////////
-Particle::Particle() :
-	m_type				(0),
-	m_position			(0.0f),
-	m_size				(1.0f),
-	m_rotation			(0.0f),
-	m_texCoord			(0.0f),
-	m_texSize			(1.0f),
-	m_color				(1.0f),
-	m_velocity			(0.0f),
-	m_angularVelocity	(0.0f),
-	m_elapsed			(0.0f)
+ParticleType::ParticleType() :
+	m_texture		(0),
+	m_particleSize	(0),
+	m_numParticles	(0),
+	m_currentBuffer	(0)
 {
 
+}
+
+
+///////////////////////////////////////////////////////////
+void ParticleType::setUpdateShader(const std::string& fname)
+{
+	// Can only set update shader if it hasn't been loaded yet
+	if (m_shader.getId()) return;
+
+	// Specify transform feedback variables
+	std::vector<const char*> varyings;
+	for (Uint32 i = 0; i < m_fields.size(); ++i)
+		varyings.push_back(m_fields[i].m_uniform.c_str());
+
+	// Load update shader
+	m_shader.load("shaders/particles/update.vert", Shader::Vertex);
+	m_shader.load(fname, Shader::Geometry);
+	m_shader.compile(varyings);
+}
+
+
+///////////////////////////////////////////////////////////
+void ParticleType::setUpdateFunc(const std::function<void(Shader&)>& func)
+{
+	m_updateFunc = func;
+}
+
+
+///////////////////////////////////////////////////////////
+void ParticleType::setTexture(Texture* texture)
+{
+	m_texture = texture;
 }
 
 
@@ -104,7 +107,19 @@ void ParticleSystem::update(float dt)
 		VertexBuffer& outputBuffer = type->m_vertexBuffers[nextBuffer];
 
 		// Input buffer
-		priv::bindParticleBuffer(type->m_vertexArray, inputBuffer);
+		std::vector<ParticleType::ParticleField>& fields = type->m_fields;
+		for (Uint32 i = 0; i < fields.size(); ++i)
+		{
+			type->m_vertexArray.addBuffer(
+				inputBuffer,
+				i,
+				fields[i].m_size / 4,
+				type->m_particleSize,
+				fields[i].m_offset,
+				1,
+				fields[i].m_isFloatType ? GLType::Float : GLType::Int32
+			);
+		}
 
 		// Output buffer
 		outputBuffer.bind(BufferTarget::TransformFeedback, 0);
@@ -118,11 +133,11 @@ void ParticleSystem::update(float dt)
 
 		// Update particles
 		glCheck(glBeginQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, query));
-		type->m_vertexArray.draw(type->m_numInstances);
+		type->m_vertexArray.draw(type->m_numParticles);
 		glCheck(glEndQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN));
 
 		// Update the number of particles
-		glCheck(glGetQueryObjectuiv(query, GL_QUERY_RESULT, &type->m_numInstances));
+		glCheck(glGetQueryObjectuiv(query, GL_QUERY_RESULT, &type->m_numParticles));
 
 		// End transform feedback
 		glCheck(glEndTransformFeedback());
@@ -152,7 +167,7 @@ void ParticleSystem::render(Camera& camera)
 		ParticleType* type = it.value();
 
 		// Skip if no particles exist
-		if (!type->m_numInstances) continue;
+		if (!type->m_numParticles) continue;
 
 		// Bind the particle texture
 		shader.setUniform("u_hasTexture", (int)type->m_texture);
@@ -161,73 +176,23 @@ void ParticleSystem::render(Camera& camera)
 
 		// Bind particle buffer
 		VertexBuffer& inputBuffer = type->m_vertexBuffers[type->m_currentBuffer];
-		priv::bindParticleBuffer(type->m_vertexArray, inputBuffer);
+		std::vector<ParticleType::ParticleField>& fields = type->m_fields;
+		for (Uint32 i = 0; i < fields.size(); ++i)
+		{
+			type->m_vertexArray.addBuffer(
+				inputBuffer,
+				i,
+				fields[i].m_size / 4,
+				type->m_particleSize,
+				fields[i].m_offset,
+				1,
+				fields[i].m_isFloatType ? GLType::Float : GLType::Int32
+			);
+		}
 
 		// Draw the particles
-		type->m_vertexArray.draw(type->m_numInstances);
+		type->m_vertexArray.draw(type->m_numParticles);
 	}
-}
-
-
-///////////////////////////////////////////////////////////
-void ParticleSystem::addParticleType(const std::string& shader, Uint32 maxParticles, Texture* texture, std::function<void(Shader&)>&& update)
-{
-	// Check if the shader has already been added
-	if (m_particleTypes.find(shader) != m_particleTypes.end()) return;
-
-	// Allocate particle type
-	ParticleType* type = (ParticleType*)m_typePool.alloc();
-	new(type)ParticleType();
-
-	// Specify transform feedback variables
-	std::vector<const char*> varyings;
-	varyings.push_back("g_type");
-	varyings.push_back("g_position");
-	varyings.push_back("g_size");
-	varyings.push_back("g_rotation");
-	varyings.push_back("g_texCoord");
-	varyings.push_back("g_texSize");
-	varyings.push_back("g_color");
-	varyings.push_back("g_velocity");
-	varyings.push_back("g_angularVelocity");
-	varyings.push_back("g_elapsed");
-
-	// Load update shader
-	type->m_shader.load("shaders/particles/update.vert", Shader::Vertex);
-	type->m_shader.load(shader, Shader::Geometry);
-	type->m_shader.compile(varyings);
-
-	// Create vertex buffer
-	type->m_vertexBuffers[0].create((Particle*)0, maxParticles, BufferUsage::Dynamic);
-	type->m_vertexBuffers[1].create((Particle*)0, maxParticles, BufferUsage::Dynamic);
-
-	// Create vertex array
-	priv::bindParticleBuffer(type->m_vertexArray, type->m_vertexBuffers[0]);
-	type->m_vertexArray.setDrawMode(DrawMode::Points);
-	type->m_vertexArray.setNumVertices(1);
-
-	// Set the number of instances and texture
-	type->m_texture = texture;
-	type->m_numInstances = 0;
-
-	// Update function
-	type->m_updateFunc = update;
-
-	// Add to map
-	m_particleTypes[shader] = type;
-}
-
-
-///////////////////////////////////////////////////////////
-void ParticleSystem::createEmitter(const std::string& shader, const Particle& emitter)
-{
-	// Find the particle type
-	auto it = m_particleTypes.find(shader);
-	if (it == m_particleTypes.end()) return;
-	ParticleType* type = it.value();
-
-	// Update vertex buffer
-	type->m_vertexBuffers[type->m_currentBuffer].update(&emitter, 1, type->m_numInstances++);
 }
 
 

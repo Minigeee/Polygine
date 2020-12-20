@@ -115,8 +115,6 @@ int main()
     particle.m_velocity = Vector3f(0.0f);
 
     ParticleSystem particles;
-    particles.addParticleType("shaders/particles/test.geom", 500);
-    particles.createEmitter("shaders/particles/test.geom", particle);
     scene.addRenderSystem(&particles);
 
     ProceduralSkybox skybox;
@@ -250,3 +248,4 @@ int main()
 // TODO : Document PostProcess
 // TODO : Document RenderSystem
 // TODO : Document SkyBox
+// TODO : Document ParticleSystem
