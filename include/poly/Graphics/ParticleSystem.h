@@ -92,10 +92,10 @@ public:
 	/// color, or any custom per-particle data that is needed for
 	/// the particle shader to work correctly. The order the fields
 	/// are added must match the order they are defined in the particle
-	/// struct, and this order must match the order of the vertex
-	/// shader inputs. There are six fields that are required for
-	/// every particle type, and these fields must be added first before
-	/// any other custom fields are added:
+	/// struct, and this order must be consistent between the update shader
+	/// outputs and the rendering shader inputs. There are six fields that
+	/// are required for every particle type, and these fields must be 
+	/// added first before any other custom fields are added:
 	///
 	/// \li Position
 	/// \li Size
@@ -104,28 +104,68 @@ public:
 	/// \li Texture Coord
 	/// \li Texture Size
 	///
-	/// The output variable names of the previous fields must be defined as:
+	/// These fields are required becuase the are needed to render the
+	/// particles correctly.
 	///
-	/// \li g_position
-	/// \li g_size
-	/// \li g_rotation
-	/// \li g_color
-	/// \li g_texCoord
-	/// \li g_texSize
-	///
-	/// Where the "g_" prefix indicates that the variable is an output variable
-	/// that comes from the geometry shader.
+	/// The output variable names of the update geometry shader must be
+	/// specified in the \a name in the same order.
 	///
 	/// Also, all particle fields must be added before setting the particle
 	/// update shader, so the shader compiler knows which output variables
 	/// to capture.
 	///
-	/// Usage example:
+	/// So assuming the gemoetry update shader contains the following code:
+	/// \code
+	///
+	/// // shaders/particles/test.geom
+	/// #version 330 core
+	///
+	/// layout(points) in;
+	/// layout(points, max_vertices = 10) out;
+	///
+	/// // Required fields
+	/// in vec3 v_position[];
+	/// in vec2 v_size[];
+	/// in float v_rotation[];
+	/// in vec4 v_color[];
+	/// in vec2 v_texCoord[];
+	/// in vec2 v_texSize[];
+	///
+	/// // Additional fields
+	/// flat in int v_type[];
+	/// in vec3 v_velocity[];
+	/// in float v_angularVelocity[];
+	/// in float v_elapsed[];
+	///
+	/// // Output variables must be defined in the same order
+	/// // as the particle struct
+	/// out vec3 g_position;
+	/// out vec2 g_size;
+	/// out float g_rotation;
+	/// out vec4 g_color;
+	/// out vec2 g_texCoord;
+	/// out vec2 g_texSize;
+	///
+	/// flat out int g_type;
+	/// out vec3 g_velocity;
+	/// out float g_angularVelocity;
+	/// out float g_elapsed;
+	///
+	/// // All update shaders should have a uniform that tells how much
+	/// // time has passed since the last frame
+	/// uniform float u_elapsed;
+	///
+	/// \endcode
+	///
+	/// Then the particle type should be initialized like this:
+	///
 	/// \code
 	///
 	/// using namespace poly;
 	///
-	/// struct FireParticle
+	/// // When defining the particle struct, make sure all the particle fields
+	/// // are defined in the same order as the update shader
+	/// struct TestParticle
 	/// {
 	///		// The following 6 fields must be defined in this order
 	///		Vector3f m_position;
@@ -142,9 +182,16 @@ public:
 	///		float m_elapsed;
 	/// };
 	///
+	/// // Create the particle system
 	/// ParticleSystem system;
 	///
 	/// // The fields must be added in the order they are defined
+	/// // The "name" parameter of the addField() function should be the
+	/// // name of the output variable from the update geometry shader
+	///
+	/// // In this case, all the fields are prefixed with "g_" to match
+	/// // the shader shown previously
+	///
 	/// system.addField<FireParticle, Vector3f>("g_position");
 	/// system.addField<FireParticle, Vector2f>("g_size");
 	/// system.addField<FireParticle, float>("g_rotation");
@@ -157,8 +204,7 @@ public:
 	/// system.addField<FireParticle, float>("g_elapsed");
 	///
 	/// // After adding all the particle fields, set the update shader
-	/// system.setUpdateUniform<FireParticle>("shaders/particles/fire.geom");
-	///
+	/// system.setUpdateUniform<FireParticle>("shaders/particles/test.geom");
 	///
 	/// \endcode
 	///

@@ -108,12 +108,6 @@ int main()
     octree.create();
     scene.addRenderSystem(&octree);
 
-    Particle particle;
-    particle.m_type = 0;
-    particle.m_size = Vector2f(0.05f);
-    particle.m_position = Vector3f(0.0f, 55.0f, 0.0f);
-    particle.m_velocity = Vector3f(0.0f);
-
     ParticleSystem particles;
     scene.addRenderSystem(&particles);
 
