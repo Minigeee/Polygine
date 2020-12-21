@@ -59,10 +59,19 @@ int main()
     Model model;
     model.load("models/character/character.dae");
 
+    Skeleton skeleton("models/character/character.dae");
+    Animation animation("models/character/character.dae", "Armature");
+    skeleton.setAnimation(&animation);
+
     Shader shader;
     shader.load("shaders/default.vert", Shader::Vertex);
     shader.load("shaders/default.frag", Shader::Fragment);
     shader.compile();
+
+    Shader animShader;
+    animShader.load("shaders/animated.vert", Shader::Vertex);
+    animShader.load("shaders/default.frag", Shader::Fragment);
+    animShader.compile();
 
     Camera camera;
     camera.setPosition(0.0f, 50.0f, 0.0f);
@@ -108,11 +117,8 @@ int main()
     octree.create();
     scene.addRenderSystem(&octree);
 
-    ParticleSystem particles;
-    scene.addRenderSystem(&particles);
-
     ProceduralSkybox skybox;
-    terrain.setAmbientColor(skybox.getAmbientColor() * 0.2f);
+    terrain.setAmbientColor(skybox.getAmbientColor() * 0.3f);
     scene.addRenderSystem(&skybox);
 
     DirLightComponent sun;
@@ -125,8 +131,9 @@ int main()
     TransformComponent t;
     t.m_position.y = 65.0f;
     t.m_scale = Vector3f(0.25f);
-    RenderComponent r(&model, &shader);
-    scene.createEntity(t, r, DynamicTag());
+    RenderComponent r(&model, &animShader);
+    scene.createEntity(t, r, AnimationComponent(&skeleton), DynamicTag());
+    r.m_shader = &shader;
     t.m_position.x = 5.0f;
     scene.createEntity(t, r);
     t.m_position.x = -5.0f;
@@ -221,8 +228,8 @@ int main()
             camera.move(normalize(move) * elapsed * 3.4f);
 
         // Render scene
+        skeleton.update(elapsed);
         // octree.update();
-        particles.update(elapsed);
         scene.render(camera, framebuffer);
         colorAdjust.render(framebuffer);
 

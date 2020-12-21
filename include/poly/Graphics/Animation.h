@@ -54,6 +54,17 @@ public:
 	///////////////////////////////////////////////////////////
 	/// \brief Load an animation from a model file
 	///
+	/// \param fname The model file to load the animation from
+	/// \param fname The name of the animation to load
+	///
+	/// \see load()
+	///
+	///////////////////////////////////////////////////////////
+	Animation(const std::string& fname, const std::string& name);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Load an animation from a model file
+	///
 	/// Loading an animation from a file only works for model file
 	/// formats that are supported by ASSIMP and can hold animation
 	/// data (i.e. COLLADA/DAE). Only one animation can be loaded

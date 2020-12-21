@@ -23,6 +23,13 @@ public:
 	///////////////////////////////////////////////////////////
 	Bone();
 
+#ifndef DOXYGEN_SKIP
+	Bone(const Bone&) = delete;
+	Bone(Bone&&) = default;
+	Bone& operator=(const Bone&) = delete;
+	Bone& operator=(Bone&&) = default;
+#endif
+
 	///////////////////////////////////////////////////////////
 	/// \brief Create a bone from a name and an id
 	///

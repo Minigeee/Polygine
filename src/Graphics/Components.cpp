@@ -7,8 +7,7 @@ namespace poly
 ///////////////////////////////////////////////////////////
 RenderComponent::RenderComponent() :
 	m_model		(0),
-	m_shader	(0),
-	m_skeleton	(0)
+	m_shader	(0)
 {
 
 }
@@ -17,8 +16,23 @@ RenderComponent::RenderComponent() :
 ///////////////////////////////////////////////////////////
 RenderComponent::RenderComponent(Model* model, Shader* shader) :
 	m_model		(model),
-	m_shader	(shader),
-	m_skeleton	(0)
+	m_shader	(shader)
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
+AnimationComponent::AnimationComponent() :
+	m_skeleton		(0)
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
+AnimationComponent::AnimationComponent(Skeleton* skeleton) :
+	m_skeleton		(skeleton)
 {
 
 }

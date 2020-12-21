@@ -6,6 +6,7 @@
 namespace poly
 {
 
+class Animation;
 class Model;
 class Shader;
 class Skeleton;
@@ -33,7 +34,32 @@ struct RenderComponent
 
 	Model* m_model;			//!< The model to render
 	Shader* m_shader;		//!< The shader to render the model with
-	Skeleton* m_skeleton;	//!< The skeleton to apply to the model
+};
+
+
+///////////////////////////////////////////////////////////
+/// \brief A component that contains a skeleton that can have an animation
+///	       applied to it. This will apply the skeleton to entities that also
+///        contain a render component.
+///
+///////////////////////////////////////////////////////////
+struct AnimationComponent
+{
+	///////////////////////////////////////////////////////////
+	/// \brief Default constructor
+	///
+	///////////////////////////////////////////////////////////
+	AnimationComponent();
+
+	///////////////////////////////////////////////////////////
+	/// \brief Create the component from a pointer to a skeleton
+	///
+	/// \param skeleton A pointer to a skeleton object
+	///
+	///////////////////////////////////////////////////////////
+	AnimationComponent(Skeleton* skeleton);
+
+	Skeleton* m_skeleton;	//!< The skeleton to apply to a render component
 };
 
 
@@ -45,6 +71,9 @@ struct DirLightComponent
 {
 	///////////////////////////////////////////////////////////
 	/// \brief Default constructor
+	///
+	/// Creates a light with white diffuse and specular colors, that
+	/// points in the negative y-axis.
 	///
 	///////////////////////////////////////////////////////////
 	DirLightComponent();

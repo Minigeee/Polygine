@@ -321,9 +321,13 @@ void Octree::add(Entity::Id entity)
 	ASSERT(m_scene, "The octree must be initialized before using, by calling the init() function");
 
 	// Get component data
-	auto components = m_scene->getComponents<TransformComponent, RenderComponent>(entity);
+	auto components = m_scene->getComponents<TransformComponent, RenderComponent, AnimationComponent>(entity);
 	RenderComponent& r = *components.get<RenderComponent*>();
 	TransformComponent& t = *components.get<TransformComponent*>();
+	AnimationComponent* a = components.get<AnimationComponent*>();
+
+	// Get skeleton pointer
+	Skeleton* skeleton = a ? a->m_skeleton : 0;
 
 	// Get transform matrix
 	Matrix4f transform = toTransformMatrix(t.m_position, t.m_rotation, t.m_scale);
@@ -381,7 +385,7 @@ void Octree::add(Entity::Id entity)
 		if (
 			group.m_model == r.m_model &&
 			group.m_shader == r.m_shader && 
-			group.m_skeleton == r.m_skeleton)
+			group.m_skeleton == skeleton)
 		{
 			data->m_group = i;
 			groupExists = true;
@@ -396,7 +400,7 @@ void Octree::add(Entity::Id entity)
 		RenderGroup group;
 		group.m_model = r.m_model;
 		group.m_shader = r.m_shader;
-		group.m_skeleton = r.m_skeleton;
+		group.m_skeleton = skeleton;
 		m_renderGroups.push_back(group);
 	}
 

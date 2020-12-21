@@ -81,6 +81,53 @@ void applyAnimation(Bone* bone, Animation* animation, float time)
 }
 
 
+///////////////////////////////////////////////////////////
+void freeBone(Bone* bone, ObjectPool& pool)
+{
+	// Skip if the bone does not exist
+	if (!bone) return;
+
+	// Free children first
+	for (Uint32 i = 0; i < bone->getChildren().size(); ++i)
+		freeBone(bone->getChildren()[i], pool);
+
+	// Call bone destructor
+	bone->~Bone();
+
+	// Free from the object pool
+	pool.free(bone);
+}
+
+
+///////////////////////////////////////////////////////////
+Bone* copyBone(Bone* bone, Bone* parent, ObjectPool& pool)
+{
+	// Skip if the source bone does not exist
+	if (!bone) return 0;
+
+	// Allocate space for new bone
+	Bone* newBone = (Bone*)pool.alloc();
+
+	// Use name and id constructor
+	new(newBone)Bone(bone->getName(), bone->getId());
+
+	// Set offset and local transform
+	newBone->setOffset(bone->getOffset());
+	newBone->setTransform(bone->getLocalTransform());
+
+	// Add to parent bone
+	if (parent)
+		parent->addBone(newBone);
+
+	// For each child bone from the original bone, copy the child bone
+	for (Uint32 i = 0; i < bone->getChildren().size(); ++i)
+		copyBone(bone->getChildren()[i], newBone, pool);
+
+	// Return the new bone
+	return newBone;
+}
+
+
 }
 
 
@@ -93,6 +140,61 @@ Skeleton::Skeleton() :
 	m_animSpeed			(1.0f)
 {
 
+}
+
+
+///////////////////////////////////////////////////////////
+Skeleton::Skeleton(const std::string& fname) :
+	m_root				(0),
+	m_bonePool			(sizeof(Bone), 10),
+	m_animation			(0),
+	m_animTime			(0.0f),
+	m_animSpeed			(1.0f)
+{
+	load(fname);
+}
+
+
+///////////////////////////////////////////////////////////
+Skeleton::Skeleton(const Skeleton& skeleton) :
+	m_root				(0),
+	m_bonePool			(sizeof(Bone), 10),
+	m_animation			(skeleton.m_animation),
+	m_animTime			(skeleton.m_animTime),
+	m_animSpeed			(skeleton.m_animSpeed)
+{
+	// Do a depth first search and copy all bones to the new object pool
+	m_root = priv::copyBone(skeleton.m_root, 0, m_bonePool);
+}
+
+
+///////////////////////////////////////////////////////////
+Skeleton& Skeleton::operator=(const Skeleton& skeleton)
+{
+	if (this != &skeleton)
+	{
+		// Free all previous bones
+		priv::freeBone(m_root, m_bonePool);
+
+		// Reset the object pool
+		m_bonePool.reset();
+		m_animation = skeleton.m_animation;
+		m_animTime = skeleton.m_animTime;
+		m_animSpeed = skeleton.m_animSpeed;
+
+		// Do a depth first search and copy all bones to the new object pool
+		m_root = priv::copyBone(skeleton.m_root, 0, m_bonePool);
+	}
+
+	return *this;
+}
+
+
+///////////////////////////////////////////////////////////
+Skeleton::~Skeleton()
+{
+	// Call all bone destructors
+	priv::freeBone(m_root, m_bonePool);
 }
 
 

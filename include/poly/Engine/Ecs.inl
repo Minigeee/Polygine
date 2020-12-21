@@ -141,8 +141,8 @@ inline C* ComponentData<C>::getComponent(Uint16 sceneId, Uint32 groupId, Uint16 
 	if (sceneId >= m_data.size()) return 0;
 
 	// Return ptr to component
-	std::vector<C>& group = m_data[sceneId][groupId];
-	return index < group.size() ? &group[index] : 0;
+	auto it = m_data[sceneId].find(groupId);
+	return it == m_data[sceneId].end() ? 0 : &it.value()[index];
 }
 
 template <typename C>

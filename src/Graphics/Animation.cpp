@@ -86,6 +86,15 @@ Animation::Animation() :
 
 
 ///////////////////////////////////////////////////////////
+Animation::Animation(const std::string& fname, const std::string& name) :
+	m_duration			(0.0f),
+	m_ticksPerSecond	(0.0f)
+{
+	load(fname, name);
+}
+
+
+///////////////////////////////////////////////////////////
 bool Animation::load(const std::string& fname, const std::string& name)
 {
 	// Load the scene

@@ -27,6 +27,27 @@ public:
 	Skeleton();
 
 	///////////////////////////////////////////////////////////
+	/// \brief Load a skeleton from a model file
+	///
+	/// \param fname The model file to load the skeleton from
+	///
+	/// \see load()
+	///
+	///////////////////////////////////////////////////////////
+	Skeleton(const std::string& fname);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Correctly deinitializes bones from the object pool
+	///
+	///////////////////////////////////////////////////////////
+	~Skeleton();
+
+#ifndef DOXYGEN_SKIP
+	Skeleton(const Skeleton& skeleton);
+	Skeleton& operator=(const Skeleton& skeleton);
+#endif
+
+	///////////////////////////////////////////////////////////
 	/// \brief Load a skeleton from a file
 	///
 	/// Any model file format that is able to be loaded by Assimp
