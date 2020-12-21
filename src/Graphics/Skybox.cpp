@@ -91,6 +91,8 @@ bool Skybox::load(const std::string& fname, Side side)
     // Set texture
     GLenum dtype = (GLenum)image.getDataType();
     glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + (int)side, 0, GL_RGB, image.getWidth(), image.getHeight(), 0, GL_RGB, dtype, image.getData());
+
+    return true;
 }
 
 

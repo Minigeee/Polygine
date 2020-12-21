@@ -13,6 +13,7 @@
 #include <poly/Graphics/Image.h>
 #include <poly/Graphics/Model.h>
 #include <poly/Graphics/Octree.h>
+#include <poly/Graphics/ParticleSystem.h>
 #include <poly/Graphics/PostProcess.h>
 #include <poly/Graphics/Shader.h>
 #include <poly/Graphics/Skeleton.h>
@@ -107,12 +108,15 @@ int main()
     octree.create();
     scene.addRenderSystem(&octree);
 
+    ParticleSystem particles;
+    scene.addRenderSystem(&particles);
+
     ProceduralSkybox skybox;
-    terrain.setAmbientColor(skybox.getAmbientColor() * 0.1f);
+    terrain.setAmbientColor(skybox.getAmbientColor() * 0.2f);
     scene.addRenderSystem(&skybox);
 
     DirLightComponent sun;
-    // sun.m_diffuse = Vector3f(0.08f, 0.15f, 0.25f) * 0.2f;
+    // sun.m_diffuse = Vector3f(0.08f, 0.15f, 0.25f) * 0.4f;
     sun.m_diffuse = Vector3f(0.9f, 0.9f, 0.8f);
     sun.m_specular = sun.m_diffuse * 0.2f;
     sun.m_direction.z = 2.0f;
@@ -218,6 +222,7 @@ int main()
 
         // Render scene
         // octree.update();
+        particles.update(elapsed);
         scene.render(camera, framebuffer);
         colorAdjust.render(framebuffer);
 
@@ -236,3 +241,5 @@ int main()
 // TODO : Document FrameBuffer
 // TODO : Document PostProcess
 // TODO : Document RenderSystem
+// TODO : Document SkyBox
+// TODO : Document ParticleSystem

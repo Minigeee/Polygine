@@ -96,12 +96,14 @@ public:
 	/// to be useable. All shaders that have been loaded using load()
 	/// will be linked into the final shader program.
 	///
+	/// \param feedback A list of transform feedback variables to retrieve
+	///
 	/// \return True if the shaders successfully link
 	///
 	/// \see load
 	///
 	///////////////////////////////////////////////////////////
-	bool compile();
+	bool compile(const std::vector<const char*>& feedback = std::vector<const char*>());
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the value of a uniform (shader variable)
