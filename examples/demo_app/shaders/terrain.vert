@@ -12,6 +12,7 @@ out vec4 v_color;
 
 uniform mat4 u_projView;
 uniform vec3 u_cameraPos;
+uniform vec4 u_clipPlanes[4];
 
 uniform float u_size;
 uniform float u_height;
@@ -20,6 +21,8 @@ uniform float u_blendLodDist;
 uniform sampler2D u_heightMap;
 uniform sampler2D u_normalMap;
 uniform sampler2D u_colorMap;
+
+float gl_ClipDistance[4];
 
 void main()
 {
@@ -58,6 +61,10 @@ void main()
         normal += texture(u_normalMap, nearTexCoord / u_size + 0.5f).rgb * 0.7;
         color = texture(u_colorMap, worldPos.xz / u_size + 0.5f).rgb;
     }
+
+    // Apply clip planes
+    for (int i = 0; i < 4; ++i)
+        gl_ClipDistance[i] = dot(worldPos, u_clipPlanes[i]);
 
     v_fragPos = worldPos.xyz;
     v_normal = normal;

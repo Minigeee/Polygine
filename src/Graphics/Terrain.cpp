@@ -3,6 +3,7 @@
 #include <poly/Engine/Scene.h>
 
 #include <poly/Graphics/Components.h>
+#include <poly/Graphics/GLCheck.h>
 #include <poly/Graphics/Terrain.h>
 
 #include <poly/Math/Transform.h>
@@ -444,7 +445,18 @@ void Terrain::render(Camera& camera)
 		bbox.m_min += pos;
 		bbox.m_max += pos;
 
-		if (frustum.contains(bbox))
+		// Check if the tile should be rendered
+		Vector2f tilePos = Vector2f(
+			std::min(std::abs(bbox.m_min.x), std::abs(bbox.m_max.x)),
+			std::min(std::abs(bbox.m_min.z), std::abs(bbox.m_max.z))
+		) * 2.0f;
+
+		bool shouldRender =
+			frustum.contains(bbox) &&
+			tilePos.x < m_size&&
+			tilePos.y < m_size;
+
+		if (shouldRender)
 			normalTiles.push_back(&m_normalTiles[i]);
 	}
 
@@ -454,7 +466,18 @@ void Terrain::render(Camera& camera)
 		bbox.m_min += pos;
 		bbox.m_max += pos;
 
-		if (frustum.contains(bbox))
+		// Check if the tile should be rendered
+		Vector2f tilePos = Vector2f(
+			std::min(std::abs(bbox.m_min.x), std::abs(bbox.m_max.x)),
+			std::min(std::abs(bbox.m_min.z), std::abs(bbox.m_max.z))
+		) * 2.0f;
+
+		bool shouldRender =
+			frustum.contains(bbox) &&
+			tilePos.x < m_size &&
+			tilePos.y < m_size;
+
+		if (shouldRender)
 			edgeTiles.push_back(&m_edgeTiles[i]);
 	}
 
@@ -507,6 +530,12 @@ void Terrain::render(Camera& camera)
 	shader.setUniform("u_cameraPos", camera.getPosition());
 	shader.setUniform("u_ambient", m_ambientColor);
 
+	// Set the clip planes
+	shader.setUniform("u_clipPlanes[0]", Vector4f(-1.0f, 0.0f, 0.0f, m_size * 0.5f));
+	shader.setUniform("u_clipPlanes[1]", Vector4f(1.0f, 0.0f, 0.0f, m_size * 0.5f));
+	shader.setUniform("u_clipPlanes[2]", Vector4f(0.0f, 0.0f, -1.0f, m_size * 0.5f));
+	shader.setUniform("u_clipPlanes[3]", Vector4f(0.0f, 0.0f, 1.0f, m_size * 0.5f));
+
 	// Apply directional lights
 	int i = 0;
 	m_scene->system<DirLightComponent>(
@@ -535,6 +564,10 @@ void Terrain::render(Camera& camera)
 	shader.setUniform("u_tileScale", m_tileScale);
 	shader.setUniform("u_blendLodDist", m_lodDists[m_lodDists.size() - 2]);
 
+	// Enable clip planes
+	for (Uint32 i = 0; i < 4; ++i)
+		glCheck(glEnable(GL_CLIP_DISTANCE0 + i));
+
 	// Attach instance buffer and render
 	m_normalTile.bind();
 	m_normalTile.addBuffer(m_instanceBuffer, 3, 1, sizeof(InstanceData), m_instanceBufferOffset, 1);
@@ -552,6 +585,10 @@ void Terrain::render(Camera& camera)
 	m_edgeTile.addBuffer(m_instanceBuffer, 6, 4, sizeof(InstanceData), offset + 4 + 2 * sizeof(Vector4f), 1);
 	m_edgeTile.addBuffer(m_instanceBuffer, 7, 4, sizeof(InstanceData), offset + 4 + 3 * sizeof(Vector4f), 1);
 	m_edgeTile.draw(edgeTiles.size());
+
+	// Disable clip planes
+	for (Uint32 i = 0; i < 4; ++i)
+		glCheck(glDisable(GL_CLIP_DISTANCE0 + i));
 
 	// Update buffer offset
 	m_instanceBufferOffset += size;

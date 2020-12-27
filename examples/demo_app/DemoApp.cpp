@@ -225,7 +225,7 @@ int main()
             move.y -= 1.0f;
 
         if (length(move) != 0.0f)
-            camera.move(normalize(move) * elapsed * 3.4f);
+            camera.move(normalize(move) * elapsed * 300.4f);
 
         // Render scene
         skeleton.update(elapsed);
@@ -243,10 +243,14 @@ int main()
     return 0;
 }
 
-// TODO : Copyable skeletons
 // TODO : Document Octree
 // TODO : Document FrameBuffer
 // TODO : Document PostProcess
 // TODO : Document RenderSystem
 // TODO : Document SkyBox
 // TODO : Document ParticleSystem
+// TODO : Clamp terrain mesh to terrain edges
+// TODO : Improve particle system
+// TODO : Renderable base class + Billboard
+// TODO : Octree lod system
+// TODO : Bloom effect
