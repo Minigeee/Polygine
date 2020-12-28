@@ -144,11 +144,16 @@ int main()
 
     Texture texture[8];
 
+    FrameBuffer multisampled;
+    multisampled.create(1280, 720, 0, true);
+    multisampled.bind();
+    multisampled.attachColor(&texture[0], PixelFormat::Rgb, GLType::Uint16);
+    multisampled.attachDepth();
+
     FrameBuffer framebuffer;
     framebuffer.create(1280, 720);
     framebuffer.bind();
-    framebuffer.attachColor(&texture[0], PixelFormat::Rgb, GLType::Uint16);
-    framebuffer.attachDepth();
+    framebuffer.attachColor(&texture[1], PixelFormat::Rgb, GLType::Uint16);
 
     // Post process stuff
     ColorAdjust colorAdjust;
@@ -225,12 +230,14 @@ int main()
             move.y -= 1.0f;
 
         if (length(move) != 0.0f)
-            camera.move(normalize(move) * elapsed * 300.4f);
+            camera.move(normalize(move) * elapsed * 3.4f);
 
         // Render scene
         skeleton.update(elapsed);
         // octree.update();
-        scene.render(camera, framebuffer);
+        scene.render(camera, multisampled);
+        multisampled.blitTo(framebuffer);
+
         colorAdjust.render(framebuffer);
 
         // Display (swap buffers)
@@ -249,7 +256,6 @@ int main()
 // TODO : Document RenderSystem
 // TODO : Document SkyBox
 // TODO : Document ParticleSystem
-// TODO : Clamp terrain mesh to terrain edges
 // TODO : Improve particle system
 // TODO : Renderable base class + Billboard
 // TODO : Octree lod system

@@ -50,7 +50,8 @@ Texture::Texture() :
 	m_format		(PixelFormat::Rgb),
 	m_dataType		(GLType::Uint8),
 	m_wrap			(TextureWrap::ClampToEdge),
-	m_filter		(TextureFilter::Linear)
+	m_filter		(TextureFilter::Linear),
+	m_multisampled	(false)
 {
 
 }
@@ -84,7 +85,12 @@ void Texture::bind(Uint32 slot)
 		// Get dimensions enum
 		GLenum dims = GL_TEXTURE_1D;
 		if (m_dimensions == 2)
-			dims = GL_TEXTURE_2D;
+		{
+			if (m_multisampled)
+				dims = GL_TEXTURE_2D_MULTISAMPLE;
+			else
+				dims = GL_TEXTURE_2D;
+		}
 		else if (m_dimensions == 3)
 			dims = GL_TEXTURE_3D;
 
@@ -98,10 +104,13 @@ void Texture::bind(Uint32 slot)
 
 
 ///////////////////////////////////////////////////////////
-void Texture::create(void* data, PixelFormat fmt, Uint32 w, Uint32 h, Uint32 d, GLType dtype, TextureFilter filter, TextureWrap wrap)
+void Texture::create(void* data, PixelFormat fmt, Uint32 w, Uint32 h, Uint32 d, GLType dtype, TextureFilter filter, TextureWrap wrap, bool multisampled)
 {
 	// Can only create texture once
 	if (m_id) return;
+
+	// Set multisampled
+	m_multisampled = multisampled;
 
 	// Create texture
 	glCheck(glGenTextures(1, &m_id));
@@ -119,7 +128,10 @@ void Texture::create(void* data, PixelFormat fmt, Uint32 w, Uint32 h, Uint32 d, 
 	else if (!d)
 	{
 		m_dimensions = 2;
-		dims = GL_TEXTURE_2D;
+		if (m_multisampled)
+			dims = GL_TEXTURE_2D_MULTISAMPLE;
+		else
+			dims = GL_TEXTURE_2D;
 	}
 	else
 	{
@@ -138,19 +150,29 @@ void Texture::create(void* data, PixelFormat fmt, Uint32 w, Uint32 h, Uint32 d, 
 		glCheck(glTexImage1D(dims, 0, internalFmt, w, 0, (GLenum)fmt, (GLenum)dtype, data));
 
 	else if (m_dimensions == 2)
-		glCheck(glTexImage2D(dims, 0, internalFmt, w, h, 0, (GLenum)fmt, (GLenum)dtype, data));
+	{
+		// Different texture creation based on if the texture is multisampled
+		if (m_multisampled)
+			glCheck(glTexImage2DMultisample(dims, 4, internalFmt, w, h, GL_TRUE));
+		else
+			glCheck(glTexImage2D(dims, 0, internalFmt, w, h, 0, (GLenum)fmt, (GLenum)dtype, data));
+	}
 
 	else
 		glCheck(glTexImage3D(dims, 0, internalFmt, w, h, d, 0, (GLenum)fmt, (GLenum)dtype, data));
 
-	// Set filter parameter
-	glCheck(glTexParameteri(dims, GL_TEXTURE_MIN_FILTER, (GLint)filter));
-	glCheck(glTexParameteri(dims, GL_TEXTURE_MAG_FILTER, (GLint)filter));
+	// If the texture is not multisampled, then set texture filter and wrap parameters
+	if (!m_multisampled)
+	{
+		// Set filter parameter
+		glCheck(glTexParameteri(dims, GL_TEXTURE_MIN_FILTER, (GLint)filter));
+		glCheck(glTexParameteri(dims, GL_TEXTURE_MAG_FILTER, (GLint)filter));
 
-	// Set wrap parameter
-	glCheck(glTexParameteri(dims, GL_TEXTURE_WRAP_S, (GLint)wrap));
-	glCheck(glTexParameteri(dims, GL_TEXTURE_WRAP_T, (GLint)wrap));
-	glCheck(glTexParameteri(dims, GL_TEXTURE_WRAP_R, (GLint)wrap));
+		// Set wrap parameter
+		glCheck(glTexParameteri(dims, GL_TEXTURE_WRAP_S, (GLint)wrap));
+		glCheck(glTexParameteri(dims, GL_TEXTURE_WRAP_T, (GLint)wrap));
+		glCheck(glTexParameteri(dims, GL_TEXTURE_WRAP_R, (GLint)wrap));
+	}
 
 	// Set member variables
 	m_width = w;
@@ -283,6 +305,13 @@ TextureWrap Texture::getWrap() const
 TextureFilter Texture::getFilter() const
 {
 	return m_filter;
+}
+
+
+///////////////////////////////////////////////////////////
+bool Texture::isMultisampled() const
+{
+	return m_multisampled;
 }
 
 

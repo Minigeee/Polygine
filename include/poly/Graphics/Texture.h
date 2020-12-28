@@ -63,6 +63,8 @@ public:
 	///////////////////////////////////////////////////////////
 	/// \brief Bind texture to a certain texture slot
 	///
+	/// \param slot The texture slot to bind the texture to
+	///
 	///////////////////////////////////////////////////////////
 	void bind(Uint32 slot = 0);
 
@@ -83,6 +85,7 @@ public:
 	/// \param dtype The texture data type
 	/// \param filter The sampling filter type for choosing a pixel when in between pixels
 	/// \param wrap The sampling wrap type for when sampling outside the texture bounds
+	/// \param multisampled Set to true to create a multisampled texture (only works for 2D)
 	///
 	///////////////////////////////////////////////////////////
 	void create(
@@ -93,7 +96,8 @@ public:
 		Uint32 d = 0,
 		GLType dtype = GLType::Uint8,
 		TextureFilter filter = TextureFilter::Linear,
-		TextureWrap wrap = TextureWrap::ClampToEdge
+		TextureWrap wrap = TextureWrap::ClampToEdge,
+		bool multisampled = false
 	);
 
 	///////////////////////////////////////////////////////////
@@ -197,6 +201,14 @@ public:
 	///////////////////////////////////////////////////////////
 	TextureFilter getFilter() const;
 
+	///////////////////////////////////////////////////////////
+	/// \brief Check if the texture is multisampled
+	///
+	/// \return True if the texture is multisampled and is a 2D texture
+	///
+	///////////////////////////////////////////////////////////
+	bool isMultisampled() const;
+
 private:
 	Uint32 m_id;			//!< The texture id
 	Uint32 m_width;			//!< Texture width
@@ -207,6 +219,7 @@ private:
 	GLType m_dataType;		//!< The pixel data type
 	TextureWrap m_wrap;		//!< The wrap sampling method
 	TextureFilter m_filter;	//!< The filter sampling method
+	bool m_multisampled;	//!< True if the texture is multisampled
 
 	static Uint32 currentBound[100];
 };

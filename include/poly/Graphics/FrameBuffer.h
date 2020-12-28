@@ -56,8 +56,13 @@ public:
 	/// and the depth can be given a value other than 0 if a
 	/// 3D framebuffer is desired.
 	///
+	/// \param w The width of the framebuffer
+	/// \param h The height of the framebuffer
+	/// \param d The depth of the framebuffer (for 3D framebuffers)
+	/// \param multisampled Set to true if the framebuffer is multisampled
+	///
 	///////////////////////////////////////////////////////////
-	void create(Uint32 w, Uint32 h, Uint32 d = 0);
+	void create(Uint32 w, Uint32 h, Uint32 d = 0, bool multisampled = false);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Attach a color buffer, either as a texture or renderbuffer
@@ -110,6 +115,18 @@ public:
 	);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Blit contents from the current framebuffer to a target framebuffer
+	///
+	/// This function copies contents of the current framebuffer
+	/// to a new one. Blitting is mostly used to copy contents of
+	/// a multisampled framebuffer to a normal one.
+	///
+	/// \param target The target framebuffer to blit to
+	///
+	///////////////////////////////////////////////////////////
+	void blitTo(FrameBuffer& target);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the internal framebuffer id
 	///
 	/// \return The framebuffer id
@@ -142,6 +159,14 @@ public:
 	Uint32 getDepth() const;
 
 	///////////////////////////////////////////////////////////
+	/// \brief Check if the framebuffer is multisampled
+	///
+	/// \return True if the framebuffer is multisampled
+	///
+	///////////////////////////////////////////////////////////
+	bool isMultisampled() const;
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the number of color texture attachments
 	///
 	/// \return The number of color texture attachments
@@ -171,6 +196,7 @@ public:
 private:
 	Uint32 m_id;							//!< The framebuffer id
 	Vector3u m_size;						//!< The framebuffer size
+	bool m_multisampled;					//!< True if the framebuffer is multisampled
 
 	std::vector<Texture*> m_colorTextures;	//!< The list of color textures
 	Texture* m_depthTexture;				//!< The depth texture

@@ -46,6 +46,7 @@ Uint32 FrameBuffer::currentBound = 0;
 FrameBuffer::FrameBuffer() :
 	m_id			(0),
 	m_size			(0),
+	m_multisampled	(false),
 	m_depthTexture	(0),
 	m_depthId		(0)
 {
@@ -105,7 +106,7 @@ void FrameBuffer::bind(Uint32 z)
 
 
 ///////////////////////////////////////////////////////////
-void FrameBuffer::create(Uint32 w, Uint32 h, Uint32 d)
+void FrameBuffer::create(Uint32 w, Uint32 h, Uint32 d, bool multisampled)
 {
 	// Only create framebuffer if it doesn't exist already
 	if (!m_id)
@@ -113,6 +114,7 @@ void FrameBuffer::create(Uint32 w, Uint32 h, Uint32 d)
 		glCheck(glGenFramebuffers(1, &m_id));
 
 		m_size = Vector3u(w, h, d);
+		m_multisampled = multisampled;
 	}
 }
 
@@ -129,11 +131,14 @@ void FrameBuffer::attachColor(Texture* texture, PixelFormat fmt, GLType dtype, T
 	if (texture)
 	{
 		// Create an empty texture
-		texture->create(0, fmt, m_size.x, m_size.y, m_size.z, dtype, filter, wrap);
+		texture->create(0, fmt, m_size.x, m_size.y, m_size.z, dtype, filter, wrap, m_multisampled);
 
 		// Attach to color attachment target using correct number of dimensions
 		if (m_size.z == 0)
-			glCheck(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + index, GL_TEXTURE_2D, texture->getId(), 0));
+		{
+			Uint32 target = m_multisampled ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D;
+			glCheck(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + index, target, texture->getId(), 0));
+		}
 		else
 			glCheck(glFramebufferTexture3D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + index, GL_TEXTURE_3D, texture->getId(), 0, 0));
 
@@ -147,7 +152,10 @@ void FrameBuffer::attachColor(Texture* texture, PixelFormat fmt, GLType dtype, T
 		glCheck(glGenRenderbuffers(1, &id));
 		glCheck(glBindRenderbuffer(GL_RENDERBUFFER, id));
 
-		glCheck(glRenderbufferStorage(GL_RENDERBUFFER, (GLenum)fmt, m_size.x, m_size.y));
+		if (m_multisampled)
+			glCheck(glRenderbufferStorageMultisample(GL_RENDERBUFFER, 4, (GLenum)fmt, m_size.x, m_size.y));
+		else
+			glCheck(glRenderbufferStorage(GL_RENDERBUFFER, (GLenum)fmt, m_size.x, m_size.y));
 
 		glCheck(glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + index, GL_RENDERBUFFER, id));
 
@@ -169,11 +177,14 @@ void FrameBuffer::attachDepth(Texture* texture, GLType dtype, TextureFilter filt
 	if (texture)
 	{
 		// Create an empty texture
-		texture->create(0, PixelFormat::Depth, m_size.x, m_size.y, m_size.z, dtype, filter, wrap);
+		texture->create(0, PixelFormat::Depth, m_size.x, m_size.y, m_size.z, dtype, filter, wrap, m_multisampled);
 
 		// Attach to depth attachment target using correct number of dimensions
 		if (m_size.z == 0)
-			glCheck(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, texture->getId(), 0));
+		{
+			Uint32 target = m_multisampled ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D;
+			glCheck(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, target, texture->getId(), 0));
+		}
 		else
 			glCheck(glFramebufferTexture3D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_3D, texture->getId(), 0, 0));
 
@@ -187,13 +198,38 @@ void FrameBuffer::attachDepth(Texture* texture, GLType dtype, TextureFilter filt
 		glCheck(glGenRenderbuffers(1, &id));
 		glCheck(glBindRenderbuffer(GL_RENDERBUFFER, id));
 
-		glCheck(glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, m_size.x, m_size.y));
+		if (m_multisampled)
+			glCheck(glRenderbufferStorageMultisample(GL_RENDERBUFFER, 4, GL_DEPTH_COMPONENT, m_size.x, m_size.y));
+		else
+			glCheck(glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, m_size.x, m_size.y));
 
 		glCheck(glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, id));
 
 		// Set depth renderbuffer
 		m_depthId = id;
 	}
+}
+
+
+///////////////////////////////////////////////////////////
+void FrameBuffer::blitTo(FrameBuffer& target)
+{
+	ASSERT(m_id, "Can't blit a framebuffer using an uninitialized source framebuffer");
+	ASSERT(target.m_id, "Can't blit a framebuffer using an uninitialized source framebuffer");
+
+	// Bind the framebuffers
+	glCheck(glBindFramebuffer(GL_READ_FRAMEBUFFER, m_id));
+	glCheck(glBindFramebuffer(GL_DRAW_FRAMEBUFFER, target.m_id));
+
+	// Get buffer bits
+	Uint32 flags = 0;
+	if (m_colorTextures.size() || m_colorIds.size())
+		flags |= GL_COLOR_BUFFER_BIT;
+	if (m_depthTexture || m_depthId)
+		flags |= GL_DEPTH_BUFFER_BIT;
+
+	// Blit the framebuffer
+	glCheck(glBlitFramebuffer(0, 0, m_size.x, m_size.y, 0, 0, target.m_size.x, target.m_size.y, flags, GL_NEAREST));
 }
 
 
@@ -222,6 +258,13 @@ Uint32 FrameBuffer::getHeight() const
 Uint32 FrameBuffer::getDepth() const
 {
 	return m_size.z;
+}
+
+
+///////////////////////////////////////////////////////////
+bool FrameBuffer::isMultisampled() const
+{
+	return m_multisampled;
 }
 
 
