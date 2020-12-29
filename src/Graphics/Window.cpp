@@ -1,9 +1,8 @@
 #include <poly/Core/Logger.h>
 
 #include <poly/Graphics/FrameBuffer.h>
+#include <poly/Graphics/GLCheck.h>
 #include <poly/Graphics/Window.h>
-
-#include <glad/glad.h>
 
 
 namespace poly
@@ -45,10 +44,10 @@ Window::Window() :
 
 }
 
-Window::Window(Uint32 w, Uint32 h, const std::string& title, bool fullscreen) :
+Window::Window(Uint32 w, Uint32 h, const std::string& title, bool fullscreen, int multisample) :
 	m_window	(0)
 {
-	create(w, h, title, fullscreen);
+	create(w, h, title, fullscreen, multisample);
 }
 
 Window::Window(Window&& other) :
@@ -91,7 +90,7 @@ Window::~Window()
 
 ///////////////////////////////////////////////////////////
 
-bool Window::create(Uint32 w, Uint32 h, const std::string& title, bool fullscreen)
+bool Window::create(Uint32 w, Uint32 h, const std::string& title, bool fullscreen, int multisample)
 {
 	// Don't create if window is already open
 	if (m_window) return false;
@@ -108,6 +107,10 @@ bool Window::create(Uint32 w, Uint32 h, const std::string& title, bool fullscree
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+	// Msaa options
+	if (multisample > 1)
+		glfwWindowHint(GLFW_SAMPLES, multisample);
 
 	// Create window
 	GLFWmonitor* monitor = fullscreen ? glfwGetPrimaryMonitor() : 0;
@@ -134,6 +137,10 @@ bool Window::create(Uint32 w, Uint32 h, const std::string& title, bool fullscree
 	// Enable vsync by default
 	glfwSwapInterval(1);
 
+	// Msaa options
+	if (multisample > 1)
+		glCheck(glEnable(GL_MULTISAMPLE));
+
 	// Update member variables
 	m_title = title;
 	++numWindows;
@@ -141,7 +148,7 @@ bool Window::create(Uint32 w, Uint32 h, const std::string& title, bool fullscree
 	// Update default framebuffer
 	FrameBuffer::Default.m_size.x = w;
 	FrameBuffer::Default.m_size.y = h;
-	glViewport(0, 0, w, h);
+	glCheck(glViewport(0, 0, w, h));
 
 	// Setup input callbacks
 	glfwSetWindowUserPointer(m_window, this);

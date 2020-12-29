@@ -55,3 +55,22 @@ public:
 }
 
 #endif
+
+///////////////////////////////////////////////////////////
+/// \class poly::Sphere
+/// \ingroup Math
+///
+/// A sphere is pretty self explanatory...
+///
+/// Usage example:
+/// \code
+///
+/// // Create a sphere at (0, 10, 0) with a radius of 2
+/// Sphere spehere(Vector3f(0.0f, 10.0f, 0.0f), 2.0f);
+///
+/// // Test if the sphere contains the origin
+/// bool containsOrigin = sphere.contains(Vector3f(0.0f));
+///
+/// \endcode
+///
+///////////////////////////////////////////////////////////

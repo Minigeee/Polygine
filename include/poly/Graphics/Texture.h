@@ -8,6 +8,7 @@
 
 namespace poly
 {
+
 enum class TextureWrap
 {
 	Repeat				= 0x2901,
@@ -63,6 +64,8 @@ public:
 	///////////////////////////////////////////////////////////
 	/// \brief Bind texture to a certain texture slot
 	///
+	/// \param slot The texture slot to bind the texture to
+	///
 	///////////////////////////////////////////////////////////
 	void bind(Uint32 slot = 0);
 
@@ -83,6 +86,7 @@ public:
 	/// \param dtype The texture data type
 	/// \param filter The sampling filter type for choosing a pixel when in between pixels
 	/// \param wrap The sampling wrap type for when sampling outside the texture bounds
+	/// \param multisampled Set to true to create a multisampled texture (only works for 2D)
 	///
 	///////////////////////////////////////////////////////////
 	void create(
@@ -93,7 +97,8 @@ public:
 		Uint32 d = 0,
 		GLType dtype = GLType::Uint8,
 		TextureFilter filter = TextureFilter::Linear,
-		TextureWrap wrap = TextureWrap::ClampToEdge
+		TextureWrap wrap = TextureWrap::ClampToEdge,
+		bool multisampled = false
 	);
 
 	///////////////////////////////////////////////////////////
@@ -120,10 +125,46 @@ public:
 	/// This will cause data to be uploaded to the texture, but maintain
 	/// the same properties as when the texture was created.
 	///
-	/// \param data A pointer to the texture data
+	/// \param data A pointer to the new texture data
 	///
 	///////////////////////////////////////////////////////////
 	void update(void* data);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Update a subregion of the texture (1D)
+	///
+	/// This will cause data from only the subregion to be updated,
+	/// where pos is pixel offset of the subregion from the top left
+	/// of the texture, and size is the region size in pixels.
+	///
+	/// \param data A pointer to the new texture data
+	///
+	///////////////////////////////////////////////////////////
+	void update(void* data, Uint32 pos, Uint32 size);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Update a subregion of the texture (2D)
+	///
+	/// This will cause data from only the subregion to be updated,
+	/// where pos is pixel offset of the subregion from the top left
+	/// of the texture, and size is the region size in pixels.
+	///
+	/// \param data A pointer to the new texture data
+	///
+	///////////////////////////////////////////////////////////
+	void update(void* data, const Vector2u& pos, const Vector2u& size);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Update a subregion of the texture (3D)
+	///
+	/// This will cause data from only the subregion to be updated,
+	/// where pos is pixel offset of the subregion from the top left
+	/// of the texture, and size is the region size in pixels.
+	///
+	/// \param data A pointer to the new texture data
+	///
+	///////////////////////////////////////////////////////////
+	void update(void* data, const Vector3u& pos, const Vector3u& size);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the internal texture id
@@ -197,6 +238,14 @@ public:
 	///////////////////////////////////////////////////////////
 	TextureFilter getFilter() const;
 
+	///////////////////////////////////////////////////////////
+	/// \brief Check if the texture is multisampled
+	///
+	/// \return True if the texture is multisampled and is a 2D texture
+	///
+	///////////////////////////////////////////////////////////
+	bool isMultisampled() const;
+
 private:
 	Uint32 m_id;			//!< The texture id
 	Uint32 m_width;			//!< Texture width
@@ -207,6 +256,7 @@ private:
 	GLType m_dataType;		//!< The pixel data type
 	TextureWrap m_wrap;		//!< The wrap sampling method
 	TextureFilter m_filter;	//!< The filter sampling method
+	bool m_multisampled;	//!< True if the texture is multisampled
 
 	static Uint32 currentBound[100];
 };

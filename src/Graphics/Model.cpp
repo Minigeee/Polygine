@@ -23,6 +23,7 @@ HashMap<std::string, Texture*> textureMap;
 namespace priv
 {
 
+#ifndef DOXYGEN_SKIP
 
 ///////////////////////////////////////////////////////////
 struct SkeletalData
@@ -48,6 +49,8 @@ struct ModelLoadState
 	const aiScene* m_scene;
 	std::string m_directory;
 };
+
+#endif
 
 
 ///////////////////////////////////////////////////////////

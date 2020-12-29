@@ -38,11 +38,12 @@ public:
 	/// \param h Height of the window in pixels
 	/// \param title The title string
 	/// \param fullscreen Should the window be fullscreen or not
+	/// \param multisample The multisampling factor, where a factor of 1 would turn off antialiasing
 	///
 	/// \see create
 	///
 	///////////////////////////////////////////////////////////
-	Window(Uint32 w, Uint32 h, const std::string& title, bool fullscreen = false);
+	Window(Uint32 w, Uint32 h, const std::string& title, bool fullscreen = false, int multisample = 1);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Destructor
@@ -75,9 +76,10 @@ public:
 	/// \param h Height of the window in pixels
 	/// \param title The title string
 	/// \param fullscreen Should the window be fullscreen or not
+	/// \param multisample The multisampling factor, where a factor of 1 would turn off antialiasing
 	///
 	///////////////////////////////////////////////////////////
-	bool create(Uint32 w, Uint32 h, const std::string& title, bool fullscreen = false);
+	bool create(Uint32 w, Uint32 h, const std::string& title, bool fullscreen = false, int multisample = 1);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Check if the window is open

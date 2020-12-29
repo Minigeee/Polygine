@@ -13,7 +13,7 @@ namespace poly
 class Window;
 
 ///////////////////////////////////////////////////////////
-/// \brief A framebuffer acts as a render target with optional color, depth, and stencil texture attachments
+/// \brief A class that acts as a render target with optional color, depth, and stencil texture attachments
 ///
 ///////////////////////////////////////////////////////////
 class FrameBuffer
@@ -54,10 +54,16 @@ public:
 	///
 	/// The width and height of the framebuffer are required,
 	/// and the depth can be given a value other than 0 if a
-	/// 3D framebuffer is desired.
+	/// 3D framebuffer is desired. To create a multisampled
+	/// framebuffer, set \a multisampled to true.
+	///
+	/// \param w The width of the framebuffer
+	/// \param h The height of the framebuffer
+	/// \param d The depth of the framebuffer (for 3D framebuffers)
+	/// \param multisampled Set to true if the framebuffer is multisampled
 	///
 	///////////////////////////////////////////////////////////
-	void create(Uint32 w, Uint32 h, Uint32 d = 0);
+	void create(Uint32 w, Uint32 h, Uint32 d = 0, bool multisampled = false);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Attach a color buffer, either as a texture or renderbuffer
@@ -110,6 +116,18 @@ public:
 	);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Blit contents from the current framebuffer to a target framebuffer
+	///
+	/// This function copies contents of the current framebuffer
+	/// to a new one. Blitting is mostly used to copy contents of
+	/// a multisampled framebuffer to a normal one.
+	///
+	/// \param target The target framebuffer to blit to
+	///
+	///////////////////////////////////////////////////////////
+	void blitTo(FrameBuffer& target);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the internal framebuffer id
 	///
 	/// \return The framebuffer id
@@ -142,6 +160,14 @@ public:
 	Uint32 getDepth() const;
 
 	///////////////////////////////////////////////////////////
+	/// \brief Check if the framebuffer is multisampled
+	///
+	/// \return True if the framebuffer is multisampled
+	///
+	///////////////////////////////////////////////////////////
+	bool isMultisampled() const;
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the number of color texture attachments
 	///
 	/// \return The number of color texture attachments
@@ -171,6 +197,7 @@ public:
 private:
 	Uint32 m_id;							//!< The framebuffer id
 	Vector3u m_size;						//!< The framebuffer size
+	bool m_multisampled;					//!< True if the framebuffer is multisampled
 
 	std::vector<Texture*> m_colorTextures;	//!< The list of color textures
 	Texture* m_depthTexture;				//!< The depth texture
@@ -183,3 +210,82 @@ private:
 }
 
 #endif
+
+///////////////////////////////////////////////////////////
+/// \class poly::FrameBuffer
+/// \ingroup Graphics
+///
+/// A framebuffer is a render target that supports color, depth,
+/// and stencil buffers. Currently, only color and depth buffer
+/// attachments are supported, but stencil buffers may be supported
+/// in the future.
+///
+/// To use the framebuffer, it must first be created with create(),
+/// where the width and height of the framebuffer must be specified.
+/// To create a 3D framebuffer, set the third depth parameter to
+/// any value above 0. To create a multisampled framebuffer for
+/// anti-aliasing, set the fourth parameter to true. After calling
+/// create(), the framebuffer is still incomplete. At least one color
+/// buffer must be attached, and a depth buffer can be added if needed.
+/// If the contents of any of the buffer attachments are needed
+/// (i.e. for postprocessing), then a pointer to an uninitialized
+/// texture must be provided. The framebuffer will initialize the
+/// texture with the correct parameters, and that texture can then
+/// be used for other purposes. If the contents are not needed,
+/// then the texture pointer can be left as null, and a renderbuffer
+/// will be created in its place.
+///
+/// If a multisampled framebuffer is created, its contents cannot
+/// directly be used, as multisampled framebuffers hold much more
+/// data than normal framebuffers, and it has to be resolved.
+/// To do this, use blitTo() to resolve the multisampled framebuffer's
+/// contents to a different framebuffer. To render to a framebuffer,
+/// call bind(), and all following renders will affect the bound
+/// framebuffer.
+///
+/// Usage example:
+/// \code
+///
+/// using namespace poly;
+///
+/// // Create a few textures to store framebuffer contents
+/// Texture textures[3];
+///
+/// // Create a normal 1280x720 framebuffer
+/// FrameBuffer framebuffer;
+/// framebuffer.create(1280, 720);
+///
+/// // Create a color attachment with 16-bit color depth
+/// framebuffer.attachColor(&textures[0], PixelFormat::Rgb, GLType::Uint16);
+///
+/// // Skip the depth attachment
+///
+///
+/// // Create a multisampled 1280x720 framebuffer
+/// FrameBuffer multisampled;
+/// multisampled.create(1280, 720, 0, true);
+///
+/// // Create a color attachment with 16-bit color depth
+/// multisampled.attachColor(&textures[1], PixelFormat::Rgb, GLType::Uint16);
+///
+/// // Create a depth attachment
+/// multisampled.attachDepth(&textures[2]);
+///
+///
+/// // Game loop
+/// while (true)
+/// {
+///		// Bind the multisampled framebuffer
+///		multisampled.bind();
+///
+///		// Render stuff to the multisampled framebuffer...
+///
+///		// Blit the multisampled framebuffer to the normal one
+///		multisampled.blitTo(framebuffer);
+///
+///		// Do some postprocessing stuff with the normal framebuffer...
+/// }
+///
+/// \endcode
+///
+///////////////////////////////////////////////////////////

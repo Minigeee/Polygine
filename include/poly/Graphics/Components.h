@@ -14,6 +14,7 @@ class Skeleton;
 ///////////////////////////////////////////////////////////
 /// \brief A component that contains data that describes how to
 ///        render an entity
+/// \ingroup Components
 ///
 ///////////////////////////////////////////////////////////
 struct RenderComponent
@@ -41,6 +42,7 @@ struct RenderComponent
 /// \brief A component that contains a skeleton that can have an animation
 ///	       applied to it. This will apply the skeleton to entities that also
 ///        contain a render component.
+/// \ingroup Components
 ///
 ///////////////////////////////////////////////////////////
 struct AnimationComponent
@@ -65,6 +67,7 @@ struct AnimationComponent
 
 ///////////////////////////////////////////////////////////
 /// \brief A component that defines properties of a directional light
+/// \ingroup Components
 ///
 ///////////////////////////////////////////////////////////
 struct DirLightComponent
@@ -86,6 +89,7 @@ struct DirLightComponent
 
 ///////////////////////////////////////////////////////////
 /// \brief Dynamic renderable component tag
+/// \ingroup Components
 ///
 /// Notifies octree that the entity will be updated many times.
 ///
