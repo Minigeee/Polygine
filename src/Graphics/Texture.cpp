@@ -246,6 +246,57 @@ void Texture::update(void* data)
 
 
 ///////////////////////////////////////////////////////////
+void Texture::update(void* data, Uint32 pos, Uint32 size)
+{
+	// Don't update before creating
+	if (!m_id) return;
+
+	// Make sure the texture is 2D
+	ASSERT(m_dimensions == 1, "Updating a texture using a 1D region requires having a 1D texture");
+
+	// Bind the texture
+	bind();
+
+	// Update the subregion
+	glCheck(glTexSubImage1D(GL_TEXTURE_1D, 0, (int)pos, (int)size, (GLenum)m_format, (GLenum)m_dataType, data));
+}
+
+
+///////////////////////////////////////////////////////////
+void Texture::update(void* data, const Vector2u& pos, const Vector2u& size)
+{
+	// Don't update before creating
+	if (!m_id) return;
+
+	// Make sure the texture is 2D
+	ASSERT(m_dimensions == 2, "Updating a texture using a 2D region requires having a 2D texture");
+
+	// Bind the texture
+	bind();
+
+	// Update the subregion
+	glCheck(glTexSubImage2D(GL_TEXTURE_2D, 0, (int)pos.x, (int)pos.y, (int)size.x, (int)size.y, (GLenum)m_format, (GLenum)m_dataType, data));
+}
+
+
+///////////////////////////////////////////////////////////
+void Texture::update(void* data, const Vector3u& pos, const Vector3u& size)
+{
+	// Don't update before creating
+	if (!m_id) return;
+
+	// Make sure the texture is 2D
+	ASSERT(m_dimensions == 3, "Updating a texture using a 3D region requires having a 3D texture");
+
+	// Bind the texture
+	bind();
+
+	// Update the subregion
+	glCheck(glTexSubImage3D(GL_TEXTURE_3D, 0, (int)pos.x, (int)pos.y, (int)pos.z, (int)size.x, (int)size.y, (int)size.z, (GLenum)m_format, (GLenum)m_dataType, data));
+}
+
+
+///////////////////////////////////////////////////////////
 Uint32 Texture::getId() const
 {
 	return m_id;

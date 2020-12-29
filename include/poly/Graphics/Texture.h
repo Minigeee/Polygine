@@ -125,10 +125,46 @@ public:
 	/// This will cause data to be uploaded to the texture, but maintain
 	/// the same properties as when the texture was created.
 	///
-	/// \param data A pointer to the texture data
+	/// \param data A pointer to the new texture data
 	///
 	///////////////////////////////////////////////////////////
 	void update(void* data);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Update a subregion of the texture (1D)
+	///
+	/// This will cause data from only the subregion to be updated,
+	/// where pos is pixel offset of the subregion from the top left
+	/// of the texture, and size is the region size in pixels.
+	///
+	/// \param data A pointer to the new texture data
+	///
+	///////////////////////////////////////////////////////////
+	void update(void* data, Uint32 pos, Uint32 size);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Update a subregion of the texture (2D)
+	///
+	/// This will cause data from only the subregion to be updated,
+	/// where pos is pixel offset of the subregion from the top left
+	/// of the texture, and size is the region size in pixels.
+	///
+	/// \param data A pointer to the new texture data
+	///
+	///////////////////////////////////////////////////////////
+	void update(void* data, const Vector2u& pos, const Vector2u& size);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Update a subregion of the texture (3D)
+	///
+	/// This will cause data from only the subregion to be updated,
+	/// where pos is pixel offset of the subregion from the top left
+	/// of the texture, and size is the region size in pixels.
+	///
+	/// \param data A pointer to the new texture data
+	///
+	///////////////////////////////////////////////////////////
+	void update(void* data, const Vector3u& pos, const Vector3u& size);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the internal texture id
