@@ -41,21 +41,4 @@ void Entity::remove() const
 
 ///////////////////////////////////////////////////////////
 
-void Entity::addTag(int tag)
-{
-	m_scene->addTag(m_id, tag);
-}
-
-void Entity::removeTag(int tag)
-{
-	m_scene->removeTag(m_id, tag);
-}
-
-bool Entity::hasTag(int tag) const
-{
-	return m_scene->hasTag(m_id, tag);
-}
-
-///////////////////////////////////////////////////////////
-
 }

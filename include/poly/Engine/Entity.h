@@ -86,42 +86,6 @@ public:
 	///////////////////////////////////////////////////////////
 	void remove() const;
 
-	///////////////////////////////////////////////////////////
-	/// \brief Add a tag to the entity
-	///
-	/// Tags should be an enum that can be cast to an integer.
-	///
-	/// \param tag The tag to add
-	///
-	/// \see Scene::addTag
-	///
-	///////////////////////////////////////////////////////////
-	void addTag(int tag);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Remove a tag from the entity
-	///
-	/// Tags should be an enum that can be cast to an integer.
-	///
-	/// \param tag The tag to remove
-	///
-	/// \see Scene::removeTag
-	///
-	///////////////////////////////////////////////////////////
-	void removeTag(int tag);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Check if the entity has a certain tag
-	///
-	/// Tags should be an enum that can be cast to an integer.
-	///
-	/// \param tag The tag to check for
-	///
-	/// \see Scene::hasTag
-	///
-	///////////////////////////////////////////////////////////
-	bool hasTag(int tag) const;
-
 private:
 	Scene* m_scene;	//!< Scene pointer
 	Id m_id;		//!< The entity id

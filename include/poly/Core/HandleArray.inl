@@ -162,6 +162,12 @@ inline std::vector<T>& HandleArray<T>::getData()
 }
 
 template <typename T>
+inline const std::vector<T>& HandleArray<T>::getData() const
+{
+	return m_data;
+}
+
+template <typename T>
 inline Uint16 HandleArray<T>::getIndex(Handle handle) const
 {
 	Handle entry = m_handleToData[handle.m_index];

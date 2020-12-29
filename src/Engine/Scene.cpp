@@ -1,16 +1,45 @@
+#include <poly/Core/Profiler.h>
+
+#include <poly/Engine/Components.h>
 #include <poly/Engine/Scene.h>
+
+#include <poly/Graphics/RenderSystem.h>
 
 namespace poly
 {
 
-HandleArray<bool> Scene::idArray;
 
 ///////////////////////////////////////////////////////////
+HandleArray<bool> Scene::idArray;
 
+
+///////////////////////////////////////////////////////////
+E_EntitiesCreated::E_EntitiesCreated() :
+	m_numEntities	(0),
+	m_entities		(0)
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
+E_EntitiesCreated::E_EntitiesCreated(std::vector<Entity>& entities) :
+	m_numEntities	(entities.size()),
+	m_entities		(&entities[0])
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
 Scene::Scene() :
-	m_handle	(idArray.add(true))
-{ }
+	m_handle				(idArray.add(true))
+{
 
+}
+
+
+///////////////////////////////////////////////////////////
 Scene::~Scene()
 {
 	// Clean up ECS
@@ -20,19 +49,21 @@ Scene::~Scene()
 	}
 
 	// Clean up event systems
-	priv::EventCleanup::cleanup(m_handle.m_index);
+	priv::SceneEventsCleanup::cleanup(m_handle.m_index);
 
 	// Remove from list to free up id
 	idArray.remove(m_handle);
 }
 
+
+///////////////////////////////////////////////////////////
 Uint16 Scene::getId() const
 {
 	return m_handle.m_index;
 }
 
-///////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////
 void Scene::removeEntity(Entity::Id id)
 {
 	// Find the correct group
@@ -48,6 +79,8 @@ void Scene::removeEntity(Entity::Id id)
 	it.value().removeEntity(id);
 }
 
+
+///////////////////////////////////////////////////////////
 void Scene::removeQueuedEntities()
 {
 	// Entity removal is protected by mutex
@@ -58,39 +91,29 @@ void Scene::removeQueuedEntities()
 		it.value().removeQueuedEntities();
 }
 
-void Scene::addTag(Entity::Id id, int tag)
-{
-	std::lock_guard<std::mutex> lock(m_tagMutex);
-
-	// Insert id into correct tag group
-	m_entityTags[tag].insert(id);
-}
-
-void Scene::removeTag(Entity::Id id, int tag)
-{
-	std::lock_guard<std::mutex> lock(m_tagMutex);
-
-	// Remove entity from tag group
-	m_entityTags[tag].erase(id);
-}
-
-bool Scene::hasTag(Entity::Id id, int tag)
-{
-	std::lock_guard<std::mutex> lock(m_tagMutex);
-
-	// Get the tag group
-	auto it = m_entityTags.find(tag);
-	if (it == m_entityTags.end()) return false;
-
-	// Return if the id has been found
-	return it->second.find(id) != it->second.end();
-}
-
-const HashSet<Entity::Id>& Scene::getEntitiesWithTag(Uint32 tag)
-{
-	return m_entityTags[tag];
-}
 
 ///////////////////////////////////////////////////////////
+void Scene::addRenderSystem(RenderSystem* system)
+{
+	// Initialize the system
+	system->init(this);
+
+	m_renderSystems.push_back(system);
+}
+
+
+///////////////////////////////////////////////////////////
+void Scene::render(Camera& camera, FrameBuffer& target)
+{
+	// Bind framebuffer
+	target.bind();
+
+	// Render state
+	RenderState::Default.apply();
+
+	// Render all render systems
+	for (Uint32 i = 0; i < m_renderSystems.size(); ++i)
+		m_renderSystems[i]->render(camera);
+}
 
 }

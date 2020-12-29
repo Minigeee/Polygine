@@ -27,10 +27,10 @@ inline void EntityGroup::setComponentTypes(Uint32 groupId)
 }
 
 template <typename... Cs>
-inline std::vector<Entity> EntityGroup::createEntities(Uint16 num, Cs&&... components)
+inline std::vector<Entity> EntityGroup::createEntities(Uint16 num, const Cs&... components)
 {
 	// Add components
-	PARAM_EXPAND(ComponentData<Cs>::createComponents(m_sceneId, m_groupId, num, std::forward<Cs>(components)));
+	PARAM_EXPAND(ComponentData<Cs>::createComponents(m_sceneId, m_groupId, num, components));
 
 	// Create entities
 	std::vector<Entity> entities;
@@ -141,8 +141,8 @@ inline C* ComponentData<C>::getComponent(Uint16 sceneId, Uint32 groupId, Uint16 
 	if (sceneId >= m_data.size()) return 0;
 
 	// Return ptr to component
-	std::vector<C>& group = m_data[sceneId][groupId];
-	return index < group.size() ? &group[index] : 0;
+	auto it = m_data[sceneId].find(groupId);
+	return it == m_data[sceneId].end() ? 0 : &it.value()[index];
 }
 
 template <typename C>

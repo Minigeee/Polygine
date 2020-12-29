@@ -11,8 +11,8 @@ namespace poly
 namespace priv
 {
 
-///////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////
 template <typename... Cs>
 inline Uint32 generateGroupId()
 {
@@ -31,10 +31,10 @@ inline Uint32 generateGroupId()
 	return (Uint32)hasher(hash);
 }
 
-///////////////////////////////////////////////////////////
-
 }
 
+
+///////////////////////////////////////////////////////////
 template <typename... Cs>
 inline Entity Scene::createEntity()
 {
@@ -42,18 +42,24 @@ inline Entity Scene::createEntity()
 	return createEntity(Cs()...);
 }
 
+
+///////////////////////////////////////////////////////////
 template <typename... Cs>
-inline Entity Scene::createEntity(Cs&&... components)
+inline Entity Scene::createEntity(const Cs&... components)
 {
-	return createEntities(1, std::forward<Cs>(components)...)[0];
+	return createEntities(1, components...)[0];
 }
 
+
+///////////////////////////////////////////////////////////
 template <typename... Cs>
 inline Entity Scene::createEntity(Tuple<Cs...>& components)
 {
 	return createEntity(std::forward<Cs>(components.get<Cs>())...);
 }
 
+
+///////////////////////////////////////////////////////////
 template <typename... Cs>
 inline std::vector<Entity> Scene::createEntities(Uint32 num)
 {
@@ -61,8 +67,10 @@ inline std::vector<Entity> Scene::createEntities(Uint32 num)
 	return createEntities(num, Cs()...);
 }
 
+
+///////////////////////////////////////////////////////////
 template <typename... Cs>
-inline std::vector<Entity> Scene::createEntities(Uint32 num, Cs&&... components)
+inline std::vector<Entity> Scene::createEntities(Uint32 num, const Cs&... components)
 {
 	static_assert(sizeof...(Cs), "Entities must have at least one component type");
 	static_assert(priv::IsUnique<Cs...>::value, "Entities are not allowed to have duplicate component types");
@@ -87,15 +95,24 @@ inline std::vector<Entity> Scene::createEntities(Uint32 num, Cs&&... components)
 		group = &it.value();
 
 	// Create entity
-	return group->createEntities(num, std::forward<Cs>(components)...);
+	std::vector<Entity> entities = group->createEntities(num, components...);
+
+	// Send the event
+	sendEvent(E_EntitiesCreated(entities));
+
+	return entities;
 }
 
+
+///////////////////////////////////////////////////////////
 template <typename... Cs>
 inline std::vector<Entity> Scene::createEntities(Uint32 num, Tuple<Cs...>& components)
 {
 	return createEntities(num, std::forward<Cs>(components.get<Cs>())...);
 }
 
+
+///////////////////////////////////////////////////////////
 template <typename C>
 inline C* Scene::getComponent(Entity::Id id) const
 {
@@ -103,6 +120,20 @@ inline C* Scene::getComponent(Entity::Id id) const
 	return it == m_entityGroups.end() ? 0 : it.value().getComponent<C>(id);
 }
 
+
+///////////////////////////////////////////////////////////
+template <typename... Cs>
+inline Tuple<Cs*...> Scene::getComponents(Entity::Id id) const
+{
+	auto it = m_entityGroups.find(id.m_group);
+	if (it == m_entityGroups.end())
+		return makeTuple((Cs*)(0)...);
+	else
+		return makeTuple(it.value().getComponent<Cs>(id)...);
+}
+
+
+///////////////////////////////////////////////////////////
 template <typename... Cs>
 inline Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> Scene::getComponentData()
 {
@@ -132,6 +163,8 @@ inline Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> Scene::getCompon
 	return t;
 }
 
+
+///////////////////////////////////////////////////////////
 template <typename... Cs>
 inline Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> Scene::getComponentData(const ComponentTypeSet& exclude)
 {
@@ -169,6 +202,8 @@ inline Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> Scene::getCompon
 	return t;
 }
 
+
+///////////////////////////////////////////////////////////
 template <typename... Cs, typename Func>
 inline void Scene::system(Func&& func, const ComponentTypeSet& excludes)
 {
@@ -199,26 +234,28 @@ inline void Scene::system(Func&& func, const ComponentTypeSet& excludes)
 	}
 }
 
-///////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////
 template <typename E>
 inline Handle Scene::addListener(std::function<void(const E&)>&& func)
 {
-	return priv::EventSystem<E>::addListener(m_handle.m_index, std::move(func));
+	return priv::SceneEvents<E>::addListener(m_handle.m_index, std::move(func));
 }
 
+
+///////////////////////////////////////////////////////////
 template <typename E>
 inline void Scene::removeListener(Handle handle)
 {
-	priv::EventSystem<E>::removeListener(m_handle.m_index, handle);
+	priv::SceneEvents<E>::removeListener(m_handle.m_index, handle);
 }
 
+
+///////////////////////////////////////////////////////////
 template <typename E>
 inline void Scene::sendEvent(const E& event)
 {
-	priv::EventSystem<E>::sendEvent(m_handle.m_index, event);
+	priv::SceneEvents<E>::sendEvent(m_handle.m_index, event);
 }
-
-///////////////////////////////////////////////////////////
 
 }

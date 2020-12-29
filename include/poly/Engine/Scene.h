@@ -2,13 +2,42 @@
 #define POLY_SCENE_H
 
 #include <poly/Core/Tuple.h>
+
 #include <poly/Engine/Ecs.h>
 #include <poly/Engine/Entity.h>
 
-#include <unordered_map>
+#include <poly/Graphics/Camera.h>
+#include <poly/Graphics/FrameBuffer.h>
 
 namespace poly
 {
+
+
+class RenderSystem;
+
+
+///////////////////////////////////////////////////////////
+/// \brief An event that occurs whenever entities are created in a scene
+///
+///////////////////////////////////////////////////////////
+struct E_EntitiesCreated
+{
+	///////////////////////////////////////////////////////////
+	/// \brief Default constructor
+	///
+	///////////////////////////////////////////////////////////
+	E_EntitiesCreated();
+
+	///////////////////////////////////////////////////////////
+	/// \brief Create an event from a list of entities
+	///
+	///////////////////////////////////////////////////////////
+	E_EntitiesCreated(std::vector<Entity>& entities);
+
+	Uint32 m_numEntities;	//!< Number of entities
+	Entity* m_entities;		//!< Pointer to the first entity in the list
+};
+
 
 ///////////////////////////////////////////////////////////
 /// \brief A class that represent a game scene and stores all data on
@@ -94,7 +123,7 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	template <typename... Cs>
-	Entity createEntity(Cs&&... components);
+	Entity createEntity(const Cs&... components);
 
 
 	///////////////////////////////////////////////////////////
@@ -165,7 +194,7 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	template <typename... Cs>
-	std::vector<Entity> createEntities(Uint32 num, Cs&&... components);
+	std::vector<Entity> createEntities(Uint32 num, const Cs&... components);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Create several entities with the specified component types
@@ -245,6 +274,25 @@ public:
 	C* getComponent(Entity::Id id) const;
 
 	///////////////////////////////////////////////////////////
+	/// \brief Get a tuple of pointers to component data associated with a certain entity
+	///
+	/// This function should not be used too often (it is slower
+	/// compared to other functions when bulk access is needed).
+	/// Use getComponentData() when bulk access is needed, or
+	/// use system() when bulk processing of component data is
+	/// needed.
+	///
+	/// \tparam Cs The component types to retrieve
+	///
+	/// \param id The id of the entity to retrieve a component for
+	///
+	/// \return A tuple of component pointers to retrieve
+	///
+	///////////////////////////////////////////////////////////
+	template <typename... Cs>
+	Tuple<Cs*...> getComponents(Entity::Id id) const;
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get component data for entities contain the specified component types
 	///
 	/// \tparam Cs The set of component types an entity must have to be
@@ -275,67 +323,6 @@ public:
 	///////////////////////////////////////////////////////////
 	template <typename... Cs>
 	Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> getComponentData(const ComponentTypeSet& exclude);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Add a tag to an entity
-	///
-	/// Tags should be an enum that can be cast to an integer.
-	/// If entities need to be filtered by tags for processing
-	/// by system(), use empty components as tags instead.
-	///
-	/// See the scene usage example for an example of empty components.
-	///
-	/// This function is thread-safe.
-	///
-	/// \param id The id of the entity to add a tag to
-	/// \param tag The tag to add
-	///
-	///////////////////////////////////////////////////////////
-	void addTag(Entity::Id id, int tag);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Remove a tag from an entity
-	///
-	/// Tags should be an enum that can be cast to an integer.
-	/// If entities need to be filtered by tags for processing
-	/// by system(), use empty components as tags instead.
-	///
-	/// See the scene usage example for an example of empty components.
-	///
-	/// This function is thread-safe.
-	///
-	/// \param id The id of the entity to remove a tag from
-	/// \param tag The tag to remove
-	///
-	///////////////////////////////////////////////////////////
-	void removeTag(Entity::Id id, int tag);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Check if an entity has a tag
-	///
-	/// Tags should be an enum that can be cast to an integer
-	///
-	/// This function is thread-safe.
-	///
-	/// \param id The id of the entity to check
-	/// \param tag The tag to check for
-	///
-	/// \return True if the specified entity has the tag
-	///
-	///////////////////////////////////////////////////////////
-	bool hasTag(Entity::Id id, int tag);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Get entities that contain the specified tag
-	///
-	/// Tags should be an enum that can be cast to an integer
-	///
-	/// \param tag The tag to retrieve entities for
-	///
-	/// \return The set of entitties that contain the tag
-	///
-	///////////////////////////////////////////////////////////
-	const HashSet<Entity::Id>& getEntitiesWithTag(Uint32 tag);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Process or modify a set of component data
@@ -511,13 +498,39 @@ public:
 	template <typename E>
 	void sendEvent(const E& event);
 
+	///////////////////////////////////////////////////////////
+	/// \brief Add a render system
+	///
+	/// Render systems define custom rendering procedures.
+	///
+	/// This function calls RenderSystem::init(), so the user
+	/// shouldn't have to initialize the system manually.
+	///
+	/// \param system A pointer to a render system
+	///
+	/// \see RenderSystem
+	///
+	///////////////////////////////////////////////////////////
+	void addRenderSystem(RenderSystem* system);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Render all added render systems in the order they were added
+	///
+	/// This function simply renders all render systems in the order they were added.
+	///
+	/// \param camera The camera used to render the scene
+	/// \param target The target framebuffer to render the scene to
+	///
+	///////////////////////////////////////////////////////////
+	void render(Camera& camera, FrameBuffer& target = FrameBuffer::Default);
+
 private:
 	Handle m_handle;									//!< The scene handle used for scene id
 
 	HashMap<Uint32, priv::EntityGroup> m_entityGroups;	//!< Map of group id to priv::EntityGroup
-	HashMap<int, HashSet<Entity::Id>> m_entityTags;		//!< Map of tags to sets of entity ids
 	std::mutex m_entityMutex;							//!< Mutex to protect creation and removal of entities
-	std::mutex m_tagMutex;								//!< Mutex to protect adding and removing tags
+
+	std::vector<RenderSystem*> m_renderSystems;			//!< List of render systems
 
 	static HandleArray<bool> idArray;					//!< HandleArray to handle scene id generation
 };

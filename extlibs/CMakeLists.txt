@@ -24,7 +24,7 @@ function(add_dependency name target src)
     target_link_libraries(polygine PUBLIC ${target})
 
     # Export
-    install(TARGETS ${target} EXPORT ${target})
+    # install(TARGETS ${target} EXPORT polygine)
 endfunction()
 
 function(add_dependency_headers name src include_dir)
@@ -50,3 +50,46 @@ endfunction()
 
 # Cmake dependencies
 add_dependency_headers(tsl-hopscotch-map hopscotch-map tsl)
+add_dependency_headers(FastNoise FastNoise FastNoise)
+
+add_dependency(glfw glfw glfw)
+add_dependency(assimp assimp assimp)
+
+# Glad
+target_include_directories(polygine PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extlibs/glad/include>
+    $<INSTALL_INTERFACE:include>)
+target_sources(polygine PRIVATE "${PROJECT_SOURCE_DIR}/extlibs/glad/src/glad.c")
+install(DIRECTORY "${PROJECT_SOURCE_DIR}/extlibs/glad/include/glad" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+
+# stb_image
+if (NOT EXISTS "${PROJECT_SOURCE_DIR}/extlibs/stb/stb_image.h")
+    message(STATUS "Getting stb_image.h...")
+
+    # Get submodule
+    execute_process(COMMAND git submodule update --init -- "${PROJECT_SOURCE_DIR}/extlibs/stb"
+                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+else()
+    message(STATUS "Found stb_image.h")
+endif()
+
+target_include_directories(polygine PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extlibs/stb>
+    $<INSTALL_INTERFACE:include>)
+install(DIRECTORY "${PROJECT_SOURCE_DIR}/extlibs/stb" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+
+# FastNoise
+if (NOT EXISTS "${PROJECT_SOURCE_DIR}/extlibs/FastNoise/Cpp/FastNoiseLite.h")
+    message(STATUS "Getting FastNoiseLite.h...")
+
+    # Get submodule
+    execute_process(COMMAND git submodule update --init -- "${PROJECT_SOURCE_DIR}/extlibs/FastNoise"
+                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+else()
+    message(STATUS "Found FastNoiseLite.h")
+endif()
+
+target_include_directories(polygine PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extlibs/FastNoise/Cpp>
+    $<INSTALL_INTERFACE:include>)
+install(FILES "${PROJECT_SOURCE_DIR}/extlibs/FastNoise/Cpp/FastNoiseLite.h" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
