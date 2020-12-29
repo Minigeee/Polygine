@@ -8,6 +8,7 @@
 
 namespace poly
 {
+
 enum class TextureWrap
 {
 	Repeat				= 0x2901,

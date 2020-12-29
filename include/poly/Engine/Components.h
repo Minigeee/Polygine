@@ -9,6 +9,7 @@ namespace poly
 ///////////////////////////////////////////////////////////
 /// \brief An engine components that describes an entity's
 ///	       position, rotation, and scale
+/// \ingroup Components
 ///
 ///////////////////////////////////////////////////////////
 struct TransformComponent

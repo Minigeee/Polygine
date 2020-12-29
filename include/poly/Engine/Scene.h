@@ -501,9 +501,27 @@ public:
 	///////////////////////////////////////////////////////////
 	/// \brief Add a render system
 	///
+	/// Render systems define custom rendering procedures.
+	///
+	/// This function calls RenderSystem::init(), so the user
+	/// shouldn't have to initialize the system manually.
+	///
+	/// \param system A pointer to a render system
+	///
+	/// \see RenderSystem
+	///
 	///////////////////////////////////////////////////////////
 	void addRenderSystem(RenderSystem* system);
 
+	///////////////////////////////////////////////////////////
+	/// \brief Render all added render systems in the order they were added
+	///
+	/// This function simply renders all render systems in the order they were added.
+	///
+	/// \param camera The camera used to render the scene
+	/// \param target The target framebuffer to render the scene to
+	///
+	///////////////////////////////////////////////////////////
 	void render(Camera& camera, FrameBuffer& target = FrameBuffer::Default);
 
 private:

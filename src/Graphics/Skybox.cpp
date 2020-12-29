@@ -57,6 +57,11 @@ void Skybox::render(Camera& camera)
     Matrix4f view = Matrix4f(Matrix3f(camera.getViewMatrix()), 1.0f);
     shader.setUniform("u_projView", camera.getProjMatrix() * view);
 
+    // Cube map
+    shader.setUniform("u_cubemap", 0);
+    glCheck(glActiveTexture(GL_TEXTURE0));
+    glCheck(glBindTexture(GL_TEXTURE_CUBE_MAP, m_id));
+
     // Draw cubemap
     Skybox::getVertexArray().draw();
 }

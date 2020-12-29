@@ -16,6 +16,7 @@ namespace poly
 namespace priv
 {
 
+#ifndef DOXYGEN_SKIP
 
 ///////////////////////////////////////////////////////////
 struct TerrainVertex
@@ -47,6 +48,7 @@ void addTerrainTriangle(
 	vertices.push_back(priv::TerrainVertex(p3, nearTexCoord, farTexCoord));
 }
 
+#endif
 
 }
 
@@ -658,6 +660,9 @@ void Terrain::setMaxDist(float dist)
 ///////////////////////////////////////////////////////////
 void Terrain::setHeightMap(const Image& map)
 {
+	ASSERT(map.getDataType() == GLType::Float, "Terrain height maps must use float values");
+	ASSERT(map.getNumChannels() == 1, "Terrain height maps must have only one color channel");
+
 	// Upload data to texture
 	m_heightMap.create(map);
 

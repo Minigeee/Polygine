@@ -58,6 +58,13 @@ void FractalNoise::generateImage(float* data, Uint32 w, Uint32 h, Uint32 d)
 
 
 ///////////////////////////////////////////////////////////
+void FractalNoise::setSeed(int seed)
+{
+	m_noise.SetSeed(seed);
+}
+
+
+///////////////////////////////////////////////////////////
 void FractalNoise::setFrequency(float freq)
 {
 	m_noise.SetFrequency(freq);

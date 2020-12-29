@@ -250,13 +250,10 @@ int main()
     return 0;
 }
 
-// TODO : Document Octree
-// TODO : Document FrameBuffer
-// TODO : Document PostProcess
-// TODO : Document RenderSystem
 // TODO : Document SkyBox
-// TODO : Document ParticleSystem
-// TODO : Improve particle system
+// TODO : Improve particle system + document new version
+// TODO : Improve post processing + document new version
+// TODO : Change RenderState or remove it
 // TODO : Renderable base class + Billboard
 // TODO : Octree lod system
 // TODO : Bloom effect
