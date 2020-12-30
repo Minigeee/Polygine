@@ -27,6 +27,8 @@
 #include <poly/Math/Noise.h>
 #include <poly/Math/Transform.h>
 
+#include <poly/UI/UIElement.h>
+
 #include <iostream>
 
 #include <glad/glad.h>

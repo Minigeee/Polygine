@@ -30,6 +30,10 @@ file(GLOB PHYSICS_SRC
     ${SRC_DIR}/Physics/*.cpp
     ${INC_DIR}/Physics/*.h
     ${INC_DIR}/Physics/*.inl)
+file(GLOB UI_SRC
+    ${SRC_DIR}/UI/*.cpp
+    ${INC_DIR}/UI/*.h
+    ${INC_DIR}/UI/*.inl)
 
 source_group("Audio" FILES ${AUDIO_SRC})
 source_group("Core" FILES ${CORE_SRC})
@@ -38,6 +42,7 @@ source_group("Graphics" FILES ${GRAPHICS_SRC})
 source_group("Math" FILES ${MATH_SRC})
 source_group("Network" FILES ${NETWORK_SRC})
 source_group("Physics" FILES ${PHYSICS_SRC})
+source_group("UI" FILES ${UI_SRC})
     
 # Build library
 add_library(polygine STATIC
