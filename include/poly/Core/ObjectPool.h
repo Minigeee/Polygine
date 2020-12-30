@@ -198,7 +198,46 @@ private:
     Uint32 m_pageSize;      //!< Size of each page in number of objects
 };
 
+
+///////////////////////////////////////////////////////////
+/// \brief A global object pool
+///
+///////////////////////////////////////////////////////////
+template <typename T>
+class Pool
+{
+public:
+    ///////////////////////////////////////////////////////////
+    /// \brief Allocate space for an object and call its default constructor
+    ///
+    /// All objects allocated with this function should be released
+    /// with free() after done using so the object deconstructor can
+    /// be called.
+    ///
+    /// \return A pointer to the allocated object
+    ///
+    ///////////////////////////////////////////////////////////
+    static T* alloc();
+
+    ///////////////////////////////////////////////////////////
+    /// \brief Free the object from memory and call its destructor
+    ///
+    /// Failing to call this function may lead to memory leaks if
+    /// the object type has a destructor that manages its own memory
+    /// allocations.
+    ///
+    /// \param ptr A pointer to the object
+    ///
+    ///////////////////////////////////////////////////////////
+    static void free(T* ptr);
+
+private:
+    static ObjectPool s_pool;
+};
+
 }
+
+#include <poly/Core/ObjectPool.inl>
 
 #endif
 
