@@ -55,6 +55,10 @@ void UISystem::render(FrameBuffer& target)
 	// Clear buffers
 	glCheck(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
 
+	// Enable blending
+	glCheck(glEnable(GL_BLEND));
+	glCheck(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+
 	std::vector<UIRenderData> renderData;
 	std::vector<UIQuad> transparentData;
 	std::vector<std::vector<UIQuad>> quads;
@@ -101,7 +105,7 @@ void UISystem::render(FrameBuffer& target)
 				quad.m_origin,
 				quad.m_color,
 				quad.m_textureRect,
-				(float)quad.m_index / index,
+				1.0f - (float)quad.m_index / index,
 			};
 		}
 
@@ -142,7 +146,7 @@ void UISystem::render(FrameBuffer& target)
 			quad.m_origin,
 			quad.m_color,
 			quad.m_textureRect,
-			(float)quad.m_index / index,
+			1.0f - (float)quad.m_index / index,
 		};
 
 		// Update number of instances mapped
@@ -174,13 +178,13 @@ void UISystem::render(FrameBuffer& target)
 			shader.setUniform("u_hasTexture", false);
 
 		m_vertexArray.bind();
-		m_vertexArray.addBuffer(m_instanceBuffer, 0, 2, sizeof(UIInstanceData), group.m_offset + 0 * sizeof(float));	// Position
-		m_vertexArray.addBuffer(m_instanceBuffer, 1, 1, sizeof(UIInstanceData), group.m_offset + 2 * sizeof(float));	// Rotation
-		m_vertexArray.addBuffer(m_instanceBuffer, 2, 2, sizeof(UIInstanceData), group.m_offset + 3 * sizeof(float));	// Size
-		m_vertexArray.addBuffer(m_instanceBuffer, 3, 2, sizeof(UIInstanceData), group.m_offset + 5 * sizeof(float));	// Origin
-		m_vertexArray.addBuffer(m_instanceBuffer, 4, 4, sizeof(UIInstanceData), group.m_offset + 7 * sizeof(float));	// Color
-		m_vertexArray.addBuffer(m_instanceBuffer, 5, 4, sizeof(UIInstanceData), group.m_offset + 11 * sizeof(float));	// Texture rect
-		m_vertexArray.addBuffer(m_instanceBuffer, 6, 1, sizeof(UIInstanceData), group.m_offset + 15 * sizeof(float));	// Index
+		m_vertexArray.addBuffer(m_instanceBuffer, 0, 2, sizeof(UIInstanceData), group.m_offset + 0 * sizeof(float), 1);		// Position
+		m_vertexArray.addBuffer(m_instanceBuffer, 1, 1, sizeof(UIInstanceData), group.m_offset + 2 * sizeof(float), 1);		// Rotation
+		m_vertexArray.addBuffer(m_instanceBuffer, 2, 2, sizeof(UIInstanceData), group.m_offset + 3 * sizeof(float), 1);		// Size
+		m_vertexArray.addBuffer(m_instanceBuffer, 3, 2, sizeof(UIInstanceData), group.m_offset + 5 * sizeof(float), 1);		// Origin
+		m_vertexArray.addBuffer(m_instanceBuffer, 4, 4, sizeof(UIInstanceData), group.m_offset + 7 * sizeof(float), 1);		// Color
+		m_vertexArray.addBuffer(m_instanceBuffer, 5, 4, sizeof(UIInstanceData), group.m_offset + 11 * sizeof(float), 1);	// Texture rect
+		m_vertexArray.addBuffer(m_instanceBuffer, 6, 1, sizeof(UIInstanceData), group.m_offset + 15 * sizeof(float), 1);	// Index
 
 		// Draw elements
 		m_vertexArray.draw(group.m_instances);
@@ -234,7 +238,7 @@ void UISystem::getRenderQuads(
 			element->getQuads(transparentData);
 
 			// Set index
-			for (Uint32 i = start; i < quads.size(); ++i)
+			for (Uint32 i = start; i < transparentData.size(); ++i)
 				transparentData[i].m_index = index;
 		}
 
