@@ -261,13 +261,12 @@ int main()
 
         // Render scene
         skeleton.update(elapsed);
-        // octree.update();
+        octree.update();
         scene.render(camera, multisampled);
         multisampled.blitTo(framebuffer);
 
+        colorAdjust.render(framebuffer);
         ui.render(FrameBuffer::Default);
-
-        // colorAdjust.render(framebuffer);
 
         // Display (swap buffers)
         window.display();

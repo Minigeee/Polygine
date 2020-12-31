@@ -122,9 +122,10 @@ void FrameBuffer::create(Uint32 w, Uint32 h, Uint32 d, bool multisampled)
 ///////////////////////////////////////////////////////////
 void FrameBuffer::attachColor(Texture* texture, PixelFormat fmt, GLType dtype, TextureFilter filter, TextureWrap wrap)
 {
+	if (!m_id) return;
+
 	// Bind the framebuffer
-	if (m_id && currentBound == m_id)
-		bind();
+	bind();
 
 	// Get the color attachment index
 	Uint32 index = m_colorTextures.size() + m_colorIds.size();
@@ -173,9 +174,10 @@ void FrameBuffer::attachColor(Texture* texture, PixelFormat fmt, GLType dtype, T
 ///////////////////////////////////////////////////////////
 void FrameBuffer::attachDepth(Texture* texture, GLType dtype, TextureFilter filter, TextureWrap wrap)
 {
+	if (!m_id) return;
+
 	// Bind the framebuffer
-	if (m_id && currentBound == m_id)
-		bind();
+	bind();
 
 	// Decide to use texture or renderbuffer attachment
 	if (texture)

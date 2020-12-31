@@ -66,13 +66,13 @@ void ColorAdjust::render(FrameBuffer& input, FrameBuffer& output)
 	output.bind();
 
 	// Disable depth test
-	glDisable(GL_DEPTH_TEST);
+	glCheck(glDisable(GL_DEPTH_TEST));
 
 	// Disable cull face
-	glDisable(GL_CULL_FACE);
+	glCheck(glDisable(GL_CULL_FACE));
 
 	// Clear color buffer
-	glClear(GL_COLOR_BUFFER_BIT);
+	glCheck(glClear(GL_COLOR_BUFFER_BIT));
 
 	// Bind shader
 	Shader& shader = getShader();

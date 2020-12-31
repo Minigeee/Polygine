@@ -61,8 +61,8 @@ void UISystem::render(FrameBuffer& target)
 	// Bind framebuffer
 	target.bind();
 
-	// Clear buffers
-	glCheck(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
+	// Clear only the depth buffer (so the UI can be overlayed)
+	glCheck(glClear(GL_DEPTH_BUFFER_BIT));
 
 	// Enable blending
 	glCheck(glEnable(GL_BLEND));
@@ -94,7 +94,7 @@ void UISystem::render(FrameBuffer& target)
 	}
 
 	// Map the instance buffer
-	UIInstanceData* data = (UIInstanceData * )m_instanceBuffer.map(m_instanceBufferOffset, size, flags);
+	UIInstanceData* data = (UIInstanceData*)m_instanceBuffer.map(m_instanceBufferOffset, size, flags);
 
 	Uint32 numInstancesMapped = 0;
 

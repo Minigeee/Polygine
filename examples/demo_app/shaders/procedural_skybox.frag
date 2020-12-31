@@ -81,5 +81,5 @@ void main()
     color += u_bloomColor * phaseFunction_M(u_bloomSize, nu) * (factor * 0.2f + 0.2f) * heightFactor;
 
     // Final color
-    f_color.rgb = color;
+    f_color = vec4(color, 1.0f);
 }
