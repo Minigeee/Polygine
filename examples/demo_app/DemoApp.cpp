@@ -168,8 +168,13 @@ int main()
     ColorAdjust colorAdjust;
 
     UISystem ui(1280, 720);
-    UIElement elems[3];
+    ui.setWindow(&window);
 
+    UIElement elems[3];
+    elems[0].setOrigin(UIPosition::Center);
+    elems[0].setAnchor(UIPosition::Center);
+    elems[0].setPosition(50.0f, 50.0f);
+    elems[0].setRotation(45.0f);
     elems[0].setSize(50.0f, 50.0f);
     elems[0].setColor(1, 0, 0, 1);
     elems[1].setSize(50.0f, 50.0f);
@@ -179,8 +184,6 @@ int main()
     elems[2].setPosition(15.0f, 30.0f);
     elems[2].setColor(0, 0, 1, 0.5f);
     ui.addChild(&elems[0]);
-    ui.addChild(&elems[1]);
-    ui.addChild(&elems[2]);
 
 
     bool mouseDown = false;

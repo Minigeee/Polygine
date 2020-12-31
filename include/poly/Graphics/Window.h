@@ -22,7 +22,7 @@ namespace poly
 ///
 ///////////////////////////////////////////////////////////
 class Window :
-	public EventSystem<E_KeyEvent, E_MouseButton, E_MouseMove, E_MouseScroll>
+	public EventSystem<E_KeyEvent, E_MouseButton, E_MouseMove, E_MouseScroll, E_TextInput>
 {
 public:
 	///////////////////////////////////////////////////////////

@@ -11,6 +11,8 @@
 namespace poly
 {
 
+class Window;
+
 
 ///////////////////////////////////////////////////////////
 struct UIRenderData
@@ -50,6 +52,8 @@ public:
 
 	void render(FrameBuffer& target);
 
+	void setWindow(Window* window);
+
 private:
 	void getRenderQuads(
 		UIElement* element,
@@ -59,14 +63,36 @@ private:
 		Uint32& index
 	);
 
-	Shader& getShader();
+	void onKeyEvent(const E_KeyEvent& e) override;
+
+	void onMouseButton(const E_MouseButton& e) override;
+
+	void onMouseMove(const E_MouseMove& e) override;
+
+	void onMouseScroll(const E_MouseScroll& e) override;
+
+	void onTextInput(const E_TextInput& e) override;
+
+	bool relayMouseMove(UIElement* element, const E_MouseMove& e);
+
+	static Shader& getShader();
 
 	static Shader s_shader;
 
 private:
+	Window* m_window;
+	Handle m_onKeyEventHandle;
+	Handle m_onMouseButtonHandle;
+	Handle m_onMouseMoveHandle;
+	Handle m_onMouseScrollHandle;
+	Handle m_onTextInputHandle;
+
 	VertexArray m_vertexArray;
 	VertexBuffer m_instanceBuffer;						//!< The instance buffer that stores instance transform data
 	Uint32 m_instanceBufferOffset;						//!< The offset of the valid range of the instance buffer
+
+	UIElement* m_hovered;
+	UIElement* m_focused;
 };
 
 }

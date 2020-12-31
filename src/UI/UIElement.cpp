@@ -1,4 +1,5 @@
 #include <poly/UI/UIElement.h>
+#include <iostream>
 
 namespace poly
 {
@@ -55,7 +56,9 @@ UIElement::UIElement() :
 	m_index					(0),
 	m_transformDirty		(false),
 	m_isColorTransparent	(false),
-	m_isTextureTransparent	(false)
+	m_isTextureTransparent	(false),
+	m_hasHover				(false),
+	m_hasFocus				(false)
 {
 
 }
@@ -156,22 +159,25 @@ void UIElement::updateTransforms()
 
 		if (m_parent)
 		{
-			Vector2f parentOrigin = m_parent->getOrigin() * m_parent->getPixelSize();
-			Vector2f anchor = m_anchor * m_parent->getPixelSize();
+			// Update parent transforms
+			m_parent->updateTransforms();
 
-			m_absPosition += m_parent->getAbsPosition() - parentOrigin + anchor;
-			m_absRotation += m_parent->getAbsRotation();
+			Vector2f parentOrigin = m_parent->m_origin * m_parent->m_pixelSize;
+			Vector2f anchor = m_anchor * m_parent->m_pixelSize;
+
+			m_absPosition += m_parent->m_absPosition - parentOrigin + anchor;
+			m_absRotation += m_parent->m_absRotation;
 
 			// Update sizes
 			if (m_useRelSize.x)
-				m_pixelSize.x = m_relSize.x * m_parent->getPixelSize().x;
+				m_pixelSize.x = m_relSize.x * m_parent->m_pixelSize.x;
 			else
-				m_relSize.x = m_pixelSize.x / m_parent->getPixelSize().x;
+				m_relSize.x = m_pixelSize.x / m_parent->m_pixelSize.x;
 
 			if (m_useRelSize.y)
-				m_pixelSize.y = m_relSize.y * m_parent->getPixelSize().y;
+				m_pixelSize.y = m_relSize.y * m_parent->m_pixelSize.y;
 			else
-				m_relSize.y = m_pixelSize.y / m_parent->getPixelSize().y;
+				m_relSize.y = m_pixelSize.y / m_parent->m_pixelSize.y;
 		}
 
 		// Keep rotation within range
@@ -543,19 +549,99 @@ Uint32 UIElement::getIndex() const
 
 
 ///////////////////////////////////////////////////////////
+bool UIElement::hasHover() const
+{
+	return m_hasHover;
+}
+
+
+///////////////////////////////////////////////////////////
+bool UIElement::hasFocus() const
+{
+	return m_hasFocus;
+}
+
+
+///////////////////////////////////////////////////////////
 void UIElement::getQuads(std::vector<UIQuad>& quads)
 {
+	// Update transforms
+	updateTransforms();
+
 	UIQuad quad;
-	quad.m_position = getAbsPosition();
-	quad.m_rotation = getAbsRotation();
-	quad.m_size = getPixelSize();
-	quad.m_origin = getOrigin();
-	quad.m_color = getColor();
-	quad.m_texture = getTexture();
-	quad.m_textureRect = getTextureRect();
+	quad.m_position = m_absPosition;
+	quad.m_rotation = m_absRotation;
+	quad.m_size = m_pixelSize;
+	quad.m_origin = m_origin;
+	quad.m_color = m_color;
+	quad.m_texture = m_texture;
+	quad.m_textureRect = m_textureRect;
 	quad.m_transparent = isTransparent();
 
 	quads.push_back(quad);
+}
+
+
+///////////////////////////////////////////////////////////
+void UIElement::onKeyEvent(const E_KeyEvent& e)
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
+void UIElement::onMouseButton(const E_MouseButton& e)
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
+void UIElement::onMouseMove(const E_MouseMove& e)
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
+void UIElement::onMouseScroll(const E_MouseScroll& e)
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
+void UIElement::onTextInput(const E_TextInput& e)
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
+void UIElement::onMouseEnter(const E_MouseMove& e)
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
+void UIElement::onMouseLeave(const E_MouseMove& e)
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
+void UIElement::onGainFocus()
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
+void UIElement::onLoseFocus()
+{
+
 }
 
 

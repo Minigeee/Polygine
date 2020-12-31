@@ -1,6 +1,9 @@
 #include <poly/Core/Profiler.h>
 
 #include <poly/Graphics/GLCheck.h>
+#include <poly/Graphics/Window.h>
+
+#include <poly/Math/Functions.h>
 
 #include <poly/UI/UISystem.h>
 
@@ -14,7 +17,10 @@ Shader UISystem::s_shader;
 
 ///////////////////////////////////////////////////////////
 UISystem::UISystem() :
-	m_instanceBufferOffset	(0)
+	m_window				(0),
+	m_instanceBufferOffset	(0),
+	m_hovered				(0),
+	m_focused				(0)
 {
 	m_isVisible = false;
 
@@ -26,7 +32,10 @@ UISystem::UISystem() :
 
 ///////////////////////////////////////////////////////////
 UISystem::UISystem(Uint32 w, Uint32 h) :
-	m_instanceBufferOffset	(0)
+	m_window				(0),
+	m_instanceBufferOffset	(0),
+	m_hovered				(0),
+	m_focused				(0)
 {
 	m_isVisible = false;
 	m_pixelSize = Vector2f(w, h);
@@ -264,6 +273,149 @@ Shader& UISystem::getShader()
 	}
 
 	return s_shader;
+}
+
+
+///////////////////////////////////////////////////////////
+void UISystem::setWindow(Window* window)
+{
+	// Reset previous handles
+	if (m_window)
+	{
+		m_window->removeListener<E_KeyEvent>(m_onKeyEventHandle);
+		m_window->removeListener<E_MouseButton>(m_onMouseButtonHandle);
+		m_window->removeListener<E_MouseMove>(m_onMouseMoveHandle);
+		m_window->removeListener<E_MouseScroll>(m_onMouseScrollHandle);
+		m_window->removeListener<E_TextInput>(m_onTextInputHandle);
+	}
+
+	// Set listeners
+	m_window = window;
+	m_onKeyEventHandle =	m_window->addListener<E_KeyEvent>(std::bind(&UISystem::onKeyEvent, this, std::placeholders::_1));
+	m_onMouseButtonHandle = m_window->addListener<E_MouseButton>(std::bind(&UISystem::onMouseButton, this, std::placeholders::_1));
+	m_onMouseMoveHandle =	m_window->addListener<E_MouseMove>(std::bind(&UISystem::onMouseMove, this, std::placeholders::_1));
+	m_onMouseScrollHandle = m_window->addListener<E_MouseScroll>(std::bind(&UISystem::onMouseScroll, this, std::placeholders::_1));
+	m_onTextInputHandle =	m_window->addListener<E_TextInput>(std::bind(&UISystem::onTextInput, this, std::placeholders::_1));
+}
+
+
+///////////////////////////////////////////////////////////
+void UISystem::onKeyEvent(const E_KeyEvent& e)
+{
+	if (m_hovered && m_hovered != this)
+		m_hovered->onKeyEvent(e);
+
+	if (m_focused && m_focused != this)
+		m_focused->onKeyEvent(e);
+}
+
+
+///////////////////////////////////////////////////////////
+bool UISystem::relayMouseMove(UIElement* element, const E_MouseMove& e)
+{
+	// Relay to children first, back to front
+	for (int i = element->m_children.size() - 1; i >= 0; --i)
+	{
+		if (relayMouseMove(element->m_children[i], e))
+			return true;
+	}
+
+	// Update transforms
+	element->updateTransforms();
+
+	// Adjust for translation
+	Vector2f p = Vector2f(e.m_x, e.m_y) - element->m_absPosition;
+	// Adjust for rotation
+	float angle = rad(element->m_absRotation);
+	float ca = cos(angle);
+	float sa = sin(angle);
+	p = Vector2f(p.x * ca - p.y * sa, p.x * sa + p.y * ca);
+	p += element->m_pixelSize * element->m_origin;
+
+	// The point is now in the element's local coordinate space
+	// Check if the point is inside the element
+	const Vector2f& size = element->getPixelSize();
+	if (p.x > 0.0f && p.x < size.x && p.y > 0.0f && p.y < size.y)
+	{
+		// Check if this element has hover
+		if (!element->hasHover())
+		{
+			// Send event for mouse leave previous area
+			if (m_hovered)
+			{
+				m_hovered->m_hasHover = false;
+				m_hovered->onMouseLeave(e);
+			}
+
+			// Send event for entering the new element
+			element->m_hasHover = true;
+			element->onMouseEnter(e);
+
+			// Update the current hovered element
+			m_hovered = element;
+		}
+
+		// Send event for mouse move
+		if (element != this)
+			element->onMouseMove(e);
+
+		return true;
+	}
+
+	return false;
+}
+
+
+///////////////////////////////////////////////////////////
+void UISystem::onMouseMove(const E_MouseMove& e)
+{
+	// Relay the event
+	relayMouseMove(this, e);
+}
+
+
+///////////////////////////////////////////////////////////
+void UISystem::onMouseButton(const E_MouseButton& e)
+{
+	// Check current hovered, and change it to focus if needed
+	if (m_hovered && m_hovered != m_focused)
+	{
+		// Send event for losing focus
+		if (m_focused)
+		{
+			m_focused->m_hasFocus = false;
+			m_focused->onLoseFocus();
+		}
+
+		// Send event for gaining focus
+		m_hovered->m_hasFocus = true;
+		m_hovered->onGainFocus();
+
+		// Update current focused element
+		m_focused = m_hovered;
+	}
+
+	// Send event for mouse button
+	if (m_focused && m_focused != this)
+		m_focused->onMouseButton(e);
+}
+
+
+///////////////////////////////////////////////////////////
+void UISystem::onMouseScroll(const E_MouseScroll& e)
+{
+	// Send event for hovered element
+	if (m_hovered && m_hovered != this)
+		m_hovered->onMouseScroll(e);
+}
+
+
+///////////////////////////////////////////////////////////
+void UISystem::onTextInput(const E_TextInput& e)
+{
+	// Send event for focused element
+	if (m_focused && m_focused != this)
+		m_focused->onTextInput(e);
 }
 
 

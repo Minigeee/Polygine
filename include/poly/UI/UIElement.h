@@ -1,6 +1,8 @@
 #ifndef POLY_UI_ELEMENT_H
 #define POLY_UI_ELEMENT_H
 
+#include <poly/Engine/Input.h>
+
 #include <poly/Math/Vector2.h>
 
 #include <vector>
@@ -635,12 +637,117 @@ public:
 	///////////////////////////////////////////////////////////
 	Uint32 getIndex() const;
 
+	///////////////////////////////////////////////////////////
+	/// \brief Check if the element has mouse hover
+	///
+	/// \return True if the element is being hovered with the cursor
+	///
+	///////////////////////////////////////////////////////////
+	bool hasHover() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Check if the element has focus
+	///
+	/// \return True if the element has focus
+	///
+	///////////////////////////////////////////////////////////
+	bool hasFocus() const;
+
 protected:
-	void markTransformDirty();
+	///////////////////////////////////////////////////////////
+	/// \brief Key event callback
+	///
+	/// This function will be called whenever a key event occurs
+	/// while the element has hover or focus.
+	///
+	/// \param e The event object
+	///
+	///////////////////////////////////////////////////////////
+	virtual void onKeyEvent(const E_KeyEvent& e);
 
-	void updateTransforms();
+	///////////////////////////////////////////////////////////
+	/// \brief Mouse button callback
+	///
+	/// This function will be called whenever a mouse button event
+	/// occurs while the element has hover or focus.
+	///
+	/// \param e The event object
+	///
+	///////////////////////////////////////////////////////////
+	virtual void onMouseButton(const E_MouseButton& e);
 
-	virtual void getQuads(std::vector<UIQuad>& quads);
+	///////////////////////////////////////////////////////////
+	/// \brief Mouse move callback
+	///
+	/// This function will be called whenever a mouse move event
+	/// occurs while the element has hover or focus.
+	///
+	/// \param e The event object
+	///
+	///////////////////////////////////////////////////////////
+	virtual void onMouseMove(const E_MouseMove& e);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Mouse scroll callback
+	///
+	/// This function will be called whenever a mouse scroll event
+	/// occurs while the element has hover.
+	///
+	/// \param e The event object
+	///
+	///////////////////////////////////////////////////////////
+	virtual void onMouseScroll(const E_MouseScroll& e);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Text input callback
+	///
+	/// This function will be called whenever a text inpu event
+	/// occurs while the element has focus.
+	///
+	/// \param e The event object
+	///
+	///////////////////////////////////////////////////////////
+	virtual void onTextInput(const E_TextInput& e);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Mouse enter callback
+	///
+	/// This function will be called whenever the cursor enters
+	/// the element bounding box.
+	///
+	/// \param e The event object
+	///
+	///////////////////////////////////////////////////////////
+	virtual void onMouseEnter(const E_MouseMove& e);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Mouse leave callback
+	///
+	/// This function will be called whenever the cursor leaves
+	/// the element bounding box.
+	///
+	/// \param e The event object
+	///
+	///////////////////////////////////////////////////////////
+	virtual void onMouseLeave(const E_MouseMove& e);
+
+	///////////////////////////////////////////////////////////
+	/// \brief gain focus callback
+	///
+	/// This function will be called whenever the element gains
+	/// focus.
+	///
+	///////////////////////////////////////////////////////////
+	virtual void onGainFocus();
+
+	///////////////////////////////////////////////////////////
+	/// \brief gain focus callback
+	///
+	/// This function will be called whenever the element loses
+	/// focus.
+	///
+	///////////////////////////////////////////////////////////
+	virtual void onLoseFocus();
 
 protected:
 	UIElement* m_parent;
@@ -664,6 +771,15 @@ protected:
 
 	Uint32 m_index;
 	bool m_transformDirty;
+	bool m_hasHover;
+	bool m_hasFocus;
+
+private:
+	void markTransformDirty();
+
+	void updateTransforms();
+
+	virtual void getQuads(std::vector<UIQuad>& quads);
 };
 
 }
