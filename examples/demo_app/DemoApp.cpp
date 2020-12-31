@@ -27,6 +27,7 @@
 #include <poly/Math/Noise.h>
 #include <poly/Math/Transform.h>
 
+#include <poly/UI/UISystem.h>
 #include <poly/UI/UIElement.h>
 
 #include <iostream>
@@ -157,8 +158,22 @@ int main()
     framebuffer.bind();
     framebuffer.attachColor(&texture[1], PixelFormat::Rgb, GLType::Uint16);
 
+    FrameBuffer uiTarget;
+    uiTarget.create(1280, 720);
+    uiTarget.bind();
+    uiTarget.attachColor(&texture[2], PixelFormat::Rgba, GLType::Uint8);
+    uiTarget.attachDepth();
+
     // Post process stuff
     ColorAdjust colorAdjust;
+
+    UISystem ui(1280, 720);
+    UIElement elem;
+    elem.setOrigin(UIPosition::Center);
+    elem.setAnchor(UIPosition::Center);
+    elem.setSize(50.0f, 20.0f);
+    elem.setRotation(45.0f);
+    ui.addChild(&elem);
 
 
     bool mouseDown = false;
@@ -240,13 +255,15 @@ int main()
         scene.render(camera, multisampled);
         multisampled.blitTo(framebuffer);
 
-        colorAdjust.render(framebuffer);
+        ui.render(FrameBuffer::Default);
+
+        // colorAdjust.render(framebuffer);
 
         // Display (swap buffers)
         window.display();
     }
 
-    const ProfilerData& data = Profiler::getData("poly::Terrain::render");
+    const ProfilerData& data = Profiler::getData("poly::UISystem::render");
     std::cout << data.mean().toMicroseconds() << '\n';
 
     return 0;

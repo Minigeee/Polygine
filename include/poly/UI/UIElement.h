@@ -9,6 +9,8 @@ namespace poly
 {
 
 class Texture;
+class UISystem;
+
 
 ///////////////////////////////////////////////////////////
 /// \brief An enum that describes relative UI element positions
@@ -27,12 +29,34 @@ enum class UIPosition
 	BotRight
 };
 
+
+///////////////////////////////////////////////////////////
+/// \brief An intermediate struct used to render UI quads
+///
+///////////////////////////////////////////////////////////
+struct UIQuad
+{
+	Vector2f m_position;
+	float m_rotation;
+	Vector2f m_size;
+	Vector2f m_origin;
+	Vector4f m_color;
+	Texture* m_texture;
+	Vector4f m_textureRect;
+	Uint32 m_index;
+	Uint32 m_group;
+	bool m_transparent;
+};
+
+
 ///////////////////////////////////////////////////////////
 /// \brief The base class for all UI elements
 ///
 ///////////////////////////////////////////////////////////
 class UIElement
 {
+	friend UISystem;
+
 public:
 	///////////////////////////////////////////////////////////
 	/// \brief Default constructor
@@ -430,6 +454,18 @@ public:
 	void setVisible(bool visible, bool recursive = true);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Set the transparent flag for the element
+	///
+	/// This should be used if a transparent texture is being used
+	/// because it is much harder to check transparency in a texture.
+	/// It does not need to be used for transparent colors.
+	///
+	/// \param transparent Transparency flag
+	///
+	///////////////////////////////////////////////////////////
+	void setTransparent(bool transparent);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Move the UI element by the specified pixel offset
 	///
 	/// \param offset The pixel offset
@@ -568,6 +604,14 @@ public:
 	bool isVisible() const;
 
 	///////////////////////////////////////////////////////////
+	/// \brief Check if the element has transparent colors or textures
+	///
+	/// \return True if the element has transparent colors or texture
+	///
+	///////////////////////////////////////////////////////////
+	bool isTransparent() const;
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the UI element's parent element
 	///
 	/// \return The UI element's parent element
@@ -596,6 +640,8 @@ protected:
 
 	void updateTransforms();
 
+	virtual void getQuads(std::vector<UIQuad>& quads);
+
 protected:
 	UIElement* m_parent;
 	std::vector<UIElement*> m_children;
@@ -613,6 +659,8 @@ protected:
 	Texture* m_texture;
 	Vector4f m_textureRect;
 	bool m_isVisible;
+	bool m_isColorTransparent;
+	bool m_isTextureTransparent;
 
 	Uint32 m_index;
 	bool m_transformDirty;

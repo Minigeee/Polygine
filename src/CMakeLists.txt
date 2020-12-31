@@ -52,7 +52,8 @@ add_library(polygine STATIC
     ${GRAPHICS_SRC}
     ${MATH_SRC}
     ${NETWORK_SRC}
-    ${PHYSICS_SRC})
+    ${PHYSICS_SRC}
+    ${UI_SRC})
     
 target_include_directories(polygine PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>

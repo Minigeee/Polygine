@@ -224,6 +224,7 @@ void FrameBuffer::blitTo(FrameBuffer& target)
 	// Bind the framebuffers
 	glCheck(glBindFramebuffer(GL_READ_FRAMEBUFFER, m_id));
 	glCheck(glBindFramebuffer(GL_DRAW_FRAMEBUFFER, target.m_id));
+	currentBound = target.m_id;
 
 	// Get buffer bits
 	Uint32 flags = 0;

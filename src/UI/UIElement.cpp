@@ -39,21 +39,23 @@ Vector2f getPositionFromEnum(UIPosition pos)
 
 ///////////////////////////////////////////////////////////
 UIElement::UIElement() :
-	m_parent			(0),
-	m_relPosition		(0.0f),
-	m_absPosition		(0.0f),
-	m_relRotation		(0.0f),
-	m_absRotation		(0.0f),
-	m_relSize			(0.0f),
-	m_pixelSize			(0.0f),
-	m_useRelSize		(false),
-	m_origin			(0.0f),
-	m_anchor			(0.0f),
-	m_color				(1.0f),
-	m_texture			(0),
-	m_isVisible			(true),
-	m_index				(0),
-	m_transformDirty	(false)
+	m_parent				(0),
+	m_relPosition			(0.0f),
+	m_absPosition			(0.0f),
+	m_relRotation			(0.0f),
+	m_absRotation			(0.0f),
+	m_relSize				(0.0f),
+	m_pixelSize				(0.0f),
+	m_useRelSize			(false),
+	m_origin				(0.0f),
+	m_anchor				(0.0f),
+	m_color					(1.0f),
+	m_texture				(0),
+	m_isVisible				(true),
+	m_index					(0),
+	m_transformDirty		(false),
+	m_isColorTransparent	(false),
+	m_isTextureTransparent	(false)
 {
 
 }
@@ -199,7 +201,7 @@ void UIElement::setPosition(float x, float y)
 ///////////////////////////////////////////////////////////
 void UIElement::setRotation(float rotation)
 {
-	m_relRotation = rotation;
+	m_relRotation = fmodf(rotation, 360.0f);
 	markTransformDirty();
 }
 
@@ -328,6 +330,7 @@ void UIElement::setAnchor(UIPosition anchor)
 void UIElement::setColor(const Vector4f& color)
 {
 	m_color = color;
+	m_isColorTransparent = m_color.a < 1.0f - FLT_EPSILON;
 }
 
 
@@ -335,6 +338,7 @@ void UIElement::setColor(const Vector4f& color)
 void UIElement::setColor(float r, float g, float b, float a)
 {
 	m_color = Vector4f(r, g, b, a);
+	m_isColorTransparent = m_color.a < 1.0f - FLT_EPSILON;
 }
 
 
@@ -374,6 +378,13 @@ void UIElement::setVisible(bool visible, bool recursive)
 
 
 ///////////////////////////////////////////////////////////
+void UIElement::setTransparent(bool transparent)
+{
+	m_isTextureTransparent = transparent;
+}
+
+
+///////////////////////////////////////////////////////////
 void UIElement::move(const Vector2f& offset)
 {
 	m_relPosition += offset;
@@ -392,7 +403,7 @@ void UIElement::move(float x, float y)
 ///////////////////////////////////////////////////////////
 void UIElement::rotate(float angle)
 {
-	m_relRotation += angle;
+	m_relRotation = fmodf(m_relRotation + angle, 360.0f);
 	markTransformDirty();
 }
 
@@ -504,6 +515,13 @@ bool UIElement::isVisible() const
 
 
 ///////////////////////////////////////////////////////////
+bool UIElement::isTransparent() const
+{
+	return m_isColorTransparent || m_isTextureTransparent;
+}
+
+
+///////////////////////////////////////////////////////////
 UIElement* UIElement::getParent() const
 {
 	return m_parent;
@@ -521,6 +539,23 @@ const std::vector<UIElement*>& UIElement::getChildren() const
 Uint32 UIElement::getIndex() const
 {
 	return m_index;
+}
+
+
+///////////////////////////////////////////////////////////
+void UIElement::getQuads(std::vector<UIQuad>& quads)
+{
+	UIQuad quad;
+	quad.m_position = getAbsPosition();
+	quad.m_rotation = getAbsRotation();
+	quad.m_size = getPixelSize();
+	quad.m_origin = getOrigin();
+	quad.m_color = getColor();
+	quad.m_texture = getTexture();
+	quad.m_textureRect = getTextureRect();
+	quad.m_transparent = isTransparent();
+
+	quads.push_back(quad);
 }
 
 
