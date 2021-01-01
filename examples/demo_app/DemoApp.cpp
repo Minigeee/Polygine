@@ -172,19 +172,19 @@ int main()
     ui.setWindow(&window);
 
     UIElement elems[3];
-    elems[0].setPosition(50.0f, 50.0f);
+    elems[0].setPosition(50.0f, 350.0f);
     elems[0].setSize(831, 14);
+    // elems[0].setRotation(90.0f);
+    // elems[0].setColor(0.68f, 0.73f, 0.43f, 1.0f);
     elems[0].setBlendFactor(BlendFactor::One);
     elems[0].setTransparent(true);
-    elems[1].setSize(50.0f, 50.0f);
-    elems[1].setPosition(30.0f, 0.0f);
-    elems[1].setColor(0, 1, 0, 0.2f);
+    elems[1].setSize(300.0f, 140.0f);
+    elems[1].setPosition(100.0f, 20.0f);
+    elems[1].setColor(0, 1, 0, 1.0f);
     elems[2].setSize(50.0f, 50.0f);
     elems[2].setPosition(15.0f, 30.0f);
     elems[2].setColor(0, 0, 1, 0.5f);
     ui.addChild(&elems[0]);
-    ui.addChild(&elems[2]);
-    ui.addChild(&elems[1]);
 
     Font font;
     font.load("fonts/segoeui/segoeui.ttf");
@@ -272,7 +272,7 @@ int main()
         multisampled.blitTo(framebuffer);
 
         colorAdjust.render(framebuffer);
-        ui.render();
+        ui.render(FrameBuffer::Default, true);
 
         // Display (swap buffers)
         window.display();
