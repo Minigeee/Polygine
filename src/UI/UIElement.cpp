@@ -52,6 +52,8 @@ UIElement::UIElement() :
 	m_anchor				(0.0f),
 	m_color					(1.0f),
 	m_texture				(0),
+	m_textureRect			(0.0f, 0.0f, 1.0f, 1.0f),
+	m_blendFactor			(BlendFactor::SrcAlpha),
 	m_isVisible				(true),
 	m_index					(0),
 	m_transformDirty		(false),
@@ -370,6 +372,13 @@ void UIElement::setTextureRect(float x, float y, float w, float h)
 
 
 ///////////////////////////////////////////////////////////
+void UIElement::setBlendFactor(BlendFactor factor)
+{
+	m_blendFactor = factor;
+}
+
+
+///////////////////////////////////////////////////////////
 void UIElement::setVisible(bool visible, bool recursive)
 {
 	m_isVisible = visible;
@@ -514,6 +523,13 @@ const Vector4f& UIElement::getTextureRect() const
 
 
 ///////////////////////////////////////////////////////////
+BlendFactor UIElement::getBlendFactor() const
+{
+	return m_blendFactor;
+}
+
+
+///////////////////////////////////////////////////////////
 bool UIElement::isVisible() const
 {
 	return m_isVisible;
@@ -576,6 +592,7 @@ void UIElement::getQuads(std::vector<UIQuad>& quads)
 	quad.m_color = m_color;
 	quad.m_texture = m_texture;
 	quad.m_textureRect = m_textureRect;
+	quad.m_blendFactor = m_blendFactor;
 	quad.m_transparent = isTransparent();
 
 	quads.push_back(quad);

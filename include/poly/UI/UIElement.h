@@ -3,6 +3,8 @@
 
 #include <poly/Engine/Input.h>
 
+#include <poly/Graphics/GLType.h>
+
 #include <poly/Math/Vector2.h>
 
 #include <vector>
@@ -45,6 +47,7 @@ struct UIQuad
 	Vector4f m_color;
 	Texture* m_texture;
 	Vector4f m_textureRect;
+	BlendFactor m_blendFactor;
 	Uint32 m_index;
 	Uint32 m_group;
 	bool m_transparent;
@@ -424,6 +427,17 @@ public:
 	void setTextureRect(const Vector4f& rect);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Set the alpha blend factor for the source values
+	///
+	/// This factor determines the percentage of the new color to
+	/// keep during alpha blending.
+	///
+	/// \param factor The blend factor
+	///
+	///////////////////////////////////////////////////////////
+	void setBlendFactor(BlendFactor factor);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Set the portion of the rectangle that gets displayed with a subregion rectangle
 	///
 	/// The texture rectangle includes a coordinate marking the
@@ -598,6 +612,14 @@ public:
 	const Vector4f& getTextureRect() const;
 
 	///////////////////////////////////////////////////////////
+	/// \brief Get the alpha blend factor
+	///
+	/// \return The alpha blend factor
+	///
+	///////////////////////////////////////////////////////////
+	BlendFactor getBlendFactor() const;
+
+	///////////////////////////////////////////////////////////
 	/// \brief Check if the UI element is visible
 	///
 	/// \return The UI element's visibility
@@ -765,6 +787,7 @@ protected:
 	Vector4f m_color;
 	Texture* m_texture;
 	Vector4f m_textureRect;
+	BlendFactor m_blendFactor;
 	bool m_isVisible;
 	bool m_isColorTransparent;
 	bool m_isTextureTransparent;

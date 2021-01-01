@@ -54,8 +54,8 @@ void main()
 
     // Texture coords
     vec2 t1 = v_texCoord[0];
-    vec2 t2 = v_texCoord[0] + vec2(v_texSize[0].x, 0.0f);
-    vec2 t3 = v_texCoord[0] + vec2(0.0f, v_texSize[0].y);
+    vec2 t3 = v_texCoord[0] + vec2(v_texSize[0].x, 0.0f);
+    vec2 t2 = v_texCoord[0] + vec2(0.0f, v_texSize[0].y);
     vec2 t4 = v_texCoord[0] + vec2(v_texSize[0].x, v_texSize[0].y);
 
     // Emit vertices

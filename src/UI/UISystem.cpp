@@ -54,7 +54,7 @@ void UISystem::update(float dt)
 
 
 ///////////////////////////////////////////////////////////
-void UISystem::render(FrameBuffer& target)
+void UISystem::render(FrameBuffer& target, bool overlay)
 {
 	START_PROFILING_FUNC;
 
@@ -62,11 +62,14 @@ void UISystem::render(FrameBuffer& target)
 	target.bind();
 
 	// Clear only the depth buffer (so the UI can be overlayed)
-	glCheck(glClear(GL_DEPTH_BUFFER_BIT));
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+	if (overlay)
+		glCheck(glClear(GL_DEPTH_BUFFER_BIT));
+	else
+		glCheck(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
 
 	// Enable blending
 	glCheck(glEnable(GL_BLEND));
-	glCheck(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 
 	std::vector<UIRenderData> renderData;
 	std::vector<UIQuad> transparentData;
@@ -140,7 +143,7 @@ void UISystem::render(FrameBuffer& target)
 
 			// Add a new group every time texture changes
 			currentTexture = transparentData[i].m_texture;
-			renderData.push_back(UIRenderData{ currentTexture, m_instanceBufferOffset, transparentData.size() - i });
+			renderData.push_back(UIRenderData{ currentTexture, transparentData[i].m_blendFactor, m_instanceBufferOffset, transparentData.size() - i });
 
 			// Update previous offset
 			prevOffset = i;
@@ -186,6 +189,9 @@ void UISystem::render(FrameBuffer& target)
 		else
 			shader.setUniform("u_hasTexture", false);
 
+		// Set the blend factor
+		glCheck(glBlendFunc((GLenum)group.m_blendFactor, GL_ONE_MINUS_SRC_ALPHA));
+
 		m_vertexArray.bind();
 		m_vertexArray.addBuffer(m_instanceBuffer, 0, 2, sizeof(UIInstanceData), group.m_offset + 0 * sizeof(float), 1);		// Position
 		m_vertexArray.addBuffer(m_instanceBuffer, 1, 1, sizeof(UIInstanceData), group.m_offset + 2 * sizeof(float), 1);		// Rotation
@@ -221,7 +227,7 @@ void UISystem::getRenderQuads(
 			// If the group doesn't exist, add it
 			if (group == renderData.size())
 			{
-				renderData.push_back(UIRenderData{ element->getTexture(), 0, 0 });
+				renderData.push_back(UIRenderData{ element->getTexture(), element->getBlendFactor(), 0, 0 });
 				quads.push_back(std::vector<UIQuad>());
 			}
 

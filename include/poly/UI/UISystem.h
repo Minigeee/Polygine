@@ -18,6 +18,7 @@ class Window;
 struct UIRenderData
 {
 	Texture* m_texture;
+	BlendFactor m_blendFactor;
 	Uint32 m_offset;
 	Uint32 m_instances;
 };
@@ -50,7 +51,7 @@ public:
 
 	void update(float dt);
 
-	void render(FrameBuffer& target);
+	void render(FrameBuffer& target = FrameBuffer::Default, bool overlay = true);
 
 	void setWindow(Window* window);
 

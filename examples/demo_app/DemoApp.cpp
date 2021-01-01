@@ -27,12 +27,13 @@
 #include <poly/Math/Noise.h>
 #include <poly/Math/Transform.h>
 
+#include <poly/UI/Font.h>
 #include <poly/UI/UISystem.h>
 #include <poly/UI/UIElement.h>
 
 #include <iostream>
 
-#include <glad/glad.h>
+#include <freetype/freetype.h>
 
 using namespace poly;
 
@@ -171,12 +172,10 @@ int main()
     ui.setWindow(&window);
 
     UIElement elems[3];
-    elems[0].setOrigin(UIPosition::Center);
-    elems[0].setAnchor(UIPosition::Center);
     elems[0].setPosition(50.0f, 50.0f);
-    elems[0].setRotation(45.0f);
-    elems[0].setSize(50.0f, 50.0f);
-    elems[0].setColor(1, 0, 0, 1);
+    elems[0].setSize(831, 14);
+    elems[0].setBlendFactor(BlendFactor::One);
+    elems[0].setTransparent(true);
     elems[1].setSize(50.0f, 50.0f);
     elems[1].setPosition(30.0f, 0.0f);
     elems[1].setColor(0, 1, 0, 0.2f);
@@ -184,6 +183,13 @@ int main()
     elems[2].setPosition(15.0f, 30.0f);
     elems[2].setColor(0, 0, 1, 0.5f);
     ui.addChild(&elems[0]);
+    ui.addChild(&elems[2]);
+    ui.addChild(&elems[1]);
+
+    Font font;
+    font.load("fonts/segoeui/segoeui.ttf");
+    Texture* fontTexture = &font.getTexture(15);
+    elems[0].setTexture(fontTexture);
 
 
     bool mouseDown = false;
@@ -266,7 +272,7 @@ int main()
         multisampled.blitTo(framebuffer);
 
         colorAdjust.render(framebuffer);
-        ui.render(FrameBuffer::Default);
+        ui.render();
 
         // Display (swap buffers)
         window.display();

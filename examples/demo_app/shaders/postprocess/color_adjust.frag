@@ -13,9 +13,9 @@ uniform float u_gamma;
 
 void main()
 {
-    vec3 result = texture(u_texture, v_texCoord).rgb;
+    vec4 result = texture(u_texture, v_texCoord);
 
     // Hdr and gamma correction
-    f_color.rgb = pow(vec3(1.0f) - exp(-result), vec3(1.0f / u_gamma));
-    f_color.a = 1.0f;
+    f_color.rgb = pow(vec3(1.0f) - exp(-result.rgb), vec3(1.0f / u_gamma));
+    f_color.a = result.a;
 }

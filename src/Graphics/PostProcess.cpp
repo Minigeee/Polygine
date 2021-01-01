@@ -71,9 +71,6 @@ void ColorAdjust::render(FrameBuffer& input, FrameBuffer& output)
 	// Disable cull face
 	glCheck(glDisable(GL_CULL_FACE));
 
-	// Clear color buffer
-	glCheck(glClear(GL_COLOR_BUFFER_BIT));
-
 	// Bind shader
 	Shader& shader = getShader();
 

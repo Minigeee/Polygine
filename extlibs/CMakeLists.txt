@@ -54,6 +54,7 @@ add_dependency_headers(FastNoise FastNoise FastNoise)
 
 add_dependency(glfw glfw glfw)
 add_dependency(assimp assimp assimp)
+add_dependency(freetype freetype freetype)
 
 # Glad
 target_include_directories(polygine PUBLIC
