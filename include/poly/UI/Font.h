@@ -8,8 +8,6 @@
 
 #include <poly/Math/Vector4.h>
 
-#include <freetype/freetype.h>
-
 #include <string>
 
 namespace poly
@@ -32,25 +30,92 @@ enum class CharacterSet
 class Font
 {
 public:
+	///////////////////////////////////////////////////////////
+	/// \brief A struct containing information on character
+	///
+	///////////////////////////////////////////////////////////
 	struct Glyph
 	{
-		float m_advance;
-		Vector4f m_textureRect;
-		Vector4f m_glyphRect;
+		Glyph();
+
+		float m_advance;		//!< The number of pixels between the start of this character and the next character
+		Vector4f m_textureRect;	//!< The texture rectangle that determines which part of the texture to display
+		Vector4f m_glyphRect;	//!< The rectangle describing the relative position and size of the character in pixels
 	};
 
 public:
+	///////////////////////////////////////////////////////////
+	/// \brief Default constructor
+	///
+	/// Initializes the FreeType library
+	///
+	///////////////////////////////////////////////////////////
 	Font();
 
+	///////////////////////////////////////////////////////////
+	/// \brief Destructor
+	///
+	/// Cleans up the resource used by the FreeType library
+	///
+	///////////////////////////////////////////////////////////
 	~Font();
 
+	///////////////////////////////////////////////////////////
+	/// \brief Load a set of glyphs from a font file
+	///
+	/// This function loads a set of characters from a font file,
+	/// using predefined character sets (English, Spanish, Japanese,
+	/// etc...). If the font file fails to load, this function will
+	/// return false.
+	///
+	/// \param fname The file name of the font file
+	/// \param set A predefined character set
+	///
+	/// \return True if the file loads successfully
+	///
+	///////////////////////////////////////////////////////////
 	bool load(const std::string& fname, CharacterSet set = CharacterSet::English);
 
+	///////////////////////////////////////////////////////////
+	/// \brief Load a set of glyphs from a font file
+	///
+	/// This function loads a set of characters from a font file,
+	/// using a list of characters. For example, to load the English
+	/// character set (ASCII), \a set should be a list of integers
+	/// in the range 32 to 128.
+	///
+	/// \param fname The file name of the font file
+	/// \param set A list of characters to load from the font file
+	///
+	/// \return True if the file loads successfully
+	///
+	///////////////////////////////////////////////////////////
 	bool load(const std::string& fname, const std::vector<Uint32>& set);
 
+	///////////////////////////////////////////////////////////
+	/// \brief Get a character glyph for a certain font size
+	///
+	/// The glyph will be generated into the font object.
+	///
+	/// \param c The character to retrieve a glyph for
+	/// \param size The font size to retrieve the glyph
+	///
+	/// \return A reference to the character glyph
+	///
+	///////////////////////////////////////////////////////////
 	const Glyph& getGlyph(Uint32 c, Uint32 size);
 
+	///////////////////////////////////////////////////////////
+	/// \brief Get the font texture atlas for the specified font size
+	///
+	/// \param size The font size to retrieve a texture atlas for
+	///
+	/// \return A reference to the texture
+	///
+	///////////////////////////////////////////////////////////
 	Texture& getTexture(Uint32 size);
+
+	float getKerning(Uint32 c1, Uint32 c2, Uint32 size);
 
 private:
 	struct Page
@@ -68,6 +133,7 @@ private:
 	ObjectPool m_pool;
 	std::vector<Uint32> m_characters;
 	HashMap<Uint32, Page*> m_pages;
+	Uint32 m_characterSize;
 };
 
 }

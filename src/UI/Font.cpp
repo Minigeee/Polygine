@@ -2,8 +2,13 @@
 
 #include <poly/UI/Font.h>
 
+#include <freetype/freetype.h>
+#include FT_BITMAP_H
+
 namespace poly
 {
+
+#ifndef DOXYGEN_SKIP
 
 namespace priv
 {
@@ -18,12 +23,25 @@ struct FTGlyph
 
 }
 
+#endif
+
+
+///////////////////////////////////////////////////////////
+Font::Glyph::Glyph() :
+    m_advance       (0.0f),
+    m_glyphRect     (0.0f),
+    m_textureRect   (0.0f)
+{
+
+}
+
 
 ///////////////////////////////////////////////////////////
 Font::Font() :
-    m_library   (0),
-    m_face      (0),
-    m_pool      (sizeof(Page), 4)
+    m_library       (0),
+    m_face          (0),
+    m_pool          (sizeof(Page), 4),
+    m_characterSize (0)
 {
 
 }
@@ -122,8 +140,14 @@ Texture& Font::getTexture(Uint32 size)
 ///////////////////////////////////////////////////////////
 void Font::loadGlyphs(Uint32 size)
 {
+    FT_Library library = (FT_Library)m_library;
     FT_Face face = (FT_Face)m_face;
-    FT_Set_Pixel_Sizes(face, 0, size);
+
+    if (m_characterSize != size)
+    {
+        FT_Set_Pixel_Sizes(face, 0, size);
+        m_characterSize = size;
+    }
 
     // A vector of glyphs
     std::vector<priv::FTGlyph> glyphData(m_characters.size());
@@ -220,8 +244,8 @@ void Font::loadGlyphs(Uint32 size)
 
         // Texture rectangle
         glyph.m_textureRect.x = (float)currentX / textureSize.x;
-        glyph.m_textureRect.y = (float)ftGlyph.m_rect.w / textureSize.y;
-        glyph.m_textureRect.z = (float)ftGlyph.m_rect.z / textureSize.x;
+        glyph.m_textureRect.y = 0.0f;
+        glyph.m_textureRect.z = (float)ftGlyph.m_rect.z / textureSize.x * 4.0f / 3.0f;
         glyph.m_textureRect.w = (float)ftGlyph.m_rect.w / textureSize.y;
 
         // Update current x
@@ -236,6 +260,32 @@ void Font::loadGlyphs(Uint32 size)
 
     // Free texture data
     free(data);
+}
+
+
+///////////////////////////////////////////////////////////
+float Font::getKerning(Uint32 c1, Uint32 c2, Uint32 size)
+{
+    FT_Face face = (FT_Face)m_face;
+
+    if (m_characterSize != size)
+    {
+        FT_Set_Pixel_Sizes(face, 0, size);
+        m_characterSize = size;
+    }
+
+    if (face && FT_HAS_KERNING(face))
+    {
+        Uint32 index1 = FT_Get_Char_Index(face, c1);
+        Uint32 index2 = FT_Get_Char_Index(face, c2);
+
+        FT_Vector kerning;
+        FT_Get_Kerning(face, index1, index2, FT_KERNING_DEFAULT, &kerning);
+
+        return (float)kerning.x;
+    }
+
+    return 0.0f;
 }
 
 

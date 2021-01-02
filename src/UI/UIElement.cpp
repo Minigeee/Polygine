@@ -56,7 +56,7 @@ UIElement::UIElement() :
 	m_blendFactor			(BlendFactor::SrcAlpha),
 	m_isVisible				(true),
 	m_index					(0),
-	m_transformDirty		(false),
+	m_transformChanged		(false),
 	m_isColorTransparent	(false),
 	m_isTextureTransparent	(false),
 	m_hasHover				(false),
@@ -142,19 +142,19 @@ void UIElement::setIndex(Uint32 index)
 
 
 ///////////////////////////////////////////////////////////
-void UIElement::markTransformDirty()
+void UIElement::markDirty()
 {
-	m_transformDirty = true;
+	m_transformChanged = true;
 
 	for (Uint32 i = 0; i < m_children.size(); ++i)
-		m_children[i]->markTransformDirty();
+		m_children[i]->markDirty();
 }
 
 
 ///////////////////////////////////////////////////////////
-void UIElement::updateTransforms()
+void UIElement::updateProperties()
 {
-	if (m_transformDirty)
+	if (m_transformChanged)
 	{
 		m_absPosition = m_relPosition;
 		m_absRotation = m_relRotation;
@@ -162,7 +162,7 @@ void UIElement::updateTransforms()
 		if (m_parent)
 		{
 			// Update parent transforms
-			m_parent->updateTransforms();
+			m_parent->updateProperties();
 
 			Vector2f parentOrigin = m_parent->m_origin * m_parent->m_pixelSize;
 			Vector2f anchor = m_anchor * m_parent->m_pixelSize;
@@ -185,7 +185,7 @@ void UIElement::updateTransforms()
 		// Keep rotation within range
 		m_absRotation = fmodf(m_absRotation, 360.0f);
 
-		m_transformDirty = false;
+		m_transformChanged = false;
 	}
 }
 
@@ -194,7 +194,7 @@ void UIElement::updateTransforms()
 void UIElement::setPosition(const Vector2f& pos)
 {
 	m_relPosition = pos;
-	markTransformDirty();
+	markDirty();
 }
 
 
@@ -202,7 +202,7 @@ void UIElement::setPosition(const Vector2f& pos)
 void UIElement::setPosition(float x, float y)
 {
 	m_relPosition = Vector2f(x, y);
-	markTransformDirty();
+	markDirty();
 }
 
 
@@ -210,7 +210,7 @@ void UIElement::setPosition(float x, float y)
 void UIElement::setRotation(float rotation)
 {
 	m_relRotation = fmodf(rotation, 360.0f);
-	markTransformDirty();
+	markDirty();
 }
 
 
@@ -219,7 +219,7 @@ void UIElement::setSize(const Vector2f& size)
 {
 	m_pixelSize = size;
 	m_useRelSize = Vector2f(false);
-	markTransformDirty();
+	markDirty();
 }
 
 
@@ -228,7 +228,7 @@ void UIElement::setSize(float w, float h)
 {
 	m_pixelSize = Vector2f(w, h);
 	m_useRelSize = Vector2f(false);
-	markTransformDirty();
+	markDirty();
 }
 
 
@@ -237,7 +237,7 @@ void UIElement::setRelSize(const Vector2f& size)
 {
 	m_relSize = size;
 	m_useRelSize = Vector2f(true);
-	markTransformDirty();
+	markDirty();
 }
 
 
@@ -246,7 +246,7 @@ void UIElement::setRelSize(float w, float h)
 {
 	m_relSize = Vector2f(w, h);
 	m_useRelSize = Vector2f(true);
-	markTransformDirty();
+	markDirty();
 }
 
 
@@ -255,7 +255,7 @@ void UIElement::setWidth(float w)
 {
 	m_pixelSize.x = w;
 	m_useRelSize.x = false;
-	markTransformDirty();
+	markDirty();
 }
 
 
@@ -264,7 +264,7 @@ void UIElement::setHeight(float h)
 {
 	m_pixelSize.y = h;
 	m_useRelSize.y = false;
-	markTransformDirty();
+	markDirty();
 }
 
 
@@ -273,7 +273,7 @@ void UIElement::setRelWidth(float w)
 {
 	m_relSize.x = w;
 	m_useRelSize.x = true;
-	markTransformDirty();
+	markDirty();
 }
 
 
@@ -282,7 +282,7 @@ void UIElement::setRelHeight(float h)
 {
 	m_relSize.y = h;
 	m_useRelSize.y = true;
-	markTransformDirty();
+	markDirty();
 }
 
 
@@ -290,7 +290,7 @@ void UIElement::setRelHeight(float h)
 void UIElement::setOrigin(const Vector2f& origin)
 {
 	m_origin = origin;
-	markTransformDirty();
+	markDirty();
 }
 
 
@@ -298,7 +298,7 @@ void UIElement::setOrigin(const Vector2f& origin)
 void UIElement::setOrigin(float x, float y)
 {
 	m_origin = Vector2f(x, y);
-	markTransformDirty();
+	markDirty();
 }
 
 
@@ -306,7 +306,7 @@ void UIElement::setOrigin(float x, float y)
 void UIElement::setOrigin(UIPosition origin)
 {
 	m_origin = priv::getPositionFromEnum(origin);
-	markTransformDirty();
+	markDirty();
 }
 
 
@@ -314,7 +314,7 @@ void UIElement::setOrigin(UIPosition origin)
 void UIElement::setAnchor(const Vector2f& anchor)
 {
 	m_anchor = anchor;
-	markTransformDirty();
+	markDirty();
 }
 
 
@@ -322,7 +322,7 @@ void UIElement::setAnchor(const Vector2f& anchor)
 void UIElement::setAnchor(float x, float y)
 {
 	m_anchor = Vector2f(x, y);
-	markTransformDirty();
+	markDirty();
 }
 
 
@@ -330,7 +330,7 @@ void UIElement::setAnchor(float x, float y)
 void UIElement::setAnchor(UIPosition anchor)
 {
 	m_anchor = priv::getPositionFromEnum(anchor);
-	markTransformDirty();
+	markDirty();
 }
 
 
@@ -403,7 +403,7 @@ void UIElement::setTransparent(bool transparent)
 void UIElement::move(const Vector2f& offset)
 {
 	m_relPosition += offset;
-	markTransformDirty();
+	markDirty();
 }
 
 
@@ -411,7 +411,7 @@ void UIElement::move(const Vector2f& offset)
 void UIElement::move(float x, float y)
 {
 	m_relPosition += Vector2f(x, y);
-	markTransformDirty();
+	markDirty();
 }
 
 
@@ -419,7 +419,7 @@ void UIElement::move(float x, float y)
 void UIElement::rotate(float angle)
 {
 	m_relRotation = fmodf(m_relRotation + angle, 360.0f);
-	markTransformDirty();
+	markDirty();
 }
 
 
@@ -428,7 +428,7 @@ void UIElement::scale(const Vector2f& scale)
 {
 	m_pixelSize *= scale;
 	m_relSize *= scale;
-	markTransformDirty();
+	markDirty();
 }
 
 
@@ -437,7 +437,7 @@ void UIElement::scale(float w, float h)
 {
 	m_pixelSize *= Vector2f(w, h);
 	m_relSize *= Vector2f(w, h);
-	markTransformDirty();
+	markDirty();
 }
 
 
@@ -451,7 +451,7 @@ const Vector2f& UIElement::getRelPosition() const
 ///////////////////////////////////////////////////////////
 const Vector2f& UIElement::getAbsPosition()
 {
-	updateTransforms();
+	updateProperties();
 	return m_absPosition;
 }
 
@@ -466,7 +466,7 @@ float UIElement::getRelRotation() const
 ///////////////////////////////////////////////////////////
 float UIElement::getAbsRotation()
 {
-	updateTransforms();
+	updateProperties();
 	return m_absRotation;
 }
 
@@ -474,7 +474,7 @@ float UIElement::getAbsRotation()
 ///////////////////////////////////////////////////////////
 const Vector2f& UIElement::getPixelSize()
 {
-	updateTransforms();
+	updateProperties();
 	return m_pixelSize;
 }
 
@@ -482,7 +482,7 @@ const Vector2f& UIElement::getPixelSize()
 ///////////////////////////////////////////////////////////
 const Vector2f& UIElement::getRelSize()
 {
-	updateTransforms();
+	updateProperties();
 	return m_relSize;
 }
 
@@ -582,7 +582,7 @@ bool UIElement::hasFocus() const
 void UIElement::getQuads(std::vector<UIQuad>& quads)
 {
 	// Update transforms
-	updateTransforms();
+	updateProperties();
 
 	UIQuad quad;
 	quad.m_position = m_absPosition;

@@ -28,6 +28,7 @@
 #include <poly/Math/Transform.h>
 
 #include <poly/UI/Font.h>
+#include <poly/UI/Text.h>
 #include <poly/UI/UISystem.h>
 #include <poly/UI/UIElement.h>
 
@@ -171,26 +172,18 @@ int main()
     UISystem ui(1280, 720);
     ui.setWindow(&window);
 
-    UIElement elems[3];
-    elems[0].setPosition(50.0f, 350.0f);
-    elems[0].setSize(831, 14);
-    // elems[0].setRotation(90.0f);
-    // elems[0].setColor(0.68f, 0.73f, 0.43f, 1.0f);
-    elems[0].setBlendFactor(BlendFactor::One);
-    elems[0].setTransparent(true);
-    elems[1].setSize(300.0f, 140.0f);
-    elems[1].setPosition(100.0f, 20.0f);
-    elems[1].setColor(0, 1, 0, 1.0f);
-    elems[2].setSize(50.0f, 50.0f);
-    elems[2].setPosition(15.0f, 30.0f);
-    elems[2].setColor(0, 0, 1, 0.5f);
-    ui.addChild(&elems[0]);
-
     Font font;
     font.load("fonts/segoeui/segoeui.ttf");
-    Texture* fontTexture = &font.getTexture(15);
-    elems[0].setTexture(fontTexture);
 
+    Text text;
+    text.setFont(&font);
+    text.setString("The quick brown fox jumps over the lazy dog.");
+    text.setCharacterSize(12);
+    // text.setCharacterSpacing(5.0f);
+    text.setPosition(50.0f, 300.0f);
+    text.setCharacterColor(Vector4f(0.8f, 0.4f, 0.4f, 1.0f), 16, 19);
+    text.setCharacterColor(Vector4f(0.8f, 0.4f, 0.4f, 1.0f), 40, 43);
+    ui.addChild(&text);
 
     bool mouseDown = false;
     window.addListener<E_MouseButton>(
@@ -284,7 +277,7 @@ int main()
     return 0;
 }
 
-// TODO : Document SkyBox
+// TODO : Document all UI classes
 // TODO : Improve particle system + document new version
 // TODO : Improve post processing + document new version
 // TODO : Change RenderState or remove it

@@ -771,6 +771,18 @@ protected:
 	///////////////////////////////////////////////////////////
 	virtual void onLoseFocus();
 
+	///////////////////////////////////////////////////////////
+	/// \brief Mark that some property of this element has changed
+	///
+	///////////////////////////////////////////////////////////
+	virtual void markDirty();
+
+	///////////////////////////////////////////////////////////
+	/// \brief Update element properties that have been changed
+	///
+	///////////////////////////////////////////////////////////
+	virtual void updateProperties();
+
 protected:
 	UIElement* m_parent;
 	std::vector<UIElement*> m_children;
@@ -793,15 +805,11 @@ protected:
 	bool m_isTextureTransparent;
 
 	Uint32 m_index;
-	bool m_transformDirty;
+	bool m_transformChanged;
 	bool m_hasHover;
 	bool m_hasFocus;
 
 private:
-	void markTransformDirty();
-
-	void updateTransforms();
-
 	virtual void getQuads(std::vector<UIQuad>& quads);
 };
 

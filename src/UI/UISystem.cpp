@@ -327,7 +327,7 @@ bool UISystem::relayMouseMove(UIElement* element, const E_MouseMove& e)
 	}
 
 	// Update transforms
-	element->updateTransforms();
+	element->updateProperties();
 
 	// Adjust for translation
 	Vector2f p = Vector2f(e.m_x, e.m_y) - element->m_absPosition;
