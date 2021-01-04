@@ -22,6 +22,14 @@ public:
 	Text();
 
 	///////////////////////////////////////////////////////////
+	/// \brief Set the default font that every text element will use on construction
+	///
+	/// \param font The default font to set
+	///
+	///////////////////////////////////////////////////////////
+	static void setDefaultFont(Font* font);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Set the font to render the text with
 	///
 	/// A font is required for text to be rendered, if the text
@@ -227,6 +235,7 @@ private:
 	Shader* getTextShader();
 
 	static Shader s_textShader;
+	static Font* s_defaultFont;
 
 private:
 	Font* m_font;

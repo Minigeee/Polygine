@@ -10,10 +10,13 @@ namespace poly
 ///////////////////////////////////////////////////////////
 Shader Text::s_textShader;
 
+///////////////////////////////////////////////////////////
+Font* Text::s_defaultFont = 0;
+
 
 ///////////////////////////////////////////////////////////
 Text::Text() :
-	m_font				(0),
+	m_font				(s_defaultFont),
 	m_characterSize		(12),
 	m_characterSpacing	(0.0f),
 	m_lineSpacing		(3.0f),
@@ -360,6 +363,13 @@ Shader* Text::getTextShader()
 	}
 
 	return &s_textShader;
+}
+
+
+///////////////////////////////////////////////////////////
+void Text::setDefaultFont(Font* font)
+{
+	s_defaultFont = font;
 }
 
 

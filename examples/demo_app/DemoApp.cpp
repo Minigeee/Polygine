@@ -175,9 +175,9 @@ int main()
 
     Font font;
     font.load("fonts/segoeui/segoeui.ttf");
+    Text::setDefaultFont(&font);
 
     Text text;
-    text.setFont(&font);
     text.setString("The quick brown fox jumps over the lazy dog.");
     text.setCharacterSize(12);
     // text.setCharacterSpacing(5.0f);
@@ -190,7 +190,6 @@ int main()
     ui.addChild(&text);
 
     Button button;
-    button.getText()->setFont(&font);
     button.setString("Play");
     button.setPosition(50.0f, 50.0f);
     button.setSize(100.0f, 30.0f);
@@ -324,6 +323,7 @@ int main()
     return 0;
 }
 
+// TODO : Add convenience constructor loaders
 // TODO : Document all UI classes
 // TODO : Improve particle system + document new version
 // TODO : Improve post processing + document new version
