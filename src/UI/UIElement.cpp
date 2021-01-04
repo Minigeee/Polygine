@@ -692,6 +692,13 @@ void UIElement::onLoseFocus()
 
 
 ///////////////////////////////////////////////////////////
+bool UIElement::handlesMouseEvents() const
+{
+	return false;
+}
+
+
+///////////////////////////////////////////////////////////
 Shader* UIElement::getDefaultShader()
 {
 	if (!s_shader.getId())

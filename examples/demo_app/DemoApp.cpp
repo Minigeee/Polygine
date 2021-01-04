@@ -27,6 +27,7 @@
 #include <poly/Math/Noise.h>
 #include <poly/Math/Transform.h>
 
+#include <poly/UI/Button.h>
 #include <poly/UI/Font.h>
 #include <poly/UI/Text.h>
 #include <poly/UI/UISystem.h>
@@ -172,12 +173,6 @@ int main()
     UISystem ui(1280, 720);
     ui.setWindow(&window);
 
-    UIElement box;
-    box.setPosition(50.0f, 50.0f);
-    box.setSize(300.0f, 30.0f);
-    box.setColor(0.2f, 0.2f, 0.25f, 1.0f);
-    ui.addChild(&box);
-
     Font font;
     font.load("fonts/segoeui/segoeui.ttf");
 
@@ -192,7 +187,50 @@ int main()
     text.setAnchor(UIPosition::Left);
     text.setCharacterColor(Vector4f(0.8f, 0.4f, 0.4f, 1.0f), 16, 19);
     text.setCharacterColor(Vector4f(0.8f, 0.4f, 0.4f, 1.0f), 40, 43);
-    box.addChild(&text);
+    ui.addChild(&text);
+
+    Button button;
+    button.getText()->setFont(&font);
+    button.setString("Play");
+    button.setPosition(50.0f, 50.0f);
+    button.setSize(100.0f, 30.0f);
+    button.setColor(0.2f, 0.2f, 0.25f, 1.0f);
+    ui.addChild(&button);
+
+    button.onMouseEnter(
+        [&](const E_MouseMove& e)
+        {
+            button.setColor(0.3f, 0.3f, 0.35f, 1.0f);
+        }
+    );
+
+    button.onMouseLeave(
+        [&](const E_MouseMove& e)
+        {
+            if (!button.isPressed())
+                button.setColor(0.2f, 0.2f, 0.25f, 1.0f);
+        }
+    );
+
+    button.onPress(
+        [&]()
+        {
+            button.setColor(0.15f, 0.15f, 0.2f, 1.0f);
+        }
+    );
+
+    button.onRelease(
+        [&]()
+        {
+            if (button.hasHover())
+            {
+                button.setColor(0.3f, 0.3f, 0.35f, 1.0f);
+                std::cout << "Button press!\n";
+            }
+            else
+                button.setColor(0.2f, 0.2f, 0.25f, 1.0f);
+        }
+    );
 
     bool mouseDown = false;
     window.addListener<E_MouseButton>(

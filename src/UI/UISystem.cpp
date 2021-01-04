@@ -351,6 +351,9 @@ bool UISystem::relayMouseMove(UIElement* element, const E_MouseMove& e)
 			return true;
 	}
 
+	// Skip if element does not handle mouse events
+	if (!element->handlesMouseEvents()) return false;
+
 	// Update transforms
 	element->updateTransforms();
 
@@ -400,6 +403,30 @@ bool UISystem::relayMouseMove(UIElement* element, const E_MouseMove& e)
 ///////////////////////////////////////////////////////////
 void UISystem::onMouseMove(const E_MouseMove& e)
 {
+	if (m_hovered)
+	{
+		// Update transforms
+		m_hovered->updateTransforms();
+
+		// Adjust for translation
+		Vector2f p = Vector2f(e.m_x, e.m_y) - m_hovered->m_absPosition;
+		// Adjust for rotation
+		float angle = rad(m_hovered->m_absRotation);
+		float ca = cos(angle);
+		float sa = sin(angle);
+		p = Vector2f(p.x * ca - p.y * sa, p.x * sa + p.y * ca);
+		p += m_hovered->m_pixelSize * m_hovered->m_origin;
+
+		const Vector2f& size = m_hovered->getPixelSize();
+		if (p.x < 0.0f || p.x > size.x || p.y < 0.0f || p.y > size.y)
+		{
+			m_hovered->m_hasHover = false;
+			m_hovered->onMouseLeave(e);
+
+			m_hovered = 0;
+		}
+	}
+
 	// Relay the event
 	relayMouseMove(this, e);
 }
@@ -409,7 +436,7 @@ void UISystem::onMouseMove(const E_MouseMove& e)
 void UISystem::onMouseButton(const E_MouseButton& e)
 {
 	// Check current hovered, and change it to focus if needed
-	if (m_hovered && m_hovered != m_focused)
+	if (e.m_action == InputAction::Press && m_hovered != m_focused)
 	{
 		// Send event for losing focus
 		if (m_focused)
@@ -418,9 +445,12 @@ void UISystem::onMouseButton(const E_MouseButton& e)
 			m_focused->onLoseFocus();
 		}
 
-		// Send event for gaining focus
-		m_hovered->m_hasFocus = true;
-		m_hovered->onGainFocus();
+		if (m_hovered)
+		{
+			// Send event for gaining focus
+			m_hovered->m_hasFocus = true;
+			m_hovered->onGainFocus();
+		}
 
 		// Update current focused element
 		m_focused = m_hovered;
@@ -429,6 +459,9 @@ void UISystem::onMouseButton(const E_MouseButton& e)
 	// Send event for mouse button
 	if (m_focused && m_focused != this)
 		m_focused->onMouseButton(e);
+
+	if (m_hovered && m_hovered != m_focused && m_hovered != this)
+		m_hovered->onMouseButton(e);
 }
 
 

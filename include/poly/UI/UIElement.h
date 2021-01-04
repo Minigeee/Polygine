@@ -776,7 +776,7 @@ protected:
 	virtual void onMouseLeave(const E_MouseMove& e);
 
 	///////////////////////////////////////////////////////////
-	/// \brief gain focus callback
+	/// \brief Gain focus callback
 	///
 	/// This function will be called whenever the element gains
 	/// focus.
@@ -785,13 +785,21 @@ protected:
 	virtual void onGainFocus();
 
 	///////////////////////////////////////////////////////////
-	/// \brief gain focus callback
+	/// \brief Lose focus callback
 	///
 	/// This function will be called whenever the element loses
 	/// focus.
 	///
 	///////////////////////////////////////////////////////////
 	virtual void onLoseFocus();
+
+	///////////////////////////////////////////////////////////
+	/// \brief This function should return true if the element handles mouse events
+	///
+	/// \return True if the element handles mouse events
+	///
+	///////////////////////////////////////////////////////////
+	virtual bool handlesMouseEvents() const;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Mark that some property of this element has changed
