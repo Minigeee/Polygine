@@ -1,5 +1,6 @@
+
+#include <poly/Math/Functions.h>
 #include <poly/UI/UIElement.h>
-#include <iostream>
 
 namespace poly
 {
@@ -39,6 +40,10 @@ Vector2f getPositionFromEnum(UIPosition pos)
 
 
 ///////////////////////////////////////////////////////////
+Shader UIElement::s_shader;
+
+
+///////////////////////////////////////////////////////////
 UIElement::UIElement() :
 	m_parent				(0),
 	m_relPosition			(0.0f),
@@ -54,6 +59,7 @@ UIElement::UIElement() :
 	m_texture				(0),
 	m_textureRect			(0.0f, 0.0f, 1.0f, 1.0f),
 	m_blendFactor			(BlendFactor::SrcAlpha),
+	m_shader				(getDefaultShader()),
 	m_isVisible				(true),
 	m_index					(0),
 	m_transformChanged		(false),
@@ -142,17 +148,17 @@ void UIElement::setIndex(Uint32 index)
 
 
 ///////////////////////////////////////////////////////////
-void UIElement::markDirty()
+void UIElement::markTransformDirty()
 {
 	m_transformChanged = true;
 
 	for (Uint32 i = 0; i < m_children.size(); ++i)
-		m_children[i]->markDirty();
+		m_children[i]->markTransformDirty();
 }
 
 
 ///////////////////////////////////////////////////////////
-void UIElement::updateProperties()
+void UIElement::updateTransforms()
 {
 	if (m_transformChanged)
 	{
@@ -162,12 +168,20 @@ void UIElement::updateProperties()
 		if (m_parent)
 		{
 			// Update parent transforms
-			m_parent->updateProperties();
+			m_parent->updateTransforms();
 
 			Vector2f parentOrigin = m_parent->m_origin * m_parent->m_pixelSize;
 			Vector2f anchor = m_anchor * m_parent->m_pixelSize;
 
-			m_absPosition += m_parent->m_absPosition - parentOrigin + anchor;
+			// Calculate rotations for transforming element position
+			float angle = -rad(m_parent->m_absRotation);
+			float c = cos(angle);
+			float s = sin(angle);
+
+			Vector2f& p = m_absPosition;
+			p = p - parentOrigin + anchor;
+			p = Vector2f(p.x * c - p.y * s, p.x * s + p.y * c);
+			p += m_parent->m_absPosition;
 			m_absRotation += m_parent->m_absRotation;
 
 			// Update sizes
@@ -194,7 +208,7 @@ void UIElement::updateProperties()
 void UIElement::setPosition(const Vector2f& pos)
 {
 	m_relPosition = pos;
-	markDirty();
+	markTransformDirty();
 }
 
 
@@ -202,7 +216,7 @@ void UIElement::setPosition(const Vector2f& pos)
 void UIElement::setPosition(float x, float y)
 {
 	m_relPosition = Vector2f(x, y);
-	markDirty();
+	markTransformDirty();
 }
 
 
@@ -210,7 +224,7 @@ void UIElement::setPosition(float x, float y)
 void UIElement::setRotation(float rotation)
 {
 	m_relRotation = fmodf(rotation, 360.0f);
-	markDirty();
+	markTransformDirty();
 }
 
 
@@ -219,7 +233,7 @@ void UIElement::setSize(const Vector2f& size)
 {
 	m_pixelSize = size;
 	m_useRelSize = Vector2f(false);
-	markDirty();
+	markTransformDirty();
 }
 
 
@@ -228,7 +242,7 @@ void UIElement::setSize(float w, float h)
 {
 	m_pixelSize = Vector2f(w, h);
 	m_useRelSize = Vector2f(false);
-	markDirty();
+	markTransformDirty();
 }
 
 
@@ -237,7 +251,7 @@ void UIElement::setRelSize(const Vector2f& size)
 {
 	m_relSize = size;
 	m_useRelSize = Vector2f(true);
-	markDirty();
+	markTransformDirty();
 }
 
 
@@ -246,7 +260,7 @@ void UIElement::setRelSize(float w, float h)
 {
 	m_relSize = Vector2f(w, h);
 	m_useRelSize = Vector2f(true);
-	markDirty();
+	markTransformDirty();
 }
 
 
@@ -255,7 +269,7 @@ void UIElement::setWidth(float w)
 {
 	m_pixelSize.x = w;
 	m_useRelSize.x = false;
-	markDirty();
+	markTransformDirty();
 }
 
 
@@ -264,7 +278,7 @@ void UIElement::setHeight(float h)
 {
 	m_pixelSize.y = h;
 	m_useRelSize.y = false;
-	markDirty();
+	markTransformDirty();
 }
 
 
@@ -273,7 +287,7 @@ void UIElement::setRelWidth(float w)
 {
 	m_relSize.x = w;
 	m_useRelSize.x = true;
-	markDirty();
+	markTransformDirty();
 }
 
 
@@ -282,7 +296,7 @@ void UIElement::setRelHeight(float h)
 {
 	m_relSize.y = h;
 	m_useRelSize.y = true;
-	markDirty();
+	markTransformDirty();
 }
 
 
@@ -290,7 +304,7 @@ void UIElement::setRelHeight(float h)
 void UIElement::setOrigin(const Vector2f& origin)
 {
 	m_origin = origin;
-	markDirty();
+	markTransformDirty();
 }
 
 
@@ -298,7 +312,7 @@ void UIElement::setOrigin(const Vector2f& origin)
 void UIElement::setOrigin(float x, float y)
 {
 	m_origin = Vector2f(x, y);
-	markDirty();
+	markTransformDirty();
 }
 
 
@@ -306,7 +320,7 @@ void UIElement::setOrigin(float x, float y)
 void UIElement::setOrigin(UIPosition origin)
 {
 	m_origin = priv::getPositionFromEnum(origin);
-	markDirty();
+	markTransformDirty();
 }
 
 
@@ -314,7 +328,7 @@ void UIElement::setOrigin(UIPosition origin)
 void UIElement::setAnchor(const Vector2f& anchor)
 {
 	m_anchor = anchor;
-	markDirty();
+	markTransformDirty();
 }
 
 
@@ -322,7 +336,7 @@ void UIElement::setAnchor(const Vector2f& anchor)
 void UIElement::setAnchor(float x, float y)
 {
 	m_anchor = Vector2f(x, y);
-	markDirty();
+	markTransformDirty();
 }
 
 
@@ -330,7 +344,7 @@ void UIElement::setAnchor(float x, float y)
 void UIElement::setAnchor(UIPosition anchor)
 {
 	m_anchor = priv::getPositionFromEnum(anchor);
-	markDirty();
+	markTransformDirty();
 }
 
 
@@ -379,6 +393,13 @@ void UIElement::setBlendFactor(BlendFactor factor)
 
 
 ///////////////////////////////////////////////////////////
+void UIElement::setShader(Shader* shader)
+{
+	m_shader = shader;
+}
+
+
+///////////////////////////////////////////////////////////
 void UIElement::setVisible(bool visible, bool recursive)
 {
 	m_isVisible = visible;
@@ -403,7 +424,7 @@ void UIElement::setTransparent(bool transparent)
 void UIElement::move(const Vector2f& offset)
 {
 	m_relPosition += offset;
-	markDirty();
+	markTransformDirty();
 }
 
 
@@ -411,7 +432,7 @@ void UIElement::move(const Vector2f& offset)
 void UIElement::move(float x, float y)
 {
 	m_relPosition += Vector2f(x, y);
-	markDirty();
+	markTransformDirty();
 }
 
 
@@ -419,7 +440,7 @@ void UIElement::move(float x, float y)
 void UIElement::rotate(float angle)
 {
 	m_relRotation = fmodf(m_relRotation + angle, 360.0f);
-	markDirty();
+	markTransformDirty();
 }
 
 
@@ -428,7 +449,7 @@ void UIElement::scale(const Vector2f& scale)
 {
 	m_pixelSize *= scale;
 	m_relSize *= scale;
-	markDirty();
+	markTransformDirty();
 }
 
 
@@ -437,7 +458,7 @@ void UIElement::scale(float w, float h)
 {
 	m_pixelSize *= Vector2f(w, h);
 	m_relSize *= Vector2f(w, h);
-	markDirty();
+	markTransformDirty();
 }
 
 
@@ -451,7 +472,7 @@ const Vector2f& UIElement::getRelPosition() const
 ///////////////////////////////////////////////////////////
 const Vector2f& UIElement::getAbsPosition()
 {
-	updateProperties();
+	updateTransforms();
 	return m_absPosition;
 }
 
@@ -466,7 +487,7 @@ float UIElement::getRelRotation() const
 ///////////////////////////////////////////////////////////
 float UIElement::getAbsRotation()
 {
-	updateProperties();
+	updateTransforms();
 	return m_absRotation;
 }
 
@@ -474,7 +495,7 @@ float UIElement::getAbsRotation()
 ///////////////////////////////////////////////////////////
 const Vector2f& UIElement::getPixelSize()
 {
-	updateProperties();
+	updateTransforms();
 	return m_pixelSize;
 }
 
@@ -482,7 +503,7 @@ const Vector2f& UIElement::getPixelSize()
 ///////////////////////////////////////////////////////////
 const Vector2f& UIElement::getRelSize()
 {
-	updateProperties();
+	updateTransforms();
 	return m_relSize;
 }
 
@@ -526,6 +547,13 @@ const Vector4f& UIElement::getTextureRect() const
 BlendFactor UIElement::getBlendFactor() const
 {
 	return m_blendFactor;
+}
+
+
+///////////////////////////////////////////////////////////
+Shader* UIElement::getShader() const
+{
+	return m_shader;
 }
 
 
@@ -582,7 +610,7 @@ bool UIElement::hasFocus() const
 void UIElement::getQuads(std::vector<UIQuad>& quads)
 {
 	// Update transforms
-	updateProperties();
+	updateTransforms();
 
 	UIQuad quad;
 	quad.m_position = m_absPosition;
@@ -593,6 +621,7 @@ void UIElement::getQuads(std::vector<UIQuad>& quads)
 	quad.m_texture = m_texture;
 	quad.m_textureRect = m_textureRect;
 	quad.m_blendFactor = m_blendFactor;
+	quad.m_shader = m_shader;
 	quad.m_transparent = isTransparent();
 
 	quads.push_back(quad);
@@ -659,6 +688,21 @@ void UIElement::onGainFocus()
 void UIElement::onLoseFocus()
 {
 
+}
+
+
+///////////////////////////////////////////////////////////
+Shader* UIElement::getDefaultShader()
+{
+	if (!s_shader.getId())
+	{
+		s_shader.load("shaders/ui.vert", Shader::Vertex);
+		s_shader.load("shaders/ui.geom", Shader::Geometry);
+		s_shader.load("shaders/ui.frag", Shader::Fragment);
+		s_shader.compile();
+	}
+
+	return &s_shader;
 }
 
 

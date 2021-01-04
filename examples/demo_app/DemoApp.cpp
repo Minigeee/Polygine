@@ -172,6 +172,12 @@ int main()
     UISystem ui(1280, 720);
     ui.setWindow(&window);
 
+    UIElement box;
+    box.setPosition(50.0f, 50.0f);
+    box.setSize(300.0f, 30.0f);
+    box.setColor(0.2f, 0.2f, 0.25f, 1.0f);
+    ui.addChild(&box);
+
     Font font;
     font.load("fonts/segoeui/segoeui.ttf");
 
@@ -180,10 +186,13 @@ int main()
     text.setString("The quick brown fox jumps over the lazy dog.");
     text.setCharacterSize(12);
     // text.setCharacterSpacing(5.0f);
-    text.setPosition(50.0f, 300.0f);
+    text.setPosition(10.0f, 0.0f);
+    // text.setColor(0, 0, 0, 1);
+    text.setOrigin(UIPosition::Left);
+    text.setAnchor(UIPosition::Left);
     text.setCharacterColor(Vector4f(0.8f, 0.4f, 0.4f, 1.0f), 16, 19);
     text.setCharacterColor(Vector4f(0.8f, 0.4f, 0.4f, 1.0f), 40, 43);
-    ui.addChild(&text);
+    box.addChild(&text);
 
     bool mouseDown = false;
     window.addListener<E_MouseButton>(

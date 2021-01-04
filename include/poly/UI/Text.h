@@ -109,6 +109,39 @@ public:
 	void setCharacterColor(const Vector4f& color, Uint32 start, Uint32 end);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Set the origin of the text element
+	///
+	/// \param origin The origin of the text element
+	///
+	/// \see UIElement::setOrigin
+	///
+	///////////////////////////////////////////////////////////
+	void setOrigin(const Vector2f& origin);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the origin of the text element
+	///
+	/// \param x The x-coordinate of the offset
+	/// \param y The y-coordinate of the offset
+	///
+	/// \see UIElement::setOrigin
+	///
+	///////////////////////////////////////////////////////////
+	void setOrigin(float x, float y);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the origin of the text element with a special offset when origin is vertically centered
+	///
+	/// When the origin value is vertically centered, such as for
+	/// Left, Center, or Right, an offset is applied to the origin
+	/// to make it look more centered.
+	///
+	/// \param origin A predefined origin value
+	///
+	///////////////////////////////////////////////////////////
+	void setOrigin(UIPosition origin);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the text font
 	///
 	/// \return A pointer to the text font
@@ -187,7 +220,13 @@ public:
 private:
 	void getQuads(std::vector<UIQuad>& quads) override;
 
-	void updateProperties() override;
+	void updateQuads();
+
+	void updateTransforms() override;
+
+	Shader* getTextShader();
+
+	static Shader s_textShader;
 
 private:
 	Font* m_font;
@@ -202,6 +241,7 @@ private:
 	float m_glyphYMax;
 	float m_glyphYMin;
 	bool m_stringChanged;
+	bool m_isCentered;
 };
 
 }

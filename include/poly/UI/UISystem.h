@@ -19,6 +19,7 @@ struct UIRenderData
 {
 	Texture* m_texture;
 	BlendFactor m_blendFactor;
+	Shader* m_shader;
 	Uint32 m_offset;
 	Uint32 m_instances;
 };
@@ -75,10 +76,6 @@ private:
 	void onTextInput(const E_TextInput& e) override;
 
 	bool relayMouseMove(UIElement* element, const E_MouseMove& e);
-
-	static Shader& getShader();
-
-	static Shader s_shader;
 
 private:
 	Window* m_window;

@@ -12,10 +12,6 @@ namespace poly
 
 
 ///////////////////////////////////////////////////////////
-Shader UISystem::s_shader;
-
-
-///////////////////////////////////////////////////////////
 UISystem::UISystem() :
 	m_window				(0),
 	m_instanceBufferOffset	(0),
@@ -84,6 +80,19 @@ void UISystem::render(FrameBuffer& target, bool overlay)
 	for (Uint32 i = 0; i < quads.size(); ++i)
 		numInstances += quads[i].size();
 
+	if (!numInstances) return;
+
+	// Sort render data
+	std::sort(renderData.begin(), renderData.end(),
+		[](const UIRenderData& a, const UIRenderData& b) -> bool
+		{
+			if (a.m_shader == b.m_shader)
+				return a.m_offset < b.m_offset;
+			else
+				return a.m_shader < b.m_shader;
+		}
+	);
+
 
 	// Stream instance data
 	Uint32 size = numInstances * sizeof(UIInstanceData);
@@ -132,10 +141,14 @@ void UISystem::render(FrameBuffer& target, bool overlay)
 
 	// Map transparent data
 	Texture* currentTexture = 0;
+	Shader* currentShader = 0;
 	Uint32 prevOffset = 0;
 	for (Uint32 i = 0; i < transparentData.size(); ++i)
 	{
-		if (transparentData[i].m_texture != currentTexture || i == 0)
+		if (
+			transparentData[i].m_texture != currentTexture || 
+			transparentData[i].m_shader != currentShader ||
+			i == 0)
 		{
 			// Finish previous group
 			if (i != 0)
@@ -143,7 +156,15 @@ void UISystem::render(FrameBuffer& target, bool overlay)
 
 			// Add a new group every time texture changes
 			currentTexture = transparentData[i].m_texture;
-			renderData.push_back(UIRenderData{ currentTexture, transparentData[i].m_blendFactor, m_instanceBufferOffset, transparentData.size() - i });
+			currentShader = transparentData[i].m_shader;
+			renderData.push_back(UIRenderData
+				{
+					currentTexture,
+					transparentData[i].m_blendFactor,
+					currentShader,
+					m_instanceBufferOffset,
+					transparentData.size() - i
+				});
 
 			// Update previous offset
 			prevOffset = i;
@@ -171,23 +192,31 @@ void UISystem::render(FrameBuffer& target, bool overlay)
 
 
 	// Bind shader
-	Shader& shader = getShader();
-	shader.bind();
-	shader.setUniform("u_targetSize", Vector2f(target.getWidth(), target.getHeight()));
+	Shader* shader = renderData[0].m_shader;
+	shader->bind();
+	shader->setUniform("u_targetSize", Vector2f(target.getWidth(), target.getHeight()));
 
 	// Render all data
 	for (Uint32 i = 0; i < renderData.size(); ++i)
 	{
 		UIRenderData& group = renderData[i];
 
+		// Change shader if needed
+		if (group.m_shader != shader)
+		{
+			shader = group.m_shader;
+			shader->bind();
+			shader->setUniform("u_targetSize", Vector2f(target.getWidth(), target.getHeight()));
+		}
+
 		// Bind texture
 		if (group.m_texture)
 		{
-			shader.setUniform("u_texture", *group.m_texture);
-			shader.setUniform("u_hasTexture", true);
+			shader->setUniform("u_texture", *group.m_texture);
+			shader->setUniform("u_hasTexture", true);
 		}
 		else
-			shader.setUniform("u_hasTexture", false);
+			shader->setUniform("u_hasTexture", false);
 
 		// Set the blend factor
 		glCheck(glBlendFunc((GLenum)group.m_blendFactor, GL_ONE_MINUS_SRC_ALPHA));
@@ -222,12 +251,23 @@ void UISystem::getRenderQuads(
 		{
 			// Find group
 			Uint32 group = 0;
-			for (; group < renderData.size() && renderData[group].m_texture != element->getTexture(); ++group);
+			for (; group < renderData.size(); ++group)
+			{
+				if (renderData[group].m_texture == element->getTexture() &&
+					renderData[group].m_shader == element->getShader())
+					break;
+			}
 
 			// If the group doesn't exist, add it
 			if (group == renderData.size())
 			{
-				renderData.push_back(UIRenderData{ element->getTexture(), element->getBlendFactor(), 0, 0 });
+				renderData.push_back(UIRenderData
+					{
+						element->getTexture(),
+						element->getBlendFactor(),
+						element->getShader(),
+						0, 0
+					});
 				quads.push_back(std::vector<UIQuad>());
 			}
 
@@ -238,7 +278,7 @@ void UISystem::getRenderQuads(
 			element->getQuads(quads[group]);
 
 			// Keep track of its group
-			for (Uint32 i = start; i < quads.size(); ++i)
+			for (Uint32 i = start; i < quads[group].size(); ++i)
 			{
 				quads[group][i].m_group = group;
 				quads[group][i].m_index = index;
@@ -264,21 +304,6 @@ void UISystem::getRenderQuads(
 	// Call for children
 	for (Uint32 i = 0; i < element->m_children.size(); ++i)
 		getRenderQuads(element->m_children[i], quads, renderData, transparentData, index);
-}
-
-
-///////////////////////////////////////////////////////////
-Shader& UISystem::getShader()
-{
-	if (!s_shader.getId())
-	{
-		s_shader.load("shaders/ui.vert", Shader::Vertex);
-		s_shader.load("shaders/ui.geom", Shader::Geometry);
-		s_shader.load("shaders/ui.frag", Shader::Fragment);
-		s_shader.compile();
-	}
-
-	return s_shader;
 }
 
 
@@ -327,7 +352,7 @@ bool UISystem::relayMouseMove(UIElement* element, const E_MouseMove& e)
 	}
 
 	// Update transforms
-	element->updateProperties();
+	element->updateTransforms();
 
 	// Adjust for translation
 	Vector2f p = Vector2f(e.m_x, e.m_y) - element->m_absPosition;

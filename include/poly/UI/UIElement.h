@@ -4,6 +4,7 @@
 #include <poly/Engine/Input.h>
 
 #include <poly/Graphics/GLType.h>
+#include <poly/Graphics/Shader.h>
 
 #include <poly/Math/Vector2.h>
 
@@ -48,6 +49,7 @@ struct UIQuad
 	Texture* m_texture;
 	Vector4f m_textureRect;
 	BlendFactor m_blendFactor;
+	Shader* m_shader;
 	Uint32 m_index;
 	Uint32 m_group;
 	bool m_transparent;
@@ -121,7 +123,7 @@ public:
 	/// \param pos The relative position in pixels
 	///
 	///////////////////////////////////////////////////////////
-	void setPosition(const Vector2f& pos);
+	virtual void setPosition(const Vector2f& pos);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the UI element's relative position in pixels
@@ -133,7 +135,7 @@ public:
 	/// \param y The relative y-coordinate in pixels
 	///
 	///////////////////////////////////////////////////////////
-	void setPosition(float x, float y);
+	virtual void setPosition(float x, float y);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the UI element's relative rotation in degrees
@@ -144,7 +146,7 @@ public:
 	/// \param rot The relative rotation in degrees
 	///
 	///////////////////////////////////////////////////////////
-	void setRotation(float rot);
+	virtual void setRotation(float rot);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the size of the UI element in pixels
@@ -156,7 +158,7 @@ public:
 	/// \param size The element size in pixels
 	///
 	///////////////////////////////////////////////////////////
-	void setSize(const Vector2f& size);
+	virtual void setSize(const Vector2f& size);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the size of the UI element in pixels
@@ -169,7 +171,7 @@ public:
 	/// \param h The element height in pixels
 	///
 	///////////////////////////////////////////////////////////
-	void setSize(float w, float h);
+	virtual void setSize(float w, float h);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the relative size of the UI element as a percentage of its parent element
@@ -183,7 +185,7 @@ public:
 	/// \param size The relative element size
 	///
 	///////////////////////////////////////////////////////////
-	void setRelSize(const Vector2f& size);
+	virtual void setRelSize(const Vector2f& size);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the relative size of the UI element as a percentage of its parent element
@@ -198,7 +200,7 @@ public:
 	/// \param h The relative element height
 	///
 	///////////////////////////////////////////////////////////
-	void setRelSize(float w, float h);
+	virtual void setRelSize(float w, float h);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the width of the UI element in pixels
@@ -213,7 +215,7 @@ public:
 	/// \param w The element width in pixels
 	///
 	///////////////////////////////////////////////////////////
-	void setWidth(float w);
+	virtual void setWidth(float w);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the height of the UI element in pixels
@@ -228,7 +230,7 @@ public:
 	/// \param w The element height in pixels
 	///
 	///////////////////////////////////////////////////////////
-	void setHeight(float h);
+	virtual void setHeight(float h);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the relative width of the UI element as a percentage of its parent element
@@ -246,7 +248,7 @@ public:
 	/// \param w The relative width of the element
 	///
 	///////////////////////////////////////////////////////////
-	void setRelWidth(float w);
+	virtual void setRelWidth(float w);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the relative height of the UI element as a percentage of its parent element
@@ -264,7 +266,7 @@ public:
 	/// \param w The relative height of the element
 	///
 	///////////////////////////////////////////////////////////
-	void setRelHeight(float h);
+	virtual void setRelHeight(float h);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the origin of the UI element
@@ -278,7 +280,7 @@ public:
 	/// \param origin The origin of the element
 	///
 	///////////////////////////////////////////////////////////
-	void setOrigin(const Vector2f& origin);
+	virtual void setOrigin(const Vector2f& origin);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the origin of the UI element
@@ -293,7 +295,7 @@ public:
 	/// \param y The y-coordinate of the origin of the element
 	///
 	///////////////////////////////////////////////////////////
-	void setOrigin(float x, float y);
+	virtual void setOrigin(float x, float y);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the origin of the UI element using a predefined location
@@ -305,7 +307,7 @@ public:
 	/// \param y The y-coordinate of the origin of the element
 	///
 	///////////////////////////////////////////////////////////
-	void setOrigin(UIPosition origin);
+	virtual void setOrigin(UIPosition origin);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the anchor of the UI element
@@ -327,7 +329,7 @@ public:
 	/// \param anchor The anchor of the element
 	///
 	///////////////////////////////////////////////////////////
-	void setAnchor(const Vector2f& anchor);
+	virtual void setAnchor(const Vector2f& anchor);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the anchor of the UI element
@@ -350,7 +352,7 @@ public:
 	/// \param y The y-coordinate of the anchor
 	///
 	///////////////////////////////////////////////////////////
-	void setAnchor(float x, float y);
+	virtual void setAnchor(float x, float y);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the anchor of the UI element using a predefined position
@@ -372,7 +374,7 @@ public:
 	/// \param anchor The anchor of the element
 	///
 	///////////////////////////////////////////////////////////
-	void setAnchor(UIPosition anchor);
+	virtual void setAnchor(UIPosition anchor);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the background color of the UI element
@@ -380,7 +382,7 @@ public:
 	/// \param color The RGBA color of the element
 	///
 	///////////////////////////////////////////////////////////
-	void setColor(const Vector4f& color);
+	virtual void setColor(const Vector4f& color);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the background color of the UI element
@@ -391,7 +393,7 @@ public:
 	/// \param a The a-component of the background color
 	///
 	///////////////////////////////////////////////////////////
-	void setColor(float r, float g, float b, float a);
+	virtual void setColor(float r, float g, float b, float a);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the background texture of the UI element
@@ -427,17 +429,6 @@ public:
 	void setTextureRect(const Vector4f& rect);
 
 	///////////////////////////////////////////////////////////
-	/// \brief Set the alpha blend factor for the source values
-	///
-	/// This factor determines the percentage of the new color to
-	/// keep during alpha blending.
-	///
-	/// \param factor The blend factor
-	///
-	///////////////////////////////////////////////////////////
-	void setBlendFactor(BlendFactor factor);
-
-	///////////////////////////////////////////////////////////
 	/// \brief Set the portion of the rectangle that gets displayed with a subregion rectangle
 	///
 	/// The texture rectangle includes a coordinate marking the
@@ -454,6 +445,29 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	void setTextureRect(float x, float y, float w, float h);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the alpha blend factor for the source values
+	///
+	/// This factor determines the percentage of the new color to
+	/// keep during alpha blending.
+	///
+	/// \param factor The blend factor
+	///
+	///////////////////////////////////////////////////////////
+	void setBlendFactor(BlendFactor factor);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the shader that will be used to render the UI element
+	///
+	/// The element shader is set to the default shader when the
+	/// element is created. This function will change the shader
+	/// that gets used to render the element.
+	///
+	/// \param shader A pointer to the shader
+	///
+	///////////////////////////////////////////////////////////
+	void setShader(Shader* shader);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the visibility of the UI element
@@ -537,7 +551,7 @@ public:
 	/// \return The absolute position in pixels
 	///
 	///////////////////////////////////////////////////////////
-	const Vector2f& getAbsPosition();
+	virtual const Vector2f& getAbsPosition();
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the rotation of the UI element relative to its parent's rotation
@@ -553,7 +567,7 @@ public:
 	/// \return The absolute rotation in degrees
 	///
 	///////////////////////////////////////////////////////////
-	float getAbsRotation();
+	virtual float getAbsRotation();
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the relative size of the UI element as a percentage of its parent's size
@@ -561,7 +575,7 @@ public:
 	/// \return The relative size
 	///
 	///////////////////////////////////////////////////////////
-	const Vector2f& getRelSize();
+	virtual const Vector2f& getRelSize();
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the pixel size of the UI element
@@ -569,7 +583,7 @@ public:
 	/// \return The pixel size
 	///
 	///////////////////////////////////////////////////////////
-	const Vector2f& getPixelSize();
+	virtual const Vector2f& getPixelSize();
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the UI element origin
@@ -618,6 +632,14 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	BlendFactor getBlendFactor() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the shader used to render this element
+	///
+	/// \return A pointer to the element shader
+	///
+	///////////////////////////////////////////////////////////
+	Shader* getShader() const;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Check if the UI element is visible
@@ -775,13 +797,13 @@ protected:
 	/// \brief Mark that some property of this element has changed
 	///
 	///////////////////////////////////////////////////////////
-	virtual void markDirty();
+	virtual void markTransformDirty();
 
 	///////////////////////////////////////////////////////////
 	/// \brief Update element properties that have been changed
 	///
 	///////////////////////////////////////////////////////////
-	virtual void updateProperties();
+	virtual void updateTransforms();
 
 protected:
 	UIElement* m_parent;
@@ -800,6 +822,7 @@ protected:
 	Texture* m_texture;
 	Vector4f m_textureRect;
 	BlendFactor m_blendFactor;
+	Shader* m_shader;
 	bool m_isVisible;
 	bool m_isColorTransparent;
 	bool m_isTextureTransparent;
@@ -811,6 +834,10 @@ protected:
 
 private:
 	virtual void getQuads(std::vector<UIQuad>& quads);
+
+	Shader* getDefaultShader();
+
+	static Shader s_shader;
 };
 
 }

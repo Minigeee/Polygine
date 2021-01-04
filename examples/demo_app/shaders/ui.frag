@@ -14,10 +14,5 @@ void main()
 {
     f_color = g_color;
     if (u_hasTexture)
-    {
-        vec4 texColor = texture(u_texture, g_texCoord);
-        float factor = 0.35f * texColor.a + 0.65f;
-        f_color.rgb = mix(texColor.rgb, texColor.rgb * g_color.rgb, factor);
-        f_color.a = texColor.a * g_color.a;
-    }
+        f_color *= texture(u_texture, g_texCoord);
 }
