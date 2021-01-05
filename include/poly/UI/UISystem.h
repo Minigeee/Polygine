@@ -20,6 +20,7 @@ struct UIRenderData
 	Texture* m_texture;
 	BlendFactor m_blendFactor;
 	Shader* m_shader;
+	Vector4f m_clipRect;
 	Uint32 m_offset;
 	Uint32 m_instances;
 };
@@ -61,7 +62,9 @@ private:
 		UIElement* element,
 		std::vector<std::vector<UIQuad>>& quads,
 		std::vector<UIRenderData>& renderData,
-		std::vector<UIQuad>& transparentData,
+		std::vector<UIQuad>& transparentQuads,
+		std::vector<UIRenderData>& transparentRenderData,
+		const Vector4f& clipRect,
 		Uint32& index
 	);
 

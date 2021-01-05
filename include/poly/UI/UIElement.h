@@ -46,13 +46,8 @@ struct UIQuad
 	Vector2f m_size;
 	Vector2f m_origin;
 	Vector4f m_color;
-	Texture* m_texture;
 	Vector4f m_textureRect;
-	BlendFactor m_blendFactor;
-	Shader* m_shader;
 	Uint32 m_index;
-	Uint32 m_group;
-	bool m_transparent;
 };
 
 
@@ -642,6 +637,19 @@ public:
 	Shader* getShader() const;
 
 	///////////////////////////////////////////////////////////
+	/// \brief Get the element clip region
+	///
+	/// This region is the rectangle that gets kept when the element
+	/// and its children get rendered. This clip region is not
+	/// adjustable outside the UIElement class, but can be adjusted
+	/// by inheriting from this class.
+	///
+	/// \return A rectangle clip region
+	///
+	///////////////////////////////////////////////////////////
+	virtual Vector4f getClipRect();
+
+	///////////////////////////////////////////////////////////
 	/// \brief Check if the UI element is visible
 	///
 	/// \return The UI element's visibility
@@ -696,6 +704,16 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	bool hasFocus() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Transform absolute coordinate to local coordinate space
+	///
+	/// \param p The absolute coordinate to transform
+	///
+	/// \return The point in local coordinate space
+	///
+	///////////////////////////////////////////////////////////
+	Vector2f getLocalCoordinate(const Vector2f& abs);
 
 protected:
 	///////////////////////////////////////////////////////////

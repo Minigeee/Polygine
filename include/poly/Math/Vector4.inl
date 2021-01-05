@@ -87,8 +87,8 @@ template <typename A, typename B>
 inline Vector4<T>::Vector4(const Vector2<A>& xy, const Vector2<B>& zw) :
 	x(static_cast<T>(xy.x)),
 	y(static_cast<T>(xy.y)),
-	z(static_cast<T>(zw.z)),
-	w(static_cast<T>(zw.w))
+	z(static_cast<T>(zw.x)),
+	w(static_cast<T>(zw.y))
 { }
 
 template <typename T>
@@ -104,9 +104,9 @@ template <typename T>
 template <typename A, typename B>
 inline Vector4<T>::Vector4(A x, const Vector3<B>& yzw) :
 	x(static_cast<T>(x)),
-	y(static_cast<T>(yzw.y)),
-	z(static_cast<T>(yzw.z)),
-	w(static_cast<T>(yzw.w))
+	y(static_cast<T>(yzw.x)),
+	z(static_cast<T>(yzw.y)),
+	w(static_cast<T>(yzw.z))
 { }
 
 ///////////////////////////////////////////////////////////

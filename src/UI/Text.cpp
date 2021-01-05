@@ -203,11 +203,7 @@ void Text::getQuads(std::vector<UIQuad>& quads)
 	updateTransforms();
 
 	for (Uint32 i = 0; i < m_quads.size(); ++i)
-	{
-		// Skip empty quads
-		if (m_quads[i].m_texture)
-			quads.push_back(m_quads[i]);
-	}
+		quads.push_back(m_quads[i]);
 }
 
 
@@ -252,17 +248,10 @@ void Text::updateQuads()
 			// Set quad properties
 			m_quads[i].m_origin = Vector2f(0.0f);
 			m_quads[i].m_color = color.a < 0.0f ? m_color : color;
-			m_quads[i].m_texture = m_texture;
-			m_quads[i].m_blendFactor = BlendFactor::One;
-			m_quads[i].m_shader = m_shader;
-			m_quads[i].m_transparent = true;
 
 			// Set size
 			m_quads[i].m_size.x = glyph.m_glyphRect.z;
 			m_quads[i].m_size.y = glyph.m_glyphRect.w;
-			// If the area is zero, skip the quad by setting an empty texture
-			if (fabsf(glyph.m_glyphRect.z * glyph.m_glyphRect.w) <= FLT_EPSILON)
-				m_quads[i].m_texture = 0;
 
 			// Set texture rectangle
 			m_quads[i].m_textureRect = glyph.m_textureRect;

@@ -558,6 +558,13 @@ Shader* UIElement::getShader() const
 
 
 ///////////////////////////////////////////////////////////
+Vector4f UIElement::getClipRect()
+{
+	return Vector4f(0.0f);
+}
+
+
+///////////////////////////////////////////////////////////
 bool UIElement::isVisible() const
 {
 	return m_isVisible;
@@ -607,6 +614,26 @@ bool UIElement::hasFocus() const
 
 
 ///////////////////////////////////////////////////////////
+Vector2f UIElement::getLocalCoordinate(const Vector2f& abs)
+{
+	// Update transforms
+	updateTransforms();
+
+	// Adjust for translation
+	Vector2f p = abs - m_absPosition;
+	// Adjust for rotation
+	float angle = rad(m_absRotation);
+	float ca = cos(angle);
+	float sa = sin(angle);
+
+	// Apply rotation
+	p = Vector2f(p.x * ca - p.y * sa, p.x * sa + p.y * ca);
+
+	return p;
+}
+
+
+///////////////////////////////////////////////////////////
 void UIElement::getQuads(std::vector<UIQuad>& quads)
 {
 	// Update transforms
@@ -618,11 +645,7 @@ void UIElement::getQuads(std::vector<UIQuad>& quads)
 	quad.m_size = m_pixelSize;
 	quad.m_origin = m_origin;
 	quad.m_color = m_color;
-	quad.m_texture = m_texture;
 	quad.m_textureRect = m_textureRect;
-	quad.m_blendFactor = m_blendFactor;
-	quad.m_shader = m_shader;
-	quad.m_transparent = isTransparent();
 
 	quads.push_back(quad);
 }

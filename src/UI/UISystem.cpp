@@ -68,15 +68,16 @@ void UISystem::render(FrameBuffer& target, bool overlay)
 	glCheck(glEnable(GL_BLEND));
 
 	std::vector<UIRenderData> renderData;
-	std::vector<UIQuad> transparentData;
+	std::vector<UIRenderData> transparentRenderData;
+	std::vector<UIQuad> transparentQuads;
 	std::vector<std::vector<UIQuad>> quads;
 
 	// Get all render quads
 	Uint32 index = 0;
-	getRenderQuads(this, quads, renderData, transparentData, index);
+	getRenderQuads(this, quads, renderData, transparentQuads, transparentRenderData, Vector4f(0.0f), index);
 
 	// Calculate size
-	Uint32 numInstances = transparentData.size();
+	Uint32 numInstances = transparentQuads.size();
 	for (Uint32 i = 0; i < quads.size(); ++i)
 		numInstances += quads[i].size();
 
@@ -142,49 +143,58 @@ void UISystem::render(FrameBuffer& target, bool overlay)
 	// Map transparent data
 	Texture* currentTexture = 0;
 	Shader* currentShader = 0;
+	Vector4f currentClipRect(0.0f);
 	Uint32 prevOffset = 0;
-	for (Uint32 i = 0; i < transparentData.size(); ++i)
+	for (Uint32 i = 0; i < transparentRenderData.size(); ++i)
 	{
+		UIRenderData& group = transparentRenderData[i];
+
 		if (
-			transparentData[i].m_texture != currentTexture || 
-			transparentData[i].m_shader != currentShader ||
+			group.m_texture != currentTexture ||
+			group.m_shader != currentShader ||
+			group.m_clipRect != currentClipRect ||
 			i == 0)
 		{
 			// Finish previous group
 			if (i != 0)
-				renderData.back().m_instances = i - prevOffset;
+				renderData.back().m_instances = group.m_offset - prevOffset;
 
 			// Add a new group every time texture changes
-			currentTexture = transparentData[i].m_texture;
-			currentShader = transparentData[i].m_shader;
+			currentTexture = group.m_texture;
+			currentShader = group.m_shader;
+			currentClipRect = group.m_clipRect;
 			renderData.push_back(UIRenderData
 				{
 					currentTexture,
-					transparentData[i].m_blendFactor,
+					group.m_blendFactor,
 					currentShader,
+					group.m_clipRect,
 					m_instanceBufferOffset,
-					transparentData.size() - i
+					transparentQuads.size() - group.m_offset
 				});
 
 			// Update previous offset
-			prevOffset = i;
+			prevOffset = group.m_offset;
 		}
 
-		UIQuad& quad = transparentData[i];
-		data[numInstancesMapped] = UIInstanceData
+		for (Uint32 j = 0; j < group.m_instances; ++j)
 		{
-			quad.m_position,
-			quad.m_rotation,
-			quad.m_size,
-			quad.m_origin,
-			quad.m_color,
-			quad.m_textureRect,
-			1.0f - (float)quad.m_index / index,
-		};
+			UIQuad& quad = transparentQuads[group.m_offset + j];
+			data[numInstancesMapped + j] = UIInstanceData
+			{
+				quad.m_position,
+				quad.m_rotation,
+				quad.m_size,
+				quad.m_origin,
+				quad.m_color,
+				quad.m_textureRect,
+				1.0f - (float)quad.m_index / index,
+			};
+		}
 
 		// Update number of instances mapped
-		numInstancesMapped += 1;
-		m_instanceBufferOffset += sizeof(UIInstanceData);
+		numInstancesMapped += group.m_instances;
+		m_instanceBufferOffset += group.m_instances * sizeof(UIInstanceData);
 	}
 
 	// Unmap buffer
@@ -221,6 +231,16 @@ void UISystem::render(FrameBuffer& target, bool overlay)
 		// Set the blend factor
 		glCheck(glBlendFunc((GLenum)group.m_blendFactor, GL_ONE_MINUS_SRC_ALPHA));
 
+		// Set up scissors clipping rectangle
+		bool hasClipping = group.m_clipRect.z * group.m_clipRect.w > 0.0f;
+		if (hasClipping)
+		{
+			const Vector4f& rect = group.m_clipRect;
+
+			glCheck(glEnable(GL_SCISSOR_TEST));
+			glCheck(glScissor((int)rect.x, (int)target.getHeight() - (int)(rect.y + rect.w), (int)rect.z, (int)rect.w));
+		}
+
 		m_vertexArray.bind();
 		m_vertexArray.addBuffer(m_instanceBuffer, 0, 2, sizeof(UIInstanceData), group.m_offset + 0 * sizeof(float), 1);		// Position
 		m_vertexArray.addBuffer(m_instanceBuffer, 1, 1, sizeof(UIInstanceData), group.m_offset + 2 * sizeof(float), 1);		// Rotation
@@ -232,6 +252,9 @@ void UISystem::render(FrameBuffer& target, bool overlay)
 
 		// Draw elements
 		m_vertexArray.draw(group.m_instances);
+
+		if (hasClipping)
+			glCheck(glDisable(GL_SCISSOR_TEST));
 	}
 }
 
@@ -241,11 +264,13 @@ void UISystem::getRenderQuads(
 	UIElement* element,
 	std::vector<std::vector<UIQuad>>& quads,
 	std::vector<UIRenderData>& renderData,
-	std::vector<UIQuad>& transparentData,
+	std::vector<UIQuad>& transparentQuads,
+	std::vector<UIRenderData>& transparentRenderData,
+	const Vector4f& clipRect,
 	Uint32& index)
 {
 	// Skip the element if it is not visible
-	if (element->isVisible())
+	if (element->isVisible() && element->getColor().a > 0.0f)
 	{
 		if (!element->isTransparent())
 		{
@@ -254,7 +279,8 @@ void UISystem::getRenderQuads(
 			for (; group < renderData.size(); ++group)
 			{
 				if (renderData[group].m_texture == element->getTexture() &&
-					renderData[group].m_shader == element->getShader())
+					renderData[group].m_shader == element->getShader() &&
+					renderData[group].m_clipRect == element->getClipRect())
 					break;
 			}
 
@@ -266,6 +292,7 @@ void UISystem::getRenderQuads(
 						element->getTexture(),
 						element->getBlendFactor(),
 						element->getShader(),
+						clipRect,
 						0, 0
 					});
 				quads.push_back(std::vector<UIQuad>());
@@ -279,31 +306,44 @@ void UISystem::getRenderQuads(
 
 			// Keep track of its group
 			for (Uint32 i = start; i < quads[group].size(); ++i)
-			{
-				quads[group][i].m_group = group;
 				quads[group][i].m_index = index;
-			}
 		}
 		else
 		{
 			// Keep track of start index
-			Uint32 start = transparentData.size();
+			Uint32 start = transparentQuads.size();
 
 			// Get quads
-			element->getQuads(transparentData);
+			element->getQuads(transparentQuads);
+
+			// Add transparent render data
+			transparentRenderData.push_back(UIRenderData
+				{
+					element->getTexture(),
+					element->getBlendFactor(),
+					element->getShader(),
+					clipRect,
+					start,
+					transparentQuads.size() - start
+				});
 
 			// Set index
-			for (Uint32 i = start; i < transparentData.size(); ++i)
-				transparentData[i].m_index = index;
+			for (Uint32 i = start; i < transparentQuads.size(); ++i)
+				transparentQuads[i].m_index = index;
 		}
 
 		// Increment index
 		++index;
 	}
 
+	// Get next clip rectangle
+	Vector4f newClipRect = element->getClipRect();
+	if (newClipRect.z * newClipRect.w == 0.0f)
+		newClipRect = clipRect;
+
 	// Call for children
 	for (Uint32 i = 0; i < element->m_children.size(); ++i)
-		getRenderQuads(element->m_children[i], quads, renderData, transparentData, index);
+		getRenderQuads(element->m_children[i], quads, renderData, transparentQuads, transparentRenderData, newClipRect, index);
 }
 
 
@@ -354,16 +394,7 @@ bool UISystem::relayMouseMove(UIElement* element, const E_MouseMove& e)
 	// Skip if element does not handle mouse events
 	if (!element->handlesMouseEvents()) return false;
 
-	// Update transforms
-	element->updateTransforms();
-
-	// Adjust for translation
-	Vector2f p = Vector2f(e.m_x, e.m_y) - element->m_absPosition;
-	// Adjust for rotation
-	float angle = rad(element->m_absRotation);
-	float ca = cos(angle);
-	float sa = sin(angle);
-	p = Vector2f(p.x * ca - p.y * sa, p.x * sa + p.y * ca);
+	Vector2f p = element->getLocalCoordinate(Vector2f(e.m_x, e.m_y));
 	p += element->m_pixelSize * element->m_origin;
 
 	// The point is now in the element's local coordinate space
@@ -405,16 +436,7 @@ void UISystem::onMouseMove(const E_MouseMove& e)
 {
 	if (m_hovered)
 	{
-		// Update transforms
-		m_hovered->updateTransforms();
-
-		// Adjust for translation
-		Vector2f p = Vector2f(e.m_x, e.m_y) - m_hovered->m_absPosition;
-		// Adjust for rotation
-		float angle = rad(m_hovered->m_absRotation);
-		float ca = cos(angle);
-		float sa = sin(angle);
-		p = Vector2f(p.x * ca - p.y * sa, p.x * sa + p.y * ca);
+		Vector2f p = m_hovered->getLocalCoordinate(Vector2f(e.m_x, e.m_y));
 		p += m_hovered->m_pixelSize * m_hovered->m_origin;
 
 		const Vector2f& size = m_hovered->getPixelSize();
@@ -429,6 +451,10 @@ void UISystem::onMouseMove(const E_MouseMove& e)
 
 	// Relay the event
 	relayMouseMove(this, e);
+
+	// Pass move event to focused element
+	if (m_focused && m_focused != this)
+		m_focused->onMouseMove(e);
 }
 
 

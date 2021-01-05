@@ -29,6 +29,7 @@
 
 #include <poly/UI/Button.h>
 #include <poly/UI/Font.h>
+#include <poly/UI/Slider.h>
 #include <poly/UI/Text.h>
 #include <poly/UI/UISystem.h>
 #include <poly/UI/UIElement.h>
@@ -189,47 +190,12 @@ int main()
     text.setCharacterColor(Vector4f(0.8f, 0.4f, 0.4f, 1.0f), 40, 43);
     ui.addChild(&text);
 
-    Button button;
-    button.setString("Play");
-    button.setPosition(50.0f, 50.0f);
-    button.setSize(100.0f, 30.0f);
-    button.setColor(0.2f, 0.2f, 0.25f, 1.0f);
-    ui.addChild(&button);
-
-    button.onMouseEnter(
-        [&](const E_MouseMove& e)
-        {
-            button.setColor(0.3f, 0.3f, 0.35f, 1.0f);
-        }
-    );
-
-    button.onMouseLeave(
-        [&](const E_MouseMove& e)
-        {
-            if (!button.isPressed())
-                button.setColor(0.2f, 0.2f, 0.25f, 1.0f);
-        }
-    );
-
-    button.onPress(
-        [&]()
-        {
-            button.setColor(0.15f, 0.15f, 0.2f, 1.0f);
-        }
-    );
-
-    button.onRelease(
-        [&]()
-        {
-            if (button.hasHover())
-            {
-                button.setColor(0.3f, 0.3f, 0.35f, 1.0f);
-                std::cout << "Button press!\n";
-            }
-            else
-                button.setColor(0.2f, 0.2f, 0.25f, 1.0f);
-        }
-    );
+    Slider slider;
+    slider.setPosition(50.0f, 50.0f);
+    slider.setSize(200.0f, 20.0f);
+    slider.setColor(0.2f, 0.2f, 0.25f, 1.0f);
+    slider.getSliderButton()->setWidth(30.0f);
+    ui.addChild(&slider);
 
     bool mouseDown = false;
     window.addListener<E_MouseButton>(
@@ -310,8 +276,8 @@ int main()
         scene.render(camera, multisampled);
         multisampled.blitTo(framebuffer);
 
-        colorAdjust.render(framebuffer);
-        ui.render(FrameBuffer::Default, true);
+        // colorAdjust.render(framebuffer);
+        ui.render(FrameBuffer::Default, false);
 
         // Display (swap buffers)
         window.display();
