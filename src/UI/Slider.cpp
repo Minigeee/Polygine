@@ -81,8 +81,8 @@ void SliderButton::onMouseMove(const E_MouseMove& e)
 		{
 			// Change value
 			slider->m_value = value;
-			if (slider->m_onValueChanged)
-				slider->m_onValueChanged(slider->m_value);
+			if (slider->m_onValueChange)
+				slider->m_onValueChange(slider->m_value);
 
 			// Mark transform dirty
 			markTransformDirty();
@@ -159,8 +159,8 @@ void Slider::setValue(float value)
 	m_button->setPosition(x, m_button->getRelPosition().y);
 
 	// Call function
-	if (m_onValueChanged)
-		m_onValueChanged(m_value);
+	if (m_onValueChange)
+		m_onValueChange(m_value);
 }
 
 
@@ -179,9 +179,9 @@ SliderButton* Slider::getSliderButton()
 
 
 ///////////////////////////////////////////////////////////
-void Slider::onValueChanged(const std::function<void(float)>& func)
+void Slider::onValueChange(const std::function<void(float)>& func)
 {
-	m_onValueChanged = func;
+	m_onValueChange = func;
 }
 
 
@@ -216,8 +216,8 @@ void Slider::onMouseButton(const E_MouseButton& e)
 		{
 			// Change value
 			m_value = value;
-			if (m_onValueChanged)
-				m_onValueChanged(m_value);
+			if (m_onValueChange)
+				m_onValueChange(m_value);
 		}
 	}
 }
@@ -248,8 +248,8 @@ void Slider::onMouseMove(const E_MouseMove& e)
 		{
 			// Change value
 			m_value = value;
-			if (m_onValueChanged)
-				m_onValueChanged(m_value);
+			if (m_onValueChange)
+				m_onValueChange(m_value);
 		}
 	}
 	else

@@ -18,6 +18,33 @@ namespace poly
 {
 
 ///////////////////////////////////////////////////////////
+/// \brief An enum defining the standard cursor types
+///
+///////////////////////////////////////////////////////////
+enum class Cursor
+{
+	Arrow		= 0x00036001,	//!< The default arrow cursor
+	IBeam		= 0x00036002,	//!< The text input I-beam cursor
+	CrossHair	= 0x00036003,	//!< The crosshair cursor
+	Hand		= 0x00036004,	//!< The hand shaped cursor
+	HResize		= 0x00036005,	//!< The horizontal resize cursor
+	VResize		= 0x00036006	//!< The vertical resize cursor
+};
+
+
+///////////////////////////////////////////////////////////
+/// \brief An enum defining cursor modes
+///
+///////////////////////////////////////////////////////////
+enum class CursorMode
+{
+	Normal		= 0x00034001,	//!< The cursor is fully visible and unrestricted cursor
+	Hidden		= 0x00034002,	//!< The cursor is not visible and is unrestricted, meaning that it can leave the window
+	Disabled	= 0x00034003	//!< The cursor is not visible and restricted, meaning that it has unlimited movement within the window
+};
+
+
+///////////////////////////////////////////////////////////
 /// \brief Handles window creation, management, and user input
 ///
 ///////////////////////////////////////////////////////////
@@ -137,6 +164,22 @@ public:
 	void setTitle(const std::string& title);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Set the cursor type to one of the standard types for thiw window
+	///
+	/// \param cursor A standard system cursor type
+	///
+	///////////////////////////////////////////////////////////
+	void setCursor(Cursor cursor);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the cursor mode for this window
+	///
+	/// \param mode The cursor mode
+	///
+	///////////////////////////////////////////////////////////
+	void setCursorMode(CursorMode mode);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the window resolution
 	///
 	/// \return The window resolution
@@ -153,10 +196,12 @@ public:
 	const std::string& getTitle() const;
 
 private:
-	GLFWwindow* m_window;		//!< GLFW window pointer
-	std::string m_title;		//!< Window title
+	GLFWwindow* m_window;						//!< GLFW window pointer
+	GLFWcursor* m_cursor;						//!< The current cursor
+	std::string m_title;						//!< Window title
 
-	static Uint32 numWindows;	//!< The number of existing windows
+	static Uint32 numWindows;					//!< The number of existing windows
+	static GLFWcursor* s_standardCursors[6];	//!< The standard cursors
 };
 
 }

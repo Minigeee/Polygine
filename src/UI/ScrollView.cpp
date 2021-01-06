@@ -60,7 +60,7 @@ ScrollView::ScrollView() :
 	m_scrollBar->setAnchor(UIPosition::TopRight);
 	m_scrollBar->setRotation(-90.0f);
 	m_scrollBar->setHeight(10.0f);
-	m_scrollBar->onValueChanged(std::bind(&ScrollView::onScrollBarChange, this, std::placeholders::_1));
+	m_scrollBar->onValueChange(std::bind(&ScrollView::onScrollBarChange, this, std::placeholders::_1));
 
 	// When there is nothing in the scroll body, hide the scroll bar
 	m_scrollBar->setVisible(false);

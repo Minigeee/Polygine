@@ -116,7 +116,7 @@ public:
 	/// \param func The function callback
 	///
 	///////////////////////////////////////////////////////////
-	void onValueChanged(const std::function<void(float)>& func);
+	void onValueChange(const std::function<void(float)>& func);
 
 private:
 	void onMouseButton(const E_MouseButton& e) override;
@@ -131,7 +131,7 @@ private:
 	float m_value;				//!< The slider value
 	bool m_isPressed;			//!< True if the slider is pressed
 
-	std::function<void(float)> m_onValueChanged;
+	std::function<void(float)> m_onValueChange;
 };
 
 }
