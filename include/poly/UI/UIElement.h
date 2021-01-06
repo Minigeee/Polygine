@@ -75,7 +75,7 @@ public:
 	/// \param child A pointer to a UI element
 	///
 	///////////////////////////////////////////////////////////
-	void addChild(UIElement* child);
+	virtual void addChild(UIElement* child);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Remove a child UI element
@@ -83,7 +83,7 @@ public:
 	/// \param child A pointer to a child UI element
 	///
 	///////////////////////////////////////////////////////////
-	void removeChild(UIElement* child);
+	virtual void removeChild(UIElement* child);
 
 	///////////////////////////////////////////////////////////
 	/// /brief Move the UI element in front of all its sibling elements
@@ -496,7 +496,7 @@ public:
 	/// \param offset The pixel offset
 	///
 	///////////////////////////////////////////////////////////
-	void move(const Vector2f& offset);
+	virtual void move(const Vector2f& offset);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Move the UI element by the specified pixel offset
@@ -505,7 +505,7 @@ public:
 	/// \param y The y-coordinate of the pixel offset
 	///
 	///////////////////////////////////////////////////////////
-	void move(float x, float y);
+	virtual void move(float x, float y);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Rotate the UI element by the specified angle offset
@@ -513,7 +513,7 @@ public:
 	/// \param angle The angle offset in degrees
 	///
 	///////////////////////////////////////////////////////////
-	void rotate(float angle);
+	virtual void rotate(float angle);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Scale the UI element by the specified factor
@@ -521,7 +521,7 @@ public:
 	/// \param scale The scale factor
 	///
 	///////////////////////////////////////////////////////////
-	void scale(const Vector2f& scale);
+	virtual void scale(const Vector2f& scale);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Scale the UI element by the specified factor
@@ -530,7 +530,7 @@ public:
 	/// \param y The y-component scale factor
 	///
 	///////////////////////////////////////////////////////////
-	void scale(float x, float y);
+	virtual void scale(float x, float y);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the position of the UI element relative to its parent's position

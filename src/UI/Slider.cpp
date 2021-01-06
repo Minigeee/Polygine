@@ -148,7 +148,7 @@ void Slider::setValue(float value)
 	m_value = value;
 	if (m_value < 0.0f)
 		m_value = 0.0f;
-	else if (m_value < 1.0f)
+	else if (m_value > 1.0f)
 		m_value = 1.0f;
 
 	// Calculate position

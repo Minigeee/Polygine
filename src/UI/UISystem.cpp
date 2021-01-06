@@ -272,6 +272,13 @@ void UISystem::getRenderQuads(
 	// Skip the element if it is not visible
 	if (element->isVisible() && element->getColor().a > 0.0f)
 	{
+		// Check if the element is inside the clipping area
+		bool insideClippingArea = true;
+		if (clipRect.z * clipRect.w <= FLT_EPSILON)
+		{
+
+		}
+
 		if (!element->isTransparent())
 		{
 			// Find group
