@@ -442,15 +442,16 @@ public:
 	void setTextureRect(float x, float y, float w, float h);
 
 	///////////////////////////////////////////////////////////
-	/// \brief Set the alpha blend factor for the source values
+	/// \brief Set the alpha blend factors
 	///
-	/// This factor determines the percentage of the new color to
-	/// keep during alpha blending.
+	/// The source factor determines how much of the source color
+	/// to keep, and the destination color determines how much of
+	/// the destination color to keep.
 	///
-	/// \param factor The blend factor
+	/// \param src The blend factor
 	///
 	///////////////////////////////////////////////////////////
-	void setBlendFactor(BlendFactor factor);
+	void setBlendFactors(BlendFactor src, BlendFactor dst);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the shader that will be used to render the UI element
@@ -621,12 +622,20 @@ public:
 	const Vector4f& getTextureRect() const;
 
 	///////////////////////////////////////////////////////////
-	/// \brief Get the alpha blend factor
+	/// \brief Get the source color blend factor
 	///
-	/// \return The alpha blend factor
+	/// \return The source color blend factor
 	///
 	///////////////////////////////////////////////////////////
-	BlendFactor getBlendFactor() const;
+	BlendFactor getSrcBlend() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the destination color blend factor
+	///
+	/// \return The destination color blend factor
+	///
+	///////////////////////////////////////////////////////////
+	BlendFactor getDstBlend() const;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the shader used to render this element
@@ -853,7 +862,8 @@ protected:
 	Vector4f m_color;
 	Texture* m_texture;
 	Vector4f m_textureRect;
-	BlendFactor m_blendFactor;
+	BlendFactor m_srcBlend;
+	BlendFactor m_dstBlend;
 	Shader* m_shader;
 	bool m_isVisible;
 	bool m_isColorTransparent;

@@ -32,7 +32,9 @@ enum class BlendFactor
 	SrcAlpha			= 0x0302,
 	OneMinusSrcAlpha	= 0x0303,
 	DstAlpha			= 0x0304,
-	OneMinusDstAlpha	= 0x0305
+	OneMinusDstAlpha	= 0x0305,
+	ConstColor			= 0x8001,
+	OneMinusConstColor	= 0x8002
 };
 
 }

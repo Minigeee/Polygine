@@ -202,7 +202,6 @@ void Font::loadGlyphs(Uint32 size)
     new(page)Page();
 
     // Create a texture
-    textureSize.x = textureSize.x / 3 * 4;
     Uint8* data = (Uint8*)malloc(textureSize.x * textureSize.y);
     memset(data, 0, textureSize.x * textureSize.y);
     Uint32 currentX = 0;
@@ -212,24 +211,11 @@ void Font::loadGlyphs(Uint32 size)
         priv::FTGlyph& ftGlyph = glyphData[i];
 
         // Copy the data from the glyph
-        Uint32 width = ftGlyph.m_rect.z / 3;
         for (Uint32 r = 0; r < (Uint32)ftGlyph.m_rect.w; ++r)
         {
             Uint8* dstRow = data + r * textureSize.x + currentX;
             Uint8* srcRow = ftGlyph.m_data + r * ftGlyph.m_pitch;
-
-            for (Uint32 c = 0; c < width; ++c)
-            {
-                Uint8* dst = dstRow + c * 4;
-                Uint8* src = srcRow + c * 3;
-
-                dst[0] = src[0];
-                dst[1] = src[1];
-                dst[2] = src[2];
-
-                // Set alpha value
-                dst[3] = (Uint8)(((float)dst[0] + (float)dst[1] + (float)dst[2]) / 3.0f);
-            }
+            memcpy(dstRow, srcRow, ftGlyph.m_rect.z);
         }
 
         // Free the glyph memory
@@ -239,21 +225,20 @@ void Font::loadGlyphs(Uint32 size)
         Glyph& glyph = page->m_glyphs[m_characters[i]];
         glyph.m_advance = ftGlyph.m_advance;
         glyph.m_glyphRect = ftGlyph.m_rect;
-        // glyph.m_glyphRect.x /= 3.0f;
         glyph.m_glyphRect.z /= 3.0f;
 
         // Texture rectangle
         glyph.m_textureRect.x = (float)currentX / textureSize.x;
         glyph.m_textureRect.y = 0.0f;
-        glyph.m_textureRect.z = (float)ftGlyph.m_rect.z / textureSize.x * 4.0f / 3.0f;
+        glyph.m_textureRect.z = (float)ftGlyph.m_rect.z / textureSize.x;
         glyph.m_textureRect.w = (float)ftGlyph.m_rect.w / textureSize.y;
 
         // Update current x
-        currentX += ftGlyph.m_rect.z / 3 * 4 + 4;
+        currentX += ftGlyph.m_rect.z + 3;
     }
 
     // Upload data to the texture
-    page->m_texture.create(data, PixelFormat::Rgba, textureSize.x / 4, textureSize.y);
+    page->m_texture.create(data, PixelFormat::Rgb, textureSize.x / 3, textureSize.y);
 
     // Add page to pages
     m_pages[size] = page;

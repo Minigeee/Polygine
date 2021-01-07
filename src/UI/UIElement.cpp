@@ -58,7 +58,8 @@ UIElement::UIElement() :
 	m_color					(1.0f),
 	m_texture				(0),
 	m_textureRect			(0.0f, 0.0f, 1.0f, 1.0f),
-	m_blendFactor			(BlendFactor::SrcAlpha),
+	m_srcBlend				(BlendFactor::SrcAlpha),
+	m_dstBlend				(BlendFactor::OneMinusSrcAlpha),
 	m_shader				(getDefaultShader()),
 	m_isVisible				(true),
 	m_index					(0),
@@ -386,9 +387,10 @@ void UIElement::setTextureRect(float x, float y, float w, float h)
 
 
 ///////////////////////////////////////////////////////////
-void UIElement::setBlendFactor(BlendFactor factor)
+void UIElement::setBlendFactors(BlendFactor src, BlendFactor dst)
 {
-	m_blendFactor = factor;
+	m_srcBlend = src;
+	m_dstBlend = dst;
 }
 
 
@@ -544,9 +546,16 @@ const Vector4f& UIElement::getTextureRect() const
 
 
 ///////////////////////////////////////////////////////////
-BlendFactor UIElement::getBlendFactor() const
+BlendFactor UIElement::getSrcBlend() const
 {
-	return m_blendFactor;
+	return m_srcBlend;
+}
+
+
+///////////////////////////////////////////////////////////
+BlendFactor UIElement::getDstBlend() const
+{
+	return m_dstBlend;
 }
 
 

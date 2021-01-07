@@ -23,7 +23,8 @@ Text::Text() :
 	m_stringChanged		(false),
 	m_isCentered		(false)
 {
-	m_blendFactor = BlendFactor::One;
+	m_srcBlend = BlendFactor::ConstColor;
+	m_dstBlend = BlendFactor::OneMinusSrcColor;
 	m_isTextureTransparent = true;
 
 	// Shader
@@ -44,9 +45,6 @@ void Text::setString(const std::string& string)
 {
 	m_string = string;
 	m_stringChanged = true;
-
-	// Reset character colors
-	m_characterColors.resize(m_string.size(), Vector4f(0.0f, 0.0f, 0.0f, -1.0f));
 }
 
 
@@ -71,34 +69,6 @@ void Text::setLineSpacing(float spacing)
 {
 	m_lineSpacing = spacing;
 	m_stringChanged = true;
-}
-
-
-///////////////////////////////////////////////////////////
-void Text::setCharacterColor(const Vector4f& color, Uint32 index)
-{
-	m_characterColors[index] = color;
-
-	// Ensure the quads are correct
-	updateQuads();
-
-	// Update the quad colors
-	m_quads[index].m_color = color;
-}
-
-
-///////////////////////////////////////////////////////////
-void Text::setCharacterColor(const Vector4f& color, Uint32 start, Uint32 end)
-{
-	for (Uint32 i = start; i < end; ++i)
-		m_characterColors[i] = color;
-
-	// Ensure the quads are correct
-	updateQuads();
-
-	// Update the quad colors
-	for (Uint32 i = start; i < end; ++i)
-		m_quads[i].m_color = color;
 }
 
 
@@ -162,13 +132,6 @@ float Text::getCharacterSpacing() const
 float Text::getLineSpacing() const
 {
 	return m_lineSpacing;
-}
-
-
-///////////////////////////////////////////////////////////
-const Vector4f& Text::getCharacterColor(Uint32 index) const
-{
-	return m_characterColors[index].a < 0.0f ? m_color : m_characterColors[index];
 }
 
 
@@ -243,11 +206,10 @@ void Text::updateQuads()
 
 			// Get the character glyph
 			const Font::Glyph& glyph = m_font->getGlyph((Uint32)m_string[i], m_characterSize);
-			const Vector4f& color = m_characterColors[i];
 
 			// Set quad properties
 			m_quads[i].m_origin = Vector2f(0.0f);
-			m_quads[i].m_color = color.a < 0.0f ? m_color : color;
+			m_quads[i].m_color = m_color;
 
 			// Set size
 			m_quads[i].m_size.x = glyph.m_glyphRect.z;

@@ -166,11 +166,14 @@ void UISystem::render(FrameBuffer& target, bool overlay)
 			renderData.push_back(UIRenderData
 				{
 					currentTexture,
-					group.m_blendFactor,
+					group.m_srcFactor,
+					group.m_dstFactor,
+					group.m_blendColor,
 					currentShader,
 					group.m_clipRect,
 					m_instanceBufferOffset,
-					transparentQuads.size() - group.m_offset
+					transparentQuads.size() - group.m_offset,
+					true
 				});
 
 			// Update previous offset
@@ -229,7 +232,16 @@ void UISystem::render(FrameBuffer& target, bool overlay)
 			shader->setUniform("u_hasTexture", false);
 
 		// Set the blend factor
-		glCheck(glBlendFunc((GLenum)group.m_blendFactor, GL_ONE_MINUS_SRC_ALPHA));
+		if (group.m_transparent)
+		{
+			if (group.m_srcFactor == BlendFactor::ConstColor)
+				glCheck(glBlendColor(group.m_blendColor.r, group.m_blendColor.g, group.m_blendColor.b, group.m_blendColor.a));
+
+			glCheck(glEnable(GL_BLEND));
+			glCheck(glBlendFunc((GLenum)group.m_srcFactor, (GLenum)group.m_dstFactor));
+		}
+		else
+			glCheck(glDisable(GL_BLEND));
 
 		// Set up scissors clipping rectangle
 		bool hasClipping = group.m_clipRect.z * group.m_clipRect.w > 0.0f;
@@ -291,10 +303,12 @@ void UISystem::getRenderQuads(
 				renderData.push_back(UIRenderData
 					{
 						element->getTexture(),
-						element->getBlendFactor(),
+						element->getSrcBlend(),
+						element->getDstBlend(),
+						element->getColor(),
 						element->getShader(),
 						clipRect,
-						0, 0
+						0, 0, false
 					});
 				quads.push_back(std::vector<UIQuad>());
 			}
@@ -321,11 +335,14 @@ void UISystem::getRenderQuads(
 			transparentRenderData.push_back(UIRenderData
 				{
 					element->getTexture(),
-					element->getBlendFactor(),
+					element->getSrcBlend(),
+					element->getDstBlend(),
+					element->getColor(),
 					element->getShader(),
 					clipRect,
 					start,
-					transparentQuads.size() - start
+					transparentQuads.size() - start,
+					false
 				});
 
 			// Set index
@@ -367,7 +384,7 @@ void UISystem::setWindow(Window* window)
 	m_onMouseButtonHandle = m_window->addListener<E_MouseButton>(std::bind(&UISystem::onMouseButton, this, std::placeholders::_1));
 	m_onMouseMoveHandle =	m_window->addListener<E_MouseMove>(std::bind(&UISystem::onMouseMove, this, std::placeholders::_1));
 	m_onMouseScrollHandle = m_window->addListener<E_MouseScroll>(std::bind(&UISystem::onMouseScroll, this, std::placeholders::_1));
-	m_onTextInputHandle =	m_window->addListener<E_TextInput>(std::bind(&UISystem::onTextInput, this, std::placeholders::_1));
+	m_onTextInputHandle = m_window->addListener<E_TextInput>(std::bind(&UISystem::onTextInput, this, std::placeholders::_1));
 }
 
 

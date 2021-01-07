@@ -95,28 +95,6 @@ public:
 	void setLineSpacing(float spacing);
 
 	///////////////////////////////////////////////////////////
-	/// \brief Set the color of a single character
-	///
-	/// This color will override the default color set by setColor(),
-	/// but resets every time the text string is changed.
-	///
-	/// \param index The index of the character to set a color
-	///
-	///////////////////////////////////////////////////////////
-	void setCharacterColor(const Vector4f& color, Uint32 index);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Set the color of a single character
-	///
-	/// This color will override the default color set by setColor(),
-	/// but resets every time the text string is changed.
-	///
-	/// \param index The index of the character to set a color
-	///
-	///////////////////////////////////////////////////////////
-	void setCharacterColor(const Vector4f& color, Uint32 start, Uint32 end);
-
-	///////////////////////////////////////////////////////////
 	/// \brief Set the origin of the text element
 	///
 	/// \param origin The origin of the text element
@@ -190,16 +168,6 @@ public:
 	float getLineSpacing() const;
 
 	///////////////////////////////////////////////////////////
-	/// \brief Get the color of a character
-	///
-	/// \param index The character index to get color for
-	///
-	/// \return The character color
-	///
-	///////////////////////////////////////////////////////////
-	const Vector4f& getCharacterColor(Uint32 index) const;
-
-	///////////////////////////////////////////////////////////
 	/// \brief Get the vertical and horizontal offset of a character
 	///
 	/// \param index The index of the character to retrieve an offset for
@@ -246,7 +214,6 @@ private:
 
 	std::vector<UIQuad> m_quads;
 	std::vector<Vector2f> m_characterOffsets;
-	std::vector<Vector4f> m_characterColors;
 	float m_glyphYMax;
 	float m_glyphYMin;
 	bool m_stringChanged;

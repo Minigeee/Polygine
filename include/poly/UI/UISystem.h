@@ -18,11 +18,14 @@ class Window;
 struct UIRenderData
 {
 	Texture* m_texture;
-	BlendFactor m_blendFactor;
+	BlendFactor m_srcFactor;
+	BlendFactor m_dstFactor;
+	Vector4f m_blendColor;		//!< This is exclusively for text rendering atm
 	Shader* m_shader;
 	Vector4f m_clipRect;
 	Uint32 m_offset;
 	Uint32 m_instances;
+	bool m_transparent;
 };
 
 

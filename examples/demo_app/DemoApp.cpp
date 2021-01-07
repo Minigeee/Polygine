@@ -185,6 +185,7 @@ int main()
     input.setPosition(50.0f, 50.0f);
     input.setColor(0.2f, 0.2f, 0.25f, 1.0f);
     input.setValue("Test");
+    input.getText()->setCharacterSize(12);
     ui.addChild(&input);
 
 
