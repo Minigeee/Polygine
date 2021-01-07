@@ -43,9 +43,20 @@ UISystem::UISystem(Uint32 w, Uint32 h) :
 
 
 ///////////////////////////////////////////////////////////
+void UISystem::updateElement(UIElement* element, float dt)
+{
+	if (element != this)
+		element->update(dt);
+
+	for (Uint32 i = 0; i < element->m_children.size(); ++i)
+		updateElement(element->m_children[i], dt);
+}
+
+
+///////////////////////////////////////////////////////////
 void UISystem::update(float dt)
 {
-
+	updateElement(this, dt);
 }
 
 

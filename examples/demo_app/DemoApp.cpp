@@ -269,6 +269,7 @@ int main()
         multisampled.blitTo(framebuffer);
 
         // colorAdjust.render(framebuffer);
+        ui.update(elapsed);
         ui.render(FrameBuffer::Default, false);
 
         // Display (swap buffers)

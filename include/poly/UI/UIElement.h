@@ -67,6 +67,14 @@ public:
 	UIElement();
 
 	///////////////////////////////////////////////////////////
+	/// \brief Execute any updates for this UI element, including UI animations
+	///
+	/// \param dt The time elapsed since the last frame in seconds
+	///
+	///////////////////////////////////////////////////////////
+	virtual void update(float dt);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Add a child UI element
 	///
 	/// The added element goes to the back of the list of children,

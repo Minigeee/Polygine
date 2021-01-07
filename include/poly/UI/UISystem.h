@@ -71,6 +71,8 @@ private:
 		Uint32& index
 	);
 
+	void updateElement(UIElement* element, float dt);
+
 	void onKeyEvent(const E_KeyEvent& e) override;
 
 	void onMouseButton(const E_MouseButton& e) override;

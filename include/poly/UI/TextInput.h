@@ -15,6 +15,8 @@ public:
 
 	~TextInput();
 
+	void update(float dt) override;
+
 	void submit();
 
 	void setValue(const std::string& value);
@@ -67,8 +69,6 @@ public:
 
 	const Vector2f& getTextOffset() const;
 
-	float getClipMargins() const;
-
 	Text* getText();
 
 	void onValueChange(const std::function<void(const std::string&)>& func);
@@ -103,12 +103,12 @@ private:
 	UIElement* m_textCursor;
 	UIElement* m_highlight;
 	float m_cursorCycle;
+	float m_time;
 
 	Keyboard m_submitKey;
 	Uint32 m_cursorCharPos;
 	Vector2u m_textSelection;
 	UIPosition m_textAlign;
-	float m_clipMargins;
 
 	Uint32 m_selectStart;
 	bool m_isPressed;

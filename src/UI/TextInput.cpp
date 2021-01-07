@@ -16,12 +16,12 @@ TextInput::TextInput() :
 	m_text				(Pool<Text>::alloc()),
 	m_textCursor		(Pool<UIElement>::alloc()),
 	m_highlight			(Pool<UIElement>::alloc()),
-	m_cursorCycle		(1.0f),
+	m_cursorCycle		(1.2f),
+	m_time				(0.0f),
 	m_submitKey			(Keyboard::Enter),
 	m_cursorCharPos		(0),
 	m_textSelection		(0),
 	m_textAlign			(UIPosition::Left),
-	m_clipMargins		(5.0f),
 	m_isPressed			(false)
 {
 	// Setup highlight
@@ -34,6 +34,7 @@ TextInput::TextInput() :
 
 	// Setup text cursor
 	addChild(m_textCursor);
+	m_textCursor->setPosition(5.0f, 0.0f);
 	m_textCursor->setSize(1.0f, 15.0f);
 
 	// Set alignment
@@ -46,6 +47,17 @@ TextInput::~TextInput()
 {
 	Pool<Text>::free(m_text);
 	m_text = 0;
+}
+
+
+///////////////////////////////////////////////////////////
+void TextInput::update(float dt)
+{
+	// Keep track of time
+	m_time = fmodf(m_time + dt, m_cursorCycle);
+
+	// Set visibility
+	m_textCursor->setVisible(m_time < 0.5f * m_cursorCycle, false);
 }
 
 
@@ -111,6 +123,9 @@ void TextInput::setTextCursorPosition(Uint32 pos)
 
 	// Update selection start position
 	m_selectStart = pos;
+
+	// Reset time
+	m_time = 0.0f;
 
 	// Clear any text selection
 	if (m_textSelection.y - m_textSelection.x > 0)
@@ -187,13 +202,6 @@ void TextInput::setTextOffset(float x, float y)
 
 
 ///////////////////////////////////////////////////////////
-void TextInput::setClipMargins(float margins)
-{
-	m_clipMargins = margins;
-}
-
-
-///////////////////////////////////////////////////////////
 const std::string& TextInput::getValue() const
 {
 	return m_text->getString();
@@ -260,13 +268,6 @@ UIPosition TextInput::getTextAlign() const
 const Vector2f& TextInput::getTextOffset() const
 {
 	return m_text->getRelPosition();
-}
-
-
-///////////////////////////////////////////////////////////
-float TextInput::getClipMargins() const
-{
-	return m_clipMargins;
 }
 
 

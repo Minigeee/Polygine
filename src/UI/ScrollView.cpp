@@ -34,7 +34,6 @@ float ScrollBody::getClipMargin() const
 ///////////////////////////////////////////////////////////
 Vector4f ScrollBody::getClipRect()
 {
-	updateTransforms();
 	return Vector4f(m_parent->getAbsPosition() + m_clipMargin, m_parent->getPixelSize() - 2.0f * m_clipMargin);
 }
 
