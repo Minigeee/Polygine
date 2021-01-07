@@ -10,6 +10,9 @@ namespace poly
 
 
 ///////////////////////////////////////////////////////////
+Window* Window::s_current = 0;
+
+///////////////////////////////////////////////////////////
 Uint32 Window::numWindows = 0;
 
 ///////////////////////////////////////////////////////////
@@ -20,7 +23,10 @@ GLFWcursor* Window::s_standardCursors[6] = { 0, 0, 0, 0, 0, 0 };
 void onKeyEvent(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
 	Window* win = (Window*)glfwGetWindowUserPointer(window);
+	Window::setCurrent(win);
+
 	win->sendEvent(E_KeyEvent((Keyboard)key, (InputAction)action));
+
 }
 
 
@@ -28,6 +34,8 @@ void onKeyEvent(GLFWwindow* window, int key, int scancode, int action, int mods)
 void onMouseButton(GLFWwindow* window, int button, int action, int mods)
 {
 	Window* win = (Window*)glfwGetWindowUserPointer(window);
+	Window::setCurrent(win);
+
 	win->sendEvent(E_MouseButton((Mouse)button, (InputAction)action));
 }
 
@@ -36,6 +44,8 @@ void onMouseButton(GLFWwindow* window, int button, int action, int mods)
 void onMouseMove(GLFWwindow* window, double x, double y)
 {
 	Window* win = (Window*)glfwGetWindowUserPointer(window);
+	Window::setCurrent(win);
+
 	win->sendEvent(E_MouseMove((float)x, (float)y));
 }
 
@@ -44,14 +54,26 @@ void onMouseMove(GLFWwindow* window, double x, double y)
 void onMouseScroll(GLFWwindow* window, double dx, double dy)
 {
 	Window* win = (Window*)glfwGetWindowUserPointer(window);
+	Window::setCurrent(win);
+
 	win->sendEvent(E_MouseScroll((float)dx, (float)dy));
 }
 
 
 ///////////////////////////////////////////////////////////
+void onTextInput(GLFWwindow* window, Uint32 c)
+{
+	Window* win = (Window*)glfwGetWindowUserPointer(window);
+	Window::setCurrent(win);
+
+	win->sendEvent(E_TextInput(c));
+}
+
+
+///////////////////////////////////////////////////////////
 Window::Window() :
-	m_window	(0),
-	m_cursor	(0)
+	m_window(0),
+	m_cursor(0)
 {
 
 }
@@ -59,8 +81,8 @@ Window::Window() :
 
 ///////////////////////////////////////////////////////////
 Window::Window(Uint32 w, Uint32 h, const std::string& title, bool fullscreen, int multisample) :
-	m_window	(0),
-	m_cursor	(0)
+	m_window(0),
+	m_cursor(0)
 {
 	create(w, h, title, fullscreen, multisample);
 }
@@ -68,8 +90,8 @@ Window::Window(Uint32 w, Uint32 h, const std::string& title, bool fullscreen, in
 
 ///////////////////////////////////////////////////////////
 Window::Window(Window&& other) :
-	m_window	(other.m_window),
-	m_title		(std::move(other.m_title))
+	m_window(other.m_window),
+	m_title(std::move(other.m_title))
 {
 	other.m_window = 0;
 
@@ -177,6 +199,10 @@ bool Window::create(Uint32 w, Uint32 h, const std::string& title, bool fullscree
 	glfwSetMouseButtonCallback(m_window, onMouseButton);
 	glfwSetCursorPosCallback(m_window, onMouseMove);
 	glfwSetScrollCallback(m_window, onMouseScroll);
+	glfwSetCharCallback(m_window, onTextInput);
+
+	// glfwGetCursorPos() is buggy
+	addListener<E_MouseMove>([&](const E_MouseMove& e) { m_cursorPos = Vector2f(e.m_x, e.m_y); });
 
 	return true;
 }
@@ -275,6 +301,13 @@ void Window::setCursorMode(CursorMode mode)
 
 
 ///////////////////////////////////////////////////////////
+void Window::setClipboard(const std::string& str)
+{
+	glfwSetClipboardString(m_window, str.c_str());
+}
+
+
+///////////////////////////////////////////////////////////
 Vector2u Window::getResolution() const
 {
 	// Check if window is open
@@ -290,6 +323,42 @@ Vector2u Window::getResolution() const
 const std::string& Window::getTitle() const
 {
 	return m_title;
+}
+
+
+///////////////////////////////////////////////////////////
+std::string Window::getClipboard() const
+{
+	return std::string(glfwGetClipboardString(m_window));
+}
+
+
+///////////////////////////////////////////////////////////
+Vector2f Window::getCursorPos() const
+{
+	return m_cursorPos;
+}
+
+
+///////////////////////////////////////////////////////////
+bool Window::isKeyPressed(Keyboard key) const
+{
+	int state = glfwGetKey(m_window, (int)key);
+	return state != GLFW_RELEASE;
+}
+
+
+///////////////////////////////////////////////////////////
+void Window::setCurrent(Window* window)
+{
+	s_current = window;
+}
+
+
+///////////////////////////////////////////////////////////
+Window* Window::getCurrent()
+{
+	return s_current;
 }
 
 

@@ -97,6 +97,25 @@ public:
 	static void pollEvents();
 
 	///////////////////////////////////////////////////////////
+	/// \brief Set the current window
+	///
+	/// This function is automatically called whenever a window
+	/// receives input events.
+	///
+	/// \param window A window pointer
+	///
+	///////////////////////////////////////////////////////////
+	static void setCurrent(Window* window);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the current window
+	///
+	/// \return A pointer to the current window
+	///
+	///////////////////////////////////////////////////////////
+	static Window* getCurrent();
+
+	///////////////////////////////////////////////////////////
 	/// \brief Create a new window using the given settings
 	///
 	/// \param w Width of the window in pixels
@@ -180,6 +199,14 @@ public:
 	void setCursorMode(CursorMode mode);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Set clipboard string
+	///
+	/// \param str The string to put in the clipboard
+	///
+	///////////////////////////////////////////////////////////
+	void setClipboard(const std::string& str);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the window resolution
 	///
 	/// \return The window resolution
@@ -195,11 +222,39 @@ public:
 	///////////////////////////////////////////////////////////
 	const std::string& getTitle() const;
 
+	///////////////////////////////////////////////////////////
+	/// \brief Get the clipboard string
+	///
+	/// \return The clipboard string
+	///
+	///////////////////////////////////////////////////////////
+	std::string getClipboard() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the cursor position in pixels
+	///
+	/// \return The cursor position in pixels
+	///
+	///////////////////////////////////////////////////////////
+	Vector2f getCursorPos() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Check if a certain key is pressed
+	///
+	/// \param key The key to check
+	///
+	/// \return True if the key is pressed or held
+	///
+	///////////////////////////////////////////////////////////
+	bool isKeyPressed(Keyboard key) const;
+
 private:
 	GLFWwindow* m_window;						//!< GLFW window pointer
 	GLFWcursor* m_cursor;						//!< The current cursor
 	std::string m_title;						//!< Window title
+	Vector2f m_cursorPos;						//!< glfwGetCursorPos() is buggy
 
+	static Window* s_current;					//!< The current window
 	static Uint32 numWindows;					//!< The number of existing windows
 	static GLFWcursor* s_standardCursors[6];	//!< The standard cursors
 };

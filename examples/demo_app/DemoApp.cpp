@@ -32,6 +32,7 @@
 #include <poly/UI/ScrollView.h>
 #include <poly/UI/Slider.h>
 #include <poly/UI/Text.h>
+#include <poly/UI/TextInput.h>
 #include <poly/UI/UISystem.h>
 #include <poly/UI/UIElement.h>
 
@@ -179,24 +180,13 @@ int main()
     font.load("fonts/segoeui/segoeui.ttf");
     Text::setDefaultFont(&font);
 
-    Text text;
-    text.setString("The quick brown fox jumps over the lazy dog.");
-    text.setCharacterSize(12);
-    // text.setCharacterSpacing(5.0f);
-    text.setPosition(10.0f, 500.0f);
-    // text.setColor(0, 0, 0, 1);
-    text.setCharacterColor(Vector4f(0.8f, 0.4f, 0.4f, 1.0f), 16, 19);
-    text.setCharacterColor(Vector4f(0.8f, 0.4f, 0.4f, 1.0f), 40, 43);
-    // ui.addChild(&text);
+    TextInput input;
+    input.setSize(300.0f, 25.0f);
+    input.setPosition(50.0f, 50.0f);
+    input.setColor(0.2f, 0.2f, 0.25f, 1.0f);
+    input.setValue("Test");
+    ui.addChild(&input);
 
-    ScrollView scroll;
-    scroll.setPosition(50.0f, 50.0f);
-    scroll.setSize(100.0f, 300.0f);
-    scroll.setColor(0.2f, 0.2f, 0.25f, 1.0f);
-    scroll.setScrollBarWidth(10.0f);
-    scroll.getScrollBar()->setColor(0.3f, 0.3f, 0.35f, 1.0f);
-    scroll.addChild(&text);
-    ui.addChild(&scroll);
 
     bool mouseDown = false;
     window.addListener<E_MouseButton>(
@@ -277,8 +267,8 @@ int main()
         scene.render(camera, multisampled);
         multisampled.blitTo(framebuffer);
 
-        colorAdjust.render(framebuffer);
-        ui.render(FrameBuffer::Default, true);
+        // colorAdjust.render(framebuffer);
+        ui.render(FrameBuffer::Default, false);
 
         // Display (swap buffers)
         window.display();

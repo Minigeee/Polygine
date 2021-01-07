@@ -41,7 +41,35 @@ public:
 
 	void setTextAlign(UIPosition align);
 
+	void setTextOffset(const Vector2f& offset);
+
+	void setTextOffset(float x, float y);
+
 	void setClipMargins(float margins);
+
+	const std::string& getValue() const;
+
+	Keyboard getSubmitKey() const;
+
+	const Vector2f& getTextCursorSize() const;
+
+	const Vector4f& getTextCursorColor() const;
+
+	Uint32 getTextCursorPosition() const;
+
+	float getTextCursorCycle() const;
+
+	const Vector4f& getHighlightColor() const;
+
+	const Vector2u& getTextSelection() const;
+
+	UIPosition getTextAlign() const;
+
+	const Vector2f& getTextOffset() const;
+
+	float getClipMargins() const;
+
+	Text* getText();
 
 	void onValueChange(const std::function<void(const std::string&)>& func);
 
@@ -72,6 +100,23 @@ private:
 
 private:
 	Text* m_text;
+	UIElement* m_textCursor;
+	UIElement* m_highlight;
+	float m_cursorCycle;
+
+	Keyboard m_submitKey;
+	Uint32 m_cursorCharPos;
+	Vector2u m_textSelection;
+	UIPosition m_textAlign;
+	float m_clipMargins;
+
+	Uint32 m_selectStart;
+	bool m_isPressed;
+
+	std::function<void(const std::string&)> m_onValueChanged;
+	std::function<void()> m_onGainFocus;
+	std::function<void()> m_onLoseFocus;
+	std::function<void(const std::string&)> m_onSubmit;
 };
 
 }

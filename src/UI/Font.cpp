@@ -282,7 +282,7 @@ float Font::getKerning(Uint32 c1, Uint32 c2, Uint32 size)
         FT_Vector kerning;
         FT_Get_Kerning(face, index1, index2, FT_KERNING_DEFAULT, &kerning);
 
-        return (float)kerning.x;
+        return (float)(kerning.x >> 6);
     }
 
     return 0.0f;

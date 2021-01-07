@@ -1,5 +1,7 @@
 #include <poly/Core/ObjectPool.h>
 
+#include <poly/Graphics/Window.h>
+
 #include <poly/UI/Slider.h>
 
 namespace poly
@@ -46,7 +48,7 @@ void SliderButton::onMouseButton(const E_MouseButton& e)
 			setRotation(0.0f);
 
 		// Calculate actual offset if the slider is pressed
-		m_offset = -getLocalCoordinate(m_offset);
+		m_offset = -getLocalCoordinate(Window::getCurrent()->getCursorPos());
 	}
 }
 
@@ -88,9 +90,6 @@ void SliderButton::onMouseMove(const E_MouseMove& e)
 			markTransformDirty();
 		}
 	}
-	else
-		// Otherwise, just keep track of mouse position
-		m_offset = Vector2f(e.m_x, e.m_y);
 }
 
 
@@ -120,7 +119,6 @@ bool SliderButton::handlesMouseEvents() const
 ///////////////////////////////////////////////////////////
 Slider::Slider() :
 	m_button		(Pool<SliderButton>::alloc()),
-	m_mousePos		(0.0f),
 	m_value			(0.0f),
 	m_isPressed		(false)
 {
@@ -197,7 +195,7 @@ void Slider::onMouseButton(const E_MouseButton& e)
 	if (m_isPressed)
 	{
 		// Change button position
-		Vector2f p = getLocalCoordinate(m_mousePos);
+		Vector2f p = getLocalCoordinate(Window::getCurrent()->getCursorPos());
 
 		// Clamp position
 		float min = 0.5f * m_button->getPixelSize().x;
@@ -252,9 +250,6 @@ void Slider::onMouseMove(const E_MouseMove& e)
 				m_onValueChange(m_value);
 		}
 	}
-	else
-		// Otherwise, just keep track of mouse position
-		m_mousePos = Vector2f(e.m_x, e.m_y);
 }
 
 

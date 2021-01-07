@@ -831,6 +831,12 @@ protected:
 	///////////////////////////////////////////////////////////
 	virtual void updateTransforms();
 
+	///////////////////////////////////////////////////////////
+	/// \brief Get all quads in the UI element
+	///
+	///////////////////////////////////////////////////////////
+	virtual void getQuads(std::vector<UIQuad>& quads);
+
 protected:
 	UIElement* m_parent;
 	std::vector<UIElement*> m_children;
@@ -859,8 +865,6 @@ protected:
 	bool m_hasFocus;
 
 private:
-	virtual void getQuads(std::vector<UIQuad>& quads);
-
 	Shader* getDefaultShader();
 
 	static Shader s_shader;

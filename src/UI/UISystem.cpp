@@ -270,7 +270,8 @@ void UISystem::getRenderQuads(
 	Uint32& index)
 {
 	// Skip the element if it is not visible
-	if (element->isVisible() && element->getColor().a > 0.0f)
+	const Vector2f& size = element->getPixelSize();
+	if (element->isVisible() && element->getColor().a > 0.0f && size.x * size.y > 0.0f)
 	{
 		if (!element->isTransparent())
 		{
@@ -376,7 +377,7 @@ void UISystem::onKeyEvent(const E_KeyEvent& e)
 	if (m_hovered && m_hovered != this)
 		m_hovered->onKeyEvent(e);
 
-	if (m_focused && m_focused != this)
+	if (m_focused && m_focused != m_hovered && m_focused != this)
 		m_focused->onKeyEvent(e);
 }
 

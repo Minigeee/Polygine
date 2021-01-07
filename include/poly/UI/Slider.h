@@ -127,7 +127,6 @@ private:
 
 private:
 	SliderButton* m_button;		//!< The slider button element
-	Vector2f m_mousePos;		//!< The mouse position
 	float m_value;				//!< The slider value
 	bool m_isPressed;			//!< True if the slider is pressed
 
