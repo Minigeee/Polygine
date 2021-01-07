@@ -9,15 +9,11 @@ namespace poly
 
 ///////////////////////////////////////////////////////////
 Button::Button() :
-	m_text			(Pool<Text>::alloc()),
+	m_text			(0),
 	m_textAlign		(UIPosition::Center),
 	m_isPressed		(false)
 {
-	// Add child
-	addChild(m_text);
 
-	// Set text align
-	setTextAlign(m_textAlign);
 }
 
 
@@ -30,8 +26,18 @@ Button::~Button()
 
 
 ///////////////////////////////////////////////////////////
+void Button::createText()
+{
+	m_text = Pool<Text>::alloc();
+	setTextAlign(m_textAlign);
+	addChild(m_text);
+}
+
+
+///////////////////////////////////////////////////////////
 void Button::setString(const std::string& string)
 {
+	if (!m_text) createText();
 	m_text->setString(string);
 }
 
@@ -39,6 +45,12 @@ void Button::setString(const std::string& string)
 ///////////////////////////////////////////////////////////
 void Button::setTextAlign(UIPosition align)
 {
+	if (!m_text)
+	{
+		m_text = Pool<Text>::alloc();
+		addChild(m_text);
+	}
+
 	m_textAlign = align;
 
 	m_text->setOrigin(align);
@@ -49,6 +61,7 @@ void Button::setTextAlign(UIPosition align)
 ///////////////////////////////////////////////////////////
 void Button::setTextOffset(const Vector2f& offset)
 {
+	if (!m_text) createText();
 	m_text->setPosition(offset);
 }
 
@@ -56,13 +69,15 @@ void Button::setTextOffset(const Vector2f& offset)
 ///////////////////////////////////////////////////////////
 void Button::setTextOffset(float x, float y)
 {
+	if (!m_text) createText();
 	m_text->setPosition(x, y);
 }
 
 
 ///////////////////////////////////////////////////////////
-const std::string& Button::getString() const
+const std::string& Button::getString()
 {
+	if (!m_text) createText();
 	return m_text->getString();
 }
 
@@ -75,15 +90,17 @@ UIPosition Button::getTextAlign() const
 
 
 ///////////////////////////////////////////////////////////
-const Vector2f& Button::getTextOffset() const
+const Vector2f& Button::getTextOffset()
 {
+	if (!m_text) createText();
 	return m_text->getRelPosition();
 }
 
 
 ///////////////////////////////////////////////////////////
-Text* Button::getText() const
+Text* Button::getText()
 {
+	if (!m_text) createText();
 	return m_text;
 }
 

@@ -165,12 +165,6 @@ int main()
     framebuffer.bind();
     framebuffer.attachColor(&texture[1], PixelFormat::Rgb, GLType::Uint16);
 
-    FrameBuffer uiTarget;
-    uiTarget.create(1280, 720);
-    uiTarget.bind();
-    uiTarget.attachColor(&texture[2], PixelFormat::Rgba, GLType::Uint8);
-    uiTarget.attachDepth();
-
     // Post process stuff
     ColorAdjust colorAdjust;
 

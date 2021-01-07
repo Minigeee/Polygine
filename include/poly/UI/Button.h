@@ -74,7 +74,7 @@ public:
 	/// \return Te text string
 	///
 	///////////////////////////////////////////////////////////
-	const std::string& getString() const;
+	const std::string& getString();
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the text alignment
@@ -90,7 +90,7 @@ public:
 	/// \return The text offset
 	///
 	///////////////////////////////////////////////////////////
-	const Vector2f& getTextOffset() const;
+	const Vector2f& getTextOffset();
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get a pointer to the button text element
@@ -98,7 +98,7 @@ public:
 	/// \return A pointer to the text element
 	///
 	///////////////////////////////////////////////////////////
-	Text* getText() const;
+	Text* getText();
 	
 	///////////////////////////////////////////////////////////
 	/// \brief Check if the button is being pressed with left-click
@@ -161,6 +161,8 @@ private:
 	void onMouseLeave(const E_MouseMove& e) override;
 
 	bool handlesMouseEvents() const override;
+
+	void createText();
 
 private:
 	Text* m_text;
