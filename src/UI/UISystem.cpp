@@ -75,9 +75,6 @@ void UISystem::render(FrameBuffer& target, bool overlay)
 	else
 		glCheck(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
 
-	// Enable blending
-	glCheck(glEnable(GL_BLEND));
-
 	std::vector<UIRenderData> renderData;
 	std::vector<UIRenderData> transparentRenderData;
 	std::vector<UIQuad> transparentQuads;
@@ -251,8 +248,6 @@ void UISystem::render(FrameBuffer& target, bool overlay)
 			glCheck(glEnable(GL_BLEND));
 			glCheck(glBlendFunc((GLenum)group.m_srcFactor, (GLenum)group.m_dstFactor));
 		}
-		else
-			glCheck(glDisable(GL_BLEND));
 
 		// Set up scissors clipping rectangle
 		bool hasClipping = group.m_clipRect.z * group.m_clipRect.w > 0.0f;
@@ -278,6 +273,9 @@ void UISystem::render(FrameBuffer& target, bool overlay)
 
 		if (hasClipping)
 			glCheck(glDisable(GL_SCISSOR_TEST));
+
+		if (group.m_transparent)
+			glCheck(glDisable(GL_BLEND));
 	}
 }
 

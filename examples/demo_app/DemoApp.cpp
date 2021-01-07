@@ -29,6 +29,7 @@
 
 #include <poly/UI/Button.h>
 #include <poly/UI/Font.h>
+#include <poly/UI/ListView.h>
 #include <poly/UI/ScrollView.h>
 #include <poly/UI/Slider.h>
 #include <poly/UI/Text.h>
@@ -180,13 +181,16 @@ int main()
     font.load("fonts/segoeui/segoeui.ttf");
     Text::setDefaultFont(&font);
 
-    TextInput input;
-    input.setSize(300.0f, 25.0f);
-    input.setPosition(50.0f, 50.0f);
-    input.setColor(0.2f, 0.2f, 0.25f, 1.0f);
-    input.setValue("Test");
-    input.getText()->setCharacterSize(12);
-    ui.addChild(&input);
+    Text texts[10];
+    for (Uint32 i = 0; i < 10; ++i)
+        texts[i].setString("Hello World!");
+
+    HListView list;
+    list.setPosition(30.0f, 30.0f);
+    for (Uint32 i = 0; i < 10; ++i)
+        list.addChild(&texts[i], Vector2f(0.0f, 5.0f));
+
+    ui.addChild(&list);
 
 
     bool mouseDown = false;
@@ -268,9 +272,9 @@ int main()
         scene.render(camera, multisampled);
         multisampled.blitTo(framebuffer);
 
-        // colorAdjust.render(framebuffer);
+        colorAdjust.render(framebuffer);
         ui.update(elapsed);
-        ui.render(FrameBuffer::Default, false);
+        ui.render(FrameBuffer::Default, true);
 
         // Display (swap buffers)
         window.display();

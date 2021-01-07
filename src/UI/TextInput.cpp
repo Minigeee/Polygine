@@ -27,10 +27,12 @@ TextInput::TextInput() :
 	// Setup highlight
 	addChild(m_highlight);
 	m_highlight->setColor(0.30f, 0.53f, 0.64f, 1.0f);
+	m_highlight->setVisible(false, false);
 
 	// Setup text
 	addChild(m_text);
 	m_text->setPosition(5.0f, 0.0f);
+	m_textCursor->setVisible(false, false);
 
 	// Setup text cursor
 	addChild(m_textCursor);
@@ -53,11 +55,14 @@ TextInput::~TextInput()
 ///////////////////////////////////////////////////////////
 void TextInput::update(float dt)
 {
-	// Keep track of time
-	m_time = fmodf(m_time + dt, m_cursorCycle);
+	if (m_hasFocus)
+	{
+		// Keep track of time
+		m_time = fmodf(m_time + dt, m_cursorCycle);
 
-	// Set visibility
-	m_textCursor->setVisible(m_time < 0.5f * m_cursorCycle, false);
+		// Set visibility
+		m_textCursor->setVisible(m_time < 0.5f * m_cursorCycle, false);
+	}
 }
 
 
@@ -72,7 +77,13 @@ void TextInput::submit()
 ///////////////////////////////////////////////////////////
 void TextInput::setValue(const std::string& value)
 {
-	m_text->setString(value);
+	if (value != m_text->getString())
+	{
+		m_text->setString(value);
+
+		if (m_onValueChanged)
+			m_onValueChanged(value);
+	}
 }
 
 
@@ -315,8 +326,10 @@ void TextInput::onMouseButton(const E_MouseButton& e)
 	m_isPressed = e.m_action == InputAction::Press;
 	if (m_isPressed)
 	{
+		Window* window = Window::getCurrent();
+
 		// Change cursor position
-		Vector2f p = m_text->getLocalCoordinate(Window::getCurrent()->getCursorPos());
+		Vector2f p = m_text->getLocalCoordinate(window->getCursorPos());
 
 		// Find correct index in string
 		const std::string& value = m_text->getString();
@@ -330,8 +343,32 @@ void TextInput::onMouseButton(const E_MouseButton& e)
 				--i;
 		}
 
-		// Set cursor position
-		setTextCursorPosition(i);
+		// If shift is held, create a text selection
+		if (window->isKeyPressed(Keyboard::LeftShift) || window->isKeyPressed(Keyboard::RightShift))
+		{
+			m_cursorCharPos = i;
+
+			// Update range
+			m_textSelection = Vector2u(i < m_selectStart ? i : m_selectStart, i > m_selectStart ? i : m_selectStart);
+
+			// Update highlight rectangle
+			float start = m_text->getCharacterOffset(m_textSelection.x).x;
+			float end = m_text->getCharacterOffset(m_textSelection.y).x;
+			float cursorPos = m_textSelection.x == m_cursorCharPos ? start : end;
+			m_highlight->setPosition(m_text->getRelPosition() + Vector2f(start, 0.0f));
+			m_highlight->setSize(end - start, m_textCursor->getPixelSize().y);
+
+			// Update cursor
+			m_textCursor->setPosition(m_text->getRelPosition() + Vector2f(cursorPos, 0.0f));
+
+			// Reset blink timer
+			m_time = 0.0f;
+		}
+		else
+		{
+			// Set cursor position
+			setTextCursorPosition(i);
+		}
 	}
 }
 
@@ -373,6 +410,9 @@ void TextInput::onMouseMove(const E_MouseMove& e)
 
 			// Update cursor
 			m_textCursor->setPosition(m_text->getRelPosition() + Vector2f(cursorPos, 0.0f));
+
+			// Reset blink timer
+			m_time = 0.0f;
 		}
 	}
 }
@@ -463,6 +503,9 @@ void TextInput::onKeyEvent(const E_KeyEvent& e)
 
 			// Update text cursor location
 			setTextCursorPosition(m_textSelection.x + clipboard.size());
+
+			if (m_onValueChanged)
+				m_onValueChanged(newValue);
 		}
 
 		// Handle cut
@@ -482,6 +525,9 @@ void TextInput::onKeyEvent(const E_KeyEvent& e)
 
 				// Update text cursor location
 				setTextCursorPosition(m_textSelection.x);
+
+				if (m_onValueChanged)
+					m_onValueChanged(newValue);
 			}
 		}
 	}
@@ -509,47 +555,61 @@ void TextInput::onKeyEvent(const E_KeyEvent& e)
 		else if (e.m_key == Keyboard::Backspace)
 		{
 			const std::string& oldValue = m_text->getString();
+			std::string newValue;
 
 			// Handle backspace
 			if (m_cursorCharPos > 0 && m_textSelection.y - m_textSelection.x == 0)
 			{
 				// Remove the previous character
-				std::string newValue = oldValue.substr(0, m_cursorCharPos - 1) + oldValue.substr(m_cursorCharPos);
+				newValue = oldValue.substr(0, m_cursorCharPos - 1) + oldValue.substr(m_cursorCharPos);
 				m_text->setString(newValue);
 
 				// Set cursor position
 				setTextCursorPosition(m_cursorCharPos - 1);
+
+				if (m_onValueChanged)
+					m_onValueChanged(newValue);
 			}
-			else
+			else if (m_textSelection.y - m_textSelection.x > 0)
 			{
 				// Remove the selection
-				std::string newValue = oldValue.substr(0, m_textSelection.x) + oldValue.substr(m_textSelection.y);
+				newValue = oldValue.substr(0, m_textSelection.x) + oldValue.substr(m_textSelection.y);
 				m_text->setString(newValue);
 
 				// Set cursor position
 				setTextCursorPosition(m_textSelection.x);
+
+				if (m_onValueChanged)
+					m_onValueChanged(newValue);
 			}
 		}
 
 		else if (e.m_key == Keyboard::Delete)
 		{
 			const std::string& oldValue = m_text->getString();
+			std::string newValue;
 
 			// Handle delete
 			if (m_cursorCharPos < oldValue.size() && m_textSelection.y - m_textSelection.x == 0)
 			{
 				// Remove the previous character
-				std::string newValue = oldValue.substr(0, m_cursorCharPos) + oldValue.substr(m_cursorCharPos + 1);
+				newValue = oldValue.substr(0, m_cursorCharPos) + oldValue.substr(m_cursorCharPos + 1);
 				m_text->setString(newValue);
+
+				if (m_onValueChanged)
+					m_onValueChanged(newValue);
 			}
-			else
+			else if (m_textSelection.y - m_textSelection.x > 0)
 			{
 				// Remove the selection
-				std::string newValue = oldValue.substr(0, m_textSelection.x) + oldValue.substr(m_textSelection.y);
+				newValue = oldValue.substr(0, m_textSelection.x) + oldValue.substr(m_textSelection.y);
 				m_text->setString(newValue);
 
 				// Set cursor position
 				setTextCursorPosition(m_textSelection.x);
+
+				if (m_onValueChanged)
+					m_onValueChanged(newValue);
 			}
 		}
 	}
@@ -568,20 +628,33 @@ void TextInput::onTextInput(const E_TextInput& e)
 
 	// Update text cursor location
 	setTextCursorPosition(m_textSelection.x + 1);
+
+	if (m_onValueChanged)
+		m_onValueChanged(newValue);
 }
 
 
 ///////////////////////////////////////////////////////////
 void TextInput::onGainFocus()
 {
+	// Show input elements
+	m_textCursor->setVisible(true, false);
+	m_highlight->setVisible(true, false);
 
+	if (m_onGainFocus)
+		m_onGainFocus();
 }
 
 
 ///////////////////////////////////////////////////////////
 void TextInput::onLoseFocus()
 {
+	// Hide input elements
+	m_textCursor->setVisible(false, false);
+	m_highlight->setVisible(false, false);
 
+	if (m_onLoseFocus)
+		m_onLoseFocus();
 }
 
 
