@@ -168,7 +168,7 @@ int main()
     // Post process stuff
     ColorAdjust colorAdjust;
 
-    UISystem ui(1280, 720);
+    UISystem ui;
     ui.setWindow(&window);
 
     Font font;

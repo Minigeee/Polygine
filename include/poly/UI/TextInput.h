@@ -354,3 +354,50 @@ private:
 }
 
 #endif
+
+///////////////////////////////////////////////////////////
+/// \class poly::TextInput
+/// \ingroup UI
+///
+/// A single line text input UI element. This text input supports
+/// most of the standard functionality of text input fields,
+/// including selecting text, moving the text cursor with the
+/// arrow keys and the cursor, copy, paste, and cut, etc.
+///
+/// Some of the adjustable parameters of a text input element
+/// are: the highlight color, the text cursor size, text cursor
+/// color, text cursor cycle length.
+///
+/// Usage example:
+/// \code
+///
+/// using namespace poly;
+///
+/// // Load a font
+/// Font font;
+/// font.load("fonts/default.ttf");
+/// Text::setDefaultFont(&font);
+///
+/// TextInput input;
+/// input.setPosition(30.0f, 30.0f);
+/// input.setColor(0.2f, 0.2f, 0.25f, 1.0f);
+/// input.setValue("Test");
+///
+/// // Set some optional parameters
+/// // Set text cursor size
+/// input.setTextCursorSize(1.0f, 15.0f);
+///
+/// // Make the cursor cycle a little faster (default is 1.2s)
+/// input.setTextCursorCycle(1.0f);
+///
+/// // Setup a function callback
+/// input.onSubmit(
+///		[&](const std::string& value)
+///		{
+///			std::cout << value << '\n';
+///		}
+/// );
+///
+/// \endcode
+///
+///////////////////////////////////////////////////////////

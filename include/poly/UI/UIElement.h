@@ -896,4 +896,36 @@ private:
 /// \class poly::UIElement
 /// \ingroup UI
 ///
+/// The base UI element class that all the other more complex
+/// UI elements inherit from. This class can be used without
+/// being inherited, but it will have less functionality.
+///
+/// View the documentation for each individual function for a
+/// more detailed explanation of each.
+///
+/// Usage example:
+/// \code
+///
+/// using namespace poly;
+///
+/// UISystem ui;
+/// 
+/// UIElement element;
+/// element.setPosition(50.0f, 20.0f);				// Set the position to (50, 20) pixels
+/// element.setRotation(-45.0f);					// Set rotation to -45 degrees
+/// element.setSize(100.0f, 30.0f);					// Set size to 100 width and 30 height
+/// element.setColor(1.0f, 0.0f, 0.0f, 1.0f);		// Set color to red
+///
+/// element.setOrigin(0.25f, 0.25f);				// Set the origin to a quarter away from the top-left corner
+/// element.setOrigin(UIPosition::Center);			// Set origin to the center, which is equivalent to (0.5, 0.5)
+/// element.setAnchor(UIPosition::BotRight);		// Set the anchor to the bottom-right corner of the parent, which is equivalent to (1, 1)
+///
+/// element.setTexture(0);							// Set this to a non-null value to display a texture on the UI
+/// element.setTextureRect(0.5, 0.5f, 0.5f, 0.5f);	// Display only the top-right region of the texture
+///
+/// // Add to the system
+/// ui.addChild(&element);
+///
+/// \endcode
+///
 ///////////////////////////////////////////////////////////

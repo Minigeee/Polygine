@@ -202,3 +202,44 @@ private:
 }
 
 #endif
+
+///////////////////////////////////////////////////////////
+/// \class poly::ScrollView
+/// \ingroup UI
+///
+/// This class is a vertical scroll view that creates a scrollable
+/// view when its children bounds are bigger than its own size.
+/// This scroll view only supports vertical scrolling.
+///
+/// To use a scoll view, initialize the scroll view like any
+/// other UI element, then add UI elements to the scroll view.
+/// All children element will be scrollable.
+///
+/// There are also several adjustable parameters specific to
+/// the scroll view, such as scrolling speed, the clipping area
+/// margins, the scroll bar width, etc.
+///
+/// Usage example:
+/// \code
+///
+/// using namespace poly;
+///
+/// ScrollView scroll;
+/// scroll.setPosition(30.0f, 30.0f);
+/// scroll.setSize(100.0f, 300.0f);
+/// scroll.setColor(0.2f, 0.2f, 0.25f, 1.0f);
+///
+/// // Set scroll bar width
+/// scroll.setScrollBarWidth(5.0f);
+///
+/// // Set scrolling speed
+/// scroll.setScrollSpeed(45.0f);
+///
+/// // Set clipping margins
+/// scroll.setClipMargins(5.0f);
+///
+/// // Then add other elements to the scroll view...
+///
+/// \endcode
+///
+///////////////////////////////////////////////////////////

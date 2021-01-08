@@ -136,3 +136,40 @@ private:
 }
 
 #endif
+
+///////////////////////////////////////////////////////////
+/// \class poly::Slider
+/// \ingroup UI
+///
+/// A bar slider that can represent decimal values between 0
+/// and 1, where when the slider is on the left side, the slider
+/// has a value of 0. The slider does not have many adjustable
+/// parameters other than the default UI element parameters.
+/// It is possible to customize the slider button using
+/// getSliderButton().
+///
+/// By default, the slider button will have a relative height of
+/// 1, so its height will be the same as the slider body size.
+///
+/// Usage example:
+/// \code
+///
+/// using namespace poly;
+///
+/// Slider slider;
+/// slider.setPosition(30.0f, 30.0f);
+/// sllider.setSize(100.0f, 10.0f);
+/// slider.setColor(0.2f, 0.2f, 0.25f, 1.0f);
+/// slider.getSliderButton()->setWidth(10.0f);
+///
+/// // Callback function
+/// slider.onValueChange(
+///		[&](float value)
+///		{
+///			std::cout << value << '\n';
+///		}
+/// );
+///
+/// \endcode
+///
+///////////////////////////////////////////////////////////

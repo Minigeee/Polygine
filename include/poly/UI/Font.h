@@ -115,6 +115,14 @@ public:
 	///////////////////////////////////////////////////////////
 	Texture& getTexture(Uint32 size);
 
+	///////////////////////////////////////////////////////////
+	/// \brief Get the extra offset between two specific characters
+	///
+	/// \param c1 The first character
+	/// \param c2 The second character
+	/// \param size The charaacter size to load kerning for
+	///
+	///////////////////////////////////////////////////////////
 	float getKerning(Uint32 c1, Uint32 c2, Uint32 size);
 
 private:
@@ -139,3 +147,37 @@ private:
 }
 
 #endif
+
+///////////////////////////////////////////////////////////
+/// \class poly::Font
+/// \ingroup UI
+///
+/// The font class loads font files and renders glyphs into
+/// textures for use by Text elements. To use a font, first load
+/// a font from a file using load(), then glyph geometry and
+/// textures can be loaded for specific character sizes using
+/// getGlyph() and getTexture(). But most of the time, these
+/// functions are only used internally by the Text element.
+///
+/// When loading the font, a limited character set must be chosen.
+/// By default, the english character set is used, which includes
+/// ASCII characters from 32 to 127. When rendering the glyphs,
+/// the font renders using subpixel rendering for slightly higher
+/// resolution text. A default text font can be set using
+/// Text::setDefaultFont().
+///
+/// Usage example:
+/// \code
+///
+/// using namespace poly;
+///
+/// // Load a font
+/// Font font;
+/// font.load("fonts/default.ttf");
+///
+/// // Set the default text font
+/// Text::setDefaultFont(&font);
+///
+/// \endcode
+///
+///////////////////////////////////////////////////////////

@@ -15,6 +15,9 @@ class Window;
 
 
 ///////////////////////////////////////////////////////////
+/// \brief Render data group (used internally)
+///
+///////////////////////////////////////////////////////////
 struct UIRenderData
 {
 	Texture* m_texture;
@@ -30,6 +33,9 @@ struct UIRenderData
 
 
 ///////////////////////////////////////////////////////////
+/// \brief Quad instance data (used internally)
+///
+///////////////////////////////////////////////////////////
 struct UIInstanceData
 {
 	Vector2f m_position;
@@ -43,21 +49,41 @@ struct UIInstanceData
 
 
 ///////////////////////////////////////////////////////////
-/// \brief TODO
+/// \brief The UI system that handles rendering, updates, and input events
 ///
 ///////////////////////////////////////////////////////////
-class UISystem :
-	public UIElement
+class UISystem : public UIElement
 {
 public:
+	///////////////////////////////////////////////////////////
+	/// \brief Default constructor
+	///
+	///////////////////////////////////////////////////////////
 	UISystem();
 
-	UISystem(Uint32 w, Uint32 h);
-
+	///////////////////////////////////////////////////////////
+	/// \brief Update UI elements and animations
+	///
+	/// \brief dt The time elapsed since the last frame in seconds
+	///
+	///////////////////////////////////////////////////////////
 	void update(float dt);
 
+	///////////////////////////////////////////////////////////
+	/// \brief Render the UI elements
+	///
+	/// \param target The target framebuffer to render to
+	/// \param overlay This should be true if the framebuffer has already been rendered to, and the UI should be overlayed
+	///
+	///////////////////////////////////////////////////////////
 	void render(FrameBuffer& target = FrameBuffer::Default, bool overlay = true);
 
+	///////////////////////////////////////////////////////////
+	/// \brief Set the window to register for input events
+	///
+	/// \param window The window to register for input events
+	///
+	///////////////////////////////////////////////////////////
 	void setWindow(Window* window);
 
 private:
@@ -104,3 +130,45 @@ private:
 }
 
 #endif
+
+///////////////////////////////////////////////////////////
+/// \class poly::UISystem
+/// \ingroup UI
+///
+/// A class that handles the rendering, updating, and input
+/// events of UI elements. The UISystem inherits from the
+/// UIElement, so it can be treated like a UI element, except
+/// it does not have any visual appearance. It supports
+/// position, rotation, and having a UI element hierarchy.
+///
+/// To use a UI system, add other UI elements to the system
+/// as system, and every time update() or render() is called,
+/// the system will handle all element updates and rendering.
+/// To support window input events for an interactive UI,
+/// the window must be set with setWindow() so the UI system
+/// can register event listeners.
+///
+/// Usage example:
+/// \code
+///
+/// using namespace poly;
+///
+/// // Create a window
+/// Window window;
+/// window.create(1280, 720, "Window");
+///
+/// // Create the UI system
+/// UISystem ui;
+/// ui.setWindow(&window);
+///
+/// // Add elements with UISystem::addChild()
+///
+/// while (true)
+/// {
+///		// Render the UI system
+///		ui.render();
+/// }
+///
+/// \endcode
+///
+///////////////////////////////////////////////////////////

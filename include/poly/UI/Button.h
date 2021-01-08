@@ -165,9 +165,9 @@ private:
 	void createText();
 
 private:
-	Text* m_text;
-	UIPosition m_textAlign;
-	bool m_isPressed;
+	Text* m_text;			//!< The button label
+	UIPosition m_textAlign;	//!< The text alignment
+	bool m_isPressed;		//!< True if the button is being pressed
 
 	std::function<void(const E_MouseMove&)> m_onMouseEnter;
 	std::function<void(const E_MouseMove&)> m_onMouseLeave;
@@ -178,3 +178,73 @@ private:
 }
 
 #endif
+
+///////////////////////////////////////////////////////////
+/// \class poly::Button
+/// \ingroup UI
+///
+/// A standard button with an optional text label. If none
+/// of the text parameters are changed, then the button will
+/// not have a text element. Fi the button has a text element,
+/// the text will be center aligned by default.
+///
+/// To set button callbacks, use onMouseEnter(), onMouseLeave(),
+/// onPress(), and onRelease(). A button press only counts if
+/// the press started while the cursor was inside the button.
+/// The release event will occur no matter where the cursor
+/// is when the mouse button is released. The button only
+/// handles left-button events.
+///
+/// Usage eample:
+/// \code
+///
+/// using namespace poly;
+///
+/// Button btn;
+/// btn.setPosition(30.0f, 30.0f);
+/// btn.setSize(100.0f, 30.0f);
+/// btn.setColor(0.2f, 0.2f, 0.25f, 1.0f);
+/// btn.setString("Play");
+///
+/// // The text color is white by default
+/// // And centered by default
+///
+/// // Set function callbacks
+/// btn.onMouseEnter(
+///		[&](const E_MouseMove& e)
+///		{
+///			btn.setColor(0.3f, 0.3f, 0.35f, 1.0f);
+///		}
+/// );
+///
+/// btn.onMouseLeave(
+///		[&](const E_MouseMove& e)
+///		{
+///			btn.setColor(0.2f, 0.2f, 0.25f, 1.0f);
+///		}
+/// );
+///
+/// btn.onRelease(
+///		[&](const E_MouseMove& e)
+///		{
+///			// Make sure the button still has hover in order to count as a valid press
+///			if (btn.hasHover())
+///				std::cout << "Pressed\n";
+///		}
+/// );
+///
+///
+/// // For more general callback functions
+///
+/// // Make a function that accepts a button
+/// void onMouseEnter(Button* button, const E_MouseMove& e)
+/// {
+///		button->setColor(0.3f, 0.3f, 0.35f, 1.0f);
+/// }
+///
+/// // Set the callback using bind, where the 2nd parameter corresponds to the 1st parameter in the function, etc.
+/// btn.onMouseEnter(std::bind(onMouseEnter, &btn, std::placeholders::_1));
+///
+/// \endcode
+///
+///////////////////////////////////////////////////////////

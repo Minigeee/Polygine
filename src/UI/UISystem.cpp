@@ -27,22 +27,6 @@ UISystem::UISystem() :
 
 
 ///////////////////////////////////////////////////////////
-UISystem::UISystem(Uint32 w, Uint32 h) :
-	m_window				(0),
-	m_instanceBufferOffset	(0),
-	m_hovered				(0),
-	m_focused				(0)
-{
-	m_isVisible = false;
-	m_pixelSize = Vector2f(w, h);
-
-	m_vertexArray.setNumVertices(1);
-	m_vertexArray.setDrawMode(DrawMode::Points);
-	m_instanceBuffer.create((UIInstanceData*)0, 65536, BufferUsage::Stream);
-}
-
-
-///////////////////////////////////////////////////////////
 void UISystem::updateElement(UIElement* element, float dt)
 {
 	if (element != this)
@@ -64,6 +48,10 @@ void UISystem::update(float dt)
 void UISystem::render(FrameBuffer& target, bool overlay)
 {
 	START_PROFILING_FUNC;
+
+	// Check if the sizes are the same
+	if (target.getWidth() != m_pixelSize.x || target.getHeight() != m_pixelSize.y)
+		setSize(target.getWidth(), target.getHeight());
 
 	// Bind framebuffer
 	target.bind();
