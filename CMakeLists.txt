@@ -9,6 +9,7 @@ set(VERSION_STR "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 
 set(POLY_BUILD_EXAMPLES FALSE CACHE BOOL "Set TRUE to build Polygine examples")
 set(POLY_BUILD_TESTS FALSE CACHE BOOL "Set TRUE to build Polygine tests")
+set(POLY_BUILD_UTIL TRUE CACHE BOOL "Set TRUE to build Polygine utility applications")
 set(POLY_INSTALL_DIR ${CMAKE_INSTALL_PREFIX} CACHE PATH "Location to install Polygine headers and binaries")
 set(POLY_ENABLE_PROFILING TRUE CACHE BOOL "Set TRUE to enable profiling")
 set(POLY_COLUMN_MAJOR TRUE CACHE BOOL "Set TRUE to use column major matrices")
@@ -70,4 +71,9 @@ endif()
 # Build tests
 if (POLY_BUILD_TESTS)
     add_subdirectory(test)
+endif()
+
+# Build utility
+if (POLY_BUILD_UTIL)
+    add_subdirectory(util)
 endif()

@@ -106,9 +106,6 @@ void Texture::bind(Uint32 slot)
 ///////////////////////////////////////////////////////////
 void Texture::create(void* data, PixelFormat fmt, Uint32 w, Uint32 h, Uint32 d, GLType dtype, TextureFilter filter, TextureWrap wrap, bool multisampled)
 {
-	// Can only create texture once
-	if (m_id) return;
-
 	// Set multisampled
 	m_multisampled = multisampled;
 

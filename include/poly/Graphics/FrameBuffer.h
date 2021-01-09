@@ -66,6 +66,12 @@ public:
 	void create(Uint32 w, Uint32 h, Uint32 d = 0, bool multisampled = false);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Reset the framebuffer so that the framebuffer can be resized
+	///
+	///////////////////////////////////////////////////////////
+	void reset();
+
+	///////////////////////////////////////////////////////////
 	/// \brief Attach a color buffer, either as a texture or renderbuffer
 	///
 	/// A color texture attachment should be used if the resulting

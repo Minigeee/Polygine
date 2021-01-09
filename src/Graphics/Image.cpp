@@ -109,7 +109,9 @@ void Image::create(void* data, Uint32 w, Uint32 h, Uint32 c, GLType dtype, bool 
 			typeSize = 4;
 
 		// Allocate data
-		m_data = malloc(m_width * m_height * m_numChannels * typeSize);
+		Uint32 size = m_width * m_height * m_numChannels * typeSize;
+		m_data = malloc(size);
+		memset(m_data, 0, size);
 
 		// Image owns data
 		m_ownsData = true;

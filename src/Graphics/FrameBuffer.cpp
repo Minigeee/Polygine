@@ -57,18 +57,7 @@ FrameBuffer::FrameBuffer() :
 ///////////////////////////////////////////////////////////
 FrameBuffer::~FrameBuffer()
 {
-	if (m_id)
-		glCheck(glDeleteFramebuffers(1, &m_id));
-
-	if (m_colorIds.size())
-		glCheck(glDeleteRenderbuffers(m_colorIds.size(), &m_colorIds[0]));
-
-	if (m_depthId)
-		glCheck(glDeleteRenderbuffers(1, &m_depthId));
-
-	m_id = 0;
-	m_depthTexture = 0;
-	m_depthId = 0;
+	reset();
 }
 
 
@@ -116,6 +105,28 @@ void FrameBuffer::create(Uint32 w, Uint32 h, Uint32 d, bool multisampled)
 		m_size = Vector3u(w, h, d);
 		m_multisampled = multisampled;
 	}
+}
+
+
+///////////////////////////////////////////////////////////
+void FrameBuffer::reset()
+{
+	if (m_id)
+		glCheck(glDeleteFramebuffers(1, &m_id));
+
+	if (m_colorIds.size())
+		glCheck(glDeleteRenderbuffers(m_colorIds.size(), &m_colorIds[0]));
+
+	if (m_depthId)
+		glCheck(glDeleteRenderbuffers(1, &m_depthId));
+
+	m_id = 0;
+	m_depthTexture = 0;
+	m_depthId = 0;
+
+	// Reset color buffers
+	m_colorTextures.clear();
+	m_colorIds.clear();
 }
 
 

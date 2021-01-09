@@ -51,7 +51,7 @@ void UISystem::render(FrameBuffer& target, bool overlay)
 
 	// Check if the sizes are the same
 	if (target.getWidth() != m_pixelSize.x || target.getHeight() != m_pixelSize.y)
-		setSize(target.getWidth(), target.getHeight());
+		setSize((float)target.getWidth(), (float)target.getHeight());
 
 	// Bind framebuffer
 	target.bind();
@@ -433,6 +433,10 @@ bool UISystem::relayMouseMove(UIElement* element, const E_MouseMove& e)
 
 			// Update the current hovered element
 			m_hovered = element;
+
+			// Has hover for a UI system is different, it tells if any of its children
+			// has hover
+			m_hasHover = true;
 		}
 
 		// Send event for mouse move
@@ -461,6 +465,10 @@ void UISystem::onMouseMove(const E_MouseMove& e)
 			m_hovered->onMouseLeave(e);
 
 			m_hovered = 0;
+
+			// Has hover for a UI system is different, it tells if any of its children
+			// has hover
+			m_hasHover = false;
 		}
 	}
 

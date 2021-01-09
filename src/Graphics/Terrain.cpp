@@ -553,12 +553,12 @@ void Terrain::render(Camera& camera)
 	shader.setUniform("u_numDirLights", i);
 
 	// Terrain maps
-	shader.setUniform("u_heightMap", 0);
-	shader.setUniform("u_normalMap", 1);
-	shader.setUniform("u_colorMap", 2);
-	m_heightMap.bind(0);
-	m_normalMap.bind(1);
-	m_colorMap.bind(2);
+	if (m_heightMap.getId())
+		shader.setUniform("u_heightMap", m_heightMap);
+	if (m_normalMap.getId())
+		shader.setUniform("u_normalMap", m_normalMap);
+	if (m_colorMap.getId())
+		shader.setUniform("u_colorMap", m_colorMap);
 
 	// Terrain parameters
 	shader.setUniform("u_size", m_size);

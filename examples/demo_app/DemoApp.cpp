@@ -160,7 +160,6 @@ int main()
     for (Uint32 i = 0; i < 2; ++i)
     {
         framebuffers[i].create(1280, 720);
-        framebuffers[i].bind();
         framebuffers[i].attachColor(&texture[2 * i + 1], PixelFormat::Rgb, GLType::Uint16);
         framebuffers[i].attachDepth(&texture[2 * i + 2]);
     }
@@ -176,6 +175,19 @@ int main()
 
     Fxaa fxaa;
 
+
+    window.addListener<E_WindowResize>(
+        [&](const E_WindowResize& e)
+        {
+            for (Uint32 i = 0; i < 2; ++i)
+            {
+                framebuffers[i].reset();
+                framebuffers[i].create(e.m_width, e.m_height);
+                framebuffers[i].attachColor(&texture[2 * i], PixelFormat::Rgb, GLType::Uint16);
+                framebuffers[i].attachDepth(&texture[2 * i + 1]);
+            }
+        }
+    );
 
     bool mouseDown = false;
     window.addListener<E_MouseButton>(
