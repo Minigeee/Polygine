@@ -1,6 +1,7 @@
 #ifndef POLY_POST_PROCESS_H
 #define POLY_POST_PROCESS_H
 
+#include <poly/Graphics/Camera.h>
 #include <poly/Graphics/FrameBuffer.h>
 #include <poly/Graphics/Shader.h>
 #include <poly/Graphics/VertexArray.h>
@@ -8,6 +9,9 @@
 
 namespace poly
 {
+
+class Scene;
+
 
 ///////////////////////////////////////////////////////////
 /// \brief The base class for all post processing effects
@@ -85,6 +89,172 @@ private:
 
 private:
 	float m_gamma;		//!< The gamma factor
+};
+
+
+///////////////////////////////////////////////////////////
+/// \brief A post-processing fog effect
+///
+///////////////////////////////////////////////////////////
+class Fog : public PostProcess
+{
+public:
+	///////////////////////////////////////////////////////////
+	/// \brief Default constructor
+	///
+	///////////////////////////////////////////////////////////
+	Fog();
+
+	///////////////////////////////////////////////////////////
+	/// \brief Apply gamma correction and HDR rendering to the input framebuffer
+	///
+	/// \param input The input framebuffer
+	/// \param output The output framebuffer
+	///
+	///////////////////////////////////////////////////////////
+	void render(FrameBuffer& input, FrameBuffer& output = FrameBuffer::Default) override;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the scene pointer for directional light effects
+	///
+	/// \param scene A scene pointer
+	///
+	///////////////////////////////////////////////////////////
+	void setScene(Scene* scene);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the camera pointer for directional light effects
+	///
+	/// \param scene A camera pointer
+	///
+	///////////////////////////////////////////////////////////
+	void setCamera(Camera* camera);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the fog color
+	///
+	/// \param r The r-component of the fog color
+	/// \param g The g-component of the fog color
+	/// \param b The b-component of the fog color
+	///
+	///////////////////////////////////////////////////////////
+	void setColor(float r, float g, float b);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the fog density
+	///
+	/// Lower values make the fog less dense. The default value
+	/// is 0.0005.
+	///
+	/// \param density The fog density
+	///
+	///////////////////////////////////////////////////////////
+	void setDensity(float density);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the fog light scatter strength
+	///
+	/// The scatter strength determines how bright the light
+	/// scattering from a directional light is. By default,
+	/// this value is 0.
+	///
+	/// \param strength The scattering strength
+	///
+	///////////////////////////////////////////////////////////
+	void setScatterStrength(float strength);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the property that determines if the fog should be applied to the skybox
+	///
+	/// \param applyFog A boolean for if the skybox should have fog applied
+	///
+	///////////////////////////////////////////////////////////
+	void setSkyboxFog(bool applyFog);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the fog color
+	///
+	/// \return Fog color
+	///
+	///////////////////////////////////////////////////////////
+	const Vector3f& getColor() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the fog density
+	///
+	/// \return Fog density
+	///
+	///////////////////////////////////////////////////////////
+	float getDensity() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the fog light scattering strength
+	///
+	/// \return Fog light scattering strength
+	///
+	///////////////////////////////////////////////////////////
+	float getScatterStrength() const;
+
+private:
+	static Shader s_shader;
+
+	static Shader& getShader();
+
+private:
+	Scene* m_scene;
+	Camera* m_camera;
+
+	Vector3f m_color;
+	float m_density;
+	float m_scatterStrength;
+	bool m_applyToSkybox;
+};
+
+
+///////////////////////////////////////////////////////////
+class Fxaa : public PostProcess
+{
+public:
+	///////////////////////////////////////////////////////////
+	/// \brief Default constructor
+	///
+	///////////////////////////////////////////////////////////
+	Fxaa();
+
+	///////////////////////////////////////////////////////////
+	/// \brief Apply gamma correction and HDR rendering to the input framebuffer
+	///
+	/// \param input The input framebuffer
+	/// \param output The output framebuffer
+	///
+	///////////////////////////////////////////////////////////
+	void render(FrameBuffer& input, FrameBuffer& output = FrameBuffer::Default) override;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the luma difference threshold that decides which pixels are edges
+	///
+	/// By default, the value is 0.1.
+	///
+	/// \param threshold The threshold value
+	///
+	///////////////////////////////////////////////////////////
+	void setLumaThreshold(float threshold);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the luma threhold value
+	///
+	/// \return The luma threhold value
+	///
+	///////////////////////////////////////////////////////////
+	float getLumaThreshold() const;
+
+private:
+	static Shader s_shader;
+
+	static Shader& getShader();
+
+private:
+	float m_threshold;
 };
 
 }

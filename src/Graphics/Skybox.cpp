@@ -62,8 +62,13 @@ void Skybox::render(Camera& camera)
     glCheck(glActiveTexture(GL_TEXTURE0));
     glCheck(glBindTexture(GL_TEXTURE_CUBE_MAP, m_id));
 
+    // Disable writing to depth buffer
+    glCheck(glDepthMask(GL_FALSE));
+
     // Draw cubemap
     Skybox::getVertexArray().draw();
+
+    glCheck(glDepthMask(GL_TRUE));
 }
 
 
@@ -240,6 +245,7 @@ void ProceduralSkybox::render(Camera& camera)
             if (i++ == 0)
             {
                 shader.setUniform("u_lightDir", normalize(light.m_direction));
+                shader.setUniform("u_bloomColor", light.m_diffuse);
             }
         }
     );
@@ -248,15 +254,19 @@ void ProceduralSkybox::render(Camera& camera)
     shader.setUniform("u_zenithColor", m_zenithColor);
     shader.setUniform("u_horizonColor", m_horizonColor);
     shader.setUniform("u_groundColor", m_groundColor);
-    shader.setUniform("u_bloomColor", m_bloomColor);
     shader.setUniform("u_bloomSize", m_bloomSize);
     shader.setUniform("u_lightStrength", m_lightStrength);
     shader.setUniform("u_topRadius", m_topRadius);
     shader.setUniform("u_botRadius", m_botRadius);
     shader.setUniform("u_radius", m_altitude + m_botRadius);
 
+    // Disable writing to depth buffer
+    glCheck(glDepthMask(GL_FALSE));
+
     // Draw cubemap
     Skybox::getVertexArray().draw();
+
+    glCheck(glDepthMask(GL_TRUE));
 }
 
 
