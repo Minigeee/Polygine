@@ -407,7 +407,7 @@ bool UISystem::relayMouseMove(UIElement* element, const E_MouseMove& e)
 	}
 
 	// Skip if element does not handle mouse events
-	if (!element->handlesMouseEvents()) return false;
+	if (!element->handlesMouseEvents() || !element->isVisible()) return false;
 
 	Vector2f p = element->getLocalCoordinate(Vector2f(e.m_x, e.m_y));
 	p += element->m_pixelSize * element->m_origin;

@@ -9,6 +9,9 @@
 
 #include <poly/Math/Noise.h>
 
+#include <poly/UI/Dropdown.h>
+#include <poly/UI/Font.h>
+#include <poly/UI/Text.h>
 #include <poly/UI/UISystem.h>
 
 #include "CameraSystem.h"
@@ -90,6 +93,44 @@ void main()
 
     ///////////////////////////////////////////////////////////
 
+    // Load font
+    Font font;
+    font.load("fonts/segoeui/segoeui.ttf");
+    Text::setDefaultFont(&font);
+
+    // Setup UI
+    ui.setWindow(&window);
+
+    Dropdown dropdown;
+    dropdown.setPosition(30.0f, 30.0f);
+    dropdown.setSize(100.0f, 20.0f);
+    dropdown.setColor(0.2f, 0.2f, 0.25f, 1.0f);
+    dropdown.setTextAlign(UIPosition::Left);
+    dropdown.setTextOffset(5.0f, 0.0f);
+    dropdown.setItemHeight(20.0f);
+    dropdown.setItemColor(0.3f, 0.3f, 0.35f, 1.0f);
+    dropdown.setString("Test");
+
+    dropdown.onMouseEnterItem(
+        [&](Button* item, const E_MouseMove& e)
+        {
+            item->setColor(0.4f, 0.4f, 0.45f, 1.0f);
+        }
+    );
+
+    dropdown.onMouseLeaveItem(
+        [&](Button* item, const E_MouseMove& e)
+        {
+            item->setColor(0.3f, 0.3f, 0.35f, 1.0f);
+        }
+    );
+
+    dropdown.addItem("Test");
+    dropdown.addItem("Hello");
+    dropdown.addItem("World");
+
+    ui.addChild(&dropdown);
+
 
     // Game loop
     while (window.isOpen())
@@ -101,6 +142,8 @@ void main()
         scene.render(camera, framebuffers[0]);
         fxaa.render(framebuffers[0], framebuffers[1]);
         colorAdjust.render(framebuffers[1]);
+
+        ui.render();
 
         // Swap buffers
         window.display();
