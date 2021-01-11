@@ -36,7 +36,6 @@ void CameraSystem::onMouseMove(const E_MouseMove& e)
 		offset *= 0.01f;
 
 		// Move camera
-
 		const Vector3f& right = m_camera->getRight();
 		Vector3f up = cross(right, m_camera->getDirection());
 

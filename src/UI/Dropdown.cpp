@@ -17,6 +17,10 @@ Dropdown::Dropdown() :
 	m_menu->setVisible(false);
 	m_menu->setAnchor(UIPosition::BotLeft);
 	addChild(m_menu);
+
+	// Default dropdown settings
+	setTextAlign(UIPosition::Left);
+	setTextOffset(5.0f, 0.0f);
 }
 
 
@@ -34,6 +38,10 @@ Dropdown::~Dropdown()
 ///////////////////////////////////////////////////////////
 void Dropdown::addItem(const std::string& name)
 {
+	// If this is the first item, set value
+	if (!m_menu->getChildren().size())
+		setString(name);
+
 	Button* item = Pool<Button>::alloc();
 	item->setString(name);
 	item->setTextAlign(UIPosition::Left);
@@ -76,7 +84,7 @@ void Dropdown::removeItem(Uint32 index)
 void Dropdown::clearItems()
 {
 	const std::vector<UIElement*>& children = m_menu->getChildren();
-	for (Uint32 i = 0; i < children.size(); ++i)
+	for (int i = children.size() - 1; i >= 0; --i)
 	{
 		Button* item = (Button*)children[i];
 
@@ -105,7 +113,7 @@ void Dropdown::setSelectedItem(Uint32 index)
 
 	// Callback
 	if (m_onItemChange)
-		m_onItemChange(item->getString());
+		m_onItemChange(index);
 }
 
 
@@ -160,7 +168,7 @@ void Dropdown::onItemAdd(const std::function<void(Button*, Uint32)>& func)
 
 
 ///////////////////////////////////////////////////////////
-void Dropdown::onItemChange(const std::function<void(const std::string&)>& func)
+void Dropdown::onItemChange(const std::function<void(Uint32)>& func)
 {
 	m_onItemChange = func;
 }

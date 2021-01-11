@@ -61,6 +61,7 @@ UIElement::UIElement() :
 	m_srcBlend				(BlendFactor::SrcAlpha),
 	m_dstBlend				(BlendFactor::OneMinusSrcAlpha),
 	m_shader				(getDefaultShader()),
+	m_hasFlippedUv			(false),
 	m_isVisible				(true),
 	m_index					(0),
 	m_transformChanged		(false),
@@ -114,7 +115,8 @@ void UIElement::removeChild(UIElement* child)
 void UIElement::moveToFront()
 {
 	// Move to back of list
-	setIndex(m_children.size() - 1);
+	if (m_parent)
+		setIndex(m_parent->m_children.size() - 1);
 }
 
 
@@ -134,7 +136,7 @@ void UIElement::setIndex(Uint32 index)
 
 	if (index > m_index)
 	{
-		for (Uint32 i = m_index; i < index - 1; ++i)
+		for (Uint32 i = m_index; i < index; ++i)
 		{
 			m_parent->m_children[i] = m_parent->m_children[i + 1];
 			--m_parent->m_children[i]->m_index;
@@ -142,7 +144,7 @@ void UIElement::setIndex(Uint32 index)
 	}
 	else
 	{
-		for (Uint32 i = m_index; i > index; --i)
+		for (int i = m_index; i > (int)index; --i)
 		{
 			m_parent->m_children[i] = m_parent->m_children[i - 1];
 			++m_parent->m_children[i]->m_index;
@@ -394,6 +396,13 @@ void UIElement::setTextureRect(float x, float y, float w, float h)
 
 
 ///////////////////////////////////////////////////////////
+void UIElement::setFlippedUv(bool flipped)
+{
+	m_hasFlippedUv = flipped;
+}
+
+
+///////////////////////////////////////////////////////////
 void UIElement::setBlendFactors(BlendFactor src, BlendFactor dst)
 {
 	m_srcBlend = src;
@@ -549,6 +558,13 @@ Texture* UIElement::getTexture() const
 const Vector4f& UIElement::getTextureRect() const
 {
 	return m_textureRect;
+}
+
+
+///////////////////////////////////////////////////////////
+bool UIElement::hasFlippedUv() const
+{
+	return m_hasFlippedUv;
 }
 
 

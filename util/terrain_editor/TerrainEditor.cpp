@@ -1,3 +1,5 @@
+#include <poly/Core/Clock.h>
+
 #include <poly/Engine/Scene.h>
 
 #include <poly/Graphics/Camera.h>
@@ -9,11 +11,12 @@
 
 #include <poly/Math/Noise.h>
 
-#include <poly/UI/Dropdown.h>
 #include <poly/UI/Font.h>
+#include <poly/UI/ScrollView.h>
 #include <poly/UI/Text.h>
 #include <poly/UI/UISystem.h>
 
+#include "BrushPanel.h"
 #include "CameraSystem.h"
 
 using namespace poly;
@@ -63,29 +66,19 @@ void main()
     scene.addRenderSystem(&terrain);
     scene.addRenderSystem(&skybox);
 
+    Vector2u renderTargetSize;
+    renderTargetSize.y = FrameBuffer::Default.getHeight();
+    renderTargetSize.x = (Uint32)(renderTargetSize.y * 16.0f / 9.0f);
+
     // Post processing
     FrameBuffer framebuffers[2];
     Texture textures[4];
     for (Uint32 i = 0; i < 2; ++i)
     {
-        framebuffers[i].create(1280, 720);
+        framebuffers[i].create(renderTargetSize.x, renderTargetSize.y);
         framebuffers[i].attachColor(&textures[2 * i], PixelFormat::Rgb, GLType::Uint16);
         framebuffers[i].attachDepth(&textures[2 * i + 1]);
     }
-
-    // Resize event
-    window.addListener<E_WindowResize>(
-        [&](const E_WindowResize& e)
-        {
-            for (Uint32 i = 0; i < 2; ++i)
-            {
-                framebuffers[i].reset();
-                framebuffers[i].create(e.m_width, e.m_height);
-                framebuffers[i].attachColor(&textures[2 * i], PixelFormat::Rgb, GLType::Uint16);
-                framebuffers[i].attachDepth(&textures[2 * i + 1]);
-            }
-        }
-    );
 
     Fog fog;
     Fxaa fxaa;
@@ -101,49 +94,81 @@ void main()
     // Setup UI
     ui.setWindow(&window);
 
-    Dropdown dropdown;
-    dropdown.setPosition(30.0f, 30.0f);
-    dropdown.setSize(100.0f, 20.0f);
-    dropdown.setColor(0.2f, 0.2f, 0.25f, 1.0f);
-    dropdown.setTextAlign(UIPosition::Left);
-    dropdown.setTextOffset(5.0f, 0.0f);
-    dropdown.setItemHeight(20.0f);
-    dropdown.setItemColor(0.3f, 0.3f, 0.35f, 1.0f);
-    dropdown.setString("Test");
+    // Main panel
+    ScrollView panel;
+    panel.setWidth(200.0f);
+    panel.setRelHeight(1.0f);
+    panel.setColor(0.15f, 0.15f, 0.18f, 1.0f);
+    ui.addChild(&panel);
 
-    dropdown.onMouseEnterItem(
-        [&](Button* item, const E_MouseMove& e)
+    ListView listView;
+    panel.addChild(&listView);
+
+    UIElement seperators[2];
+    for (Uint32 i = 0; i < 2; ++i)
+    {
+        seperators[i].setPosition(3.0f, 0.0f);
+        seperators[i].setSize(194.0f, 1.0f);
+        seperators[i].setColor(0.25f, 0.25f, 0.3f, 1.0f);
+    }
+
+    // Brush panel
+    BrushPanel brushPanel;
+    brushPanel.setRadius(10.0f);
+    brushPanel.setStrength(0.1f);
+    brushPanel.setGradient(1.5f);
+    listView.addChild(&brushPanel);
+    listView.addChild(&seperators[0], Vector2f(8.0f, 0.0f));
+
+    // Render view
+    UIElement renderTarget;
+    {
+        renderTarget.setPosition(200.0f, 0.0f);
+        renderTarget.setSize((float)renderTargetSize.x, (float)renderTargetSize.y);
+        renderTarget.setTexture(&textures[0]);
+        renderTarget.setFlippedUv(true);
+        ui.addChild(&renderTarget);
+    }
+
+    ///////////////////////////////////////////////////////////
+
+    // Resize event
+    window.addListener<E_WindowResize>(
+        [&](const E_WindowResize& e)
         {
-            item->setColor(0.4f, 0.4f, 0.45f, 1.0f);
+            renderTargetSize.y = FrameBuffer::Default.getHeight();
+            renderTargetSize.x = (Uint32)(renderTargetSize.y * 16.0f / 9.0f);
+
+            for (Uint32 i = 0; i < 2; ++i)
+            {
+                framebuffers[i].reset();
+                framebuffers[i].create(renderTargetSize.x, renderTargetSize.y);
+                framebuffers[i].attachColor(&textures[2 * i], PixelFormat::Rgb, GLType::Uint16);
+                framebuffers[i].attachDepth(&textures[2 * i + 1]);
+            }
+
+            renderTarget.setSize((float)renderTargetSize.x, (float)renderTargetSize.y);
         }
     );
 
-    dropdown.onMouseLeaveItem(
-        [&](Button* item, const E_MouseMove& e)
-        {
-            item->setColor(0.3f, 0.3f, 0.35f, 1.0f);
-        }
-    );
 
-    dropdown.addItem("Test");
-    dropdown.addItem("Hello");
-    dropdown.addItem("World");
-
-    ui.addChild(&dropdown);
-
+    Clock clock;
 
     // Game loop
     while (window.isOpen())
     {
+        float elapsed = clock.restart().toSeconds();
+
         // Poll events
         Window::pollEvents();
 
         // Render stuff
         scene.render(camera, framebuffers[0]);
         fxaa.render(framebuffers[0], framebuffers[1]);
-        colorAdjust.render(framebuffers[1]);
+        colorAdjust.render(framebuffers[1], framebuffers[0]);
 
-        ui.render();
+        ui.update(elapsed);
+        ui.render(FrameBuffer::Default, false);
 
         // Swap buffers
         window.display();

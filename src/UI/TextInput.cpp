@@ -75,13 +75,13 @@ void TextInput::submit()
 
 
 ///////////////////////////////////////////////////////////
-void TextInput::setValue(const std::string& value)
+void TextInput::setValue(const std::string& value, bool callFunc)
 {
 	if (value != m_text->getString())
 	{
 		m_text->setString(value);
 
-		if (m_onValueChanged)
+		if (callFunc && m_onValueChanged)
 			m_onValueChanged(value);
 	}
 }

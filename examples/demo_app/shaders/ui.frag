@@ -7,6 +7,7 @@ out vec4 f_color;
 
 uniform sampler2D u_texture;
 uniform bool u_hasTexture;
+uniform bool u_flippedUv;
 
 
 ///////////////////////////////////////////////////////////

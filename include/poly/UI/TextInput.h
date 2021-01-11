@@ -47,9 +47,10 @@ public:
 	/// \brief Set the value of the text input
 	///
 	/// \param value The string value to give the text input
+	/// \param callFunc The flag for if the value change callback should be called (Default false)
 	///
 	///////////////////////////////////////////////////////////
-	void setValue(const std::string& value);
+	void setValue(const std::string& value, bool callFunc = false);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the designated submit key

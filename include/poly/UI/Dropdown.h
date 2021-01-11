@@ -126,7 +126,7 @@ public:
 	/// \param func A function callback
 	///
 	///////////////////////////////////////////////////////////
-	void onItemChange(const std::function<void(const std::string&)>& func);
+	void onItemChange(const std::function<void(Uint32)>& func);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the function callback that gets called when the cursor enters an item button
@@ -156,7 +156,7 @@ private:
 	Vector4f m_itemColor;		//!< The default item color
 
 	std::function<void(Button*, Uint32)> m_onItemAdd;
-	std::function<void(const std::string&)> m_onItemChange;
+	std::function<void(Uint32)> m_onItemChange;
 	std::function<void(Button*, const E_MouseMove&)> m_onMouseEnterItem;
 	std::function<void(Button*, const E_MouseMove&)> m_onMouseLeaveItem;
 };

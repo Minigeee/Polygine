@@ -450,6 +450,14 @@ public:
 	void setTextureRect(float x, float y, float w, float h);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Set whether the y-axis of the texture should be flipped or not
+	///
+	/// \param flipped The flipped UV flag
+	///
+	///////////////////////////////////////////////////////////
+	void setFlippedUv(bool flipped);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Set the alpha blend factors
 	///
 	/// The source factor determines how much of the source color
@@ -628,6 +636,14 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	const Vector4f& getTextureRect() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Check if the texture UV coordinates should be flipped
+	///
+	/// \return True if the UV coordinates should be flipped
+	///
+	///////////////////////////////////////////////////////////
+	bool hasFlippedUv() const;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the source color blend factor
@@ -873,6 +889,7 @@ protected:
 	BlendFactor m_srcBlend;
 	BlendFactor m_dstBlend;
 	Shader* m_shader;
+	bool m_hasFlippedUv;
 	bool m_isVisible;
 	bool m_isColorTransparent;
 	bool m_isTextureTransparent;

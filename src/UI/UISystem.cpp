@@ -63,6 +63,9 @@ void UISystem::render(FrameBuffer& target, bool overlay)
 	else
 		glCheck(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
 
+	// Enable depth test
+	glCheck(glEnable(GL_DEPTH_TEST));
+
 	std::vector<UIRenderData> renderData;
 	std::vector<UIRenderData> transparentRenderData;
 	std::vector<UIQuad> transparentQuads;
@@ -169,7 +172,8 @@ void UISystem::render(FrameBuffer& target, bool overlay)
 					group.m_clipRect,
 					m_instanceBufferOffset,
 					transparentQuads.size() - group.m_offset,
-					true
+					true,
+					group.m_hasFlippedUv
 				});
 
 			// Update previous offset
@@ -222,6 +226,7 @@ void UISystem::render(FrameBuffer& target, bool overlay)
 		if (group.m_texture)
 		{
 			shader->setUniform("u_texture", *group.m_texture);
+			shader->setUniform("u_flippedUv", (int)group.m_hasFlippedUv);
 			shader->setUniform("u_hasTexture", true);
 		}
 		else
@@ -305,7 +310,8 @@ void UISystem::getRenderQuads(
 						element->getColor(),
 						element->getShader(),
 						clipRect,
-						0, 0, false
+						0, 0, false,
+						element->hasFlippedUv()
 					});
 				quads.push_back(std::vector<UIQuad>());
 			}
@@ -339,7 +345,8 @@ void UISystem::getRenderQuads(
 					clipRect,
 					start,
 					transparentQuads.size() - start,
-					false
+					false,
+					element->hasFlippedUv()
 				});
 
 			// Set index

@@ -114,7 +114,7 @@ void HListView::addChild(UIElement* child, const Vector2f& margins)
 	m_useRelSize = Vector2b(false);
 
 	// Calculate position
-	child->setPosition(m_pixelSize.x + child->getOrigin().x * size.x, child->getRelPosition().y + margins.x);
+	child->setPosition(m_pixelSize.x + child->getOrigin().x * size.x + margins.x, child->getRelPosition().y);
 
 	// Calculate size
 	float minY = child->getRelPosition().y - child->getOrigin().y * size.y;
