@@ -134,6 +134,23 @@ public:
 	void blitTo(FrameBuffer& target);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Read an area of pixels from the framebuffer
+	///
+	/// This function reads pixels from the framebuffer and stores
+	/// it in the specified buffer.
+	///
+	///////////////////////////////////////////////////////////
+	void readPixels(
+		void* buffer,
+		Uint32 x = 0,
+		Uint32 y = 0,
+		Uint32 w = 0,
+		Uint32 h = 0,
+		PixelFormat fmt = PixelFormat::Rgb,
+		GLType dtype = GLType::Uint8
+	);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the internal framebuffer id
 	///
 	/// \return The framebuffer id

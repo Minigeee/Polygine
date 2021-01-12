@@ -24,6 +24,8 @@ public:
 
 	void setGradient(float gradient);
 
+	Uint32 getMode() const;
+
 	float getRadius() const;
 
 	float getStrength() const;

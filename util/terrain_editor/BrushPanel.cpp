@@ -229,7 +229,7 @@ BrushPanel::BrushPanel() :
 	m_gradientSlider->onValueChange(
 		[&](float value)
 		{
-			float scaled = 10.0f * powf(value, 2.0f);
+			float scaled = 20.0f * value;
 			m_gradient[m_modeMenu->getSelectedItem()] = scaled;
 
 			char buffer[10];
@@ -251,7 +251,7 @@ BrushPanel::BrushPanel() :
 			}
 			catch (const std::exception&) {}
 
-			float scaled = powf(0.1f * num, 0.5f);
+			float scaled = num * 0.05f;
 			m_gradient[m_modeMenu->getSelectedItem()] = num;
 
 			// Set slider
@@ -339,7 +339,7 @@ void BrushPanel::setGradient(float gradient)
 {
 	Uint32 mode = m_modeMenu->getSelectedItem();
 
-	float scaled = powf(gradient * 0.1f, 0.5f);
+	float scaled = gradient * 0.05f;
 	m_gradient[mode] = gradient;
 
 	// String number
@@ -349,6 +349,13 @@ void BrushPanel::setGradient(float gradient)
 	// Update UI elements
 	m_gradientSlider->setValue(scaled);
 	m_gradientInput->setValue(std::string(buffer));
+}
+
+
+///////////////////////////////////////////////////////////
+Uint32 BrushPanel::getMode() const
+{
+	return m_modeMenu->getSelectedItem();
 }
 
 

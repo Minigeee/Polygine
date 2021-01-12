@@ -159,6 +159,32 @@ public:
 	void setAmbientColor(const Vector3f& color);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Updates a subregion of the height map
+	///
+	/// The provided image containing the new height map data must
+	/// have a size that matches the terrain height map.
+	///
+	/// \param map An image containing the new data (has to be the same size as the current height map)
+	/// \param pos The top-left corner of the rectangle to update (in pixels)
+	/// \param size The size of the rectangle to update (in pixels)
+	///
+	///////////////////////////////////////////////////////////
+	void updateHeightMap(const Image& map, const Vector2i& pos = Vector2i(0), const Vector2u& size = Vector2u(0));
+
+	///////////////////////////////////////////////////////////
+	/// \brief Updates a subregion of the color map
+	///
+	/// The provided image containing the new color map data must
+	/// have a size that matches the terrain color map.
+	///
+	/// \param map An image containing the new data (has to be the same size as the current height map)
+	/// \param pos The top-left corner of the rectangle to update (in pixels)
+	/// \param size The size of the rectangle to update (in pixels)
+	///
+	///////////////////////////////////////////////////////////
+	void updateColorMap(const Image& map, const Vector2u& pos = Vector2u(0), const Vector2u& size = Vector2u(0));
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get terrain size
 	///
 	/// \return Terrain size
@@ -253,6 +279,12 @@ private:
 	///
 	///////////////////////////////////////////////////////////
 	void createTileLayout();
+
+	///////////////////////////////////////////////////////////
+	/// \brief Calculate normals from height map given a subregion
+	///
+	///////////////////////////////////////////////////////////
+	void calcNormals(const Image& hmap, const Vector2i& pos, const Vector2u& size);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Update normal map, depends on height and size

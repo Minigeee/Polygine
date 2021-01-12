@@ -671,28 +671,37 @@ void Terrain::setHeightMap(const Image& map)
 	if (!m_normalMapData)
 	m_normalMapData = (Vector3f*)malloc(size.x * size.y * sizeof(Vector3f));
 
-	Vector2f sizeFactor = m_size / Vector2f(size);
+	// Calculate normals
+	calcNormals(map, Vector2u(0), size);
 
-	for (Uint32 r = 0, i = 0; r < size.y; ++r)
+	// Upload normal data
+	m_normalMap.create(m_normalMapData, PixelFormat::Rgb, size.x, size.y, 0, GLType::Float);
+}
+
+
+///////////////////////////////////////////////////////////
+void Terrain::calcNormals(const Image& hmap, const Vector2i& pos, const Vector2u& size)
+{
+	Vector2u mapSize = Vector2u(hmap.getWidth(), hmap.getHeight());
+	Vector2f sizeFactor = m_size / Vector2f(mapSize);
+
+	for (Uint32 r = pos.y; r < mapSize.y && r < pos.y + size.y; ++r)
 	{
-		for (Uint32 c = 0; c < size.x; ++c, ++i)
+		for (Uint32 c = pos.x; c < mapSize.x && c < pos.x + size.x; ++c)
 		{
 			// Calculate normal
-			float h01 = *(float*)map.getPixel(r, c - (c == 0 ? 0 : 1)) * m_height;
-			float h21 = *(float*)map.getPixel(r, c + (c == size.x - 1 ? 0 : 1)) * m_height;
-			float h10 = *(float*)map.getPixel(r + (r == size.y - 1 ? 0 : 1), c) * m_height;
-			float h12 = *(float*)map.getPixel(r - (r == 0 ? 0 : 1), c) * m_height;
+			float h01 = *(float*)hmap.getPixel(r, c - (c == 0 ? 0 : 1)) * m_height;
+			float h21 = *(float*)hmap.getPixel(r, c + (c == mapSize.x - 1 ? 0 : 1)) * m_height;
+			float h10 = *(float*)hmap.getPixel(r + (r == mapSize.y - 1 ? 0 : 1), c) * m_height;
+			float h12 = *(float*)hmap.getPixel(r - (r == 0 ? 0 : 1), c) * m_height;
 
 			Vector3f v1(sizeFactor.x, h21 - h01, 0.0f);
 			Vector3f v2(0.0f, h12 - h10, -sizeFactor.y);
 			Vector3f normal = normalize(cross(v1, v2));
 
-			m_normalMapData[i] = normal;
+			m_normalMapData[r * hmap.getWidth() + c] = normal;
 		}
 	}
-
-	// Upload normal data
-	m_normalMap.create(m_normalMapData, PixelFormat::Rgb, size.x, size.y, 0, GLType::Float);
 }
 
 
@@ -726,6 +735,57 @@ void Terrain::setColorMap(const Image& map)
 void Terrain::setAmbientColor(const Vector3f& color)
 {
 	m_ambientColor = color;
+}
+
+
+///////////////////////////////////////////////////////////
+void Terrain::updateHeightMap(const Image& map, const Vector2i& pos, const Vector2u& size)
+{
+	// Get rectangle size
+	Vector2u rectSize = Vector2u(size.x ? size.x : map.getWidth(), size.y ? size.y : map.getHeight());
+
+	{
+		// Copy data to a separate buffer
+		float* data = (float*)malloc(rectSize.x * rectSize.y * sizeof(float));
+		for (Uint32 r = 0; r < rectSize.y; ++r)
+		{
+			float* src = (float*)map.getData();
+			src += (pos.y + r) * map.getWidth() + pos.x;
+			memcpy(data + r * rectSize.x, src, rectSize.x * sizeof(float));
+		}
+
+		// Push data
+		m_heightMap.update(data, pos, rectSize);
+		glFinish();
+		free(data);
+	}
+
+	{
+		Vector2i rectPos = pos - 1;
+		if (rectPos.x < 0)
+			rectPos.x = 0;
+		if (rectPos.y < 0)
+			rectPos.y = 0;
+		rectSize += 2u;
+
+		// Update normals
+		calcNormals(map, rectPos, rectSize);
+
+		// Copy data to a separate buffer
+		Vector3f* data = (Vector3f*)malloc(rectSize.x * rectSize.y * sizeof(Vector3f));
+		for (Uint32 r = 0; r < rectSize.y; ++r)
+		{
+			Vector3f* src = m_normalMapData;
+			src += (rectPos.y + r) * map.getWidth() + rectPos.x;
+			memcpy(data + r * rectSize.x, src, rectSize.x * sizeof(Vector3f));
+		}
+
+		// Push data
+		m_normalMap.update(data, rectPos, rectSize);
+		glFinish();
+		free(data);
+	}
+
 }
 
 

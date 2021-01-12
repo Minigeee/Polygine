@@ -1,9 +1,11 @@
 #include <poly/Core/Clock.h>
+#include <poly/Core/Profiler.h>
 
 #include <poly/Engine/Scene.h>
 
 #include <poly/Graphics/Camera.h>
 #include <poly/Graphics/Components.h>
+#include <poly/Graphics/GLCheck.h>
 #include <poly/Graphics/PostProcess.h>
 #include <poly/Graphics/Skybox.h>
 #include <poly/Graphics/Terrain.h>
@@ -17,7 +19,8 @@
 #include <poly/UI/UISystem.h>
 
 #include "BrushPanel.h"
-#include "CameraSystem.h"
+#include "EditSystem.h"
+#include "RenderView.h"
 
 using namespace poly;
 
@@ -40,7 +43,6 @@ void main()
 
     // Setup camera system
     camera.setFar(2000.0f);
-    CameraSystem cameraSystem(&window, &camera, &ui);
 
     // Setup scene
     Entity dirLight = scene.createEntity<DirLightComponent>();
@@ -52,15 +54,7 @@ void main()
     }
 
     // Setup terrain
-    Image hmap, cmap;
-    hmap.create(0, 1024, 1024, 1, GLType::Float);
-    cmap.create(0, 1024, 1024, 3);
-    memset(hmap.getData(), 0, 1024 * 1024 * sizeof(float));
-    memset(cmap.getData(), 0xFF, 1024 * 1024 * 3);
-
     terrain.create(4000.0f, 200.0f, 1.5f);
-    terrain.setHeightMap(hmap);
-    terrain.setColorMap(cmap);
 
     // Setup render systems
     scene.addRenderSystem(&terrain);
@@ -71,9 +65,9 @@ void main()
     renderTargetSize.x = (Uint32)(renderTargetSize.y * 16.0f / 9.0f);
 
     // Post processing
-    FrameBuffer framebuffers[2];
-    Texture textures[4];
-    for (Uint32 i = 0; i < 2; ++i)
+    FrameBuffer framebuffers[3];
+    Texture textures[6];
+    for (Uint32 i = 0; i < 3; ++i)
     {
         framebuffers[i].create(renderTargetSize.x, renderTargetSize.y);
         framebuffers[i].attachColor(&textures[2 * i], PixelFormat::Rgb, GLType::Uint16);
@@ -104,42 +98,54 @@ void main()
     ListView listView;
     panel.addChild(&listView);
 
-    UIElement seperators[2];
+    UIElement separators[2];
     for (Uint32 i = 0; i < 2; ++i)
     {
-        seperators[i].setPosition(3.0f, 0.0f);
-        seperators[i].setSize(194.0f, 1.0f);
-        seperators[i].setColor(0.25f, 0.25f, 0.3f, 1.0f);
+        separators[i].setPosition(3.0f, 0.0f);
+        separators[i].setSize(194.0f, 1.0f);
+        separators[i].setColor(0.25f, 0.25f, 0.3f, 1.0f);
     }
 
     // Brush panel
     BrushPanel brushPanel;
-    brushPanel.setRadius(10.0f);
-    brushPanel.setStrength(0.1f);
-    brushPanel.setGradient(1.5f);
+    brushPanel.setRadius(5.0f);
+    brushPanel.setStrength(0.02f);
+    brushPanel.setGradient(5.0f);
     listView.addChild(&brushPanel);
-    listView.addChild(&seperators[0], Vector2f(8.0f, 0.0f));
+    listView.addChild(&separators[0], Vector2f(8.0f, 0.0f));
 
     // Render view
-    UIElement renderTarget;
+    RenderView renderView(&camera, &framebuffers[0]);
     {
-        renderTarget.setPosition(200.0f, 0.0f);
-        renderTarget.setSize((float)renderTargetSize.x, (float)renderTargetSize.y);
-        renderTarget.setTexture(&textures[0]);
-        renderTarget.setFlippedUv(true);
-        ui.addChild(&renderTarget);
+        renderView.setPosition(200.0f, 0.0f);
+        renderView.setSize((float)renderTargetSize.x, (float)renderTargetSize.y);
+        renderView.setTexture(&textures[4]);
+        renderView.setFlippedUv(true);
+        ui.addChild(&renderView);
     }
 
     ///////////////////////////////////////////////////////////
+
+    EditSystem editSystem(&terrain, &brushPanel);
+    
+    // Brush events
+    renderView.onBrushMove(
+        [&](const Vector3f& p)
+        {
+            Vector2f pos = Vector2f(p.x, p.z);
+            editSystem.moveBrush(pos);
+        }
+    );
+    renderView.onBrushUp(std::bind(&EditSystem::finishStroke, &editSystem));
 
     // Resize event
     window.addListener<E_WindowResize>(
         [&](const E_WindowResize& e)
         {
-            renderTargetSize.y = FrameBuffer::Default.getHeight();
+            renderTargetSize.y = e.m_height;
             renderTargetSize.x = (Uint32)(renderTargetSize.y * 16.0f / 9.0f);
 
-            for (Uint32 i = 0; i < 2; ++i)
+            for (Uint32 i = 0; i < 3; ++i)
             {
                 framebuffers[i].reset();
                 framebuffers[i].create(renderTargetSize.x, renderTargetSize.y);
@@ -147,7 +153,7 @@ void main()
                 framebuffers[i].attachDepth(&textures[2 * i + 1]);
             }
 
-            renderTarget.setSize((float)renderTargetSize.x, (float)renderTargetSize.y);
+            renderView.setSize((float)renderTargetSize.x, (float)renderTargetSize.y);
         }
     );
 
@@ -165,7 +171,7 @@ void main()
         // Render stuff
         scene.render(camera, framebuffers[0]);
         fxaa.render(framebuffers[0], framebuffers[1]);
-        colorAdjust.render(framebuffers[1], framebuffers[0]);
+        colorAdjust.render(framebuffers[1], framebuffers[2]);
 
         ui.update(elapsed);
         ui.render(FrameBuffer::Default, false);
@@ -173,4 +179,6 @@ void main()
         // Swap buffers
         window.display();
     }
+
+    LOG("%d", Profiler::getData("EditSystem::moveBrush").mean().toMicroseconds());
 }

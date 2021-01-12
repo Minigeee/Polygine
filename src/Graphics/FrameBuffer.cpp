@@ -252,6 +252,17 @@ void FrameBuffer::blitTo(FrameBuffer& target)
 
 
 ///////////////////////////////////////////////////////////
+void FrameBuffer::readPixels(void* buffer, Uint32 x, Uint32 y, Uint32 w, Uint32 h, PixelFormat fmt, GLType dtype)
+{
+	// Bind the framebuffer
+	bind();
+
+	// Read pixels
+	glCheck(glReadPixels(x, y, w, h, (GLenum)fmt, (GLenum)dtype, buffer));
+}
+
+
+///////////////////////////////////////////////////////////
 Uint32 FrameBuffer::getId() const
 {
 	return m_id;
