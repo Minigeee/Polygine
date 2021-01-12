@@ -157,6 +157,22 @@ void main()
         }
     );
 
+    // Global hokeys
+    window.addListener<E_KeyEvent>(
+        [&](const E_KeyEvent& e)
+        {
+            if (e.m_action == InputAction::Release) return;
+
+            if (Window::getCurrent()->isKeyPressed(Keyboard::LeftControl))
+            {
+                if (e.m_key == Keyboard::Z)
+                    editSystem.undo();
+                else if (e.m_key == Keyboard::Y)
+                    editSystem.redo();
+            }
+        }
+    );
+
 
     Clock clock;
 

@@ -12,6 +12,8 @@ class EditSystem
 public:
 	EditSystem(Terrain* terrain, BrushPanel* panel);
 
+	~EditSystem();
+
 	void setTerrainSize(float size);
 
 	void setTerrainHeight(float height);
@@ -29,6 +31,15 @@ public:
 	void redo();
 
 private:
+	struct MapState
+	{
+		Uint32 m_mode;
+		Vector2i m_min;
+		Vector2i m_max;
+		void* m_data;
+	};
+
+private:
 	Terrain* m_terrain;
 	BrushPanel* m_panel;
 	Image m_heightMap;
@@ -41,9 +52,12 @@ private:
 	Uint32 m_colorMapSize;
 
 	Vector2i m_brushPos;
+	Vector2i m_brushMin;
+	Vector2i m_brushMax;
 
 	Uint32 m_historyIndex;
-	std::vector<std::string> m_historyFiles;
+	Uint32 m_historyMemSize;
+	std::deque<MapState> m_history;
 };
 
 #endif

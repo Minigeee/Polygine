@@ -756,7 +756,6 @@ void Terrain::updateHeightMap(const Image& map, const Vector2i& pos, const Vecto
 
 		// Push data
 		m_heightMap.update(data, pos, rectSize);
-		glFinish();
 		free(data);
 	}
 
@@ -782,7 +781,6 @@ void Terrain::updateHeightMap(const Image& map, const Vector2i& pos, const Vecto
 
 		// Push data
 		m_normalMap.update(data, rectPos, rectSize);
-		glFinish();
 		free(data);
 	}
 
