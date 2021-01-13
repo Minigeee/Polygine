@@ -182,7 +182,7 @@ public:
 	/// \param size The size of the rectangle to update (in pixels)
 	///
 	///////////////////////////////////////////////////////////
-	void updateColorMap(const Image& map, const Vector2u& pos = Vector2u(0), const Vector2u& size = Vector2u(0));
+	void updateColorMap(const Image& map, const Vector2i& pos = Vector2i(0), const Vector2u& size = Vector2u(0));
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get terrain size

@@ -788,6 +788,27 @@ void Terrain::updateHeightMap(const Image& map, const Vector2i& pos, const Vecto
 
 
 ///////////////////////////////////////////////////////////
+void Terrain::updateColorMap(const Image& map, const Vector2i& pos, const Vector2u& size)
+{
+	// Get rectangle size
+	Vector2u rectSize = Vector2u(size.x ? size.x : map.getWidth(), size.y ? size.y : map.getHeight());
+
+	// Copy data to a separate buffer
+	Vector3<Uint8>* data = (Vector3<Uint8>*)malloc(rectSize.x * rectSize.y * 3);
+	for (Uint32 r = 0; r < rectSize.y; ++r)
+	{
+		Vector3<Uint8>* src = (Vector3<Uint8>*)map.getData();
+		src += (pos.y + r) * map.getWidth() + pos.x;
+		memcpy(data + r * rectSize.x, src, rectSize.x * sizeof(Vector3<Uint8>));
+	}
+
+	// Push data
+	m_colorMap.update(data, pos, rectSize);
+	free(data);
+}
+
+
+///////////////////////////////////////////////////////////
 float Terrain::getSize() const
 {
 	return m_size;

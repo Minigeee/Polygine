@@ -6,11 +6,11 @@
 
 
 ///////////////////////////////////////////////////////////
-void blendHeightMaps(Image& src, Image& dst, Image& output, Uint32 func, const Vector2i& min, const Vector2i& max)
+void blendHeightMaps(Image& canvas, Image& input, Image& output, Uint32 func, const Vector2i& min, const Vector2i& max)
 {
-    Uint32 size = src.getWidth() * src.getHeight();
-    float* srcData = (float*)src.getData();
-    float* dstData = (float*)dst.getData();
+    Uint32 size = canvas.getWidth() * canvas.getHeight();
+    float* canvasData = (float*)canvas.getData();
+    float* inData = (float*)input.getData();
     float* outData = (float*)output.getData();
 
     if (func == 0)
@@ -19,8 +19,8 @@ void blendHeightMaps(Image& src, Image& dst, Image& output, Uint32 func, const V
         {
             for (int c = min.x; c < max.x; ++c)
             {
-                Uint32 index = r * src.getWidth() + c;
-                outData[index] = dstData[index] + srcData[index];
+                Uint32 index = r * canvas.getWidth() + c;
+                outData[index] = inData[index] + canvasData[index];
             }
         }
     }
@@ -30,22 +30,22 @@ void blendHeightMaps(Image& src, Image& dst, Image& output, Uint32 func, const V
         {
             for (int c = min.x; c < max.x; ++c)
             {
-                Uint32 index = r * src.getWidth() + c;
-                outData[index] = dstData[index] - srcData[index];
+                Uint32 index = r * canvas.getWidth() + c;
+                outData[index] = inData[index] - canvasData[index];
             }
         }
     }
     else if (func == 2)
     {
-        int w = src.getWidth();
-        int h = src.getHeight();
+        int w = canvas.getWidth();
+        int h = canvas.getHeight();
 
         for (int r = min.y; r < max.y; ++r)
         {
             for (int c = min.x; c < max.x; ++c)
             {
                 // Calculate kernel size
-                Uint32 kernel = (Uint32)(srcData[r * w + c] * 20 + 3);
+                Uint32 kernel = (Uint32)(canvasData[r * w + c] * 20 + 3);
 
                 // Calculate area bounds
                 Vector2i rBounds = Vector2i((int)r - kernel / 2, (int)r + kernel / 2);
@@ -65,7 +65,7 @@ void blendHeightMaps(Image& src, Image& dst, Image& output, Uint32 func, const V
                 for (int r2 = rBounds.x; r2 <= rBounds.y; ++r2)
                 {
                     for (int c2 = cBounds.x; c2 <= cBounds.y; ++c2, ++i)
-                        avg += dstData[r2 * w + c2];
+                        avg += inData[r2 * w + c2];
                 }
 
                 outData[r * w + c] = avg / (float)i;
@@ -76,20 +76,22 @@ void blendHeightMaps(Image& src, Image& dst, Image& output, Uint32 func, const V
 
 
 ///////////////////////////////////////////////////////////
-void blendColorMaps(Image& src, Image& dst, Image& output, const Vector3f& color)
+void blendColorMaps(Image& canvas, Image& input, Image& output, const Vector3f& color, const Vector2i& min, const Vector2i& max)
 {
-    Uint32 size = src.getWidth() * src.getHeight();
-    Uint8* srcData = (Uint8*)src.getData();
-    Vector3<Uint8>* dstData = (Vector3<Uint8>*)dst.getData();
+    float* canvasData = (float*)canvas.getData();
+    Vector3<Uint8>* inData = (Vector3<Uint8>*)input.getData();
     Vector3<Uint8>* outData = (Vector3<Uint8>*)output.getData();
 
-    for (Uint32 i = 0; i < size; ++i)
+    for (int r = min.y; r < max.y; ++r)
     {
-        float alpha = srcData[i] / 255.0f;
-        Vector3f dstPixel = Vector3f(dstData[i]) / 255.0f;
+        for (int c = min.x; c < max.x; ++c)
+        {
+            int index = r * canvas.getWidth() + c;
+            float alpha = canvasData[index];
+            Vector3f in = Vector3f(inData[index]) / 255.0f;
 
-        // Set output data
-        outData[i] = Vector3<Uint8>(255.0f * (color * alpha + dstPixel * (1.0f - alpha)));
+            outData[index] = Vector3<Uint8>((color * alpha + in * (1.0f - alpha)) * 255.0f);
+        }
     }
 }
 
@@ -98,29 +100,28 @@ void blendColorMaps(Image& src, Image& dst, Image& output, const Vector3f& color
 EditSystem::EditSystem(Terrain* terrain, BrushPanel* panel) :
 	m_terrain		    (terrain),
 	m_panel			    (panel),
-    m_heightMapSize     (1024),
-    m_colorMapSize      (1024),
+    m_mapSize           (1024),
     m_brushPos          (0),
     m_brushMin          (-1),
     m_brushMax          (-1),
 	m_historyIndex	    (0),
     m_historyMemSize    (0)
 {
-    m_heightMap.create(0, m_heightMapSize, m_heightMapSize, 1, GLType::Float);
-    m_heightMapCanvas.create(0, m_heightMapSize, m_heightMapSize, 1, GLType::Float);
-    m_heightMapSrc.create(0, m_heightMapSize, m_heightMapSize, 1, GLType::Float);
+    m_canvasMap.create(0, m_mapSize, m_mapSize, 1, GLType::Float);
 
-    m_colorMap.create(0, m_colorMapSize, m_colorMapSize, 3);
-    m_colorMapCanvas.create(0, m_colorMapSize, m_colorMapSize, 1);
-    m_colorMapSrc.create(0, m_colorMapSize, m_colorMapSize, 3);
+    m_heightMap.create(0, m_mapSize, m_mapSize, 1, GLType::Float);
+    m_heightMapSrc.create(0, m_mapSize, m_mapSize, 1, GLType::Float);
 
-    memset(m_heightMap.getData(), 0, m_heightMapSize * m_heightMapSize * sizeof(float));
-    memset(m_heightMapCanvas.getData(), 0, m_heightMapSize * m_heightMapSize * sizeof(float));
-    memset(m_heightMapSrc.getData(), 0, m_heightMapSize * m_heightMapSize * sizeof(float));
+    m_colorMap.create(0, m_mapSize, m_mapSize, 3);
+    m_colorMapSrc.create(0, m_mapSize, m_mapSize, 3);
 
-    memset(m_colorMap.getData(), 0xFF, m_colorMapSize * m_colorMapSize * 3);
-    memset(m_colorMapCanvas.getData(), 0xFF, m_colorMapSize * m_colorMapSize * 1);
-    memset(m_colorMapSrc.getData(), 0xFF, m_colorMapSize * m_colorMapSize * 3);
+    memset(m_canvasMap.getData(), 0, m_mapSize * m_mapSize * sizeof(float));
+
+    memset(m_heightMap.getData(), 0, m_mapSize * m_mapSize * sizeof(float));
+    memset(m_heightMapSrc.getData(), 0, m_mapSize * m_mapSize * sizeof(float));
+
+    memset(m_colorMap.getData(), 0xFF, m_mapSize * m_mapSize * 3);
+    memset(m_colorMapSrc.getData(), 0xFF, m_mapSize * m_mapSize * 3);
 
     // Set terrain maps
     m_terrain->setHeightMap(m_heightMap);
@@ -169,9 +170,9 @@ void EditSystem::finishStroke()
         float* newData = (float*)m_heightMap.getData();
         float* oldData = (float*)m_heightMapSrc.getData();
 
-        for (Uint32 r = m_brushMin.y, i = 0; r < m_brushMax.y; ++r)
+        for (int r = m_brushMin.y, i = 0; r < m_brushMax.y; ++r)
         {
-            for (Uint32 c = m_brushMin.x; c < m_brushMax.x; ++c, ++i)
+            for (int c = m_brushMin.x; c < m_brushMax.x; ++c, ++i)
             {
                 Uint32 index = r * m_heightMap.getWidth() + c;
                 data[i] = newData[index] - oldData[index];
@@ -198,16 +199,54 @@ void EditSystem::finishStroke()
         state.m_data = data;
         m_history.push_back(state);
 
-        // Reset canvas
-        memset(m_heightMapCanvas.getData(), 0, m_heightMapSize * m_heightMapSize * sizeof(float));
+        // Copy output to source
+        memcpy(m_heightMapSrc.getData(), m_heightMap.getData(), m_mapSize * m_mapSize * sizeof(float));
+    }
+    else if (mode == 1)
+    {
+        // Copy data to a separate buffer
+        Uint32 width = m_brushMax.x - m_brushMin.x;
+        Uint32 height = m_brushMax.y - m_brushMin.y;
+        Uint32 size = width * height * 3;
+        Vector3<Uint8>* data = (Vector3<Uint8>*)malloc(size);
+        Vector3<Uint8>* newData = (Vector3<Uint8>*)m_colorMap.getData();
+        Vector3<Uint8>* oldData = (Vector3<Uint8>*)m_colorMapSrc.getData();
+
+        for (int r = m_brushMin.y, i = 0; r < m_brushMax.y; ++r)
+        {
+            for (int c = m_brushMin.x; c < m_brushMax.x; ++c, ++i)
+            {
+                Uint32 index = r * m_colorMap.getWidth() + c;
+                data[i] = newData[index] - oldData[index];
+            }
+        }
+
+        // Update memory used
+        m_historyMemSize += size;
+
+        // If over the limit, remove earliest states
+        if (m_historyMemSize > HISTORY_MEMORY_SIZE)
+        {
+            free(m_history.front().m_data);
+            m_history.pop_front();
+
+            --m_historyIndex;
+        }
+
+        // Save map state
+        MapState state;
+        state.m_mode = m_panel->getMode();
+        state.m_min = m_brushMin;
+        state.m_max = m_brushMax;
+        state.m_data = data;
+        m_history.push_back(state);
 
         // Copy output to source
-        memcpy(m_heightMapSrc.getData(), m_heightMap.getData(), m_heightMapSize * m_heightMapSize * sizeof(float));
+        memcpy(m_colorMapSrc.getData(), m_colorMap.getData(), m_mapSize * m_mapSize * 3);
     }
-    else if (mode == 2)
-    {
-        memset(m_colorMapCanvas.getData(), 0xFF, m_colorMapSize * m_colorMapSize * 1);
-    }
+
+    // Reset canvas
+    memset(m_canvasMap.getData(), 0, m_mapSize* m_mapSize * sizeof(float));
 
     m_brushMin = Vector2i(-1);
     m_brushMax = Vector2i(-1);
@@ -255,33 +294,19 @@ void EditSystem::moveBrush(const Vector2f& pos)
 
             // Calculate factor
             float factor = 1.0f / (1.0f + exp(-gradient * (1.0f - R / radius - 0.5f)));
-            factor -= 1.0f / (1.0f + exp(0.5f * gradient));
+            float offset = 1.0f / (1.0f + exp(0.5f * gradient));
+            factor = (factor - offset) / (1.0f / (1.0f + exp(-0.5f * gradient)) - offset);
 
-            if (mode == 0)
-            {
-                float& pixel = *(float*)m_heightMapCanvas.getPixel(r, c);
-                float value = factor * strength;
-
-                if (pixel < value)
-                    pixel = value;
-            }
-            else if (mode == 1)
-            {
-                Uint8& pixel = *(Uint8*)m_colorMapCanvas.getPixel(r, c);
-
-                float value = (float)pixel / 255.0f + factor * strength;
-                if (value > strength)
-                    value = strength;
-
-                pixel = (Uint8)(value * 255.0f);
-            }
+            float& pixel = *(float*)m_canvasMap.getPixel(r, c);
+            if (pixel < factor * strength)
+                pixel = factor * strength;
         }
     }
 
     // Calculate update bounds
-    Vector2u brushBoundsPos, brushBoundsSize;
-    brushBoundsPos.x = texCoord.x > radius ? (Uint32)(texCoord.x - radius) : 0;
-    brushBoundsPos.y = texCoord.y > radius ? (Uint32)(texCoord.y - radius) : 0;
+    Vector2i brushBoundsPos, brushBoundsSize;
+    brushBoundsPos.x = texCoord.x > radius ? texCoord.x - radius : 0;
+    brushBoundsPos.y = texCoord.y > radius ? texCoord.y - radius : 0;
     brushBoundsSize.x = texCoord.x + radius < (int)m_heightMap.getWidth() ? 2 * radius : m_heightMap.getWidth() - texCoord.x;
     brushBoundsSize.y = texCoord.y + radius < (int)m_heightMap.getHeight() ? 2 * radius : m_heightMap.getHeight() - texCoord.y;
 
@@ -295,11 +320,15 @@ void EditSystem::moveBrush(const Vector2f& pos)
         m_brushMax.y = brushBoundsPos.y + brushBoundsSize.y;
 
     if (mode == 0)
-        blendHeightMaps(m_heightMapCanvas, m_heightMapSrc, m_heightMap, m_panel->getHeightFunc(), m_brushMin, m_brushMax);
+    {
+        blendHeightMaps(m_canvasMap, m_heightMapSrc, m_heightMap, m_panel->getHeightFunc(), m_brushMin, m_brushMax);
+        m_terrain->updateHeightMap(m_heightMap, brushBoundsPos, brushBoundsSize);
+    }
     else if (mode == 1)
-        blendColorMaps(m_colorMapCanvas, m_colorMapSrc, m_colorMap, Vector3f(0.0f));
-
-    m_terrain->updateHeightMap(m_heightMap, brushBoundsPos, brushBoundsSize);
+    {
+        blendColorMaps(m_canvasMap, m_colorMapSrc, m_colorMap, Vector3f(0, 1, 0), m_brushMin, m_brushMax);
+        m_terrain->updateColorMap(m_colorMap, brushBoundsPos, brushBoundsSize);
+    }
 }
 
 
@@ -319,17 +348,35 @@ void EditSystem::undo()
         float* data = (float*)m_heightMap.getData();
         float* src = (float*)m_heightMapSrc.getData();
 
-        for (Uint32 r = state.m_min.y, i = 0; r < state.m_max.y; ++r)
+        for (int r = state.m_min.y, i = 0; r < state.m_max.y; ++r)
         {
-            for (Uint32 c = state.m_min.x; c < state.m_max.x; ++c, ++i)
+            for (int c = state.m_min.x; c < state.m_max.x; ++c, ++i)
             {
-                Uint32 index = r * m_heightMap.getWidth() + c;
+                int index = r * m_heightMap.getWidth() + c;
                 src[index] = (data[index] -= offset[i]);
             }
         }
 
         // Update map
         m_terrain->updateHeightMap(m_heightMap, state.m_min, state.m_max - state.m_min);
+    }
+    else if (state.m_mode == 1)
+    {
+        Vector3<Uint8>* offset = (Vector3<Uint8>*)state.m_data;
+        Vector3<Uint8>* data = (Vector3<Uint8>*)m_colorMap.getData();
+        Vector3<Uint8>* src = (Vector3<Uint8>*)m_colorMapSrc.getData();
+
+        for (int r = state.m_min.y, i = 0; r < state.m_max.y; ++r)
+        {
+            for (int c = state.m_min.x; c < state.m_max.x; ++c, ++i)
+            {
+                int index = r * m_colorMap.getWidth() + c;
+                src[index] = (data[index] -= offset[i]);
+            }
+        }
+
+        // Update map
+        m_terrain->updateColorMap(m_colorMap, state.m_min, state.m_max - state.m_min);
     }
 }
 
@@ -350,16 +397,34 @@ void EditSystem::redo()
         float* data = (float*)m_heightMap.getData();
         float* src = (float*)m_heightMapSrc.getData();
 
-        for (Uint32 r = state.m_min.y, i = 0; r < state.m_max.y; ++r)
+        for (int r = state.m_min.y, i = 0; r < state.m_max.y; ++r)
         {
-            for (Uint32 c = state.m_min.x; c < state.m_max.x; ++c, ++i)
+            for (int c = state.m_min.x; c < state.m_max.x; ++c, ++i)
             {
-                Uint32 index = r * m_heightMap.getWidth() + c;
+                int index = r * m_heightMap.getWidth() + c;
                 src[index] = (data[index] += offset[i]);
             }
         }
 
         // Update map
         m_terrain->updateHeightMap(m_heightMap, state.m_min, state.m_max - state.m_min);
+    }
+    else if (state.m_mode == 1)
+    {
+        Vector3<Uint8>* offset = (Vector3<Uint8>*)state.m_data;
+        Vector3<Uint8>* data = (Vector3<Uint8>*)m_colorMap.getData();
+        Vector3<Uint8>* src = (Vector3<Uint8>*)m_colorMapSrc.getData();
+
+        for (int r = state.m_min.y, i = 0; r < state.m_max.y; ++r)
+        {
+            for (int c = state.m_min.x; c < state.m_max.x; ++c, ++i)
+            {
+                int index = r * m_colorMap.getWidth() + c;
+                src[index] = (data[index] += offset[i]);
+            }
+        }
+
+        // Update map
+        m_terrain->updateColorMap(m_colorMap, state.m_min, state.m_max - state.m_min);
     }
 }

@@ -118,7 +118,7 @@ void RenderView::onMouseMove(const E_MouseMove& e)
 		Vector3f intersection = Vector3f(pos) / pos.w;
 
 		// If the intersection is underground, don't count as brush move
-		if (intersection.y >= -0.1f && m_onBrushMove)
+		if (m_onBrushMove)
 			m_onBrushMove(intersection);
 	}
 }
@@ -147,7 +147,7 @@ void RenderView::onMouseButton(const E_MouseButton& e)
 			if (m_onBrushDown)
 				m_onBrushDown();
 		}
-		else
+		else if (m_paintMode)
 		{
 			m_paintMode = false;
 

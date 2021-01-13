@@ -18,10 +18,6 @@ public:
 
 	void setTerrainHeight(float height);
 
-	void setHeightMapSize(Uint32 size);
-
-	void setColorMapSize(Uint32 size);
-
 	void finishStroke();
 
 	void moveBrush(const Vector2f& pos);
@@ -43,13 +39,11 @@ private:
 	Terrain* m_terrain;
 	BrushPanel* m_panel;
 	Image m_heightMap;
-	Image m_colorMap;
-	Image m_heightMapCanvas;
-	Image m_colorMapCanvas;
+	Image m_colorMap;;
 	Image m_heightMapSrc;
 	Image m_colorMapSrc;
-	Uint32 m_heightMapSize;
-	Uint32 m_colorMapSize;
+	Image m_canvasMap;
+	Uint32 m_mapSize;
 
 	Vector2i m_brushPos;
 	Vector2i m_brushMin;
