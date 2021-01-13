@@ -45,7 +45,7 @@ void blendHeightMaps(Image& src, Image& dst, Image& output, Uint32 func, const V
             for (int c = min.x; c < max.x; ++c)
             {
                 // Calculate kernel size
-                Uint32 kernel = (Uint32)(srcData[r * w + c] * 20 + 1);
+                Uint32 kernel = (Uint32)(srcData[r * w + c] * 20 + 3);
 
                 // Calculate area bounds
                 Vector2i rBounds = Vector2i((int)r - kernel / 2, (int)r + kernel / 2);
@@ -61,13 +61,14 @@ void blendHeightMaps(Image& src, Image& dst, Image& output, Uint32 func, const V
 
                 // Calculate average of kernel
                 float avg = 0.0f;
-                for (int r2 = rBounds.x; r2 <= rBounds.y; ++r)
+                int i = 0;
+                for (int r2 = rBounds.x; r2 <= rBounds.y; ++r2)
                 {
-                    for (int c2 = cBounds.x; c2 <= cBounds.y; ++c)
+                    for (int c2 = cBounds.x; c2 <= cBounds.y; ++c2, ++i)
                         avg += dstData[r2 * w + c2];
                 }
 
-                outData[r * w + c] = avg / (kernel * kernel);
+                outData[r * w + c] = avg / (float)i;
             }
         }
     }
@@ -294,7 +295,7 @@ void EditSystem::moveBrush(const Vector2f& pos)
         m_brushMax.y = brushBoundsPos.y + brushBoundsSize.y;
 
     if (mode == 0)
-        blendHeightMaps(m_heightMapCanvas, m_heightMapSrc, m_heightMap, 0, m_brushMin, m_brushMax);
+        blendHeightMaps(m_heightMapCanvas, m_heightMapSrc, m_heightMap, m_panel->getHeightFunc(), m_brushMin, m_brushMax);
     else if (mode == 1)
         blendColorMaps(m_colorMapCanvas, m_colorMapSrc, m_colorMap, Vector3f(0.0f));
 
@@ -347,13 +348,14 @@ void EditSystem::redo()
     {
         float* offset = (float*)state.m_data;
         float* data = (float*)m_heightMap.getData();
+        float* src = (float*)m_heightMapSrc.getData();
 
         for (Uint32 r = state.m_min.y, i = 0; r < state.m_max.y; ++r)
         {
             for (Uint32 c = state.m_min.x; c < state.m_max.x; ++c, ++i)
             {
                 Uint32 index = r * m_heightMap.getWidth() + c;
-                data[index] += offset[i];
+                src[index] = (data[index] += offset[i]);
             }
         }
 

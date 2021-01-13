@@ -53,24 +53,28 @@ BrushPanel::BrushPanel() :
 	m_radiusRow			(Pool<HListView>::alloc()),
 	m_strengthRow		(Pool<HListView>::alloc()),
 	m_gradientRow		(Pool<HListView>::alloc()),
+	m_colorIndicator	(Pool<UIElement>::alloc()),
 
-	m_radius			{ 10.0f, 10.0f, 10.0f },
-	m_strength			{ 10.0f, 1.0f, 10.0f },
-	m_gradient			{ 2.0f, 2.0f, 2.0f }
+	m_radius			{ 5.0f, 5.0f, 5.0f },
+	m_strength			{ 0.02f, 0.02f, 0.02f },
+	m_gradient			{ 5.0f, 5.0f, 5.0f },
+	m_selectedColor		(0)
 {
 	float width = 200.0f;
 	float offsetX = 8.0f;
+	setSize(200.0f, 275.0f);
+	setVisible(false, false);
 
 	m_panelTitle->setOrigin(UIPosition::TopCenter);
-	m_panelTitle->setPosition(100.0f, 0.0f);
+	m_panelTitle->setPosition(100.0f, 10.0f);
 	m_panelTitle->setString("Brush Settings");
-	addChild(m_panelTitle, Vector2f(10.0f, 0.0f));
+	addChild(m_panelTitle);
 
-	m_modeTitle->setPosition(offsetX, 0.0f);
+	m_modeTitle->setPosition(offsetX, 35.0f);
 	m_modeTitle->setString("Mode");
-	addChild(m_modeTitle, Vector2f(10.0f, 0.0f));
+	addChild(m_modeTitle);
 
-	m_modeMenu->setPosition(offsetX - 5.0f, 0.0f);
+	m_modeMenu->setPosition(offsetX - 5.0f, 50.0f);
 	m_modeMenu->setSize(width - 2.0f * offsetX + 6.0f, 25.0f);
 	m_modeMenu->setColor(0.1f, 0.1f, 0.12f, 1.0f);
 	m_modeMenu->setItemHeight(25.0f);
@@ -82,13 +86,13 @@ BrushPanel::BrushPanel() :
 	m_modeMenu->addItem("Height");
 	m_modeMenu->addItem("Color");
 	m_modeMenu->addItem("Detail");
-	addChild(m_modeMenu, Vector2f(3.0f, 0.0f));
+	addChild(m_modeMenu);
 
-	m_functionTitle->setPosition(offsetX, 0.0f);
+	m_functionTitle->setPosition(offsetX, 85.0f);
 	m_functionTitle->setString("Function");
-	addChild(m_functionTitle, Vector2f(8.0f, 0.0f));
+	addChild(m_functionTitle);
 
-	m_functionMenu->setPosition(offsetX - 5.0f, 0.0f);
+	m_functionMenu->setPosition(offsetX - 5.0f, 100.0f);
 	m_functionMenu->setSize(width - 2.0f * offsetX + 6.0f, 25.0f);
 	m_functionMenu->setColor(0.1f, 0.1f, 0.12f, 1.0f);
 	m_functionMenu->setItemHeight(25.0f);
@@ -100,11 +104,28 @@ BrushPanel::BrushPanel() :
 	m_functionMenu->addItem("Add");
 	m_functionMenu->addItem("Subtract");
 	m_functionMenu->addItem("Smooth");
-	addChild(m_functionMenu, Vector2f(3.0f, 0.0f));
+	addChild(m_functionMenu);
 
-	m_radiusTitle->setPosition(offsetX, 0.0f);
+	m_colorIndicator->setPosition(2.0f, 98.0f);
+	m_colorIndicator->setSize(49.0f, 29.0f);
+	m_colorIndicator->setColor(0.5f, 0.5f, 0.6f, 1.0f);
+	m_colorIndicator->setVisible(false);
+	addChild(m_colorIndicator);
+
+	for (Uint32 i = 0; i < 4; ++i)
+	{
+		Button* btn = m_colorButtons[i] = Pool<Button>::alloc();
+		btn->setPosition(4.0f + 48 * i, 100.0f);
+		btn->setSize(45.0f, 25.0f);
+		btn->setVisible(false);
+		addChild(btn);
+
+		btn->onPress(std::bind(&BrushPanel::setColorSlot, this, i));
+	}
+
+	m_radiusTitle->setPosition(offsetX, 135.0f);
 	m_radiusTitle->setString("Radius");
-	addChild(m_radiusTitle, Vector2f(8.0f, 0.0f));
+	addChild(m_radiusTitle);
 
 	m_radiusSlider->setPosition(offsetX - 5.0f, 5.0f);
 	m_radiusSlider->setSize(120.0f, 15.0f);
@@ -117,11 +138,13 @@ BrushPanel::BrushPanel() :
 	m_radiusInput->setSize(65.0f, 25.0f);
 	m_radiusInput->setColor(0.25f, 0.25f, 0.3f, 1.0f);
 	m_radiusRow->addChild(m_radiusInput);
-	addChild(m_radiusRow, Vector2f(3.0f, 0.0f));
 
-	m_strengthTitle->setPosition(offsetX, 0.0f);
+	m_radiusRow->setPosition(0.0f, 150.0f);
+	addChild(m_radiusRow);
+
+	m_strengthTitle->setPosition(offsetX, 185.0f);
 	m_strengthTitle->setString("Strength");
-	addChild(m_strengthTitle, Vector2f(8.0f, 0.0f));
+	addChild(m_strengthTitle);
 
 	m_strengthSlider->setPosition(offsetX - 5.0f, 5.0f);
 	m_strengthSlider->setSize(120.0f, 15.0f);
@@ -134,11 +157,13 @@ BrushPanel::BrushPanel() :
 	m_strengthInput->setSize(65.0f, 25.0f);
 	m_strengthInput->setColor(0.25f, 0.25f, 0.3f, 1.0f);
 	m_strengthRow->addChild(m_strengthInput);
-	addChild(m_strengthRow, Vector2f(3.0f, 0.0f));
 
-	m_gradientTitle->setPosition(offsetX, 0.0f);
+	m_strengthRow->setPosition(0.0f, 200.0f);
+	addChild(m_strengthRow);
+
+	m_gradientTitle->setPosition(offsetX, 235.0f);
 	m_gradientTitle->setString("Gradient Factor");
-	addChild(m_gradientTitle, Vector2f(8.0f, 0.0f));
+	addChild(m_gradientTitle);
 
 	m_gradientSlider->setPosition(offsetX - 5.0f, 5.0f);
 	m_gradientSlider->setSize(120.0f, 15.0f);
@@ -151,7 +176,9 @@ BrushPanel::BrushPanel() :
 	m_gradientInput->setSize(65.0f, 25.0f);
 	m_gradientInput->setColor(0.25f, 0.25f, 0.3f, 1.0f);
 	m_gradientRow->addChild(m_gradientInput);
-	addChild(m_gradientRow, Vector2f(3.0f, 0.0f));
+
+	m_gradientRow->setPosition(0.0f, 250.0f);
+	addChild(m_gradientRow);
 
 	// Radius slider
 	m_radiusSlider->onValueChange(
@@ -263,7 +290,29 @@ BrushPanel::BrushPanel() :
 	m_modeMenu->onItemChange(
 		[&](Uint32 index)
 		{
-			setMode(index);
+			setRadius(m_radius[index]);
+			setStrength(m_strength[index]);
+			setGradient(m_gradient[index]);
+
+			if (index == 0)
+			{
+				m_functionTitle->setString("Function");
+				m_functionMenu->setVisible(true, false);
+				m_functionMenu->getText()->setVisible(true);
+
+				m_colorIndicator->setVisible(false);
+				for (Uint32 i = 0; i < 4; ++i)
+					m_colorButtons[i]->setVisible(false);
+			}
+			else if (index == 1)
+			{
+				m_functionTitle->setString("Color");
+				m_functionMenu->setVisible(false);
+
+				m_colorIndicator->setVisible(true);
+				for (Uint32 i = 0; i < 4; ++i)
+					m_colorButtons[i]->setVisible(true);
+			}
 		}
 	);
 }
@@ -292,18 +341,28 @@ BrushPanel::~BrushPanel()
 ///////////////////////////////////////////////////////////
 void BrushPanel::setMode(Uint32 mode)
 {
-	setRadius(m_radius[mode]);
-	setStrength(m_strength[mode]);
-	setGradient(m_gradient[mode]);
+	m_modeMenu->setSelectedItem(mode);
+}
+
+
+///////////////////////////////////////////////////////////
+void BrushPanel::setHeightFunc(Uint32 func)
+{
+	m_functionMenu->setSelectedItem(func);
 }
 
 
 ///////////////////////////////////////////////////////////
 void BrushPanel::setRadius(float radius)
 {
-	Uint32 mode = m_modeMenu->getSelectedItem();
 	const float min = 1.0f;
 	const float max = 100.0f;
+	if (radius < min)
+		radius = min;
+	if (radius > max)
+		radius = max;
+
+	Uint32 mode = m_modeMenu->getSelectedItem();
 
 	float scaled = (radius - min) / (max - min);
 	m_radius[mode] = radius;
@@ -321,6 +380,11 @@ void BrushPanel::setRadius(float radius)
 ///////////////////////////////////////////////////////////
 void BrushPanel::setStrength(float strength)
 {
+	if (strength < 0.0f)
+		strength = 0.0f;
+	if (strength > 1.0f)
+		strength = 1.0f;
+
 	Uint32 mode = m_modeMenu->getSelectedItem();
 	m_strength[mode] = strength;
 
@@ -337,6 +401,11 @@ void BrushPanel::setStrength(float strength)
 ///////////////////////////////////////////////////////////
 void BrushPanel::setGradient(float gradient)
 {
+	if (gradient < 0.0f)
+		gradient = 0.0f;
+	if (gradient > 20.0f)
+		gradient = 20.0f;
+
 	Uint32 mode = m_modeMenu->getSelectedItem();
 
 	float scaled = gradient * 0.05f;
@@ -349,6 +418,15 @@ void BrushPanel::setGradient(float gradient)
 	// Update UI elements
 	m_gradientSlider->setValue(scaled);
 	m_gradientInput->setValue(std::string(buffer));
+}
+
+
+///////////////////////////////////////////////////////////
+void BrushPanel::setColorSlot(Uint32 slot)
+{
+	m_selectedColor = slot;
+
+	m_colorIndicator->setPosition(2.0f + slot * 48.0f, 98.0f);
 }
 
 
@@ -377,4 +455,11 @@ float BrushPanel::getStrength() const
 float BrushPanel::getGradient() const
 {
 	return m_gradient[m_modeMenu->getSelectedItem()];
+}
+
+
+///////////////////////////////////////////////////////////
+Uint32 BrushPanel::getHeightFunc() const
+{
+	return m_functionMenu->getSelectedItem();
 }

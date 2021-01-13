@@ -170,6 +170,52 @@ void main()
                 else if (e.m_key == Keyboard::Y)
                     editSystem.redo();
             }
+
+            if (e.m_key == Keyboard::Tab)
+                brushPanel.setMode((brushPanel.getMode() + 1) % 3);
+
+            else if (e.m_key == Keyboard::One)
+            {
+                if (brushPanel.getMode() == 0)
+                    brushPanel.setHeightFunc(0);
+                else if (brushPanel.getMode() == 1)
+                    brushPanel.setColorSlot(0);
+            }
+
+            else if (e.m_key == Keyboard::Two)
+            {
+                if (brushPanel.getMode() == 0)
+                    brushPanel.setHeightFunc(1);
+                else if (brushPanel.getMode() == 1)
+                    brushPanel.setColorSlot(1);
+            }
+
+            else if (e.m_key == Keyboard::Three)
+            {
+                if (brushPanel.getMode() == 0)
+                    brushPanel.setHeightFunc(2);
+                else if (brushPanel.getMode() == 1)
+                    brushPanel.setColorSlot(2);
+            }
+
+            else if (e.m_key == Keyboard::Four)
+            {
+                if (brushPanel.getMode() == 1)
+                    brushPanel.setColorSlot(3);
+            }
+        }
+    );
+
+    // Brush resize events
+    window.addListener<E_MouseScroll>(
+        [&](const E_MouseScroll& e)
+        {
+            if (Window::getCurrent()->isKeyPressed(Keyboard::LeftControl))
+                brushPanel.setStrength(brushPanel.getStrength() + 0.005f * e.m_dy);
+            else if (Window::getCurrent()->isKeyPressed(Keyboard::LeftShift))
+                brushPanel.setRadius(brushPanel.getRadius() + e.m_dy);
+            else if (Window::getCurrent()->isKeyPressed(Keyboard::LeftAlt))
+                brushPanel.setGradient(brushPanel.getGradient() + 0.1f * e.m_dy);
         }
     );
 

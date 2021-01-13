@@ -9,7 +9,7 @@
 
 using namespace poly;
 
-class BrushPanel : public ListView
+class BrushPanel : public UIElement
 {
 public:
 	BrushPanel();
@@ -18,11 +18,15 @@ public:
 
 	void setMode(Uint32 mode);
 
+	void setHeightFunc(Uint32 func);
+
 	void setRadius(float radius);
 
 	void setStrength(float strength);
 
 	void setGradient(float gradient);
+
+	void setColorSlot(Uint32 slot);
 
 	Uint32 getMode() const;
 
@@ -31,6 +35,12 @@ public:
 	float getStrength() const;
 
 	float getGradient() const;
+
+	Uint32 getHeightFunc() const;
+
+	Uint32 getColorSlot() const;
+
+	Vector3f getSelectedColor() const;
 
 private:
 	Text* m_panelTitle;
@@ -52,9 +62,13 @@ private:
 	HListView* m_strengthRow;
 	HListView* m_gradientRow;
 
+	Button* m_colorButtons[4];
+	UIElement* m_colorIndicator;
+
 	float m_radius[3];
 	float m_strength[3];
 	float m_gradient[3];
+	Uint32 m_selectedColor;
 };
 
 #endif

@@ -62,6 +62,18 @@ void RenderView::onMouseMove(const E_MouseMove& e)
 			m_cameraPos -= offset.x * right * m_cameraDist;
 			m_cameraPos += offset.y * up * m_cameraDist;
 		}
+		else if (Window::getCurrent()->isKeyPressed(Keyboard::LeftControl))
+		{
+			// Sensitivity
+			offset *= 0.01f;
+
+			// Move camera
+			const Vector3f& right = m_camera->getRight();
+
+			// Update camera position
+			m_cameraPos -= offset.x * right * m_cameraDist;
+			m_cameraPos += offset.y * m_camera->getDirection() * m_cameraDist;
+		}
 		else
 		{
 			// Sensitivity
@@ -105,7 +117,8 @@ void RenderView::onMouseMove(const E_MouseMove& e)
 		Vector4f pos = invProjView * clipPos;
 		Vector3f intersection = Vector3f(pos) / pos.w;
 
-		if (m_onBrushMove)
+		// If the intersection is underground, don't count as brush move
+		if (intersection.y >= -0.1f && m_onBrushMove)
 			m_onBrushMove(intersection);
 	}
 }
@@ -148,6 +161,12 @@ void RenderView::onMouseButton(const E_MouseButton& e)
 ///////////////////////////////////////////////////////////
 void RenderView::onMouseScroll(const E_MouseScroll& e)
 {
+	Window* window = Window::getCurrent();
+	if (window->isKeyPressed(Keyboard::LeftControl) ||
+		window->isKeyPressed(Keyboard::LeftShift) ||
+		window->isKeyPressed(Keyboard::LeftAlt))
+		return;
+
 	const float minDist = 2.0f;
 	const float maxDist = 800.0f;
 
