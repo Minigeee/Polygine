@@ -82,7 +82,7 @@ void main()
 
     // Load font
     Font font;
-    font.load("fonts/segoeui/segoeui.ttf");
+    font.load("examples/fonts/segoeui/segoeui.ttf");
     Text::setDefaultFont(&font);
 
     // Setup UI

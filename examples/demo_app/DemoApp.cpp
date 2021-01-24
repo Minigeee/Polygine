@@ -67,10 +67,10 @@ int main()
     );
 
     Model model;
-    model.load("models/character/character.dae");
+    model.load("examples/models/character/character.dae");
 
-    Skeleton skeleton("models/character/character.dae");
-    Animation animation("models/character/character.dae", "Armature");
+    Skeleton skeleton("examples/models/character/character.dae");
+    Animation animation("examples/models/character/character.dae", "Armature");
     skeleton.setAnimation(&animation);
 
     Shader shader;

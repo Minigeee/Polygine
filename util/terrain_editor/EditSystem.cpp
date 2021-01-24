@@ -259,8 +259,6 @@ void EditSystem::finishStroke()
 ///////////////////////////////////////////////////////////
 void EditSystem::moveBrush(const Vector2f& pos)
 {
-    START_PROFILING_FUNC;
-
     // Get brush mode
     Uint32 mode = m_panel->getMode();
 
@@ -275,6 +273,8 @@ void EditSystem::moveBrush(const Vector2f& pos)
 
     if (texCoord == m_brushPos) return;
     m_brushPos = texCoord;
+
+    START_PROFILING_FUNC;
 
     // Fill in circle area
     int radius = (int)m_panel->getRadius();
