@@ -21,6 +21,7 @@
 #include "BrushPanel.h"
 #include "ColorSelector.h"
 #include "EditSystem.h"
+#include "FilePanel.h"
 #include "RenderView.h"
 
 using namespace poly;
@@ -111,13 +112,18 @@ void main()
     ColorSelector colorSelector;
     ui.addChild(&colorSelector);
 
+    // File panel
+    FilePanel filePanel;
+    listView.addChild(&filePanel);
+    listView.addChild(&separators[0], Vector2f(8.0f, 0.0f));
+
     // Brush panel
     BrushPanel brushPanel(&colorSelector);
     brushPanel.setRadius(5.0f);
     brushPanel.setStrength(0.02f);
     brushPanel.setGradient(5.0f);
     listView.addChild(&brushPanel);
-    listView.addChild(&separators[0], Vector2f(8.0f, 0.0f));
+    listView.addChild(&separators[1], Vector2f(8.0f, 0.0f));
 
     // Render view
     RenderView renderView(&camera, &framebuffers[0]);
@@ -180,7 +186,12 @@ void main()
                 else if (e.m_key == Keyboard::Tab)
                 {
                     // Change color if in color tab
-                    if (brushPanel.getMode() == 1)
+                    if (brushPanel.getMode() == 0)
+                    {
+                        Uint32 funcIndex = (brushPanel.getHeightFunc() + 1) % 3;
+                        brushPanel.setHeightFunc(funcIndex);
+                    }
+                    else if (brushPanel.getMode() == 1)
                     {
                         Uint32 colorIndex = (brushPanel.getColorSlot() + 1) % 4;
                         brushPanel.setColorSlot(colorIndex);
@@ -263,3 +274,20 @@ void main()
 
     LOG("%d", Profiler::getData("EditSystem::moveBrush").mean().toMicroseconds());
 }
+
+
+/*
+
+More features:
+
+- Import/export terrain maps
+- More height brush modes (set/assign, noise, multiply, etc.)
+- Global noise
+- View options (skybox, lighting, fog, etc.)
+- Painting details (grass, rocks, etc.)
+- Loading and placing models, and saving scene info
+- Adding water to pockets of terrain
+- Add wind
+- Brush for removing terrain
+
+*/

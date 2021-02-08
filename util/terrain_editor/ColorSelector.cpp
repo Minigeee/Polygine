@@ -1,33 +1,12 @@
 #include <poly/Core/ObjectPool.h>
 
+#include <poly/Graphics/Window.h>
+
 #include "ColorSelector.h"
+#include "UITemplates.h"
 
 #include <iomanip>
 #include <string>
-
-
-///////////////////////////////////////////////////////////
-void onMouseEnterBtn(Button* btn, const E_MouseMove& e)
-{
-	if (!btn->isPressed())
-		btn->setColor(0.25f, 0.25f, 0.30f, 1.0f);
-}
-
-
-///////////////////////////////////////////////////////////
-void onMouseLeaveBtn(Button* btn, const E_MouseMove& e)
-{
-	if (!btn->isPressed())
-		btn->setColor(0.22f, 0.22f, 0.27f, 1.0f);
-}
-
-
-
-///////////////////////////////////////////////////////////
-void onBtnPress(Button* btn)
-{
-	btn->setColor(0.2f, 0.2f, 0.25f, 1.0f);
-}
 
 
 ///////////////////////////////////////////////////////////
@@ -64,7 +43,9 @@ ColorSelector::ColorSelector() :
 	m_decInput		(Pool<TextInput>::alloc()),
 	m_sampleBox		(Pool<UIElement>::alloc()),
 	m_confirmBtn	(Pool<Button>::alloc()),
-	m_cancelBtn		(Pool<Button>::alloc())
+	m_cancelBtn		(Pool<Button>::alloc()),
+	m_mouseOffset	(0.0f),
+	m_isPressed		(false)
 {
 	setSize(450.0f, 360.0f);
 	setColor(0.15f, 0.15f, 0.18f, 1.0f);
@@ -350,7 +331,23 @@ ColorSelector::ColorSelector() :
 ///////////////////////////////////////////////////////////
 ColorSelector::~ColorSelector()
 {
-
+	Pool<Text>::free(m_panelTitle);
+	Pool<Text>::free(m_rTitle);
+	Pool<Text>::free(m_gTitle);
+	Pool<Text>::free(m_bTitle);
+	Pool<Text>::free(m_hexTitle);
+	Pool<Text>::free(m_decTitle);
+	Pool<Slider>::free(m_rSlider);
+	Pool<Slider>::free(m_gSlider);
+	Pool<Slider>::free(m_bSlider);
+	Pool<TextInput>::free(m_rInput);
+	Pool<TextInput>::free(m_gInput);
+	Pool<TextInput>::free(m_bInput);
+	Pool<TextInput>::free(m_hexInput);
+	Pool<TextInput>::free(m_decInput);
+	Pool<UIElement>::free(m_sampleBox);
+	Pool<Button>::free(m_confirmBtn);
+	Pool<Button>::free(m_cancelBtn);
 }
 
 
@@ -390,6 +387,44 @@ void ColorSelector::setSelectedColor(float r, float g, float b)
 const Vector3f& ColorSelector::getSelectedColor() const
 {
 	return m_selectedColor;
+}
+
+
+///////////////////////////////////////////////////////////
+void ColorSelector::onMouseButton(const E_MouseButton& e)
+{
+	// Left click in top margin
+	if (e.m_button != Mouse::Left) return;
+
+	if (e.m_action == InputAction::Press)
+	{
+		const float margin = 25.0f;
+		Vector2f offset = getLocalCoordinate(Window::getCurrent()->getCursorPos());
+		float localY = offset.y + m_origin.y * getPixelSize().y;
+
+		if (localY < margin)
+		{
+			// Keep track of offset
+			m_mouseOffset = offset;
+			m_isPressed = true;
+		}
+	}
+	else
+		m_isPressed = false;
+}
+
+
+///////////////////////////////////////////////////////////
+void ColorSelector::onMouseMove(const E_MouseMove& e)
+{
+	if (m_isPressed)
+	{
+		// Get position relative to parent
+		Vector2f p = m_parent->getLocalCoordinate(Vector2f(e.m_x, e.m_y));
+
+		// Set position to mouse position plus original offset
+		setPosition(p - m_mouseOffset - m_anchor * m_parent->getPixelSize());
+	}
 }
 
 

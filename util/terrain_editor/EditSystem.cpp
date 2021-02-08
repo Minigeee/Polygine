@@ -21,6 +21,10 @@ void blendHeightMaps(Image& canvas, Image& input, Image& output, Uint32 func, co
             {
                 Uint32 index = r * canvas.getWidth() + c;
                 outData[index] = inData[index] + canvasData[index];
+
+                // Clamp height
+                if (outData[index] > 1.0f)
+                    outData[index] = 1.0f;
             }
         }
     }
@@ -32,6 +36,10 @@ void blendHeightMaps(Image& canvas, Image& input, Image& output, Uint32 func, co
             {
                 Uint32 index = r * canvas.getWidth() + c;
                 outData[index] = inData[index] - canvasData[index];
+
+                // Clamp height
+                if (outData[index] < 0.0f)
+                    outData[index] = 0.0f;
             }
         }
     }
@@ -336,7 +344,13 @@ void EditSystem::moveBrush(const Vector2f& pos)
     }
     else if (mode == 1)
     {
-        blendColorMaps(m_canvasMap, m_colorMapSrc, m_colorMap, m_panel->getSelectedColor(), m_brushMin, m_brushMax);
+        const float gamma = 2.2f;
+        Vector3f adjusted = m_panel->getSelectedColor();
+        adjusted.r = powf(adjusted.r, gamma);
+        adjusted.g = powf(adjusted.g, gamma);
+        adjusted.b = powf(adjusted.b, gamma);
+
+        blendColorMaps(m_canvasMap, m_colorMapSrc, m_colorMap, adjusted, m_brushMin, m_brushMax);
         m_terrain->updateColorMap(m_colorMap, brushBoundsPos, brushBoundsSize);
     }
 }

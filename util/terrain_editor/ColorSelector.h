@@ -24,6 +24,10 @@ public:
 	void onWindowClose(const std::function<void(bool)>& func);
 
 private:
+	void onMouseButton(const E_MouseButton& e) override;
+
+	void onMouseMove(const E_MouseMove& e) override;
+
 	bool handlesMouseEvents() const override;
 
 	void onConfirmCancelBtn(Button* btn);
@@ -51,6 +55,8 @@ private:
 
 	std::function<void(bool)> m_onWindowClose;
 	Vector3f m_selectedColor;
+	Vector2f m_mouseOffset;
+	bool m_isPressed;
 };
 
 
