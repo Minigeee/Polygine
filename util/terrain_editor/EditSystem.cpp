@@ -271,6 +271,16 @@ void EditSystem::moveBrush(const Vector2f& pos)
 
     Vector2i texCoord = Vector2i((pos / m_terrain->getSize() + 0.5f) * size);
 
+    // Clamp texture coordinate
+    if (texCoord.x < 0)
+        texCoord.x = 0;
+    if (texCoord.x > m_heightMap.getWidth())
+        texCoord.x = m_heightMap.getWidth();
+    if (texCoord.y < 0)
+        texCoord.y = 0;
+    if (texCoord.y > m_heightMap.getHeight())
+        texCoord.y = m_heightMap.getHeight();
+
     if (texCoord == m_brushPos) return;
     m_brushPos = texCoord;
 
@@ -326,7 +336,7 @@ void EditSystem::moveBrush(const Vector2f& pos)
     }
     else if (mode == 1)
     {
-        blendColorMaps(m_canvasMap, m_colorMapSrc, m_colorMap, Vector3f(0, 1, 0), m_brushMin, m_brushMax);
+        blendColorMaps(m_canvasMap, m_colorMapSrc, m_colorMap, m_panel->getSelectedColor(), m_brushMin, m_brushMax);
         m_terrain->updateColorMap(m_colorMap, brushBoundsPos, brushBoundsSize);
     }
 }

@@ -9,10 +9,12 @@
 
 using namespace poly;
 
+class ColorSelector;
+
 class BrushPanel : public UIElement
 {
 public:
-	BrushPanel();
+	BrushPanel(ColorSelector* colorSelector);
 
 	~BrushPanel();
 
@@ -43,6 +45,11 @@ public:
 	Vector3f getSelectedColor() const;
 
 private:
+	void onColorSelector(bool confirmed);
+
+private:
+	ColorSelector* m_colorSelector;
+
 	Text* m_panelTitle;
 	Text* m_modeTitle;
 	Text* m_functionTitle;

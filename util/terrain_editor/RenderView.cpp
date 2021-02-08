@@ -39,6 +39,39 @@ void RenderView::onBrushMove(const std::function<void(const Vector3f&)>& func)
 }
 
 
+void RenderView::terrainPaint(const Vector2f& mousePos)
+{
+	// Update transforms for size
+	updateTransforms();
+
+	// Return if camera is below terrain
+	if (m_camera->getPosition().y <= 0.0f)
+		return;
+
+	// Get local space coords
+	Vector2f p = getLocalCoordinate(mousePos);
+
+	// Get depth value
+	float depth = 0.0f;
+	m_target->readPixels(&depth, (Uint32)p.x, (Uint32)(m_target->getHeight() - p.y), 1, 1, PixelFormat::Depth, GLType::Float);
+
+	// Get normalized coords
+	p /= Vector2f(m_target->getWidth(), m_target->getHeight());
+	p.y = 1.0f - p.y;
+
+	// Get fragment location
+	Matrix4f invProjView = inverse(m_camera->getProjMatrix() * m_camera->getViewMatrix());
+	depth = 2.0f * depth - 1.0f;
+	Vector4f clipPos = Vector4f(2.0f * p - 1.0f, depth, 1.0f);
+	Vector4f pos = invProjView * clipPos;
+	Vector3f intersection = Vector3f(pos) / pos.w;
+
+	// If the intersection is underground, don't count as brush move
+	if (m_onBrushMove)
+		m_onBrushMove(intersection);
+}
+
+
 ///////////////////////////////////////////////////////////
 void RenderView::onMouseMove(const E_MouseMove& e)
 {
@@ -95,32 +128,7 @@ void RenderView::onMouseMove(const E_MouseMove& e)
 	}
 
 	if (m_paintMode)
-	{
-		// Update transforms for size
-		updateTransforms();
-
-		// Get local space coords
-		Vector2f p = getLocalCoordinate(mousePos);
-
-		// Get depth value
-		float depth = 0.0f;
-		m_target->readPixels(&depth, (Uint32)p.x, (Uint32)(m_target->getHeight() - p.y), 1, 1, PixelFormat::Depth, GLType::Float);
-
-		// Get normalized coords
-		p /= Vector2f(m_target->getWidth(), m_target->getHeight());
-		p.y = 1.0f - p.y;
-
-		// Get fragment location
-		Matrix4f invProjView = inverse(m_camera->getProjMatrix() * m_camera->getViewMatrix());
-		depth = 2.0f * depth - 1.0f;
-		Vector4f clipPos = Vector4f(2.0f * p - 1.0f, depth, 1.0f);
-		Vector4f pos = invProjView * clipPos;
-		Vector3f intersection = Vector3f(pos) / pos.w;
-
-		// If the intersection is underground, don't count as brush move
-		if (m_onBrushMove)
-			m_onBrushMove(intersection);
-	}
+		terrainPaint(mousePos);
 }
 
 
@@ -143,6 +151,9 @@ void RenderView::onMouseButton(const E_MouseButton& e)
 		{
 			m_paintMode = true;
 			m_mousePos = Window::getCurrent()->getCursorPos();
+
+			// Paint circle on mouse down
+			terrainPaint(Window::getCurrent()->getCursorPos());
 
 			if (m_onBrushDown)
 				m_onBrushDown();

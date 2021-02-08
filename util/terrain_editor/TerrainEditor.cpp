@@ -19,6 +19,7 @@
 #include <poly/UI/UISystem.h>
 
 #include "BrushPanel.h"
+#include "ColorSelector.h"
 #include "EditSystem.h"
 #include "RenderView.h"
 
@@ -106,8 +107,12 @@ void main()
         separators[i].setColor(0.25f, 0.25f, 0.3f, 1.0f);
     }
 
+    // Color selector
+    ColorSelector colorSelector;
+    ui.addChild(&colorSelector);
+
     // Brush panel
-    BrushPanel brushPanel;
+    BrushPanel brushPanel(&colorSelector);
     brushPanel.setRadius(5.0f);
     brushPanel.setStrength(0.02f);
     brushPanel.setGradient(5.0f);
@@ -122,6 +127,8 @@ void main()
         renderView.setTexture(&textures[4]);
         renderView.setFlippedUv(true);
         ui.addChild(&renderView);
+
+        renderView.moveToBack();
     }
 
     ///////////////////////////////////////////////////////////
@@ -169,39 +176,51 @@ void main()
                     editSystem.undo();
                 else if (e.m_key == Keyboard::Y)
                     editSystem.redo();
+
+                else if (e.m_key == Keyboard::Tab)
+                {
+                    // Change color if in color tab
+                    if (brushPanel.getMode() == 1)
+                    {
+                        Uint32 colorIndex = (brushPanel.getColorSlot() + 1) % 4;
+                        brushPanel.setColorSlot(colorIndex);
+                    }
+                }
             }
-
-            if (e.m_key == Keyboard::Tab)
-                brushPanel.setMode((brushPanel.getMode() + 1) % 3);
-
-            else if (e.m_key == Keyboard::One)
+            else
             {
-                if (brushPanel.getMode() == 0)
-                    brushPanel.setHeightFunc(0);
-                else if (brushPanel.getMode() == 1)
-                    brushPanel.setColorSlot(0);
-            }
+                if (e.m_key == Keyboard::Tab)
+                    brushPanel.setMode((brushPanel.getMode() + 1) % 3);
 
-            else if (e.m_key == Keyboard::Two)
-            {
-                if (brushPanel.getMode() == 0)
-                    brushPanel.setHeightFunc(1);
-                else if (brushPanel.getMode() == 1)
-                    brushPanel.setColorSlot(1);
-            }
+                else if (e.m_key == Keyboard::One)
+                {
+                    if (brushPanel.getMode() == 0)
+                        brushPanel.setHeightFunc(0);
+                    else if (brushPanel.getMode() == 1)
+                        brushPanel.setColorSlot(0);
+                }
 
-            else if (e.m_key == Keyboard::Three)
-            {
-                if (brushPanel.getMode() == 0)
-                    brushPanel.setHeightFunc(2);
-                else if (brushPanel.getMode() == 1)
-                    brushPanel.setColorSlot(2);
-            }
+                else if (e.m_key == Keyboard::Two)
+                {
+                    if (brushPanel.getMode() == 0)
+                        brushPanel.setHeightFunc(1);
+                    else if (brushPanel.getMode() == 1)
+                        brushPanel.setColorSlot(1);
+                }
 
-            else if (e.m_key == Keyboard::Four)
-            {
-                if (brushPanel.getMode() == 1)
-                    brushPanel.setColorSlot(3);
+                else if (e.m_key == Keyboard::Three)
+                {
+                    if (brushPanel.getMode() == 0)
+                        brushPanel.setHeightFunc(2);
+                    else if (brushPanel.getMode() == 1)
+                        brushPanel.setColorSlot(2);
+                }
+
+                else if (e.m_key == Keyboard::Four)
+                {
+                    if (brushPanel.getMode() == 1)
+                        brushPanel.setColorSlot(3);
+                }
             }
         }
     );

@@ -1,6 +1,7 @@
 #include <poly/Core/ObjectPool.h>
 
 #include "BrushPanel.h"
+#include "ColorSelector.h"
 
 #include <string>
 
@@ -34,7 +35,9 @@ void brushDropdownItemUnhover(Button* button, const E_MouseMove& e)
 
 
 ///////////////////////////////////////////////////////////
-BrushPanel::BrushPanel() :
+BrushPanel::BrushPanel(ColorSelector* colorSelector) :
+	m_colorSelector		(colorSelector),
+
 	m_panelTitle		(Pool<Text>::alloc()),
 	m_modeTitle			(Pool<Text>::alloc()),
 	m_functionTitle		(Pool<Text>::alloc()),
@@ -323,6 +326,7 @@ BrushPanel::~BrushPanel()
 {
 	Pool<Text>::free(m_panelTitle);
 	Pool<Text>::free(m_modeTitle);
+	Pool<Text>::free(m_functionTitle);
 	Pool<Text>::free(m_radiusTitle);
 	Pool<Text>::free(m_strengthTitle);
 	Pool<Text>::free(m_gradientTitle);
@@ -335,6 +339,14 @@ BrushPanel::~BrushPanel()
 	Pool<TextInput>::free(m_radiusInput);
 	Pool<TextInput>::free(m_strengthInput);
 	Pool<TextInput>::free(m_gradientInput);
+	Pool<HListView>::free(m_radiusRow);
+	Pool<HListView>::free(m_strengthRow);
+	Pool<HListView>::free(m_gradientRow);
+
+	for (Uint32 i=0;i<4;++i)
+		Pool<Button>::free(m_colorButtons[i]);
+
+	Pool<UIElement>::free(m_colorIndicator);
 }
 
 
@@ -424,9 +436,21 @@ void BrushPanel::setGradient(float gradient)
 ///////////////////////////////////////////////////////////
 void BrushPanel::setColorSlot(Uint32 slot)
 {
-	m_selectedColor = slot;
+	if (slot != m_selectedColor)
+	{
+		m_selectedColor = slot;
 
-	m_colorIndicator->setPosition(2.0f + slot * 48.0f, 98.0f);
+		m_colorIndicator->setPosition(2.0f + slot * 48.0f, 98.0f);
+	}
+	else
+	{
+		// Setup color selector window
+		Vector3f color(m_colorButtons[slot]->getColor());
+		m_colorSelector->setSelectedColor(color.r, color.g, color.b);
+		m_colorSelector->setVisible(true);
+
+		m_colorSelector->onWindowClose(std::bind(&BrushPanel::onColorSelector, this, std::placeholders::_1));
+	}
 }
 
 
@@ -462,4 +486,29 @@ float BrushPanel::getGradient() const
 Uint32 BrushPanel::getHeightFunc() const
 {
 	return m_functionMenu->getSelectedItem();
+}
+
+
+///////////////////////////////////////////////////////////
+Uint32 BrushPanel::getColorSlot() const
+{
+	return m_selectedColor;
+}
+
+
+///////////////////////////////////////////////////////////
+Vector3f BrushPanel::getSelectedColor() const
+{
+	return Vector3f(m_colorButtons[m_selectedColor]->getColor());
+}
+
+
+///////////////////////////////////////////////////////////
+void BrushPanel::onColorSelector(bool confirmed)
+{
+	if (confirmed)
+	{
+		// Update color slot to new color
+		m_colorButtons[m_selectedColor]->setColor(Vector4f(m_colorSelector->getSelectedColor(), 1.0f));
+	}
 }

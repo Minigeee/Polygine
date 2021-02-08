@@ -20,6 +20,8 @@ public:
 	void onBrushMove(const std::function<void(const Vector3f&)>& func);
 
 private:
+	void terrainPaint(const Vector2f& p);
+
 	void onMouseMove(const E_MouseMove& e) override;
 
 	void onMouseButton(const E_MouseButton& e) override;

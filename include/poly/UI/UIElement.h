@@ -493,7 +493,7 @@ public:
 	/// \param recursive Set this to true to apply to all subchildren
 	///
 	///////////////////////////////////////////////////////////
-	void setVisible(bool visible, bool recursive = true);
+	virtual void setVisible(bool visible, bool recursive = true);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the transparent flag for the element

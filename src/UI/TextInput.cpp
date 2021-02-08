@@ -213,6 +213,19 @@ void TextInput::setTextOffset(float x, float y)
 
 
 ///////////////////////////////////////////////////////////
+void TextInput::setVisible(bool visible, bool recursive)
+{
+	bool origVal = m_textCursor->isVisible();
+
+	// Default function
+	UIElement::setVisible(visible, recursive);
+
+	// Set text cursor to its original state
+	m_textCursor->setVisible(origVal, false);
+}
+
+
+///////////////////////////////////////////////////////////
 const std::string& TextInput::getValue() const
 {
 	return m_text->getString();

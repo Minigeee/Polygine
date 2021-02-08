@@ -1,4 +1,5 @@
 #ifndef POLY_LIST_VIEW
+#define POLY_LIST_VIEW
 
 #include <poly/UI/UIElement.h>
 

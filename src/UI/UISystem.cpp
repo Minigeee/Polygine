@@ -143,6 +143,7 @@ void UISystem::render(FrameBuffer& target, bool overlay)
 	Texture* currentTexture = 0;
 	Shader* currentShader = 0;
 	Vector4f currentClipRect(0.0f);
+	Vector4f currentBlendColor(1.0f);
 	Uint32 prevOffset = 0;
 	for (Uint32 i = 0; i < transparentRenderData.size(); ++i)
 	{
@@ -152,6 +153,7 @@ void UISystem::render(FrameBuffer& target, bool overlay)
 			group.m_texture != currentTexture ||
 			group.m_shader != currentShader ||
 			group.m_clipRect != currentClipRect ||
+			group.m_blendColor != currentBlendColor ||
 			i == 0)
 		{
 			// Finish previous group
