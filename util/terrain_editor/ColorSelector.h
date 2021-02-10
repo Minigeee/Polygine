@@ -21,7 +21,7 @@ public:
 
 	const Vector3f& getSelectedColor() const;
 
-	void onWindowClose(const std::function<void(bool)>& func);
+	void onConfirm(const std::function<void()>& func);
 
 private:
 	void onMouseButton(const E_MouseButton& e) override;
@@ -53,7 +53,7 @@ private:
 	Button* m_confirmBtn;
 	Button* m_cancelBtn;
 
-	std::function<void(bool)> m_onWindowClose;
+	std::function<void()> m_onConfirm;
 	Vector3f m_selectedColor;
 	Vector2f m_mouseOffset;
 	bool m_isPressed;

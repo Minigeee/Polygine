@@ -87,6 +87,10 @@ void main()
     font.load("examples/fonts/segoeui/segoeui.ttf");
     Text::setDefaultFont(&font);
 
+    ColorSelector colorSelector;
+    BrushPanel brushPanel(&colorSelector);
+    EditSystem editSystem(&terrain, &brushPanel);
+
     // Setup UI
     ui.setWindow(&window);
 
@@ -109,16 +113,18 @@ void main()
     }
 
     // Color selector
-    ColorSelector colorSelector;
     ui.addChild(&colorSelector);
 
+    // Import/export dialog
+    ImportExportDialog importExportDialog;
+    ui.addChild(&importExportDialog);
+
     // File panel
-    FilePanel filePanel;
+    FilePanel filePanel(&importExportDialog, &editSystem);
     listView.addChild(&filePanel);
     listView.addChild(&separators[0], Vector2f(8.0f, 0.0f));
 
     // Brush panel
-    BrushPanel brushPanel(&colorSelector);
     brushPanel.setRadius(5.0f);
     brushPanel.setStrength(0.02f);
     brushPanel.setGradient(5.0f);
@@ -138,8 +144,6 @@ void main()
     }
 
     ///////////////////////////////////////////////////////////
-
-    EditSystem editSystem(&terrain, &brushPanel);
     
     // Brush events
     renderView.onBrushMove(

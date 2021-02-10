@@ -10,4 +10,11 @@ function(add_project name)
     target_link_libraries(${name} PRIVATE polygine)
 endfunction()
 
+set(PNG_INCLUDE_DIR "" CACHE PATH "libpng include directory")
+set(PNG_LIBRARY_DEBUG "" CACHE FILEPATH "libpng debug binary")
+set(PNG_LIBRARY_RELEASE "" CACHE FILEPATH "libpng release binary")
+
 add_project(terrain_editor)
+target_include_directories(terrain_editor PRIVATE ${PNG_INCLUDE_DIR})
+target_link_libraries(terrain_editor PRIVATE debug ${PNG_LIBRARY_DEBUG})
+target_link_libraries(terrain_editor PRIVATE optimized ${PNG_LIBRARY_RELEASE})

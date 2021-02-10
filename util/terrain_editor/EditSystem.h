@@ -26,6 +26,10 @@ public:
 
 	void redo();
 
+	Image& getHeightMap();
+
+	Image& getColorMap();
+
 private:
 	struct MapState
 	{

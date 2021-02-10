@@ -92,6 +92,18 @@ public:
 	void setItemColor(float r, float g, float b, float a);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Overrided version of set visibility
+	///
+	/// Prevents the dropdown submenu from inheriting the visibility
+	/// property.
+	///
+	/// \param visible Visibilty flag
+	/// \param recursive Set this to true to apply to all subchildren
+	///
+	///////////////////////////////////////////////////////////
+	void setVisible(bool visible, bool recursive = true) override;
+
+	///////////////////////////////////////////////////////////
 	/// \brief Set the index of the selected item
 	///
 	/// \return The index of the selected item

@@ -449,7 +449,7 @@ void BrushPanel::setColorSlot(Uint32 slot)
 		m_colorSelector->setSelectedColor(color.r, color.g, color.b);
 		m_colorSelector->setVisible(true);
 
-		m_colorSelector->onWindowClose(std::bind(&BrushPanel::onColorSelector, this, std::placeholders::_1));
+		m_colorSelector->onConfirm(std::bind(&BrushPanel::onColorSelector, this));
 	}
 }
 
@@ -504,11 +504,8 @@ Vector3f BrushPanel::getSelectedColor() const
 
 
 ///////////////////////////////////////////////////////////
-void BrushPanel::onColorSelector(bool confirmed)
+void BrushPanel::onColorSelector()
 {
-	if (confirmed)
-	{
-		// Update color slot to new color
-		m_colorButtons[m_selectedColor]->setColor(Vector4f(m_colorSelector->getSelectedColor(), 1.0f));
-	}
+	// Update color slot to new color
+	m_colorButtons[m_selectedColor]->setColor(Vector4f(m_colorSelector->getSelectedColor(), 1.0f));
 }

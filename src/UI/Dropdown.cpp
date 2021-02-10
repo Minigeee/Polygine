@@ -139,6 +139,19 @@ void Dropdown::setItemColor(float r, float g, float b, float a)
 
 
 ///////////////////////////////////////////////////////////
+void Dropdown::setVisible(bool visible, bool recursive)
+{
+	bool origVal = m_menu->isVisible();
+
+	// Default function
+	UIElement::setVisible(visible, recursive);
+
+	// Set text cursor to its original state
+	m_menu->setVisible(origVal);
+}
+
+
+///////////////////////////////////////////////////////////
 Uint32 Dropdown::getSelectedItem() const
 {
 	return m_selectedItem;

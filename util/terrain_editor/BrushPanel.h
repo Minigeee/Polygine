@@ -45,7 +45,7 @@ public:
 	Vector3f getSelectedColor() const;
 
 private:
-	void onColorSelector(bool confirmed);
+	void onColorSelector();
 
 private:
 	ColorSelector* m_colorSelector;

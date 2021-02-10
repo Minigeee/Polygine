@@ -452,3 +452,17 @@ void EditSystem::redo()
         m_terrain->updateColorMap(m_colorMap, state.m_min, state.m_max - state.m_min);
     }
 }
+
+
+///////////////////////////////////////////////////////////
+Image& EditSystem::getHeightMap()
+{
+    return m_heightMap;
+}
+
+
+///////////////////////////////////////////////////////////
+Image& EditSystem::getColorMap()
+{
+    return m_colorMap;
+}

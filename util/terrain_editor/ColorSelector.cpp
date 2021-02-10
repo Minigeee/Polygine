@@ -17,8 +17,8 @@ void ColorSelector::onConfirmCancelBtn(Button* btn)
 		btn->setColor(0.25f, 0.25f, 0.30f, 1.0f);
 
 		setVisible(false);
-		if (m_onWindowClose)
-			m_onWindowClose(btn == m_confirmBtn);
+		if (m_onConfirm && btn == m_confirmBtn)
+			m_onConfirm();
 	}
 	else
 		btn->setColor(0.22f, 0.22f, 0.27f, 1.0f);
@@ -436,7 +436,7 @@ bool ColorSelector::handlesMouseEvents() const
 
 
 ///////////////////////////////////////////////////////////
-void ColorSelector::onWindowClose(const std::function<void(bool)>& func)
+void ColorSelector::onConfirm(const std::function<void()>& func)
 {
-	m_onWindowClose = func;
+	m_onConfirm = func;
 }
