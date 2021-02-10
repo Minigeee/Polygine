@@ -16,6 +16,7 @@ out vec2 g_texCoord;
 out vec4 g_color;
 
 uniform vec2 u_targetSize;
+uniform bool u_flippedUv;
 
 const float PI = 3.1415926535;
 
@@ -54,9 +55,20 @@ void main()
 
     // Texture coords
     vec2 t1 = v_texCoord[0];
-    vec2 t3 = v_texCoord[0] + vec2(v_texSize[0].x, 0.0f);
     vec2 t2 = v_texCoord[0] + vec2(0.0f, v_texSize[0].y);
+    vec2 t3 = v_texCoord[0] + vec2(v_texSize[0].x, 0.0f);
     vec2 t4 = v_texCoord[0] + vec2(v_texSize[0].x, v_texSize[0].y);
+
+    if (u_flippedUv)
+    {
+        vec2 temp = t1;
+        t1 = t2;
+        t2 = temp;
+
+        temp = t3;
+        t3 = t4;
+        t4 = temp;
+    }
 
     // Emit vertices
     gl_Position = v1;

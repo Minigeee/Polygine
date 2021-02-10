@@ -26,11 +26,14 @@ inline T* Pool<T>::alloc()
 template <typename T>
 inline void Pool<T>::free(T* ptr)
 {
-	// Call the destructor
-	ptr->~T();
+	if (ptr)
+	{
+		// Call the destructor
+		ptr->~T();
 
-	// Free from pool
-	s_pool.free(ptr);
+		// Free from pool
+		s_pool.free(ptr);
+	}
 }
 
 }

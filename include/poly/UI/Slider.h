@@ -89,10 +89,11 @@ public:
 	/// at a value of 0, the slider button would be positioned on
 	/// the left side of the element.
 	///
-	/// \param value The value to assign 
+	/// \param value The value to assign
+	/// \param callFunc The flag for if the value change callback should be called (Default false)
 	///
 	///////////////////////////////////////////////////////////
-	void setValue(float value);
+	void setValue(float value, bool callFunc = false);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the slider's value

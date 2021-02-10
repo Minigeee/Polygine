@@ -51,7 +51,7 @@ void UISystem::render(FrameBuffer& target, bool overlay)
 
 	// Check if the sizes are the same
 	if (target.getWidth() != m_pixelSize.x || target.getHeight() != m_pixelSize.y)
-		setSize(target.getWidth(), target.getHeight());
+		setSize((float)target.getWidth(), (float)target.getHeight());
 
 	// Bind framebuffer
 	target.bind();
@@ -62,6 +62,9 @@ void UISystem::render(FrameBuffer& target, bool overlay)
 		glCheck(glClear(GL_DEPTH_BUFFER_BIT));
 	else
 		glCheck(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
+
+	// Enable depth test
+	glCheck(glEnable(GL_DEPTH_TEST));
 
 	std::vector<UIRenderData> renderData;
 	std::vector<UIRenderData> transparentRenderData;
@@ -140,6 +143,7 @@ void UISystem::render(FrameBuffer& target, bool overlay)
 	Texture* currentTexture = 0;
 	Shader* currentShader = 0;
 	Vector4f currentClipRect(0.0f);
+	Vector4f currentBlendColor(1.0f);
 	Uint32 prevOffset = 0;
 	for (Uint32 i = 0; i < transparentRenderData.size(); ++i)
 	{
@@ -149,6 +153,7 @@ void UISystem::render(FrameBuffer& target, bool overlay)
 			group.m_texture != currentTexture ||
 			group.m_shader != currentShader ||
 			group.m_clipRect != currentClipRect ||
+			group.m_blendColor != currentBlendColor ||
 			i == 0)
 		{
 			// Finish previous group
@@ -169,7 +174,8 @@ void UISystem::render(FrameBuffer& target, bool overlay)
 					group.m_clipRect,
 					m_instanceBufferOffset,
 					transparentQuads.size() - group.m_offset,
-					true
+					true,
+					group.m_hasFlippedUv
 				});
 
 			// Update previous offset
@@ -222,6 +228,7 @@ void UISystem::render(FrameBuffer& target, bool overlay)
 		if (group.m_texture)
 		{
 			shader->setUniform("u_texture", *group.m_texture);
+			shader->setUniform("u_flippedUv", (int)group.m_hasFlippedUv);
 			shader->setUniform("u_hasTexture", true);
 		}
 		else
@@ -305,7 +312,8 @@ void UISystem::getRenderQuads(
 						element->getColor(),
 						element->getShader(),
 						clipRect,
-						0, 0, false
+						0, 0, false,
+						element->hasFlippedUv()
 					});
 				quads.push_back(std::vector<UIQuad>());
 			}
@@ -339,7 +347,8 @@ void UISystem::getRenderQuads(
 					clipRect,
 					start,
 					transparentQuads.size() - start,
-					false
+					false,
+					element->hasFlippedUv()
 				});
 
 			// Set index
@@ -407,7 +416,7 @@ bool UISystem::relayMouseMove(UIElement* element, const E_MouseMove& e)
 	}
 
 	// Skip if element does not handle mouse events
-	if (!element->handlesMouseEvents()) return false;
+	if (!element->handlesMouseEvents() || !element->isVisible()) return false;
 
 	Vector2f p = element->getLocalCoordinate(Vector2f(e.m_x, e.m_y));
 	p += element->m_pixelSize * element->m_origin;
@@ -433,6 +442,10 @@ bool UISystem::relayMouseMove(UIElement* element, const E_MouseMove& e)
 
 			// Update the current hovered element
 			m_hovered = element;
+
+			// Has hover for a UI system is different, it tells if any of its children
+			// has hover
+			m_hasHover = true;
 		}
 
 		// Send event for mouse move
@@ -461,6 +474,10 @@ void UISystem::onMouseMove(const E_MouseMove& e)
 			m_hovered->onMouseLeave(e);
 
 			m_hovered = 0;
+
+			// Has hover for a UI system is different, it tells if any of its children
+			// has hover
+			m_hasHover = false;
 		}
 	}
 

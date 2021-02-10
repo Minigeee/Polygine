@@ -67,10 +67,10 @@ int main()
     );
 
     Model model;
-    model.load("models/character/character.dae");
+    model.load("examples/models/character/character.dae");
 
-    Skeleton skeleton("models/character/character.dae");
-    Animation animation("models/character/character.dae", "Armature");
+    Skeleton skeleton("examples/models/character/character.dae");
+    Animation animation("examples/models/character/character.dae", "Armature");
     skeleton.setAnimation(&animation);
 
     Shader shader;
@@ -128,14 +128,16 @@ int main()
     scene.addRenderSystem(&octree);
 
     ProceduralSkybox skybox;
+    skybox.setZenithColor(Vector3f(0.15f, 0.4f, 0.8f));
+    skybox.setHorizonColor(Vector3f(0.9f, 0.55f, 0.35f));
     terrain.setAmbientColor(skybox.getAmbientColor() * 0.3f);
     scene.addRenderSystem(&skybox);
 
     DirLightComponent sun;
     // sun.m_diffuse = Vector3f(0.08f, 0.15f, 0.25f) * 0.4f;
-    sun.m_diffuse = Vector3f(0.9f, 0.9f, 0.8f);
+    sun.m_diffuse = Vector3f(0.9f, 0.55f, 0.35f);
     sun.m_specular = sun.m_diffuse * 0.2f;
-    sun.m_direction.z = 2.0f;
+    sun.m_direction.z = 10.0f;
     scene.createEntity(sun);
 
     TransformComponent t;
@@ -154,38 +156,38 @@ int main()
 
     Texture texture[8];
 
-    FrameBuffer multisampled;
-    multisampled.create(1280, 720, 0, true);
-    multisampled.bind();
-    multisampled.attachColor(&texture[0], PixelFormat::Rgb, GLType::Uint16);
-    multisampled.attachDepth();
-
-    FrameBuffer framebuffer;
-    framebuffer.create(1280, 720);
-    framebuffer.bind();
-    framebuffer.attachColor(&texture[1], PixelFormat::Rgb, GLType::Uint16);
+    FrameBuffer framebuffers[2];
+    for (Uint32 i = 0; i < 2; ++i)
+    {
+        framebuffers[i].create(1280, 720);
+        framebuffers[i].attachColor(&texture[2 * i + 1], PixelFormat::Rgb, GLType::Uint16);
+        framebuffers[i].attachDepth(&texture[2 * i + 2]);
+    }
 
     // Post process stuff
     ColorAdjust colorAdjust;
+    Fog fog;
+    fog.setCamera(&camera);
+    fog.setScene(&scene);
+    fog.setColor(0.272f, 0.348f, 0.675f);
+    fog.setScatterStrength(0.5f);
+    fog.setSkyboxFog(true);
 
-    UISystem ui;
-    ui.setWindow(&window);
+    Fxaa fxaa;
 
-    Font font;
-    font.load("fonts/segoeui/segoeui.ttf");
-    Text::setDefaultFont(&font);
 
-    Text texts[10];
-    for (Uint32 i = 0; i < 10; ++i)
-        texts[i].setString("Hello World!");
-
-    HListView list;
-    list.setPosition(30.0f, 30.0f);
-    for (Uint32 i = 0; i < 10; ++i)
-        list.addChild(&texts[i], Vector2f(0.0f, 5.0f));
-
-    ui.addChild(&list);
-
+    window.addListener<E_WindowResize>(
+        [&](const E_WindowResize& e)
+        {
+            for (Uint32 i = 0; i < 2; ++i)
+            {
+                framebuffers[i].reset();
+                framebuffers[i].create(e.m_width, e.m_height);
+                framebuffers[i].attachColor(&texture[2 * i], PixelFormat::Rgb, GLType::Uint16);
+                framebuffers[i].attachDepth(&texture[2 * i + 1]);
+            }
+        }
+    );
 
     bool mouseDown = false;
     window.addListener<E_MouseButton>(
@@ -230,6 +232,8 @@ int main()
     // Game loop
     while (window.isOpen())
     {
+        START_PROFILING(GameLoop);
+
         // Poll events for all existing windows
         Window::pollEvents();
 
@@ -263,25 +267,26 @@ int main()
         // Render scene
         skeleton.update(elapsed);
         octree.update();
-        scene.render(camera, multisampled);
-        multisampled.blitTo(framebuffer);
+        scene.render(camera, framebuffers[0]);
 
-        colorAdjust.render(framebuffer);
-        ui.update(elapsed);
-        ui.render(FrameBuffer::Default, true);
+        fog.render(framebuffers[0], framebuffers[1]);
+        colorAdjust.render(framebuffers[1], framebuffers[0]);
+        fxaa.render(framebuffers[0]);
+
+        STOP_PROFILING(GameLoop);
 
         // Display (swap buffers)
         window.display();
     }
 
-    const ProfilerData& data = Profiler::getData("poly::UISystem::render");
+    const ProfilerData& data = Profiler::getData("main", "GameLoop");
     std::cout << data.mean().toMicroseconds() << '\n';
 
     return 0;
 }
 
 // TODO : Add convenience constructor loaders
-// TODO : Document all UI classes
+// TODO : Document Dropdown
 // TODO : Improve particle system + document new version
 // TODO : Improve post processing + document new version
 // TODO : Change RenderState or remove it

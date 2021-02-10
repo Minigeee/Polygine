@@ -47,9 +47,10 @@ public:
 	/// \brief Set the value of the text input
 	///
 	/// \param value The string value to give the text input
+	/// \param callFunc The flag for if the value change callback should be called (Default false)
 	///
 	///////////////////////////////////////////////////////////
-	void setValue(const std::string& value);
+	void setValue(const std::string& value, bool callFunc = false);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the designated submit key
@@ -187,6 +188,18 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	void setTextOffset(float x, float y);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Overrided version of set visibility
+	///
+	/// Prevents the text cursor from inheriting the visibility
+	/// property.
+	///
+	/// \param visible Visibilty flag
+	/// \param recursive Set this to true to apply to all subchildren
+	///
+	///////////////////////////////////////////////////////////
+	void setVisible(bool visible, bool recursive = true) override;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the string value of the text input

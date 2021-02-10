@@ -139,7 +139,7 @@ Slider::~Slider()
 
 
 ///////////////////////////////////////////////////////////
-void Slider::setValue(float value)
+void Slider::setValue(float value, bool callFunc)
 {
 	if (value == m_value) return;
 
@@ -157,7 +157,7 @@ void Slider::setValue(float value)
 	m_button->setPosition(x, m_button->getRelPosition().y);
 
 	// Call function
-	if (m_onValueChange)
+	if (callFunc && m_onValueChange)
 		m_onValueChange(m_value);
 }
 

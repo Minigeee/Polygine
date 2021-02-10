@@ -29,6 +29,7 @@ struct UIRenderData
 	Uint32 m_offset;
 	Uint32 m_instances;
 	bool m_transparent;
+	bool m_hasFlippedUv;
 };
 
 

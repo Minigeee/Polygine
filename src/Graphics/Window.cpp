@@ -71,6 +71,23 @@ void onTextInput(GLFWwindow* window, Uint32 c)
 
 
 ///////////////////////////////////////////////////////////
+void onWindowResize(GLFWwindow* window, int w, int h)
+{
+	Window* win = (Window*)glfwGetWindowUserPointer(window);
+	win->sendEvent(E_WindowResize((Uint32)w, (Uint32)h));
+}
+
+
+///////////////////////////////////////////////////////////
+E_WindowResize::E_WindowResize(Uint32 w, Uint32 h) :
+	m_width		(w),
+	m_height	(h)
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
 Window::Window() :
 	m_window(0),
 	m_cursor(0)
@@ -200,9 +217,19 @@ bool Window::create(Uint32 w, Uint32 h, const std::string& title, bool fullscree
 	glfwSetCursorPosCallback(m_window, onMouseMove);
 	glfwSetScrollCallback(m_window, onMouseScroll);
 	glfwSetCharCallback(m_window, onTextInput);
+	glfwSetWindowSizeCallback(m_window, onWindowResize);
 
 	// glfwGetCursorPos() is buggy
 	addListener<E_MouseMove>([&](const E_MouseMove& e) { m_cursorPos = Vector2f(e.m_x, e.m_y); });
+
+	// Resize default framebuffer on window resize
+	addListener<E_WindowResize>(
+		[&](const E_WindowResize& e)
+		{
+			FrameBuffer::Default.m_size.x = e.m_width;
+			FrameBuffer::Default.m_size.y = e.m_height;
+		}
+	);
 
 	return true;
 }

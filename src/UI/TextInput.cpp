@@ -75,13 +75,13 @@ void TextInput::submit()
 
 
 ///////////////////////////////////////////////////////////
-void TextInput::setValue(const std::string& value)
+void TextInput::setValue(const std::string& value, bool callFunc)
 {
 	if (value != m_text->getString())
 	{
 		m_text->setString(value);
 
-		if (m_onValueChanged)
+		if (callFunc && m_onValueChanged)
 			m_onValueChanged(value);
 	}
 }
@@ -209,6 +209,19 @@ void TextInput::setTextOffset(const Vector2f& offset)
 void TextInput::setTextOffset(float x, float y)
 {
 	m_text->setPosition(x, y);
+}
+
+
+///////////////////////////////////////////////////////////
+void TextInput::setVisible(bool visible, bool recursive)
+{
+	bool origVal = m_textCursor->isVisible();
+
+	// Default function
+	UIElement::setVisible(visible, recursive);
+
+	// Set text cursor to its original state
+	m_textCursor->setVisible(origVal, false);
 }
 
 
