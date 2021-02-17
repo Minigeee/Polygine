@@ -10,6 +10,7 @@
 #include <poly/Graphics/Camera.h>
 #include <poly/Graphics/Components.h>
 #include <poly/Graphics/FrameBuffer.h>
+#include <poly/Graphics/Grass.h>
 #include <poly/Graphics/Image.h>
 #include <poly/Graphics/Model.h>
 #include <poly/Graphics/Octree.h>
@@ -127,10 +128,15 @@ int main()
     octree.create();
     scene.addRenderSystem(&octree);
 
+    Grass grass;
+    grass.setTerrain(&terrain);
+    scene.addRenderSystem(&grass);
+
     ProceduralSkybox skybox;
     skybox.setZenithColor(Vector3f(0.15f, 0.4f, 0.8f));
     skybox.setHorizonColor(Vector3f(0.9f, 0.55f, 0.35f));
     terrain.setAmbientColor(skybox.getAmbientColor() * 0.3f);
+    grass.setAmbientColor(skybox.getAmbientColor() * 0.3f);
     scene.addRenderSystem(&skybox);
 
     DirLightComponent sun;

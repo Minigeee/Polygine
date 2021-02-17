@@ -230,7 +230,7 @@ public:
 	/// \return A reference to the height map texture
 	///
 	///////////////////////////////////////////////////////////
-	const Texture& getHeightMap() const;
+	Texture& getHeightMap();
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get color map texture
@@ -238,7 +238,7 @@ public:
 	/// \return A reference to the color map texture
 	///
 	///////////////////////////////////////////////////////////
-	const Texture& getColorMap() const;
+	Texture& getColorMap();
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get normal map texture
@@ -246,7 +246,7 @@ public:
 	/// \return A reference to the normal map texture
 	///
 	///////////////////////////////////////////////////////////
-	const Texture& getNormalMap() const;
+	Texture& getNormalMap();
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get terrain ambient color

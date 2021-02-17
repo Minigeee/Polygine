@@ -844,21 +844,21 @@ float Terrain::getMaxDist() const
 
 
 ///////////////////////////////////////////////////////////
-const Texture& Terrain::getHeightMap() const
+Texture& Terrain::getHeightMap()
 {
 	return m_heightMap;
 }
 
 
 ///////////////////////////////////////////////////////////
-const Texture& Terrain::getColorMap() const
+Texture& Terrain::getColorMap()
 {
 	return m_colorMap;
 }
 
 
 ///////////////////////////////////////////////////////////
-const Texture& Terrain::getNormalMap() const
+Texture& Terrain::getNormalMap()
 {
 	return m_normalMap;
 }

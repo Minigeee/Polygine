@@ -7,7 +7,14 @@ namespace poly
 ///////////////////////////////////////////////////////////
 void Frustum::setPlane(const Plane& plane, Side side)
 {
-	mPlanes[side] = plane;
+	m_planes[side] = plane;
+}
+
+
+///////////////////////////////////////////////////////////
+const Plane& Frustum::getPlane(Side side) const
+{
+	return m_planes[side];
 }
 
 
@@ -19,7 +26,7 @@ bool Frustum::contains(const BoundingBox& box) const
 
 	for (Uint32 i = 0; i < 6; ++i)
 	{
-		const Plane& plane = mPlanes[i];
+		const Plane& plane = m_planes[i];
 
 		Vector3f vmin;
 		vmin.x = plane.n.x > 0.0f ? max.x : min.x;
@@ -41,7 +48,7 @@ bool Frustum::contains(const Sphere& sphere) const
 
 	for (Uint32 i = 0; i < 6; ++i)
 	{
-		const Plane& plane = mPlanes[i];
+		const Plane& plane = m_planes[i];
 
 		if (dist(plane, sphere.m_position) + sphere.m_radius < 0.0f)
 			contains = false;
