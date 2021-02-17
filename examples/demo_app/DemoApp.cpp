@@ -46,6 +46,8 @@ using namespace poly;
 
 int main()
 {
+    srand(time(NULL));
+
     Window window;
 
     // Create a new window
