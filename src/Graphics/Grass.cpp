@@ -23,6 +23,7 @@ Grass::Grass() :
 	m_color				(0.0f),
 	m_colorMap			(0),
 	m_densityMap		(0),
+	m_sizeMap			(0),
 	m_hasDefaultColor	(false)
 {
 	m_lodDists.push_back(10.0f);
@@ -136,6 +137,15 @@ void Grass::render(Camera& camera)
 	else
 		shader.setUniform("u_useDensityMap", false);
 
+	// Set size map
+	if (m_densityMap)
+	{
+		shader.setUniform("u_sizeMap", *m_densityMap);
+		shader.setUniform("u_useSizeMap", true);
+	}
+	else
+		shader.setUniform("u_useSizeMap", false);
+
 	// Double side render
 	glCheck(glDisable(GL_CULL_FACE));
 	glCheck(glEnable(GL_BLEND));
@@ -233,6 +243,13 @@ void Grass::setDensityMap(Texture* dmap)
 
 
 ///////////////////////////////////////////////////////////
+void Grass::setSizeMap(Texture* smap)
+{
+	m_sizeMap = smap;
+}
+
+
+///////////////////////////////////////////////////////////
 float Grass::getGrassSpacing() const
 {
 	return m_grassSpacing;
@@ -278,6 +295,13 @@ Texture* Grass::getColorMap() const
 Texture* Grass::getDensityMap() const
 {
 	return m_densityMap;
+}
+
+
+///////////////////////////////////////////////////////////
+Texture* Grass::getSizeMap() const
+{
+	return m_sizeMap;
 }
 
 

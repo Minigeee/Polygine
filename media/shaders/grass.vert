@@ -8,6 +8,8 @@ out vec3 v_normal;
 out vec3 v_color;
 out float v_density;
 out float v_spacing;
+out float v_grassWidth;
+out float v_grassHeight;
 
 uniform vec3 u_cameraPos;
 
@@ -17,10 +19,14 @@ uniform sampler2D u_heightMap;
 uniform sampler2D u_normalMap;
 uniform sampler2D u_colorMap;
 uniform sampler2D u_densityMap;
+uniform sampler2D u_sizeMap;
 uniform bool u_useColorMap;
 uniform bool u_useDensityMap;
+uniform bool u_useSizeMap;
 
 uniform vec3 u_grassColor;
+uniform float u_grassWidth;
+uniform float u_grassHeight;
 
 ///////////////////////////////////////////////////////////
 
@@ -60,6 +66,19 @@ void main()
         v_density = texture(u_densityMap, texCoord).r;
     else
         v_density = 1.0f;
+
+    // Grass size
+    if (u_useSizeMap)
+    {
+        vec2 size = texture(u_sizeMap, texCoord).rg;
+        v_grassWidth = size.x;
+        v_grassHeight = size.y;
+    }
+    else
+    {
+        v_grassWidth = u_grassWidth;
+        v_grassHeight = u_grassHeight;
+    }
 
     // Set base a_spacing
     v_spacing = a_spacing;

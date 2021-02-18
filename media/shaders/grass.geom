@@ -8,6 +8,8 @@ in vec3 v_normal[];
 in vec3 v_color[];
 in float v_density[];
 in float v_spacing[];
+in float v_grassWidth[];
+in float v_grassHeight[];
 
 out vec3 g_position;
 out vec3 g_normal;
@@ -20,8 +22,6 @@ uniform vec3 u_cameraPos;
 
 uniform float u_grassRadius;
 uniform float u_grassSpacing;
-uniform float u_grassWidth;
-uniform float u_grassHeight;
 const vec2 u_windDir = vec2(1, 0);
 
 uniform float u_time;
@@ -69,8 +69,8 @@ void main()
 
     vec3 right = normalize(vec3(rand(g_position.xz) - 0.5f, 0.0f, rand(g_position.zx) - 0.5f));
     vec3 up = normalize(vec3(rand(2.0f * g_position.xz) * 1.4f - 0.7f, 1.0f, rand(2.0f * g_position.zx) * 1.4f - 0.7f));
-    float grassWidth = 0.5f * u_grassWidth * (v_spacing[0] / u_grassSpacing);
-    float grassHeight = (rand(2.0f * g_position.xz) * 0.8f + 0.6f) * u_grassHeight;
+    float grassWidth = 0.5f * v_grassWidth[0] * (v_spacing[0] / u_grassSpacing);
+    float grassHeight = (rand(2.0f * g_position.xz) * 0.8f + 0.6f) * v_grassHeight[0];
 
     float fadeFactor = clamp(1.0f - (g_dist - (u_grassRadius - 8.0f)) / 8.0f, 0.0f, 1.0f);
     grassWidth *= fadeFactor;

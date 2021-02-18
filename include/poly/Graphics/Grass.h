@@ -41,6 +41,8 @@ public:
 
 	void setDensityMap(Texture* dmap);
 
+	void setSizeMap(Texture* smap);
+
 	float getGrassSpacing() const;
 
 	float getGrassWidth() const;
@@ -54,6 +56,8 @@ public:
 	Texture* getColorMap() const;
 
 	Texture* getDensityMap() const;
+
+	Texture* getSizeMap() const;
 
 private:
 	static Shader& getShader();
@@ -74,6 +78,7 @@ private:
 	Vector3f m_color;
 	Texture* m_colorMap;
 	Texture* m_densityMap;
+	Texture* m_sizeMap;
 	bool m_hasDefaultColor;
 
 	Clock m_clock;
