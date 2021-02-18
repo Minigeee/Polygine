@@ -6,6 +6,7 @@ layout (triangle_strip, max_vertices = 5) out;
 in vec3 v_position[];
 in vec3 v_normal[];
 in vec3 v_color[];
+in float v_density[];
 in float v_spacing[];
 
 out vec3 g_position;
@@ -53,6 +54,14 @@ float noise(vec2 st) {
 
 void main()
 {
+    // Calculate a density value
+    float density = rand(2.5f * v_position[0].xz + 0.1f);
+    if (density > v_density[0])
+    {
+        EndPrimitive();
+        return;
+    }
+
     g_position = v_position[0];
     g_normal = v_normal[0];
     g_color.rgb = v_color[0];
@@ -64,11 +73,13 @@ void main()
     float grassHeight = (rand(2.0f * g_position.xz) * 0.8f + 0.6f) * u_grassHeight;
 
     float fadeFactor = clamp(1.0f - (g_dist - (u_grassRadius - 8.0f)) / 8.0f, 0.0f, 1.0f);
+    grassWidth *= fadeFactor;
+    grassHeight *= fadeFactor;
     g_color.a = fadeFactor;
 
     float windStrength = noise(v_position[0].xz + vec2(u_time, 0.0f) * 2.0f) * 0.6f;
     vec3 windOffset = vec3(u_windDir.x, 0, u_windDir.y) * windStrength;
-    g_normal = normalize(g_normal + windOffset.xyz * 1.0f * fadeFactor);
+    g_normal = normalize(g_normal + windOffset.xyz * 1.0f);
     g_frontNormal = normalize(cross(right * grassWidth, up * grassHeight + windOffset));
 
     vec3 worldPos = v_position[0] - right * grassWidth;

@@ -14,11 +14,20 @@ Shader Grass::s_shader;
 
 ///////////////////////////////////////////////////////////
 Grass::Grass() :
-	m_scene			(0),
-	m_terrain		(0),
-	m_ambientColor	(0.02f)
+	m_scene				(0),
+	m_terrain			(0),
+	m_ambientColor		(0.02f),
+	m_grassSpacing		(0.1f),
+	m_grassWidth		(0.15f),
+	m_grassHeight		(0.8f),
+	m_color				(0.0f),
+	m_colorMap			(0),
+	m_densityMap		(0),
+	m_hasDefaultColor	(false)
 {
-
+	m_lodDists.push_back(10.0f);
+	m_lodDists.push_back(25.0f);
+	m_lodDists.push_back(50.0f);
 }
 
 
@@ -27,18 +36,13 @@ void Grass::init(Scene* scene)
 {
 	m_scene = scene;
 
-	const float m_grassRadius = 50.0f;
-	const float m_grassSpacing = 0.1f;
-
-	float lodDists[] = { 10.0f, 25.0f, m_grassRadius };
-
 	// Add grass data around origin
 	std::vector<Vector3f> grassData;
 
 	// Add grass for each lod layer
-	for (Uint32 lodLevel = 0; lodLevel < 3; ++lodLevel)
+	for (Uint32 lodLevel = 0; lodLevel < m_lodDists.size(); ++lodLevel)
 	{
-		float radius = lodDists[lodLevel];
+		float radius = m_lodDists[lodLevel];
 		float spacing = m_grassSpacing * powf(2.0f, (float)lodLevel);
 
 		for (float y = -radius; y < radius; y += spacing)
@@ -49,7 +53,7 @@ void Grass::init(Scene* scene)
 			{
 				float dist = sqrtf(x * x + y * y);
 
-				if (lodLevel == 0 || dist > lodDists[lodLevel - 1])
+				if (lodLevel == 0 || dist > m_lodDists[lodLevel - 1])
 					grassData.push_back(Vector3f(x, y, spacing));
 			}
 		}
@@ -67,6 +71,9 @@ void Grass::init(Scene* scene)
 ///////////////////////////////////////////////////////////
 void Grass::render(Camera& camera)
 {
+	// Need to have terrain to render
+	if (!m_terrain) return;
+
 	Shader& shader = getShader();
 
 	// Apply shader uniforms
@@ -74,10 +81,10 @@ void Grass::render(Camera& camera)
 	shader.setUniform("u_projView", camera.getProjMatrix() * camera.getViewMatrix());
 	shader.setUniform("u_cameraPos", camera.getPosition());
 	shader.setUniform("u_ambient", m_ambientColor);
-	shader.setUniform("u_grassRadius", 50.0f);
-	shader.setUniform("u_grassSpacing", 0.1f);
-	shader.setUniform("u_grassWidth", 0.15f);
-	shader.setUniform("u_grassHeight", 0.8f);
+	shader.setUniform("u_grassRadius", m_lodDists.back());
+	shader.setUniform("u_grassSpacing", m_grassSpacing);
+	shader.setUniform("u_grassWidth", m_grassWidth);
+	shader.setUniform("u_grassHeight", m_grassHeight);
 	shader.setUniform("u_time", m_clock.getElapsedTime().toSeconds());
 
 	// Apply directional lights
@@ -99,7 +106,35 @@ void Grass::render(Camera& camera)
 	shader.setUniform("u_terrainHeight", m_terrain->getHeight());
 	shader.setUniform("u_heightMap", m_terrain->getHeightMap());
 	shader.setUniform("u_normalMap", m_terrain->getNormalMap());
-	shader.setUniform("u_colorMap", m_terrain->getColorMap());
+
+	// Set color map
+	if (m_colorMap)
+	{
+		shader.setUniform("u_colorMap", *m_colorMap);
+		shader.setUniform("u_useColorMap", true);
+	}
+	else
+	{
+		if (m_hasDefaultColor)
+		{
+			shader.setUniform("u_grassColor", m_color);
+			shader.setUniform("u_useColorMap", false);
+		}
+		else
+		{
+			shader.setUniform("u_colorMap", m_terrain->getColorMap());
+			shader.setUniform("u_useColorMap", true);
+		}
+	}
+
+	// Set density map
+	if (m_densityMap)
+	{
+		shader.setUniform("u_densityMap", *m_densityMap);
+		shader.setUniform("u_useDensityMap", true);
+	}
+	else
+		shader.setUniform("u_useDensityMap", false);
 
 	// Double side render
 	glCheck(glDisable(GL_CULL_FACE));
@@ -125,6 +160,124 @@ void Grass::setTerrain(Terrain* terrain)
 void Grass::setAmbientColor(const Vector3f& color)
 {
 	m_ambientColor = color;
+}
+
+
+///////////////////////////////////////////////////////////
+void Grass::setGrassSpacing(float spacing)
+{
+	m_grassSpacing = spacing;
+
+	// Recreate the grass mesh
+	if (m_scene)
+		init(m_scene);
+}
+
+
+///////////////////////////////////////////////////////////
+void Grass::setGrassWidth(float width)
+{
+	m_grassWidth = width;
+}
+
+
+///////////////////////////////////////////////////////////
+void Grass::setGrassHeight(float height)
+{
+	m_grassHeight = height;
+}
+
+
+///////////////////////////////////////////////////////////
+void Grass::setLodDistance(float dist, Uint32 lodLevel)
+{
+	if (lodLevel < m_lodDists.size())
+		m_lodDists[lodLevel] = dist;
+	else if (lodLevel == m_lodDists.size())
+		m_lodDists.push_back(dist);
+
+	// Recreate the grass mesh
+	if (m_scene)
+		init(m_scene);
+}
+
+
+///////////////////////////////////////////////////////////
+void Grass::setColor(float r, float g, float b)
+{
+	m_color = Vector3f(r, g, b);
+	m_hasDefaultColor = true;
+}
+
+
+///////////////////////////////////////////////////////////
+void Grass::setColor(const Vector3f& color)
+{
+	m_color = color;
+	m_hasDefaultColor = true;
+}
+
+
+///////////////////////////////////////////////////////////
+void Grass::setColorMap(Texture* cmap)
+{
+	m_colorMap = cmap;
+}
+
+
+///////////////////////////////////////////////////////////
+void Grass::setDensityMap(Texture* dmap)
+{
+	m_densityMap = dmap;
+}
+
+
+///////////////////////////////////////////////////////////
+float Grass::getGrassSpacing() const
+{
+	return m_grassSpacing;
+}
+
+
+///////////////////////////////////////////////////////////
+float Grass::getGrassWidth() const
+{
+	return m_grassWidth;
+}
+
+
+///////////////////////////////////////////////////////////
+float Grass::getGrassHeight() const
+{
+	return m_grassHeight;
+}
+
+
+///////////////////////////////////////////////////////////
+float Grass::getLodDistance(Uint32 lodLevel) const
+{
+	return m_lodDists[lodLevel];
+}
+
+
+///////////////////////////////////////////////////////////
+const Vector3f& Grass::getColor() const
+{
+	return m_color;
+}
+
+
+///////////////////////////////////////////////////////////
+Texture* Grass::getColorMap() const
+{
+	return m_colorMap;
+}
+
+
+///////////////////////////////////////////////////////////
+Texture* Grass::getDensityMap() const
+{
+	return m_densityMap;
 }
 
 

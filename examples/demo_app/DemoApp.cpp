@@ -130,16 +130,16 @@ int main()
     octree.create();
     scene.addRenderSystem(&octree);
 
-    Grass grass;
-    grass.setTerrain(&terrain);
-    scene.addRenderSystem(&grass);
-
     ProceduralSkybox skybox;
     skybox.setZenithColor(Vector3f(0.15f, 0.4f, 0.8f));
     skybox.setHorizonColor(Vector3f(0.9f, 0.55f, 0.35f));
     terrain.setAmbientColor(skybox.getAmbientColor() * 0.3f);
-    grass.setAmbientColor(skybox.getAmbientColor() * 0.3f);
     scene.addRenderSystem(&skybox);
+
+    Grass grass;
+    grass.setTerrain(&terrain);
+    grass.setAmbientColor(skybox.getAmbientColor() * 0.3f);
+    scene.addRenderSystem(&grass);
 
     DirLightComponent sun;
     // sun.m_diffuse = Vector3f(0.08f, 0.15f, 0.25f) * 0.4f;

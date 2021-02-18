@@ -25,6 +25,36 @@ public:
 
 	void setAmbientColor(const Vector3f& color);
 
+	void setGrassSpacing(float spacing);
+
+	void setGrassWidth(float width);
+
+	void setGrassHeight(float height);
+
+	void setLodDistance(float dist, Uint32 lodLevel);
+
+	void setColor(float r, float g, float b);
+
+	void setColor(const Vector3f& color);
+
+	void setColorMap(Texture* cmap);
+
+	void setDensityMap(Texture* dmap);
+
+	float getGrassSpacing() const;
+
+	float getGrassWidth() const;
+
+	float getGrassHeight() const;
+
+	float getLodDistance(Uint32 lodLevel) const;
+
+	const Vector3f& getColor() const;
+
+	Texture* getColorMap() const;
+
+	Texture* getDensityMap() const;
+
 private:
 	static Shader& getShader();
 
@@ -37,6 +67,14 @@ private:
 
 	Terrain* m_terrain;
 	Vector3f m_ambientColor;
+	float m_grassWidth;
+	float m_grassHeight;
+	float m_grassSpacing;
+	std::vector<float> m_lodDists;
+	Vector3f m_color;
+	Texture* m_colorMap;
+	Texture* m_densityMap;
+	bool m_hasDefaultColor;
 
 	Clock m_clock;
 };

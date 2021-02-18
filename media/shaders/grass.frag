@@ -70,7 +70,7 @@ void main()
 
     float mixFactor = clamp(g_dist / 20.0f, 0.0f, 1.0f);
     mixFactor -= 1.0f;
-    mixFactor = -0.4f * mixFactor * mixFactor + 1.0f;
+    mixFactor = -0.3f * mixFactor * mixFactor + 1.0f;
         
     // Calculate lighting
     vec3 result = g_color.rgb * u_ambient;

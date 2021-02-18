@@ -6,6 +6,7 @@ layout (location = 1) in float a_spacing;
 out vec3 v_position;
 out vec3 v_normal;
 out vec3 v_color;
+out float v_density;
 out float v_spacing;
 
 uniform vec3 u_cameraPos;
@@ -15,6 +16,11 @@ uniform float u_terrainHeight;
 uniform sampler2D u_heightMap;
 uniform sampler2D u_normalMap;
 uniform sampler2D u_colorMap;
+uniform sampler2D u_densityMap;
+uniform bool u_useColorMap;
+uniform bool u_useDensityMap;
+
+uniform vec3 u_grassColor;
 
 ///////////////////////////////////////////////////////////
 
@@ -44,7 +50,16 @@ void main()
     v_normal = texture(u_normalMap, texCoord).rgb;
 
     // Terrain color
-    v_color = texture(u_colorMap, texCoord).rgb;
+    if (u_useColorMap)
+        v_color = texture(u_colorMap, texCoord).rgb;
+    else
+        v_color = u_grassColor;
+
+    // Get density value from map
+    if (u_useDensityMap)
+        v_density = texture(u_densityMap, texCoord).r;
+    else
+        v_density = 1.0f;
 
     // Set base a_spacing
     v_spacing = a_spacing;
