@@ -103,7 +103,7 @@ void Scene::addRenderSystem(RenderSystem* system)
 
 
 ///////////////////////////////////////////////////////////
-void Scene::render(Camera& camera, FrameBuffer& target)
+void Scene::render(Camera& camera, FrameBuffer& target, RenderPass pass)
 {
 	// Bind framebuffer
 	target.bind();
@@ -113,7 +113,7 @@ void Scene::render(Camera& camera, FrameBuffer& target)
 
 	// Render all render systems
 	for (Uint32 i = 0; i < m_renderSystems.size(); ++i)
-		m_renderSystems[i]->render(camera);
+		m_renderSystems[i]->render(camera, pass);
 }
 
 }

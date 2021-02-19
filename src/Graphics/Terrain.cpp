@@ -423,8 +423,10 @@ void Terrain::createTileLayout()
 
 
 ///////////////////////////////////////////////////////////
-void Terrain::render(Camera& camera)
+void Terrain::render(Camera& camera, RenderPass pass)
 {
+	// The terrain should be rendered regardless of render pass
+
 	ASSERT(m_scene, "The terrain must be initialized before using, by calling the init() function");
 
 	START_PROFILING_FUNC;

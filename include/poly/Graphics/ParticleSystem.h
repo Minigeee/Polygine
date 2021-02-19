@@ -74,7 +74,7 @@ public:
 
 	void init(Scene* scene) override;
 
-	void render(Camera& camera) override;
+	void render(Camera& camera, RenderPass pass) override;
 
 	void update(float dt);
 

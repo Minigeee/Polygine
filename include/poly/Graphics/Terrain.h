@@ -70,9 +70,10 @@ public:
 	/// this function will not be directly called.
 	///
 	/// \param camera The camera to render from the perspective of
+	/// \param pass The render pass that is being executed
 	///
 	///////////////////////////////////////////////////////////
-	void render(Camera& camera) override;
+	void render(Camera& camera, RenderPass pass) override;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the size of the terrain

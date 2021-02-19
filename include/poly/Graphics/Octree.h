@@ -142,9 +142,10 @@ public:
 	/// is used, or if the view matrix of the camera is changed.
 	///
 	/// \param camera The camera to render from the perspective of
+	/// \param pass The render pass that is being executed
 	///
 	///////////////////////////////////////////////////////////
-	void render(Camera& camera) override;
+	void render(Camera& camera, RenderPass pass) override;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the ambient color

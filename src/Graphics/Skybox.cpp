@@ -47,8 +47,11 @@ void Skybox::init(Scene* scene)
 
 
 ///////////////////////////////////////////////////////////
-void Skybox::render(Camera& camera)
+void Skybox::render(Camera& camera, RenderPass pass)
 {
+    // The skybox shouldn't be rendered in the shadow pass
+    if (pass == RenderPass::Shadow) return;
+
     Shader& shader = getShader();
 
     shader.bind();
@@ -227,8 +230,11 @@ void ProceduralSkybox::init(Scene* scene)
 
 
 ///////////////////////////////////////////////////////////
-void ProceduralSkybox::render(Camera& camera)
+void ProceduralSkybox::render(Camera& camera, RenderPass pass)
 {
+    // The skybox shouldn't be rendered in the shadow pass
+    if (pass == RenderPass::Shadow) return;
+
     Shader& shader = getShader();
 
     shader.bind();

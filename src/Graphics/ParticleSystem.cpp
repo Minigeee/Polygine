@@ -152,8 +152,11 @@ void ParticleSystem::update(float dt)
 
 
 ///////////////////////////////////////////////////////////
-void ParticleSystem::render(Camera& camera)
+void ParticleSystem::render(Camera& camera, RenderPass pass)
 {
+	// Only render for the default render pass
+	if (pass != RenderPass::Default) return;
+
 	// Bind shader and set uniforms
 	Shader& shader = getShader();
 	shader.bind();

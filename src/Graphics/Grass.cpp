@@ -70,8 +70,11 @@ void Grass::init(Scene* scene)
 
 
 ///////////////////////////////////////////////////////////
-void Grass::render(Camera& camera)
+void Grass::render(Camera& camera, RenderPass pass)
 {
+	// Only render grass for default pass
+	if (pass != RenderPass::Default) return;
+
 	// Need to have terrain to render
 	if (!m_terrain) return;
 

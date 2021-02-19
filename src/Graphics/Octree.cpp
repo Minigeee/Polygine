@@ -672,8 +672,10 @@ void Octree::remove(Entity::Id entity)
 
 
 ///////////////////////////////////////////////////////////
-void Octree::render(Camera& camera)
+void Octree::render(Camera& camera, RenderPass pass)
 {
+	// Anything in the octree should be rendered for all passes
+
 	ASSERT(m_scene, "The octree must be initialized before using, by calling the init() function");
 
 	START_PROFILING_FUNC;

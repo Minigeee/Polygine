@@ -8,12 +8,10 @@
 
 #include <poly/Graphics/Camera.h>
 #include <poly/Graphics/FrameBuffer.h>
+#include <poly/Graphics/RenderSystem.h>
 
 namespace poly
 {
-
-
-class RenderSystem;
 
 
 ///////////////////////////////////////////////////////////
@@ -520,9 +518,10 @@ public:
 	///
 	/// \param camera The camera used to render the scene
 	/// \param target The target framebuffer to render the scene to
+	/// \param pass The render pass that should be executed
 	///
 	///////////////////////////////////////////////////////////
-	void render(Camera& camera, FrameBuffer& target = FrameBuffer::Default);
+	void render(Camera& camera, FrameBuffer& target = FrameBuffer::Default, RenderPass pass = RenderPass::Default);
 
 private:
 	Handle m_handle;									//!< The scene handle used for scene id

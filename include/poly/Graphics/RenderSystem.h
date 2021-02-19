@@ -11,6 +11,20 @@ namespace poly
 class Scene;
 
 ///////////////////////////////////////////////////////////
+/// \brief An enum defining render passes
+///
+/// Render systems can decide to skip rendering for certain
+/// render passes (i.e. skipping detail foliage for reflections).
+///
+///////////////////////////////////////////////////////////
+enum class RenderPass
+{
+	Default,	//!< A default render pass
+	Shadow,		//!< A shadow render pass
+	Reflection	//!< A reflection render pass
+};
+
+///////////////////////////////////////////////////////////
 /// \brief The base class for all rendering procedure classes
 ///
 ///////////////////////////////////////////////////////////
@@ -30,9 +44,10 @@ public:
 	/// \brief Execute the rendering procedures
 	///
 	/// \param camera The camera to render from the perspective of
+	/// \param pass The render pass that is being executed
 	///
 	///////////////////////////////////////////////////////////
-	virtual void render(Camera& camera) = 0;
+	virtual void render(Camera& camera, RenderPass pass) = 0;
 };
 
 }
