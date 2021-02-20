@@ -29,8 +29,8 @@ void main()
     // Calculate the three local cardinal vectors of the particle
     vec3 front = normalize(v_position[0] - u_cameraPos);
     vec3 right = cross(front, vec3(0, 1, 0));
-    right = right * c + cross(front, right) * s + front * dot(front, right) * (1.0f - c);
-    vec3 up = cross(right, front);
+    right = normalize(right * c + cross(front, right) * s + front * dot(front, right) * (1.0f - c));
+    vec3 up = normalize(cross(right, front));
 
     // Get corner vertices
     vec4 v1 = vec4(v_position[0] - right * v_size[0].x + up * v_size[0].y, 1.0f);
