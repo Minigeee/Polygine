@@ -149,8 +149,14 @@ void Grass::render(Camera& camera, RenderPass pass)
 	else
 		shader.setUniform("u_useSizeMap", false);
 
+
+	// Enable depth testing
+	glCheck(glEnable(GL_DEPTH_TEST));
+
 	// Double side render
 	glCheck(glDisable(GL_CULL_FACE));
+
+	// Enable alpha blending
 	glCheck(glEnable(GL_BLEND));
 	glCheck(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 

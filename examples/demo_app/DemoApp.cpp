@@ -295,9 +295,9 @@ int main()
 
 // TODO : Add convenience constructor loaders
 // TODO : Document Dropdown
+// TODO : Document Grass
 // TODO : Improve particle system + document new version
 // TODO : Improve post processing + document new version
-// TODO : Change RenderState or remove it
 // TODO : Renderable base class + Billboard
 // TODO : Octree lod system
 // TODO : Bloom effect

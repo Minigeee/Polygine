@@ -3,6 +3,7 @@
 #include <poly/Engine/Components.h>
 #include <poly/Engine/Scene.h>
 
+#include <poly/Graphics/GLCheck.h>
 #include <poly/Graphics/RenderSystem.h>
 
 namespace poly
@@ -108,8 +109,8 @@ void Scene::render(Camera& camera, FrameBuffer& target, RenderPass pass)
 	// Bind framebuffer
 	target.bind();
 
-	// Render state
-	RenderState::Default.apply();
+	// Clear framebuffer
+	glCheck(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
 
 	// Render all render systems
 	for (Uint32 i = 0; i < m_renderSystems.size(); ++i)

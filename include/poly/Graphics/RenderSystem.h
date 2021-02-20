@@ -3,7 +3,6 @@
 
 #include <poly/Graphics/Camera.h>
 #include <poly/Graphics/FrameBuffer.h>
-#include <poly/Graphics/RenderState.h>
 
 namespace poly
 {

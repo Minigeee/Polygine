@@ -65,6 +65,10 @@ void Skybox::render(Camera& camera, RenderPass pass)
     glCheck(glActiveTexture(GL_TEXTURE0));
     glCheck(glBindTexture(GL_TEXTURE_CUBE_MAP, m_id));
 
+
+    // Enable depth testing
+    glCheck(glEnable(GL_DEPTH_TEST));
+
     // Disable writing to depth buffer
     glCheck(glDepthMask(GL_FALSE));
 
@@ -265,6 +269,11 @@ void ProceduralSkybox::render(Camera& camera, RenderPass pass)
     shader.setUniform("u_topRadius", m_topRadius);
     shader.setUniform("u_botRadius", m_botRadius);
     shader.setUniform("u_radius", m_altitude + m_botRadius);
+
+
+    // Enable depth testing
+    glCheck(glEnable(GL_DEPTH_TEST));
+    glCheck(glDepthFunc(GL_LEQUAL));
 
     // Disable writing to depth buffer
     glCheck(glDepthMask(GL_FALSE));

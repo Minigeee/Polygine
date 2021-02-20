@@ -5,6 +5,7 @@
 
 #include <poly/Graphics/Camera.h>
 #include <poly/Graphics/Components.h>
+#include <poly/Graphics/GLCheck.h>
 #include <poly/Graphics/Model.h>
 #include <poly/Graphics/Octree.h>
 #include <poly/Graphics/Shader.h>
@@ -748,6 +749,14 @@ void Octree::render(Camera& camera, RenderPass pass)
 				return a.m_shader < b.m_shader;
 		}
 	);
+
+
+	// Enable depth testing
+	glCheck(glEnable(GL_DEPTH_TEST));
+
+	// Single side render
+	glCheck(glEnable(GL_CULL_FACE));
+	glCheck(glCullFace(GL_BACK));
 
 	// Bind the first shader
 	Shader* shader = renderData.front().m_shader;

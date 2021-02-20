@@ -568,6 +568,13 @@ void Terrain::render(Camera& camera, RenderPass pass)
 	shader.setUniform("u_tileScale", m_tileScale);
 	shader.setUniform("u_blendLodDist", m_lodDists[m_lodDists.size() - 2]);
 
+	// Enable depth testing
+	glCheck(glEnable(GL_DEPTH_TEST));
+
+	// Single side render
+	glCheck(glEnable(GL_CULL_FACE));
+	glCheck(glCullFace(GL_BACK));
+
 	// Enable clip planes
 	for (Uint32 i = 0; i < 4; ++i)
 		glCheck(glEnable(GL_CLIP_DISTANCE0 + i));
