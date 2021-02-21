@@ -7,7 +7,7 @@ namespace poly
 {
 
 class Animation;
-class Model;
+class Renderable;
 class Shader;
 class Skeleton;
 
@@ -31,10 +31,10 @@ struct RenderComponent
 	/// If no shader is provided, the default shader will be used
 	///
 	///////////////////////////////////////////////////////////
-	RenderComponent(Model* model, Shader* shader = 0);
+	RenderComponent(Renderable* renderable, Shader* shader = 0);
 
-	Model* m_model;			//!< The model to render
-	Shader* m_shader;		//!< The shader to render the model with
+	Renderable* m_renderable;		//!< The model to render
+	Shader* m_shader;				//!< The shader to render the model with
 };
 
 

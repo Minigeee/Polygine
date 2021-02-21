@@ -141,9 +141,6 @@ int main()
     grass.setAmbientColor(skybox.getAmbientColor() * 0.3f);
     scene.addRenderSystem(&grass);
 
-    CpuParticles<Particle> particles;
-    scene.addRenderSystem(&particles);
-
     DirLightComponent sun;
     // sun.m_diffuse = Vector3f(0.08f, 0.15f, 0.25f) * 0.4f;
     sun.m_diffuse = Vector3f(0.9f, 0.55f, 0.35f);
@@ -274,26 +271,6 @@ int main()
 
         if (length(move) != 0.0f)
             camera.move(normalize(move) * elapsed * 3.4f);
-
-        // Update particles
-        Particle particle;
-        particle.m_position = Vector3f(0, 50, 0);
-        particle.m_color = Vector4f(1, 0, 0, 1);
-
-        particles.addParticle(particle);
-        particles.update(
-            [&](float dt, Particle& particle) -> bool
-            {
-                // Remove particles over a few seconds
-                if (particle.m_age > 1.0f)
-                    return false;
-
-                particle.m_velocity += Vector3f(0.0f, 9.0f, 0.0f) * dt;
-                particle.m_position += particle.m_velocity * dt;
-
-                return true;
-            }
-        );
 
         // Render scene
         skeleton.update(elapsed);

@@ -187,14 +187,15 @@ private:
 
 	struct RenderGroup
 	{
-		Model* m_model;
+		Renderable* m_renderable;
+		std::vector<Uint32> m_lodLevels;
 		Shader* m_shader;
 		Skeleton* m_skeleton;
 	};
 
 	struct RenderData
 	{
-		Model* m_model;
+		Renderable* m_renderable;
 		Shader* m_shader;
 		Skeleton* m_skeleton;
 		Uint32 m_offset;
@@ -209,7 +210,9 @@ private:
 
 	void update(const Entity::Id& id, RenderComponent& r, TransformComponent& t);
 
-	void getRenderData(Node* node, const Frustum& frustum, std::vector<std::vector<EntityData*>>& entityData);
+	void getRenderData(Node* node, const Frustum& frustum, std::vector<std::vector<EntityData*>>& entityData, const Vector3f& cameraPos);
+
+	Uint32 getRenderGroup(Renderable* renderable, Shader* shader, Skeleton* skeleton);
 
 private:
 	ObjectPool m_nodePool;								//!< The object pool that holds node data

@@ -8,6 +8,7 @@
 #include <poly/Math/Vector3.h>
 
 #include <poly/Graphics/Material.h>
+#include <poly/Graphics/Renderable.h>
 #include <poly/Graphics/VertexArray.h>
 #include <poly/Graphics/VertexBuffer.h>
 
@@ -44,7 +45,7 @@ struct Vertex
 /// \brief A class that contains vertex and material data
 ///
 ///////////////////////////////////////////////////////////
-class Model
+class Model : public Renderable
 {
 public:
 	///////////////////////////////////////////////////////////
@@ -99,28 +100,12 @@ public:
 	void setMaterial(const Material& material, Uint32 index = 0);
 
 	///////////////////////////////////////////////////////////
-	/// \brief Get the internal vertex array
+	/// \brief Get the vertex array used to render the model
 	///
-	/// \return The vertex array
+	/// \return A vertex array
 	///
 	///////////////////////////////////////////////////////////
 	VertexArray& getVertexArray();
-
-	///////////////////////////////////////////////////////////
-	/// \brief Get the local bounding box
-	///
-	/// \return The bounding box
-	///
-	///////////////////////////////////////////////////////////
-	const BoundingBox& getBoundingBox() const;
-	
-	///////////////////////////////////////////////////////////
-	/// \brief Get the local bounding sphere
-	///
-	/// \brief The bounding sphere
-	///
-	///////////////////////////////////////////////////////////
-	const Sphere& getBoundingSphere() const;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the list of vertices
@@ -152,8 +137,6 @@ private:
 	VertexArray m_vertexArray;				//!< The vertex array used to render the model
 	VertexBuffer m_vertexBuffer;			//!< The vertex buffer used to store the main vertex data
 	VertexBuffer m_skeletalVertexBuffer;	//!< The vertex buffer used to store skeletal vertex data
-	BoundingBox m_boundingBox;				//!< The bounding box surrounding the model
-	Sphere m_boundingSphere;				//!< The bounding sphere surrounding te model
 
 	std::vector<Vertex> m_vertices;			//!< The list of vertex data excluding skeletal data
 	std::vector<Material> m_materials;		//!< The list of materials

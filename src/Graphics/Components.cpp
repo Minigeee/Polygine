@@ -6,17 +6,17 @@ namespace poly
 
 ///////////////////////////////////////////////////////////
 RenderComponent::RenderComponent() :
-	m_model		(0),
-	m_shader	(0)
+	m_renderable	(0),
+	m_shader		(0)
 {
 
 }
 
 
 ///////////////////////////////////////////////////////////
-RenderComponent::RenderComponent(Model* model, Shader* shader) :
-	m_model		(model),
-	m_shader	(shader)
+RenderComponent::RenderComponent(Renderable* renderable, Shader* shader) :
+	m_renderable	(renderable),
+	m_shader		(shader)
 {
 
 }

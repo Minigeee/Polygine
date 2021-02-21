@@ -452,6 +452,13 @@ void Model::create(const std::vector<Vertex>& vertices, BufferUsage usage)
 
 
 ///////////////////////////////////////////////////////////
+VertexArray& Model::getVertexArray()
+{
+	return m_vertexArray;
+}
+
+
+///////////////////////////////////////////////////////////
 void Model::setVertices(const std::vector<Vertex>& vertices)
 {
 	// Don't set vertices if model hasn't been created yet
@@ -477,27 +484,6 @@ void Model::setVertices(const std::vector<Vertex>& vertices)
 void Model::setMaterial(const Material& material, Uint32 index)
 {
 	m_materials[index] = material;
-}
-
-
-///////////////////////////////////////////////////////////
-VertexArray& Model::getVertexArray()
-{
-	return m_vertexArray;
-}
-
-
-///////////////////////////////////////////////////////////
-const BoundingBox& Model::getBoundingBox() const
-{
-	return m_boundingBox;
-}
-
-
-///////////////////////////////////////////////////////////
-const Sphere& Model::getBoundingSphere() const
-{
-	return m_boundingSphere;
 }
 
 

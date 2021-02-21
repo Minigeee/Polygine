@@ -6,6 +6,7 @@
 #include <poly/Graphics/Camera.h>
 #include <poly/Graphics/Components.h>
 #include <poly/Graphics/GLCheck.h>
+#include <poly/Graphics/LodSystem.h>
 #include <poly/Graphics/Model.h>
 #include <poly/Graphics/Octree.h>
 #include <poly/Graphics/Shader.h>
@@ -334,7 +335,7 @@ void Octree::add(Entity::Id entity)
 	Matrix4f transform = toTransformMatrix(t.m_position, t.m_rotation, t.m_scale);
 
 	// Get bounding box
-	BoundingBox bbox = r.m_model->getBoundingBox();
+	BoundingBox bbox = r.m_renderable->getBoundingBox();
 	Vector3f vertices[] =
 	{
 		Vector3f(bbox.m_min.x, bbox.m_min.y, bbox.m_min.z),
@@ -374,36 +375,11 @@ void Octree::add(Entity::Id entity)
 	EntityData* data = (EntityData*)m_dataPool.alloc();
 	data->m_boundingBox = bbox;
 	data->m_transform = transform;
+	data->m_group = getRenderGroup(r.m_renderable, r.m_shader, skeleton);
 
 	// Add to map
 	m_dataMap[entity] = data;
 
-	// Add render group
-	bool groupExists = false;
-	for (Uint32 i = 0; i < m_renderGroups.size(); ++i)
-	{
-		const RenderGroup& group = m_renderGroups[i];
-		if (
-			group.m_model == r.m_model &&
-			group.m_shader == r.m_shader && 
-			group.m_skeleton == skeleton)
-		{
-			data->m_group = i;
-			groupExists = true;
-			break;
-		}
-	}
-
-	if (!groupExists)
-	{
-		data->m_group = m_renderGroups.size();
-
-		RenderGroup group;
-		group.m_model = r.m_model;
-		group.m_shader = r.m_shader;
-		group.m_skeleton = skeleton;
-		m_renderGroups.push_back(group);
-	}
 
 	// Insert into the octree
 	insert(data);
@@ -568,7 +544,7 @@ void Octree::update(const Entity::Id& entity, RenderComponent& r, TransformCompo
 	Matrix4f transform = toTransformMatrix(t.m_position, t.m_rotation, t.m_scale);
 
 	// Get bounding box
-	BoundingBox bbox = r.m_model->getBoundingBox();
+	BoundingBox bbox = r.m_renderable->getBoundingBox();
 	Vector3f vertices[] =
 	{
 		Vector3f(bbox.m_min.x, bbox.m_min.y, bbox.m_min.z),
@@ -685,7 +661,7 @@ void Octree::render(Camera& camera, RenderPass pass)
 	// Get entity data
 	std::vector<std::vector<EntityData*>> entityData(m_renderGroups.size());
 	const Frustum& frustum = camera.getFrustum();
-	getRenderData(m_root, frustum, entityData);
+	getRenderData(m_root, frustum, entityData, camera.getPosition());
 	
 	// Get number of visible entities
 	Uint32 numVisible = 0;
@@ -716,13 +692,18 @@ void Octree::render(Camera& camera, RenderPass pass)
 	// Iterate through visible entities and stream data
 	for (Uint32 i = 0; i < entityData.size(); ++i)
 	{
+		RenderGroup& group = m_renderGroups[i];
 		const std::vector<EntityData*>& entities = entityData[i];
+
+		// Skip the group if lod
+		if (group.m_lodLevels.size())
+			continue;
 
 		// Create render data
 		RenderData data;
-		data.m_model = m_renderGroups[i].m_model;
-		data.m_shader = m_renderGroups[i].m_shader;
-		data.m_skeleton = m_renderGroups[i].m_skeleton;
+		data.m_renderable = group.m_renderable;
+		data.m_shader = group.m_shader;
+		data.m_skeleton = group.m_skeleton;
 		data.m_offset = m_instanceBufferOffset;
 		data.m_instances = entities.size();
 		renderData.push_back(data);
@@ -774,46 +755,52 @@ void Octree::render(Camera& camera, RenderPass pass)
 			priv::bindShader(shader, camera, m_scene, m_ambientColor);
 		}
 
-		// Apply the materials
-		const std::vector<Material>& materials = data.m_model->getMaterials();
-		for (Uint32 i = 0; i < materials.size(); ++i)
-			materials[i].apply(shader, i);
+		Model* model = 0;
 
-		// Get vertex array and do an instanced render
-		VertexArray& vao = data.m_model->getVertexArray();
-
-		// Different rendering behavior based on if the model is animated or not
-		if (!data.m_skeleton)
+		// Check if the object is a model type
+		if (model = dynamic_cast<Model*>(data.m_renderable))
 		{
-			// Bind instance data
-			vao.bind();
-			vao.addBuffer(m_instanceBuffer, 5, 4, sizeof(Matrix4f), data.m_offset + 0 * sizeof(Vector4f), 1);
-			vao.addBuffer(m_instanceBuffer, 6, 4, sizeof(Matrix4f), data.m_offset + 1 * sizeof(Vector4f), 1);
-			vao.addBuffer(m_instanceBuffer, 7, 4, sizeof(Matrix4f), data.m_offset + 2 * sizeof(Vector4f), 1);
-			vao.addBuffer(m_instanceBuffer, 8, 4, sizeof(Matrix4f), data.m_offset + 3 * sizeof(Vector4f), 1);
+			// Apply the materials
+			const std::vector<Material>& materials = model->getMaterials();
+			for (Uint32 i = 0; i < materials.size(); ++i)
+				materials[i].apply(shader, i);
 
-			// Draw
-			vao.draw(data.m_instances);
-		}
-		else
-		{
-			vao.bind();
+			// Get vertex array and do an instanced render
+			VertexArray& vao = model->getVertexArray();
 
-			// Have to render each animated model individually
-			for (Uint32 e = 0; e < data.m_instances; ++e)
+			// Different rendering behavior based on if the model is animated or not
+			if (!data.m_skeleton)
 			{
-				// Bind transform data
-				Uint32 offset = data.m_offset + e * sizeof(Matrix4f);
-				vao.addBuffer(m_instanceBuffer, 5, 4, sizeof(Matrix4f), offset + 0 * sizeof(Vector4f), 1);
-				vao.addBuffer(m_instanceBuffer, 6, 4, sizeof(Matrix4f), offset + 1 * sizeof(Vector4f), 1);
-				vao.addBuffer(m_instanceBuffer, 7, 4, sizeof(Matrix4f), offset + 2 * sizeof(Vector4f), 1);
-				vao.addBuffer(m_instanceBuffer, 8, 4, sizeof(Matrix4f), offset + 3 * sizeof(Vector4f), 1);
+				// Bind instance data
+				vao.bind();
+				vao.addBuffer(m_instanceBuffer, 5, 4, sizeof(Matrix4f), data.m_offset + 0 * sizeof(Vector4f), 1);
+				vao.addBuffer(m_instanceBuffer, 6, 4, sizeof(Matrix4f), data.m_offset + 1 * sizeof(Vector4f), 1);
+				vao.addBuffer(m_instanceBuffer, 7, 4, sizeof(Matrix4f), data.m_offset + 2 * sizeof(Vector4f), 1);
+				vao.addBuffer(m_instanceBuffer, 8, 4, sizeof(Matrix4f), data.m_offset + 3 * sizeof(Vector4f), 1);
 
-				// Apply skeleton
-				data.m_skeleton->apply(shader);
+				// Draw
+				vao.draw(data.m_instances);
+			}
+			else
+			{
+				vao.bind();
 
-				// Render model
-				vao.draw();
+				// Have to render each animated model individually
+				for (Uint32 e = 0; e < data.m_instances; ++e)
+				{
+					// Bind transform data
+					Uint32 offset = data.m_offset + e * sizeof(Matrix4f);
+					vao.addBuffer(m_instanceBuffer, 5, 4, sizeof(Matrix4f), offset + 0 * sizeof(Vector4f), 1);
+					vao.addBuffer(m_instanceBuffer, 6, 4, sizeof(Matrix4f), offset + 1 * sizeof(Vector4f), 1);
+					vao.addBuffer(m_instanceBuffer, 7, 4, sizeof(Matrix4f), offset + 2 * sizeof(Vector4f), 1);
+					vao.addBuffer(m_instanceBuffer, 8, 4, sizeof(Matrix4f), offset + 3 * sizeof(Vector4f), 1);
+
+					// Apply skeleton
+					data.m_skeleton->apply(shader);
+
+					// Render model
+					vao.draw();
+				}
 			}
 		}
 	}
@@ -821,7 +808,7 @@ void Octree::render(Camera& camera, RenderPass pass)
 
 
 ///////////////////////////////////////////////////////////
-void Octree::getRenderData(Node* node, const Frustum& frustum, std::vector<std::vector<EntityData*>>& entityData)
+void Octree::getRenderData(Node* node, const Frustum& frustum, std::vector<std::vector<EntityData*>>& entityData, const Vector3f& cameraPos)
 {
 	// Add all data inside the frustum
 	for (Uint32 i = 0; i < node->m_data.size(); ++i)
@@ -829,7 +816,25 @@ void Octree::getRenderData(Node* node, const Frustum& frustum, std::vector<std::
 		EntityData* data = node->m_data[i];
 
 		if (frustum.contains(data->m_boundingBox))
-			entityData[data->m_group].push_back(data);
+		{
+			Uint32 groupId = data->m_group;
+
+			// If the renderable is an lod system, add the correct group
+			RenderGroup& group = m_renderGroups[groupId];
+			if (group.m_lodLevels.size())
+			{
+				LodSystem* lod = (LodSystem*)group.m_renderable;
+				float distance = dist(cameraPos, data->m_boundingBox.getCenter());
+
+				// Find the correct lod level
+				Uint32 level = 0;
+				for (; level < lod->getNumLevels() && distance > lod->getDistance(level); ++level);
+
+				groupId = level < lod->getNumLevels() ? group.m_lodLevels[level] : groupId;
+			}
+
+			entityData[groupId].push_back(data);
+		}
 	}
 
 	// Call for children
@@ -837,8 +842,56 @@ void Octree::getRenderData(Node* node, const Frustum& frustum, std::vector<std::
 	{
 		Node* child = node->m_children[i];
 		if (child && frustum.contains(child->m_boundingBox))
-			getRenderData(child, frustum, entityData);
+			getRenderData(child, frustum, entityData, cameraPos);
 	}
+}
+
+
+///////////////////////////////////////////////////////////
+Uint32 Octree::getRenderGroup(Renderable* renderable, Shader* shader, Skeleton* skeleton)
+{
+	Uint32 groupId = 0;
+
+	// Add render group
+	bool groupExists = false;
+	for (Uint32 i = 0; i < m_renderGroups.size(); ++i)
+	{
+		const RenderGroup& group = m_renderGroups[i];
+		if (
+			group.m_renderable == renderable &&
+			group.m_shader == shader &&
+			group.m_skeleton == skeleton)
+		{
+			groupId = i;
+			groupExists = true;
+			break;
+		}
+	}
+
+	if (!groupExists)
+	{
+		groupId = m_renderGroups.size();
+
+		RenderGroup group;
+		group.m_renderable = renderable;
+		group.m_shader = shader;
+		group.m_skeleton = skeleton;
+
+		// If the renderable is an lod system, add lod levels
+		LodSystem* lod = 0;
+		if (lod = dynamic_cast<LodSystem*>(renderable))
+		{
+			Uint32 numLevels = lod->getNumLevels();
+
+			// Get or create render groups for lod levels
+			for (Uint32 i = 0; i < numLevels; ++i)
+				group.m_lodLevels.push_back(getRenderGroup(lod->getRenderable(i), lod->getShader(i), skeleton));
+		}
+
+		m_renderGroups.push_back(group);
+	}
+
+	return groupId;
 }
 
 
