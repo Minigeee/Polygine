@@ -65,7 +65,6 @@ private:
 	static Shader s_shader;
 
 private:
-	Scene* m_scene;
 	VertexArray m_vertexArray;
 	VertexBuffer m_vertexBuffer;
 

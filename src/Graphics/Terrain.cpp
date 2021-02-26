@@ -540,19 +540,8 @@ void Terrain::render(Camera& camera, RenderPass pass)
 	shader.setUniform("u_clipPlanes[2]", Vector4f(0.0f, 0.0f, -1.0f, m_size * 0.5f));
 	shader.setUniform("u_clipPlanes[3]", Vector4f(0.0f, 0.0f, 1.0f, m_size * 0.5f));
 
-	// Apply directional lights
-	int i = 0;
-	m_scene->system<DirLightComponent>(
-		[&](const Entity::Id id, DirLightComponent& light)
-		{
-			std::string prefix = "u_dirLights[" + std::to_string(i++) + "].";
-
-			shader.setUniform(prefix + "diffuse", light.m_diffuse);
-			shader.setUniform(prefix + "specular", light.m_specular);
-			shader.setUniform(prefix + "direction", normalize(light.m_direction));
-		}
-	);
-	shader.setUniform("u_numDirLights", i);
+	// Lighting
+	applyLighting(&shader);
 
 	// Terrain maps
 	if (m_heightMap.getId())

@@ -8,6 +8,8 @@ namespace poly
 {
 
 class Scene;
+class Shader;
+
 
 ///////////////////////////////////////////////////////////
 /// \brief An enum defining render passes
@@ -18,10 +20,44 @@ class Scene;
 ///////////////////////////////////////////////////////////
 enum class RenderPass
 {
-	Default,	//!< A default render pass
-	Shadow,		//!< A shadow render pass
-	Reflection	//!< A reflection render pass
+	Default			= 1 << 0,	//!< A default render pass
+	Shadow			= 1 << 1,	//!< A shadow render pass
+	Reflection		= 1 << 2,	//!< A reflection render pass
+	All				= Default | Shadow | Reflection		//!< All render passes
 };
+
+///////////////////////////////////////////////////////////
+/// \brief The binary AND operator for render pass enums
+///
+/// \param a The first operand
+/// \param b The second operand
+///
+/// \return The result
+///
+///////////////////////////////////////////////////////////
+RenderPass operator&(RenderPass a, RenderPass b);
+
+///////////////////////////////////////////////////////////
+/// \brief The binary OR operator for render pass enums
+///
+/// \param a The first operand
+/// \param b The second operand
+///
+/// \return The result
+///
+///////////////////////////////////////////////////////////
+RenderPass operator|(RenderPass a, RenderPass b);
+
+///////////////////////////////////////////////////////////
+/// \brief The binary NOT operator for render pass enums
+///
+/// \param a The operand
+///
+/// \return The result
+///
+///////////////////////////////////////////////////////////
+RenderPass operator~(RenderPass a);
+
 
 ///////////////////////////////////////////////////////////
 /// \brief The base class for all rendering procedure classes
@@ -30,6 +66,12 @@ enum class RenderPass
 class RenderSystem
 {
 public:
+	///////////////////////////////////////////////////////////
+	/// \brief Default destructor
+	///
+	///////////////////////////////////////////////////////////
+	RenderSystem();
+
 	///////////////////////////////////////////////////////////
 	/// \brief This function should initialize anything that is scene dependent,
 	///        such as access to entities
@@ -47,6 +89,18 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	virtual void render(Camera& camera, RenderPass pass) = 0;
+
+protected:
+	///////////////////////////////////////////////////////////
+	/// \brief Apply lighting and shadow uniforms to the shader
+	///
+	/// \param shader The shader to apply the uniforms to
+	///
+	///////////////////////////////////////////////////////////
+	void applyLighting(Shader* shader);
+
+protected:
+	Scene* m_scene;		//!< A pointer to the scene
 };
 
 }

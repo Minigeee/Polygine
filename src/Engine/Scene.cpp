@@ -106,15 +106,18 @@ void Scene::addRenderSystem(RenderSystem* system)
 ///////////////////////////////////////////////////////////
 void Scene::render(Camera& camera, FrameBuffer& target, RenderPass pass)
 {
-	// Bind framebuffer
-	target.bind();
+	if ((Uint32)(pass & RenderPass::Default))
+	{
+		// Bind framebuffer
+		target.bind();
 
-	// Clear framebuffer
-	glCheck(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
+		// Clear framebuffer
+		glCheck(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
 
-	// Render all render systems
-	for (Uint32 i = 0; i < m_renderSystems.size(); ++i)
-		m_renderSystems[i]->render(camera, pass);
+		// Render all render systems
+		for (Uint32 i = 0; i < m_renderSystems.size(); ++i)
+			m_renderSystems[i]->render(camera, RenderPass::Default);
+	}
 }
 
 }

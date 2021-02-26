@@ -218,7 +218,6 @@ private:
 	ObjectPool m_nodePool;								//!< The object pool that holds node data
 	ObjectPool m_dataPool;								//!< The object pool that holds render data
 
-	Scene* m_scene;										//!< A pointer to the scene
 	Node* m_root;										//!< A pointer to the root node
 	float m_size;										//!< The size of the highest octree level
 	Uint32 m_maxPerCell;								//!< The max number of entities allowed per cell

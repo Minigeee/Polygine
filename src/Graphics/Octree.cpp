@@ -75,20 +75,6 @@ void bindShader(Shader* shader, Camera& camera, Scene* scene, const Vector3f& am
 	shader->setUniform("u_projView", camera.getProjMatrix() * camera.getViewMatrix());
 	shader->setUniform("u_cameraPos", camera.getPosition());
 	shader->setUniform("u_ambient", ambient);
-
-	// Apply directional lights
-	int i = 0;
-	scene->system<DirLightComponent>(
-		[&](const Entity::Id id, DirLightComponent& light)
-		{
-			std::string prefix = "u_dirLights[" + std::to_string(i++) + "].";
-
-			shader->setUniform(prefix + "diffuse", light.m_diffuse);
-			shader->setUniform(prefix + "specular", light.m_specular);
-			shader->setUniform(prefix + "direction", normalize(light.m_direction));
-		}
-	);
-	shader->setUniform("u_numDirLights", i);
 }
 
 }
@@ -122,7 +108,6 @@ Octree::Node::Node() :
 Octree::Octree() :
 	m_nodePool				(sizeof(Node)),
 	m_dataPool				(sizeof(EntityData)),
-	m_scene					(0),
 	m_root					(0),
 	m_size					(0.0f),
 	m_maxPerCell			(0),
@@ -742,6 +727,8 @@ void Octree::render(Camera& camera, RenderPass pass)
 	// Bind the first shader
 	Shader* shader = renderData.front().m_shader;
 	priv::bindShader(shader, camera, m_scene, m_ambientColor);
+	// Lighting
+	applyLighting(shader);
 
 	// Iterate through render data and render everything
 	for (Uint32 i = 0; i < renderData.size(); ++i)
@@ -753,6 +740,9 @@ void Octree::render(Camera& camera, RenderPass pass)
 		{
 			shader = data.m_shader;
 			priv::bindShader(shader, camera, m_scene, m_ambientColor);
+
+			// Lighting
+			applyLighting(shader);
 		}
 
 		Model* model = 0;

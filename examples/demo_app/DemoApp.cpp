@@ -94,7 +94,7 @@ int main()
     Scene scene;
 
     Terrain terrain;
-    terrain.create(4000.0f, 200.0f, 1.5f);
+    terrain.create(4000.0f, 200.0f, 1.0f);
     scene.addRenderSystem(&terrain);
 
     FractalNoise noise;

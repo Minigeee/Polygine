@@ -294,7 +294,6 @@ private:
 	void updateNormalMap(const Vector3f& scale);
 
 private:
-	Scene* m_scene;							//!< A pointer to a scene
 	float m_size;							//!< Terrain size
 	float m_height;							//!< Maximume terrain height
 	float m_tileScale;						//!< Tile scale

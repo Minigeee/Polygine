@@ -14,7 +14,6 @@ Shader Grass::s_shader;
 
 ///////////////////////////////////////////////////////////
 Grass::Grass() :
-	m_scene				(0),
 	m_terrain			(0),
 	m_ambientColor		(0.02f),
 	m_grassSpacing		(0.1f),
@@ -91,19 +90,8 @@ void Grass::render(Camera& camera, RenderPass pass)
 	shader.setUniform("u_grassHeight", m_grassHeight);
 	shader.setUniform("u_time", m_clock.getElapsedTime().toSeconds());
 
-	// Apply directional lights
-	int i = 0;
-	m_scene->system<DirLightComponent>(
-		[&](const Entity::Id id, DirLightComponent& light)
-		{
-			std::string prefix = "u_dirLights[" + std::to_string(i++) + "].";
-
-			shader.setUniform(prefix + "diffuse", light.m_diffuse);
-			shader.setUniform(prefix + "specular", light.m_specular);
-			shader.setUniform(prefix + "direction", normalize(light.m_direction));
-		}
-	);
-	shader.setUniform("u_numDirLights", i);
+	// Lighting
+	applyLighting(&shader);
 
 	// Terrain maps
 	shader.setUniform("u_terrainSize", m_terrain->getSize());

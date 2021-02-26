@@ -44,6 +44,8 @@ struct E_EntitiesCreated
 ///////////////////////////////////////////////////////////
 class Scene
 {
+	friend RenderSystem;
+
 public:
 	///////////////////////////////////////////////////////////
 	/// \brief Default constructor
@@ -521,7 +523,7 @@ public:
 	/// \param pass The render pass that should be executed
 	///
 	///////////////////////////////////////////////////////////
-	void render(Camera& camera, FrameBuffer& target = FrameBuffer::Default, RenderPass pass = RenderPass::Default);
+	void render(Camera& camera, FrameBuffer& target = FrameBuffer::Default, RenderPass passes = RenderPass::All);
 
 private:
 	Handle m_handle;									//!< The scene handle used for scene id
@@ -530,6 +532,7 @@ private:
 	std::mutex m_entityMutex;							//!< Mutex to protect creation and removal of entities
 
 	std::vector<RenderSystem*> m_renderSystems;			//!< List of render systems
+	HashMap<Entity::Id, std::vector<FrameBuffer>> m_shadowMaps;	//!< Shadow map framebuffers
 
 	static HandleArray<bool> idArray;					//!< HandleArray to handle scene id generation
 };
