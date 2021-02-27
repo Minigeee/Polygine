@@ -147,15 +147,15 @@ public:
 	const Vector3f& getDirection() const;
 
 	///////////////////////////////////////////////////////////
-	/// \brief Get the camera right vector
+	/// \brief Get the camera right direction vector
 	///
 	/// The right vector points at a 90 degree angle to the right
 	/// of the direction the camera is facing, and it has 0 y component.
 	///
-	/// \return The camera right vector
+	/// \return The camera right direction vector
 	///
 	///////////////////////////////////////////////////////////
-	const Vector3f& getRight() const;
+	const Vector3f& getRightDir() const;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the camera zoom factor
@@ -216,12 +216,59 @@ public:
 	void setFar(float far);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Set the camera orthographic parameters
+	///
+	/// This specifies the parameters needed to create an orthographic
+	/// projection matrix, including the left, right, bottom, top, near,
+	/// and far planes.
+	///
+	/// \param left The distance from the camera to the left orthographic plane
+	/// \param right The distance from the camera to the right orthographic plane
+	/// \param bottom The distance from the camera to the bottom orthographic plane
+	/// \param top The distance from the camera to the top orthographic plane
+	/// \param near The distance from the camera to the near orthographic plane
+	/// \param far The distance from the camera to the far orthographic plane
+	///
+	///////////////////////////////////////////////////////////
+	void setOrthographic(float left, float right, float bottom, float top, float near, float far);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the distance to the left orthographic plane
+	///
+	/// \param left The distance from the camera to the left orthographic plane
+	///
+	///////////////////////////////////////////////////////////
+	void setLeft(float left);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the distance to the right orthographic plane
+	///
+	/// \param right The distance from the camera to the right orthographic plane
+	///
+	///////////////////////////////////////////////////////////
+	void setRight(float right);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the distance to the bottom orthographic plane
+	///
+	/// \param bottom The distance from the camera to the bottom orthographic plane
+	///
+	///////////////////////////////////////////////////////////
+	void setBottom(float bottom);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the distance to the top orthographic plane
+	///
+	/// \param top The distance from the camera to the top orthographic plane
+	///
+	///////////////////////////////////////////////////////////
+	void setTop(float top);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the projection matrix
 	///
-	/// Currently only perspective projection matrices are supported.
-	/// Every time one of the perspective projection parameters
-	/// is changed, the projection matrix will be recalculated and
-	/// cached.
+	/// Every time one of the projection parameters is changed,
+	/// the projection matrix will be recalculated and cached.
 	///
 	/// \return The projection matrix
 	///
@@ -269,7 +316,7 @@ public:
 	float getAspectRatio() const;
 
 	///////////////////////////////////////////////////////////
-	///  \brief Get the distance to the near plane
+	/// \brief Get the distance to the near plane
 	///
 	/// \return The distance to the near plane
 	///
@@ -284,6 +331,38 @@ public:
 	///////////////////////////////////////////////////////////
 	float getFar() const;
 
+	///////////////////////////////////////////////////////////
+	/// \brief Get the distance to the left orthographic plane
+	///
+	/// \return The distance to the left orthographic plane
+	///
+	///////////////////////////////////////////////////////////
+	float getLeft() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the distance to the right orthographic plane
+	///
+	/// \return The distance to the right orthographic plane
+	///
+	///////////////////////////////////////////////////////////
+	float getRight() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the distance to the bottom orthographic plane
+	///
+	/// \return The distance to the bottom orthographic plane
+	///
+	///////////////////////////////////////////////////////////
+	float getBottom() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the distance to the top orthographic plane
+	///
+	/// \return The distance to the top orthographic plane
+	///
+	///////////////////////////////////////////////////////////
+	float getTop() const;
+
 private:
 	Matrix4f m_projMatrix;		//!< The projection matrix
 	Matrix4f m_viewMatrix;		//!< The view matrix
@@ -291,7 +370,7 @@ private:
 
 	Vector3f m_position;		//!< The position in world space
 	Vector3f m_direction;		//!< The direction vector
-	Vector3f m_right;			//!< The right vector
+	Vector3f m_rightDir;		//!< The right direction vector
 	float m_zoom;				//!< The zoom factor
 
 	float m_fov;				//!< The field of view in the x axis
@@ -299,6 +378,12 @@ private:
 	float m_near;				//!< The distance to the near plane
 	float m_far;				//!< The distance to the far plane
 
+	float m_left;				//!< The distance to the left plane in orthographic mode
+	float m_right;				//!< The distance to the right plane in orthographic mode
+	float m_bottom;				//!< The distance to the bottom plane in orthographic mode
+	float m_top;				//!< The distance to the top plane in orthographic mode
+
+	bool m_isPerspective;		//!< This is true when the camera is in perspective projection mode
 	bool m_isProjDirty;			//!< This is true when one of the projection parameters has changed
 	bool m_isViewDirty;			//!< This is true when on of the view parameters has changed
 };

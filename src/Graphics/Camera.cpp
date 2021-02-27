@@ -14,7 +14,7 @@ Camera::Camera() :
 
 	m_position		(0.0f),
 	m_direction		(0.0f, 0.0f, -1.0f),
-	m_right			(1.0f, 0.0f, 0.0f),
+	m_rightDir		(1.0f, 0.0f, 0.0f),
 	m_zoom			(1.0f),
 
 	m_fov			(90.0f),
@@ -22,6 +22,7 @@ Camera::Camera() :
 	m_near			(0.1f),
 	m_far			(1000.0f),
 
+	m_isPerspective	(true),
 	m_isProjDirty	(true),
 	m_isViewDirty	(true)
 {
@@ -56,7 +57,7 @@ void Camera::setPosition(float x, float y, float z)
 void Camera::setDirection(const Vector3f& dir)
 {
 	m_direction = normalize(dir);
-	m_right = normalize(cross(m_direction, Vector3f(0.0f, 1.0f, 0.0f)));
+	m_rightDir = normalize(cross(m_direction, Vector3f(0.0f, 1.0f, 0.0f)));
 	m_isViewDirty = true;
 }
 
@@ -65,7 +66,7 @@ void Camera::setDirection(const Vector3f& dir)
 void Camera::setDirection(float x, float y, float z)
 {
 	m_direction = normalize(Vector3f(x, y, z));
-	m_right = normalize(cross(m_direction, Vector3f(0.0f, 1.0f, 0.0f)));
+	m_rightDir = normalize(cross(m_direction, Vector3f(0.0f, 1.0f, 0.0f)));
 	m_isViewDirty = true;
 }
 
@@ -82,7 +83,7 @@ void Camera::setRotation(const Vector2f& rotation)
 	float sy = sin(y);
 
 	m_direction = normalize(Vector3f(cy * cx, sx, sy * cx));
-	m_right = normalize(cross(m_direction, Vector3f(0.0f, 1.0f, 0.0f)));
+	m_rightDir = normalize(cross(m_direction, Vector3f(0.0f, 1.0f, 0.0f)));
 
 	m_isViewDirty = true;
 }
@@ -142,9 +143,9 @@ const Vector3f& Camera::getDirection() const
 
 
 ///////////////////////////////////////////////////////////
-const Vector3f& Camera::getRight() const
+const Vector3f& Camera::getRightDir() const
 {
-	return m_right;
+	return m_rightDir;
 }
 
 
@@ -162,6 +163,7 @@ void Camera::setPerspective(float fov, float ar, float near, float far)
 	m_aspectRatio = ar;
 	m_near = near;
 	m_far = far;
+	m_isPerspective = true;
 	m_isProjDirty = true;
 }
 
@@ -170,6 +172,7 @@ void Camera::setPerspective(float fov, float ar, float near, float far)
 void Camera::setFov(float fov)
 {
 	m_fov = fov;
+	m_isPerspective = true;
 	m_isProjDirty = true;
 }
 
@@ -178,6 +181,7 @@ void Camera::setFov(float fov)
 void Camera::setAspectRatio(float ar)
 {
 	m_aspectRatio = ar;
+	m_isPerspective = true;
 	m_isProjDirty = true;
 }
 
@@ -199,11 +203,65 @@ void Camera::setFar(float far)
 
 
 ///////////////////////////////////////////////////////////
+void Camera::setOrthographic(float left, float right, float bottom, float top, float near, float far)
+{
+	m_left = left;
+	m_right = right;
+	m_bottom = bottom;
+	m_top = top;
+	m_near = near;
+	m_far = far;
+	m_isPerspective = false;
+	m_isProjDirty = true;
+}
+
+
+///////////////////////////////////////////////////////////
+void Camera::setLeft(float left)
+{
+	m_left = left;
+	m_isPerspective = false;
+	m_isProjDirty = true;
+}
+
+
+///////////////////////////////////////////////////////////
+void Camera::setRight(float right)
+{
+	m_right = right;
+	m_isPerspective = false;
+	m_isProjDirty = true;
+}
+
+
+///////////////////////////////////////////////////////////
+void Camera::setBottom(float bottom)
+{
+	m_bottom = bottom;
+	m_isPerspective = false;
+	m_isProjDirty = true;
+}
+
+
+///////////////////////////////////////////////////////////
+void Camera::setTop(float top)
+{
+	m_top = top;
+	m_isPerspective = false;
+	m_isProjDirty = true;
+}
+
+
+///////////////////////////////////////////////////////////
 const Matrix4f& Camera::getProjMatrix()
 {
 	if (m_isProjDirty)
 	{
-		m_projMatrix = toPerspectiveMatrix(m_fov * m_zoom, m_aspectRatio, m_near, m_far);
+		if (m_isPerspective)
+			m_projMatrix = toPerspectiveMatrix(m_fov * m_zoom, m_aspectRatio, m_near, m_far);
+		else
+			m_projMatrix = toOrthographicMatrix(m_left, m_right, m_bottom, m_top, m_near, m_far);
+
 		m_isProjDirty = false;
 	}
 
@@ -216,7 +274,7 @@ const Matrix4f& Camera::getViewMatrix()
 {
 	if (m_isViewDirty)
 	{
-		m_viewMatrix = toViewMatrix(m_position, m_direction, m_right);
+		m_viewMatrix = toViewMatrix(m_position, m_direction, m_rightDir);
 		m_isViewDirty = false;
 	}
 
@@ -300,6 +358,34 @@ float Camera::getNear() const
 float Camera::getFar() const
 {
 	return m_far;
+}
+
+
+///////////////////////////////////////////////////////////
+float Camera::getLeft() const
+{
+	return m_left;
+}
+
+
+///////////////////////////////////////////////////////////
+float Camera::getRight() const
+{
+	return m_right;
+}
+
+
+///////////////////////////////////////////////////////////
+float Camera::getBottom() const
+{
+	return m_bottom;
+}
+
+
+///////////////////////////////////////////////////////////
+float Camera::getTop() const
+{
+	return m_top;
 }
 
 

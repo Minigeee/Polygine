@@ -5,6 +5,7 @@
 
 #include <poly/Engine/Ecs.h>
 #include <poly/Engine/Entity.h>
+#include <poly/Engine/Extension.h>
 
 #include <poly/Graphics/Camera.h>
 #include <poly/Graphics/FrameBuffer.h>
@@ -44,8 +45,6 @@ struct E_EntitiesCreated
 ///////////////////////////////////////////////////////////
 class Scene
 {
-	friend RenderSystem;
-
 public:
 	///////////////////////////////////////////////////////////
 	/// \brief Default constructor
@@ -499,6 +498,25 @@ public:
 	void sendEvent(const E& event);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Get a scene extension module
+	///
+	/// A scene extension is an object that adds extra properties
+	/// or functionality to a scene, without requiring the scene to
+	/// have any extra dependencies. Extensions should add properties
+	/// that are unique per scene.
+	///
+	/// Examples of scene extensions are shadows and lighting,
+	/// which are not related to the scene framework as they are
+	/// graphics related components, but contain properties which
+	/// should belong to the scene instead of its entities.
+	///
+	/// \return A pointer to the requested scene extension
+	///
+	///////////////////////////////////////////////////////////
+	template <typename T>
+	T* getExtension();
+
+	///////////////////////////////////////////////////////////
 	/// \brief Add a render system
 	///
 	/// Render systems define custom rendering procedures.
@@ -531,10 +549,11 @@ private:
 	HashMap<Uint32, priv::EntityGroup> m_entityGroups;	//!< Map of group id to priv::EntityGroup
 	std::mutex m_entityMutex;							//!< Mutex to protect creation and removal of entities
 
-	std::vector<RenderSystem*> m_renderSystems;			//!< List of render systems
-	HashMap<Entity::Id, std::vector<FrameBuffer>> m_shadowMaps;	//!< Shadow map framebuffers
+	HashMap<Uint32, Extension*> m_extensions;			//!< Map of scene extensions
 
-	static HandleArray<bool> idArray;					//!< HandleArray to handle scene id generation
+	std::vector<RenderSystem*> m_renderSystems;			//!< List of render systems
+
+	static HandleArray<bool> s_idArray;					//!< HandleArray to handle scene id generation
 };
 
 }

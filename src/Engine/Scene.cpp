@@ -11,7 +11,7 @@ namespace poly
 
 
 ///////////////////////////////////////////////////////////
-HandleArray<bool> Scene::idArray;
+HandleArray<bool> Scene::s_idArray;
 
 
 ///////////////////////////////////////////////////////////
@@ -34,7 +34,7 @@ E_EntitiesCreated::E_EntitiesCreated(std::vector<Entity>& entities) :
 
 ///////////////////////////////////////////////////////////
 Scene::Scene() :
-	m_handle				(idArray.add(true))
+	m_handle				(s_idArray.add(true))
 {
 
 }
@@ -52,8 +52,12 @@ Scene::~Scene()
 	// Clean up event systems
 	priv::SceneEventsCleanup::cleanup(m_handle.m_index);
 
+	// Clean up extensions
+	for (auto it = m_extensions.begin(); it != m_extensions.end(); ++it)
+		delete it.value();
+
 	// Remove from list to free up id
-	idArray.remove(m_handle);
+	s_idArray.remove(m_handle);
 }
 
 

@@ -261,9 +261,9 @@ int main()
         if (keyMap[Keyboard::S])
             move -= camera.getDirection();
         if (keyMap[Keyboard::A])
-            move -= camera.getRight();
+            move -= camera.getRightDir();
         if (keyMap[Keyboard::D])
-            move += camera.getRight();
+            move += camera.getRightDir();
         if (keyMap[Keyboard::Space])
             move.y += 1.0f;
         if (keyMap[Keyboard::LeftShift])
