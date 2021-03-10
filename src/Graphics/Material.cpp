@@ -11,12 +11,27 @@ namespace poly
 
 ///////////////////////////////////////////////////////////
 Material::Material() :
+	m_ambient		(1.0f),
 	m_diffuse		(1.0f),
 	m_specular		(0.1f),
 	m_shininess		(16.0f),
 	m_diffTexture	(0),
 	m_specTexture	(0)
 { }
+
+
+///////////////////////////////////////////////////////////
+void Material::setAmbient(const Vector3f& color)
+{
+	m_ambient = color;
+}
+
+
+///////////////////////////////////////////////////////////
+void Material::setAmbient(float r, float g, float b)
+{
+	m_ambient = Vector3f(r, g, b);
+}
 
 
 ///////////////////////////////////////////////////////////
@@ -84,6 +99,13 @@ void Material::removeTexture(const std::string& uniform)
 
 
 ///////////////////////////////////////////////////////////
+Vector3f& Material::getAmbient()
+{
+	return m_ambient;
+}
+
+
+///////////////////////////////////////////////////////////
 Vector3f& Material::getDiffuse()
 {
 	return m_diffuse;
@@ -121,6 +143,7 @@ Texture* Material::getTexture(const std::string& uniform) const
 void Material::apply(Shader* shader, int index) const
 {
 	std::string prefix = "u_materials[" + std::to_string(index) + "].";
+	shader->setUniform(prefix + "ambient", m_ambient);
 	shader->setUniform(prefix + "diffuse", m_diffuse);
 	shader->setUniform(prefix + "specular", m_specular);
 	shader->setUniform(prefix + "shininess", m_shininess);

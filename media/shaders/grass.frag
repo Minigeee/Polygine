@@ -1,17 +1,8 @@
 #version 330 core
 
-///////////////////////////////////////////////////////////
-
-struct DirLight
-{
-    vec3 diffuse;
-    vec3 specular;
-    vec3 direction;
-};
+#include "common.glsl"
 
 ///////////////////////////////////////////////////////////
-
-#define MAX_NUM_DIR_LIGHTS 2
 
 in vec3 g_position;
 in vec3 g_normal;
@@ -32,7 +23,7 @@ const float diffFactor = 0.1f;
 
 ///////////////////////////////////////////////////////////
 
-vec3 calcDirLight(DirLight light, vec3 frontNormal, float mixFactor, vec3 viewDir, vec3 diffColor)
+vec3 calcDirLightGrass(DirLight light, vec3 frontNormal, float mixFactor, vec3 viewDir, vec3 diffColor)
 {
     // Get diffuse factor
     float frontDiff = dot(frontNormal, -light.direction);
@@ -77,7 +68,7 @@ void main()
     
     // Calculate directional lighting
     for (int i = 0; i < u_numDirLights; ++i)
-        result += calcDirLight(u_dirLights[i], frontNormal, mixFactor, viewDir, g_color.rgb);
+        result += calcDirLightGrass(u_dirLights[i], frontNormal, mixFactor, viewDir, g_color.rgb);
 
     f_color = vec4(result, g_color.a);
 }

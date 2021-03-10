@@ -91,15 +91,6 @@ public:
 	virtual void render(Camera& camera, RenderPass pass) = 0;
 
 protected:
-	///////////////////////////////////////////////////////////
-	/// \brief Apply lighting and shadow uniforms to the shader
-	///
-	/// \param shader The shader to apply the uniforms to
-	///
-	///////////////////////////////////////////////////////////
-	void applyLighting(Shader* shader);
-
-protected:
 	Scene* m_scene;		//!< A pointer to the scene
 };
 

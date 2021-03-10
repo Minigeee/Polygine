@@ -267,13 +267,10 @@ inline T* Scene::getExtension()
 	if (it == m_extensions.end())
 	{
 		// Create the extension if it doesn't exist
-		T* extension = new T(this);
-		m_extensions.insert(TypeInfo::getId<T>(), extension);
-
-		return extension;
+		return (T*)(m_extensions[TypeInfo::getId<T>()] = new T(this));
 	}
 
-	return it.value();
+	return (T*)it.value();
 }
 
 

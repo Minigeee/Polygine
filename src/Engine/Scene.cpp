@@ -4,6 +4,7 @@
 #include <poly/Engine/Scene.h>
 
 #include <poly/Graphics/GLCheck.h>
+#include <poly/Graphics/Lighting.h>
 #include <poly/Graphics/RenderSystem.h>
 
 namespace poly
@@ -36,7 +37,8 @@ E_EntitiesCreated::E_EntitiesCreated(std::vector<Entity>& entities) :
 Scene::Scene() :
 	m_handle				(s_idArray.add(true))
 {
-
+	// Default extensions
+	getExtension<Lighting>();
 }
 
 

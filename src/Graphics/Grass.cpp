@@ -3,6 +3,7 @@
 #include <poly/Graphics/Components.h>
 #include <poly/Graphics/GLCheck.h>
 #include <poly/Graphics/Grass.h>
+#include <poly/Graphics/Lighting.h>
 
 namespace poly
 {
@@ -83,7 +84,6 @@ void Grass::render(Camera& camera, RenderPass pass)
 	shader.bind();
 	shader.setUniform("u_projView", camera.getProjMatrix() * camera.getViewMatrix());
 	shader.setUniform("u_cameraPos", camera.getPosition());
-	shader.setUniform("u_ambient", m_ambientColor);
 	shader.setUniform("u_grassRadius", m_lodDists.back());
 	shader.setUniform("u_grassSpacing", m_grassSpacing);
 	shader.setUniform("u_grassWidth", m_grassWidth);
@@ -91,7 +91,7 @@ void Grass::render(Camera& camera, RenderPass pass)
 	shader.setUniform("u_time", m_clock.getElapsedTime().toSeconds());
 
 	// Lighting
-	applyLighting(&shader);
+	m_scene->getExtension<Lighting>()->apply(&shader);
 
 	// Terrain maps
 	shader.setUniform("u_terrainSize", m_terrain->getSize());

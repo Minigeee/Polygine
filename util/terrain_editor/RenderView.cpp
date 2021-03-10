@@ -88,7 +88,7 @@ void RenderView::onMouseMove(const E_MouseMove& e)
 			offset *= 0.01f;
 
 			// Move camera
-			const Vector3f& right = m_camera->getRight();
+			const Vector3f& right = m_camera->getRightDir();
 			Vector3f up = cross(right, m_camera->getDirection());
 
 			// Update camera position
@@ -101,7 +101,7 @@ void RenderView::onMouseMove(const E_MouseMove& e)
 			offset *= 0.01f;
 
 			// Move camera
-			const Vector3f& right = m_camera->getRight();
+			const Vector3f& right = m_camera->getRightDir();
 
 			// Update camera position
 			m_cameraPos -= offset.x * right * m_cameraDist;

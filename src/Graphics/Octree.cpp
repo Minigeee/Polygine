@@ -6,6 +6,7 @@
 #include <poly/Graphics/Camera.h>
 #include <poly/Graphics/Components.h>
 #include <poly/Graphics/GLCheck.h>
+#include <poly/Graphics/Lighting.h>
 #include <poly/Graphics/LodSystem.h>
 #include <poly/Graphics/Model.h>
 #include <poly/Graphics/Octree.h>
@@ -69,12 +70,11 @@ bool updateBoundingBox(BoundingBox& a, const BoundingBox& b)
 
 
 ///////////////////////////////////////////////////////////
-void bindShader(Shader* shader, Camera& camera, Scene* scene, const Vector3f& ambient)
+void bindShader(Shader* shader, Camera& camera, Scene* scene)
 {
 	shader->bind();
 	shader->setUniform("u_projView", camera.getProjMatrix() * camera.getViewMatrix());
 	shader->setUniform("u_cameraPos", camera.getPosition());
-	shader->setUniform("u_ambient", ambient);
 }
 
 }
@@ -111,8 +111,7 @@ Octree::Octree() :
 	m_root					(0),
 	m_size					(0.0f),
 	m_maxPerCell			(0),
-	m_instanceBufferOffset	(0),
-	m_ambientColor			(0.02f)
+	m_instanceBufferOffset	(0)
 {
 
 }
@@ -726,9 +725,11 @@ void Octree::render(Camera& camera, RenderPass pass)
 
 	// Bind the first shader
 	Shader* shader = renderData.front().m_shader;
-	priv::bindShader(shader, camera, m_scene, m_ambientColor);
+	priv::bindShader(shader, camera, m_scene);
+
 	// Lighting
-	applyLighting(shader);
+	Lighting* lighting = m_scene->getExtension<Lighting>();
+	lighting->apply(shader);
 
 	// Iterate through render data and render everything
 	for (Uint32 i = 0; i < renderData.size(); ++i)
@@ -739,10 +740,10 @@ void Octree::render(Camera& camera, RenderPass pass)
 		if (data.m_shader != shader)
 		{
 			shader = data.m_shader;
-			priv::bindShader(shader, camera, m_scene, m_ambientColor);
+			priv::bindShader(shader, camera, m_scene);
 
 			// Lighting
-			applyLighting(shader);
+			lighting->apply(shader);
 		}
 
 		Model* model = 0;
@@ -882,20 +883,6 @@ Uint32 Octree::getRenderGroup(Renderable* renderable, Shader* shader, Skeleton* 
 	}
 
 	return groupId;
-}
-
-
-///////////////////////////////////////////////////////////
-void Octree::setAmbientColor(const Vector3f& color)
-{
-	m_ambientColor = color;
-}
-
-
-///////////////////////////////////////////////////////////
-const Vector3f& Octree::getAmbientColor() const
-{
-	return m_ambientColor;
 }
 
 

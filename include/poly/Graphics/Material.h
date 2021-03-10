@@ -25,6 +25,36 @@ public:
 	Material();
 
 	///////////////////////////////////////////////////////////
+	/// \brief Set the ambient color multiplier of the material
+	///
+	/// The ambient color multiplier is the color that gets multplied
+	/// by the global ambient color when applying ambient lighting.
+	/// Ambient lighting is the lighting that comes from the environment
+	/// and is what lights up surfaces of models when there is no direct
+	/// light shining on it.
+	///
+	/// \param color The diffuse color
+	///
+	///////////////////////////////////////////////////////////
+	void setAmbient(const Vector3f& color);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the ambient color multiplier of the material
+	///
+	/// The ambient color multiplier is the color that gets multplied
+	/// by the global ambient color when applying ambient lighting.
+	/// Ambient lighting is the lighting that comes from the environment
+	/// and is what lights up surfaces of models when there is no direct
+	/// light shining on it.
+	///
+	/// \param r The r component of the ambient color
+	/// \param g The g component of the ambient color
+	/// \param b The b component of the ambient color
+	///
+	///////////////////////////////////////////////////////////
+	void setAmbient(float r, float g, float b);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Set the diffuse color of the material
 	///
 	/// The diffuse color is the main color that appears on a model,
@@ -142,6 +172,14 @@ public:
 	void removeTexture(const std::string& uniform);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Get the ambient color multiplier
+	///
+	/// \return The ambient color multiplier
+	///
+	///////////////////////////////////////////////////////////
+	Vector3f& getAmbient();
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the diffuse color
 	///
 	/// \return The diffuse color
@@ -216,6 +254,7 @@ public:
 	void apply(Shader* shader, int index = 0) const;
 
 private:
+	Vector3f m_ambient;							//!< The ambient color multiplier
 	Vector3f m_diffuse;							//!< The diffuse color
 	Vector3f m_specular;						//!< The specular color
 	float m_shininess;							//!< The shininess value

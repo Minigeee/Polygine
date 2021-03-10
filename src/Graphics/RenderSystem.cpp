@@ -37,26 +37,4 @@ RenderSystem::RenderSystem() :
 }
 
 
-///////////////////////////////////////////////////////////
-void RenderSystem::applyLighting(Shader* shader)
-{
-	// Need a scene
-	if (!m_scene) return;
-
-	// Apply directional lights
-	int i = 0;
-	m_scene->system<DirLightComponent>(
-		[&](const Entity::Id id, DirLightComponent& light)
-		{
-			std::string prefix = "u_dirLights[" + std::to_string(i++) + "].";
-
-			shader->setUniform(prefix + "diffuse", light.m_diffuse);
-			shader->setUniform(prefix + "specular", light.m_specular);
-			shader->setUniform(prefix + "direction", normalize(light.m_direction));
-		}
-	);
-	shader->setUniform("u_numDirLights", i);
-}
-
-
 }

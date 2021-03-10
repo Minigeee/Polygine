@@ -147,22 +147,6 @@ public:
 	///////////////////////////////////////////////////////////
 	void render(Camera& camera, RenderPass pass) override;
 
-	///////////////////////////////////////////////////////////
-	/// \brief Set the ambient color
-	///
-	/// \param color The ambient color
-	///
-	///////////////////////////////////////////////////////////
-	void setAmbientColor(const Vector3f& color);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Get the ambient color
-	///
-	/// \return The ambient color
-	///
-	///////////////////////////////////////////////////////////
-	const Vector3f& getAmbientColor() const;
-
 private:
 	struct Node;
 
@@ -226,8 +210,6 @@ private:
 	VertexBuffer m_instanceBuffer;						//!< The instance buffer that stores instance transform data
 	Uint32 m_instanceBufferOffset;						//!< The offset of the valid range of the instance buffer
 	std::vector<RenderGroup> m_renderGroups;			//!< A list of render groups
-
-	Vector3f m_ambientColor;							//!< The ambient color
 
 	static Vector3f nodeOffsets[8];
 };

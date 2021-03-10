@@ -4,6 +4,7 @@
 
 #include <poly/Graphics/Components.h>
 #include <poly/Graphics/GLCheck.h>
+#include <poly/Graphics/Lighting.h>
 #include <poly/Graphics/Terrain.h>
 
 #include <poly/Math/Transform.h>
@@ -532,7 +533,6 @@ void Terrain::render(Camera& camera, RenderPass pass)
 	shader.bind();
 	shader.setUniform("u_projView", camera.getProjMatrix() * camera.getViewMatrix());
 	shader.setUniform("u_cameraPos", camera.getPosition());
-	shader.setUniform("u_ambient", m_ambientColor);
 
 	// Set the clip planes
 	shader.setUniform("u_clipPlanes[0]", Vector4f(-1.0f, 0.0f, 0.0f, m_size * 0.5f));
@@ -541,7 +541,7 @@ void Terrain::render(Camera& camera, RenderPass pass)
 	shader.setUniform("u_clipPlanes[3]", Vector4f(0.0f, 0.0f, 1.0f, m_size * 0.5f));
 
 	// Lighting
-	applyLighting(&shader);
+	m_scene->getExtension<Lighting>()->apply(&shader);
 
 	// Terrain maps
 	if (m_heightMap.getId())

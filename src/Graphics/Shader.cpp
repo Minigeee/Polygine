@@ -87,6 +87,50 @@ bool Shader::load(const std::string& fname, Shader::Type type)
 	// Close file
 	f.close();
 
+	// Search code for includes
+	std::string dirPath = fname.substr(0, fname.find_last_of("\\/") + 1);
+	const std::string inclKeyword = "#include";
+
+	// TODO : Allow recursive includes (maybe?)
+
+	for (Uint32 i = 0; i < code.size() - inclKeyword.size(); ++i)
+	{
+		if (code[i] == '#' && code.substr(i, inclKeyword.size()) == inclKeyword)
+		{
+			Uint32 fnameStart = i + inclKeyword.size() + 2;
+			Uint32 fnameEnd = fnameStart;
+			for (; fnameEnd < code.size(); ++fnameEnd)
+			{
+				if (code[fnameEnd] == '"')
+					break;
+			}
+
+			std::string inclFname = dirPath + code.substr(fnameStart, fnameEnd - fnameStart);
+
+			// Open the include file
+			f.open(inclFname);
+			if (!f.is_open())
+			{
+				LOG_ERROR("Could not open shader file: %s", inclFname.c_str());
+				return false;
+			}
+
+			// Read include data
+			std::string includeData;
+
+			f.seekg(0, std::ios::end);
+			includeData.reserve((Uint32)f.tellg());
+			f.seekg(0, std::ios::beg);
+
+			includeData.assign(std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>());
+
+			f.close();
+
+			// Concatenate data
+			code = code.substr(0, i) + '\n' + includeData + '\n' + code.substr(fnameEnd + 1);
+		}
+	}
+
 	// Create shader
 	Uint32 shader = 0;
 	const char* src = code.c_str();
