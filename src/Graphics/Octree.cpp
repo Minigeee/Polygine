@@ -11,6 +11,7 @@
 #include <poly/Graphics/Model.h>
 #include <poly/Graphics/Octree.h>
 #include <poly/Graphics/Shader.h>
+#include <poly/Graphics/Shadows.h>
 #include <poly/Graphics/Skeleton.h>
 
 #include <poly/Math/Transform.h>
@@ -729,7 +730,10 @@ void Octree::render(Camera& camera, RenderPass pass)
 
 	// Lighting
 	Lighting* lighting = m_scene->getExtension<Lighting>();
+	Shadows* shadows = m_scene->getExtension<Shadows>();
 	lighting->apply(shader);
+	if (pass != RenderPass::Shadow)
+		shadows->apply(shader);
 
 	// Iterate through render data and render everything
 	for (Uint32 i = 0; i < renderData.size(); ++i)
@@ -738,12 +742,15 @@ void Octree::render(Camera& camera, RenderPass pass)
 
 		// If the shader changed, update to the new one
 		if (data.m_shader != shader)
+
 		{
 			shader = data.m_shader;
 			priv::bindShader(shader, camera, m_scene);
 
 			// Lighting
 			lighting->apply(shader);
+			if (pass != RenderPass::Shadow)
+				shadows->apply(shader);
 		}
 
 		Model* model = 0;

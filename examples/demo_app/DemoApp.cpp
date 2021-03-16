@@ -18,6 +18,7 @@
 #include <poly/Graphics/ParticleSystem.h>
 #include <poly/Graphics/PostProcess.h>
 #include <poly/Graphics/Shader.h>
+#include <poly/Graphics/Shadows.h>
 #include <poly/Graphics/Skeleton.h>
 #include <poly/Graphics/Skybox.h>
 #include <poly/Graphics/Terrain.h>
@@ -139,17 +140,17 @@ int main()
 
     Grass grass;
     grass.setTerrain(&terrain);
-    scene.addRenderSystem(&grass);
+    // scene.addRenderSystem(&grass);
 
     DirLightComponent sun;
     // sun.m_diffuse = Vector3f(0.08f, 0.15f, 0.25f) * 0.4f;
     sun.m_diffuse = Vector3f(0.9f, 0.55f, 0.35f);
     sun.m_specular = sun.m_diffuse * 0.2f;
-    sun.m_direction.z = 10.0f;
+    sun.m_direction.z = 2.0f;
     scene.createEntity(sun);
 
     TransformComponent t;
-    t.m_position.y = 65.0f;
+    t.m_position.y = 52.0f;
     t.m_scale = Vector3f(0.25f);
     RenderComponent r(&model, &animShader);
     scene.createEntity(t, r, AnimationComponent(&skeleton), DynamicTag());
@@ -273,6 +274,7 @@ int main()
             camera.move(normalize(move) * elapsed * 3.4f);
 
         // Render scene
+        scene.getExtension<Shadows>()->render(camera);
         skeleton.update(elapsed);
         octree.update();
         scene.render(camera, framebuffers[0]);

@@ -25,24 +25,42 @@ struct DirLight
 
 
 ///////////////////////////////////////////////////////////
-vec3 calcDirLight(DirLight light, Material material, vec3 viewDir, vec3 normal, float shadowFactor = 1.0f, float diffFactor = 0.1f)
+float getShadowFactor(sampler2D shadowMap, vec4 lightClipSpacePos, float shadowDist, float fragDist)
+{
+    vec3 projCoords = lightClipSpacePos.xyz / lightClipSpacePos.w;
+    projCoords = projCoords * 0.5f + 0.5f;
+
+    if (fragDist > shadowDist)
+        return 1.0f;
+
+    // Get shadow map depth
+    float mapDepth = texture(shadowMap, projCoords.xy).r;
+    
+    return mapDepth < projCoords.z - 0.0001f ? 0.0f : 1.0f;
+}
+
+
+///////////////////////////////////////////////////////////
+vec3 calcDirLight(DirLight light, Material material, vec3 viewDir, vec3 normal, float shadowFactor, float diffFactor)
 {
     // Get diffuse factor
     float diff = dot(normal, -light.direction);
-    if (diff <= 0.0f)
-        diff = diffFactor * diff + diffFactor;
+    float diff1 = diffFactor * diff + diffFactor;
+    float diff2 = (1.0f - diffFactor) * diff + diffFactor;
+    if (diff < 0.0f)
+        diff = diff1;
     else
-        diff = (1.0f - diffFactor) * diff + diffFactor;
+        diff = mix(diff1, diff2, shadowFactor);
         
     // Diffuse color
-    vec3 diffuse = diff * light.diffuse * material.diffuse * shadowFactor;
+    vec3 diffuse = diff * light.diffuse * material.diffuse;
 
     // Get specular factor
     vec3 reflectDir = reflect(-light.direction, normal);
     float spec = pow(max(dot(viewDir, reflectDir), 0.0f), material.shininess);
 
     // Specular color
-    vec3 specular = spec * light.specular * material.specular;
+    vec3 specular = spec * light.specular * material.specular * shadowFactor;
 
     return diffuse + specular;
 }

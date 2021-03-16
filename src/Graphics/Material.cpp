@@ -152,17 +152,11 @@ void Material::apply(Shader* shader, int index) const
 
 	// Bind diffuse texture
 	if (m_diffTexture)
-	{
-		m_diffTexture->bind(0);
-		shader->setUniform("u_diffuseMaps[" + std::to_string(index) + ']', 0);
-	}
+		shader->setUniform("u_diffuseMaps[" + std::to_string(index) + ']', *m_diffTexture);
 
 	// Bind specular texture
 	if (m_specTexture)
-	{
-		m_specTexture->bind(1);
-		shader->setUniform("u_specularMaps[" + std::to_string(index) + ']', 1);
-	}
+		shader->setUniform("u_specularMaps[" + std::to_string(index) + ']', *m_specTexture);
 
 	auto it = m_textures.begin();
 	for (int i = 2; it != m_textures.end(); ++it, ++i)

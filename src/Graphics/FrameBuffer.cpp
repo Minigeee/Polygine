@@ -102,6 +102,10 @@ void FrameBuffer::create(Uint32 w, Uint32 h, Uint32 d, bool multisampled)
 	{
 		glCheck(glGenFramebuffers(1, &m_id));
 
+		bind();
+		glCheck(glDrawBuffer(GL_NONE));
+		glCheck(glReadBuffer(GL_NONE));
+
 		m_size = Vector3u(w, h, d);
 		m_multisampled = multisampled;
 	}
@@ -178,7 +182,7 @@ void FrameBuffer::attachColor(Texture* texture, PixelFormat fmt, GLType dtype, T
 	}
 
 	// Specify color attachments to draw
-	glDrawBuffers(m_colorTextures.size() + m_colorIds.size(), priv::drawBuffers);
+	glCheck(glDrawBuffers(m_colorTextures.size() + m_colorIds.size(), priv::drawBuffers));
 }
 
 

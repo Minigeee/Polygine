@@ -257,6 +257,43 @@ private:
 	float m_threshold;
 };
 
+
+///////////////////////////////////////////////////////////
+class Blur : public PostProcess
+{
+public:
+	enum DistType
+	{
+		Uniform,
+		Gaussian
+	};
+
+public:
+	///////////////////////////////////////////////////////////
+	/// \brief Default constructor
+	///
+	///////////////////////////////////////////////////////////
+	Blur();
+
+	void render(FrameBuffer& input, FrameBuffer& output = FrameBuffer::Default) override;
+
+	void setVerticalBlur(bool vertical);
+
+private:
+	static Shader s_shader;
+
+	static Shader& getShader();
+
+private:
+	DistType m_distType;
+	Uint32 m_kernelSize;
+	float m_spread;
+	bool m_verticalBlur;
+	bool m_paramsDirty;
+
+	std::vector<float> m_weights;
+};
+
 }
 
 #endif

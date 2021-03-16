@@ -44,7 +44,7 @@ DirLightComponent::DirLightComponent() :
 	m_specular				(1.0f),
 	m_direction				(0.0f, -1.0f, 0.0f),
 	m_shadowResolution		(1024),
-	m_shadowDistance		(100.0f),
+	m_shadowDistance		(10.0f),
 	m_shadowStrength		(0.8f),
 	m_shadowsEnabled		(true)
 {

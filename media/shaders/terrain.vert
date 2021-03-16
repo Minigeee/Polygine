@@ -1,5 +1,7 @@
 #version 330 core
 
+#include "common.glsl"
+
 layout (location = 0) in vec2 a_position;
 layout (location = 1) in vec2 a_nearTexCoord;
 layout (location = 2) in vec2 a_farTexCoord;
@@ -8,6 +10,7 @@ layout (location = 4) in mat4 a_transform;
 
 out vec3 v_fragPos;
 out vec2 v_texCoord;
+out vec4 v_lightClipSpacePos[MAX_NUM_DIR_LIGHTS];
 
 uniform mat4 u_projView;
 uniform vec3 u_cameraPos;
@@ -18,6 +21,9 @@ uniform float u_height;
 uniform float u_tileScale;
 uniform float u_blendLodDist;
 uniform sampler2D u_heightMap;
+
+uniform mat4 u_lightProjViews[MAX_NUM_DIR_LIGHTS];
+uniform int u_numShadows;
 
 float gl_ClipDistance[4];
 
@@ -36,4 +42,8 @@ void main()
         gl_ClipDistance[i] = dot(worldPos, u_clipPlanes[i]);
 
     v_fragPos = worldPos.xyz;
+
+    // Calculate light space positions
+    for (int i = 0; i < u_numShadows; ++i)
+        v_lightClipSpacePos[i] = u_lightProjViews[i] * worldPos;
 }

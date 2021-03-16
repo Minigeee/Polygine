@@ -541,7 +541,7 @@ public:
 	/// \param pass The render pass that should be executed
 	///
 	///////////////////////////////////////////////////////////
-	void render(Camera& camera, FrameBuffer& target = FrameBuffer::Default, RenderPass passes = RenderPass::All);
+	void render(Camera& camera, FrameBuffer& target = FrameBuffer::Default, RenderPass passes = RenderPass::Default);
 
 private:
 	Handle m_handle;									//!< The scene handle used for scene id

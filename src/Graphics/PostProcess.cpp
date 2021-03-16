@@ -23,6 +23,9 @@ Shader Fog::s_shader;
 ///////////////////////////////////////////////////////////
 Shader Fxaa::s_shader;
 
+///////////////////////////////////////////////////////////
+Shader Blur::s_shader;
+
 
 ///////////////////////////////////////////////////////////
 VertexArray& PostProcess::getVertexArray()
@@ -326,6 +329,95 @@ Shader& Fxaa::getShader()
 		// Load shader
 		s_shader.load("shaders/postprocess/quad.vert", Shader::Vertex);
 		s_shader.load("shaders/postprocess/fxaa.frag", Shader::Fragment);
+		s_shader.compile();
+	}
+
+	return s_shader;
+}
+
+
+///////////////////////////////////////////////////////////
+Blur::Blur() :
+	m_distType		(Gaussian),
+	m_kernelSize	(5),
+	m_spread		(1.0f),
+	m_verticalBlur	(true),
+	m_paramsDirty	(true)
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
+void Blur::render(FrameBuffer& input, FrameBuffer& output)
+{
+	// Bind output target
+	output.bind();
+
+	// Disable depth test
+	glCheck(glDisable(GL_DEPTH_TEST));
+
+	// Disable cull face
+	glCheck(glDisable(GL_CULL_FACE));
+
+	// Update distribution weights if needed
+	if (m_paramsDirty)
+	{
+		m_weights.clear();
+
+		if (m_distType == Uniform)
+		{
+
+		}
+		else if (m_distType == Gaussian)
+		{
+			Uint32 numWeights = m_kernelSize / 2 + 1;
+			float sum = 0.0f;
+
+			for (Uint32 i = 0; i < numWeights; ++i)
+			{
+				m_weights.push_back(exp(-(float)i * i / (2.0f * m_spread * m_spread)));
+				sum += m_weights.back() * (i == 0 ? 1.0f : 2.0f);
+			}
+
+			for (Uint32 i = 0; i < numWeights; ++i)
+				m_weights[i] /= sum;
+		}
+	}
+
+	// Bind shader
+	Shader& shader = getShader();
+
+	shader.bind();
+	shader.setUniform("u_texture", *input.getColorTexture());
+
+	shader.setUniform("u_verticalBlur", (int)m_verticalBlur);
+	shader.setUniform("u_kernelSize", (int)m_kernelSize);
+	for (Uint32 i = 0; i < m_weights.size(); ++i)
+		shader.setUniform("u_weights[" + std::to_string(i) + ']', m_weights[i]);
+
+	// Render vertex array
+	VertexArray& vao = PostProcess::getVertexArray();
+	vao.bind();
+	vao.draw();
+}
+
+
+///////////////////////////////////////////////////////////
+void Blur::setVerticalBlur(bool vertical)
+{
+	m_verticalBlur = vertical;
+}
+
+
+///////////////////////////////////////////////////////////
+Shader& Blur::getShader()
+{
+	if (!s_shader.getId())
+	{
+		// Load shader
+		s_shader.load("shaders/postprocess/quad.vert", Shader::Vertex);
+		s_shader.load("shaders/postprocess/blur.frag", Shader::Fragment);
 		s_shader.compile();
 	}
 

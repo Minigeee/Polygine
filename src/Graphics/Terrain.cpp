@@ -5,6 +5,7 @@
 #include <poly/Graphics/Components.h>
 #include <poly/Graphics/GLCheck.h>
 #include <poly/Graphics/Lighting.h>
+#include <poly/Graphics/Shadows.h>
 #include <poly/Graphics/Terrain.h>
 
 #include <poly/Math/Transform.h>
@@ -542,6 +543,8 @@ void Terrain::render(Camera& camera, RenderPass pass)
 
 	// Lighting
 	m_scene->getExtension<Lighting>()->apply(&shader);
+	if (pass != RenderPass::Shadow)
+		m_scene->getExtension<Shadows>()->apply(&shader);
 
 	// Terrain maps
 	if (m_heightMap.getId())
@@ -562,7 +565,7 @@ void Terrain::render(Camera& camera, RenderPass pass)
 
 	// Single side render
 	glCheck(glEnable(GL_CULL_FACE));
-	glCheck(glCullFace(GL_BACK));
+	glCheck(glCullFace(pass == RenderPass::Shadow ? GL_FRONT : GL_BACK));
 
 	// Enable clip planes
 	for (Uint32 i = 0; i < 4; ++i)
