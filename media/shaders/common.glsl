@@ -25,6 +25,20 @@ struct DirLight
 
 
 ///////////////////////////////////////////////////////////
+float rand(vec2 c){
+	return fract(sin(dot(c.xy ,vec2(12.9898,78.233))) * 43758.5453);
+}
+
+
+///////////////////////////////////////////////////////////
+vec2 random2(vec2 st){
+    st = vec2( dot(st,vec2(127.1,311.7)),
+              dot(st,vec2(269.5,183.3)) );
+    return -1.0 + 2.0*fract(sin(st)*43758.5453123);
+}
+
+
+///////////////////////////////////////////////////////////
 float getShadowFactor(sampler2D shadowMap, vec4 lightClipSpacePos, float shadowDist, float fragDist)
 {
     vec3 projCoords = lightClipSpacePos.xyz / lightClipSpacePos.w;
@@ -34,9 +48,26 @@ float getShadowFactor(sampler2D shadowMap, vec4 lightClipSpacePos, float shadowD
         return 1.0f;
 
     // Get shadow map depth
-    float mapDepth = texture(shadowMap, projCoords.xy).r;
+    float shadow = 0.0f;
+    const int kernelHalfSize = 3;
+    vec2 texelSize = 1.0f / textureSize(shadowMap, 0);
+
+    for (int r = -kernelHalfSize; r <= kernelHalfSize; ++r)
+    {
+        for (int c = -kernelHalfSize; c <= kernelHalfSize; ++c)
+        {
+            vec2 texCoords = projCoords.xy / texelSize + vec2(c, r);
+            vec2 offset = random2(texCoords * 0.001f);
+            texCoords += (offset - 0.5f) * 0.5f;
+
+            float mapDepth = texture(shadowMap, texCoords * texelSize).r;
+            shadow += mapDepth < projCoords.z - 0.0001f ? 1.0f : 0.0f;
+        }
+    }
+
+    shadow /= 49.0f;
     
-    return mapDepth < projCoords.z - 0.0001f ? 0.0f : 1.0f;
+    return 1.0f - shadow;
 }
 
 

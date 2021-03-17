@@ -43,7 +43,7 @@ DirLightComponent::DirLightComponent() :
 	m_diffuse				(1.0f),
 	m_specular				(1.0f),
 	m_direction				(0.0f, -1.0f, 0.0f),
-	m_shadowResolution		(1024),
+	m_shadowResolution		(2048),
 	m_shadowDistance		(10.0f),
 	m_shadowStrength		(0.8f),
 	m_shadowsEnabled		(true)
