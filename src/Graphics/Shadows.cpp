@@ -28,8 +28,13 @@ Shadows::~Shadows()
 {
 	for (auto it = m_shadowInfo.begin(); it != m_shadowInfo.end(); ++it)
 	{
-		Pool<Texture>::free(it.value().m_shadowMap->getDepthTexture());
-		Pool<FrameBuffer>::free(it.value().m_shadowMap);
+		std::vector<FrameBuffer*>& shadowMaps = it.value().m_shadowMaps;
+
+		for (Uint32 i = 0; i < shadowMaps.size(); ++i)
+		{
+			Pool<Texture>::free(shadowMaps[i]->getDepthTexture());
+			Pool<FrameBuffer>::free(shadowMaps[i]);
+		}
 	}
 }
 
@@ -46,70 +51,83 @@ void Shadows::render(Camera& camera)
 	m_scene->system<DirLightComponent>(
 		[&](const Entity::Id& id, const DirLightComponent& light)
 		{
-			// Get shadow info
-			ShadowInfo* info = 0;
-
-			auto it = m_shadowInfo.find(id);
-			if (it == m_shadowInfo.end())
-			{
-				// Create the info struct if it doesn't exist
-				info = &m_shadowInfo[id];
-				info->m_lightProjView = Matrix4f(1.0f);
-				info->m_shadowDist = 0.0f;
-
-				info->m_shadowMap = Pool<FrameBuffer>::alloc();
-				info->m_shadowMap->create(light.m_shadowResolution, light.m_shadowResolution);
-				info->m_shadowMap->attachDepth(Pool<Texture>::alloc());
-			}
-			else
-				info = &it.value();
-
-			// Calculate vertices
-			float near = camera.getNear();
-			float far = light.m_shadowDistance;
-			float xn = near * tanHalfFovH;
-			float yn = near * tanHalfFovV;
-			float xf = far * tanHalfFovH;
-			float yf = far * tanHalfFovV;
-
-			Vector4f vertices[] =
-			{
-				Vector4f(-xn, -yn, -near, 1.0f),
-				Vector4f(-xn, yn, -near, 1.0f),
-				Vector4f(xn, -yn, -near, 1.0f),
-				Vector4f(xn, yn, -near, 1.0f),
-				Vector4f(-xf, -yf, -far, 1.0f),
-				Vector4f(-xf, yf, -far, 1.0f),
-				Vector4f(xf, -yf, -far, 1.0f),
-				Vector4f(xf, yf, -far, 1.0f)
-			};
-
 			// Create light camera
 			Camera lightCamera;
 			lightCamera.setDirection(light.m_direction);
 			lightCamera.setPosition(camera.getPosition());
 
-			// Calculate light ortho bounds
-			Vector3f min(std::numeric_limits<float>::max());
-			Vector3f max(-std::numeric_limits<float>::max());
-			for (Uint32 i = 0; i < 8; ++i)
+			// Calculate base distance unit
+			float denom = 0.0f;
+			for (Uint32 i = 0; i < light.m_shadowCascades; ++i)
+				denom += powf(light.m_cascadeDistMultiplier, (float)i);
+			float distUnit = (light.m_shadowDistance - camera.getNear()) / denom;
+
+			// Initial near and far plane
+			float near = camera.getNear();
+			float far = near + distUnit;
+
+			// Get shadow info
+			ShadowInfo* info = &m_shadowInfo[id];
+			info->m_shadowStrength = light.m_shadowStrength;
+			info->m_cameraProj = camera.getProjMatrix();
+
+			for (Uint32 cascade = 0; cascade < light.m_shadowCascades; ++cascade)
 			{
-				Vector4f vertex = lightCamera.getViewMatrix() * invCameraView * vertices[i];
+				if (cascade >= info->m_shadowMaps.size())
+				{
+					FrameBuffer* shadowMap = Pool<FrameBuffer>::alloc();
+					shadowMap->create(light.m_shadowResolution, light.m_shadowResolution);
+					shadowMap->attachDepth(Pool<Texture>::alloc());
 
-				min.x = std::min(min.x, vertex.x);
-				min.y = std::min(min.y, vertex.y);
-				min.z = std::min(min.z, vertex.z);
-				max.x = std::max(max.x, vertex.x);
-				max.y = std::max(max.y, vertex.y);
-				max.z = std::max(max.z, vertex.z);
+					info->m_shadowMaps.push_back(shadowMap);
+					info->m_lightProjViews.push_back(Matrix4f(1.0f));
+					info->m_shadowDists.push_back(0.0f);
+				}
+
+				// Calculate vertices
+				float xn = near * tanHalfFovH;
+				float yn = near * tanHalfFovV;
+				float xf = far * tanHalfFovH;
+				float yf = far * tanHalfFovV;
+
+				Vector4f vertices[] =
+				{
+					Vector4f(-xn, -yn, -near, 1.0f),
+					Vector4f(-xn, yn, -near, 1.0f),
+					Vector4f(xn, -yn, -near, 1.0f),
+					Vector4f(xn, yn, -near, 1.0f),
+					Vector4f(-xf, -yf, -far, 1.0f),
+					Vector4f(-xf, yf, -far, 1.0f),
+					Vector4f(xf, -yf, -far, 1.0f),
+					Vector4f(xf, yf, -far, 1.0f)
+				};
+
+				// Update new near and far planes
+				near = far;
+				far += powf(light.m_cascadeDistMultiplier, (float)(cascade + 1)) * distUnit;
+
+				// Calculate light ortho bounds
+				Vector3f min(std::numeric_limits<float>::max());
+				Vector3f max(-std::numeric_limits<float>::max());
+				for (Uint32 i = 0; i < 8; ++i)
+				{
+					Vector4f vertex = lightCamera.getViewMatrix() * invCameraView * vertices[i];
+
+					min.x = std::min(min.x, vertex.x);
+					min.y = std::min(min.y, vertex.y);
+					min.z = std::min(min.z, vertex.z);
+					max.x = std::max(max.x, vertex.x);
+					max.y = std::max(max.y, vertex.y);
+					max.z = std::max(max.z, vertex.z);
+				}
+
+				lightCamera.setOrthographic(min.x, max.x, min.y, max.y, -200.0f, -min.z);
+				info->m_lightProjViews[cascade] = lightCamera.getProjMatrix() * lightCamera.getViewMatrix();
+				info->m_shadowDists[cascade] = near;
+
+				// Render the scene
+				m_scene->render(lightCamera, *info->m_shadowMaps[cascade], RenderPass::Shadow);
 			}
-
-			lightCamera.setOrthographic(min.x, max.x, min.y, max.y, -200.0f, -min.z);
-			info->m_lightProjView = lightCamera.getProjMatrix() * lightCamera.getViewMatrix();
-			info->m_shadowDist = light.m_shadowDistance;
-
-			// Render the scene
-			m_scene->render(lightCamera, *info->m_shadowMap, RenderPass::Shadow);
 		}
 	);
 }
@@ -121,12 +139,23 @@ void Shadows::apply(Shader* shader)
 	shader->setUniform("u_numShadows", (int)m_shadowInfo.size());
 
 	Uint32 i = 0;
-	for (auto it = m_shadowInfo.begin(); it != m_shadowInfo.end(); ++it)
+	for (auto it = m_shadowInfo.begin(); it != m_shadowInfo.end(); ++it, ++i)
 	{
-		std::string indexStr = '[' + std::to_string(i++) + ']';
-		shader->setUniform("u_shadowMaps" + indexStr, *it.value().m_shadowMap->getDepthTexture());
-		shader->setUniform("u_lightProjViews" + indexStr, it.value().m_lightProjView);
-		shader->setUniform("u_shadowDists" + indexStr, it.value().m_shadowDist);
+		ShadowInfo& info = it.value();
+
+		for (Uint32 cascade = 0; cascade < info.m_shadowMaps.size(); ++cascade)
+		{
+			Vector4f projCoords = info.m_cameraProj * Vector4f(0.0f, 0.0f, -info.m_shadowDists[cascade], 1.0f);
+
+			Uint32 index = i * 3 + cascade;
+			std::string indexStr = '[' + std::to_string(index) + ']';
+			shader->setUniform("u_shadowMaps" + indexStr, *info.m_shadowMaps[cascade]->getDepthTexture());
+			shader->setUniform("u_lightProjViews" + indexStr, info.m_lightProjViews[cascade]);
+			shader->setUniform("u_shadowDists" + indexStr, projCoords.z);
+		}
+
+		shader->setUniform("u_shadowStrengths[" + std::to_string(i) + ']', info.m_shadowStrength);
+		shader->setUniform("u_numShadowCascades[" + std::to_string(i) + ']', (int)info.m_shadowMaps.size());
 	}
 }
 

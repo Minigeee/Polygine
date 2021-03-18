@@ -9,8 +9,9 @@ layout (location = 3) in float a_lodDist;
 layout (location = 4) in mat4 a_transform;
 
 out vec3 v_fragPos;
+out vec4 v_clipSpacePos;
 out vec2 v_texCoord;
-out vec4 v_lightClipSpacePos[MAX_NUM_DIR_LIGHTS];
+out vec4 v_lightClipSpacePos[MAX_NUM_SHADOW_MAPS];
 
 uniform mat4 u_projView;
 uniform vec3 u_cameraPos;
@@ -22,7 +23,7 @@ uniform float u_tileScale;
 uniform float u_blendLodDist;
 uniform sampler2D u_heightMap;
 
-uniform mat4 u_lightProjViews[MAX_NUM_DIR_LIGHTS];
+uniform mat4 u_lightProjViews[MAX_NUM_SHADOW_MAPS];
 uniform int u_numShadows;
 
 float gl_ClipDistance[4];
@@ -36,6 +37,7 @@ void main()
     worldPos.y = texture(u_heightMap, v_texCoord).r * u_height;
 
     gl_Position =  u_projView * worldPos;
+    v_clipSpacePos = gl_Position;
 
     // Apply clip planes
     for (int i = 0; i < 4; ++i)
@@ -44,6 +46,6 @@ void main()
     v_fragPos = worldPos.xyz;
 
     // Calculate light space positions
-    for (int i = 0; i < u_numShadows; ++i)
+    for (int i = 0; i < u_numShadows * MAX_NUM_SHADOW_CASCADES; ++i)
         v_lightClipSpacePos[i] = u_lightProjViews[i] * worldPos;
 }

@@ -140,7 +140,7 @@ int main()
 
     Grass grass;
     grass.setTerrain(&terrain);
-    // scene.addRenderSystem(&grass);
+    scene.addRenderSystem(&grass);
 
     DirLightComponent sun;
     // sun.m_diffuse = Vector3f(0.08f, 0.15f, 0.25f) * 0.4f;

@@ -4,6 +4,7 @@
 #include <poly/Graphics/GLCheck.h>
 #include <poly/Graphics/Grass.h>
 #include <poly/Graphics/Lighting.h>
+#include <poly/Graphics/Shadows.h>
 
 namespace poly
 {
@@ -92,6 +93,7 @@ void Grass::render(Camera& camera, RenderPass pass)
 
 	// Lighting
 	m_scene->getExtension<Lighting>()->apply(&shader);
+	m_scene->getExtension<Shadows>()->apply(&shader);
 
 	// Terrain maps
 	shader.setUniform("u_terrainSize", m_terrain->getSize());

@@ -88,6 +88,9 @@ struct DirLightComponent
 	Uint32 m_shadowResolution;		//!< The base resolution of the shadow map
 	float m_shadowDistance;			//!< The furthest distance shadows should be rendered
 	float m_shadowStrength;			//!< The amount of light blocked by shadowed areas
+	Uint32 m_shadowCascades;		//!< The number of shadow cascades to use
+	float m_cascadeResMultiplier;	//!< The shadow map resolution multiplier between each cascade level
+	float m_cascadeDistMultiplier;	//!< The shadow distance cutoff multplier between each cascade level
 	bool m_shadowsEnabled;			//!< Flag that determines if this light should cast shadows or not
 };
 

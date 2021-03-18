@@ -1,6 +1,8 @@
 
 #define MAX_NUM_MATERIALS 4
 #define MAX_NUM_DIR_LIGHTS 2
+#define MAX_NUM_SHADOW_CASCADES 3
+#define MAX_NUM_SHADOW_MAPS MAX_NUM_DIR_LIGHTS * MAX_NUM_SHADOW_CASCADES
 
 
 ///////////////////////////////////////////////////////////
@@ -39,18 +41,34 @@ vec2 random2(vec2 st){
 
 
 ///////////////////////////////////////////////////////////
-float getShadowFactor(sampler2D shadowMap, vec4 lightClipSpacePos, float shadowDist, float fragDist)
+float getShadowFactor(
+    sampler2D shadowMaps[MAX_NUM_SHADOW_MAPS],
+    vec4 lightClipSpacePos[MAX_NUM_SHADOW_MAPS],
+    float shadowDists[MAX_NUM_SHADOW_MAPS],
+    int numCascades,
+    float clipSpaceDepth,
+    int lightNum,
+    int kernelSize)
 {
-    vec3 projCoords = lightClipSpacePos.xyz / lightClipSpacePos.w;
-    projCoords = projCoords * 0.5f + 0.5f;
+    // Find which region the pixel is in
+    int regionNum = 0;
+    for (; regionNum < numCascades; ++regionNum)
+    {
+        if (clipSpaceDepth < shadowDists[lightNum * MAX_NUM_SHADOW_CASCADES + regionNum])
+            break;
+    }
 
-    if (fragDist > shadowDist)
+    if (regionNum >= numCascades)
         return 1.0f;
+
+    int mapIndex = lightNum * MAX_NUM_SHADOW_CASCADES + regionNum;
+    vec3 projCoords = lightClipSpacePos[mapIndex].xyz / lightClipSpacePos[mapIndex].w;
+    projCoords = projCoords * 0.5f + 0.5f;
 
     // Get shadow map depth
     float shadow = 0.0f;
-    const int kernelHalfSize = 3;
-    vec2 texelSize = 1.0f / textureSize(shadowMap, 0);
+    int kernelHalfSize = (regionNum == 0 ? kernelSize / 2 : 0);
+    vec2 texelSize = 1.0f / textureSize(shadowMaps[mapIndex], 0);
 
     for (int r = -kernelHalfSize; r <= kernelHalfSize; ++r)
     {
@@ -60,12 +78,12 @@ float getShadowFactor(sampler2D shadowMap, vec4 lightClipSpacePos, float shadowD
             vec2 offset = random2(texCoords * 0.001f);
             texCoords += (offset - 0.5f) * 0.5f;
 
-            float mapDepth = texture(shadowMap, texCoords * texelSize).r;
+            float mapDepth = texture(shadowMaps[mapIndex], texCoords * texelSize).r;
             shadow += mapDepth < projCoords.z - 0.0001f ? 1.0f : 0.0f;
         }
     }
 
-    shadow /= 49.0f;
+    shadow /= pow(2 * kernelHalfSize + 1, 2.0f);
     
     return 1.0f - shadow;
 }

@@ -26,9 +26,11 @@ public:
 private:
 	struct ShadowInfo
 	{
-		FrameBuffer* m_shadowMap;
-		Matrix4f m_lightProjView;
-		float m_shadowDist;
+		std::vector<FrameBuffer*> m_shadowMaps;
+		std::vector<Matrix4f> m_lightProjViews;
+		std::vector<float> m_shadowDists;
+		Matrix4f m_cameraProj;
+		float m_shadowStrength;
 	};
 
 private:
