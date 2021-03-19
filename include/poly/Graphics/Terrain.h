@@ -127,6 +127,14 @@ public:
 	void setMaxDist(float maxDist);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Set whether the terrain should use flat shading (low-poly style)
+	///
+	/// \param use The boolean controlling whether to use flat shading or not
+	///
+	///////////////////////////////////////////////////////////
+	void setUseFlatShading(bool use);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Set the terrain height map
 	///
 	/// Everytime a new height map is set, the normals are recalculated
@@ -226,6 +234,14 @@ public:
 	float getMaxDist() const;
 
 	///////////////////////////////////////////////////////////
+	/// \brief Check if this terrain is rendered using flat shading
+	///
+	/// \return True if the terrain uses flat shading
+	///
+	///////////////////////////////////////////////////////////
+	bool usesFlatShading() const;
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get height map texture
 	///
 	/// \return A reference to the height map texture
@@ -298,7 +314,8 @@ private:
 	float m_height;							//!< Maximume terrain height
 	float m_tileScale;						//!< Tile scale
 	float m_lodScale;						//!< Lod distance scale
-	float m_maxDist;						//!< Maximume view distance
+	float m_maxDist;						//!< Maximum view distance
+	bool m_useFlatShading;					//!< Controls if the terrain should be rendered using flat shading
 
 	Texture m_heightMap;					//!< Height map texture
 	Texture m_normalMap;					//!< Normal map texture

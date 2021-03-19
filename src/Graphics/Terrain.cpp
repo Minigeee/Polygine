@@ -80,6 +80,7 @@ Terrain::Terrain() :
 	m_tileScale				(0.0f),
 	m_lodScale				(0.0f),
 	m_maxDist				(0.0f),
+	m_useFlatShading		(true),
 	m_normalMapData			(0),
 	m_instanceBufferOffset	(0),
 	m_ambientColor			(0.02f)
@@ -559,6 +560,7 @@ void Terrain::render(Camera& camera, RenderPass pass)
 	shader.setUniform("u_height", m_height);
 	shader.setUniform("u_tileScale", m_tileScale);
 	shader.setUniform("u_blendLodDist", m_lodDists[m_lodDists.size() - 2]);
+	shader.setUniform("u_useFlatShading", m_useFlatShading);
 
 	// Enable depth testing
 	glCheck(glEnable(GL_DEPTH_TEST));
@@ -655,6 +657,13 @@ void Terrain::setMaxDist(float dist)
 
 	// Update tile layout
 	createTileLayout();
+}
+
+
+///////////////////////////////////////////////////////////
+void Terrain::setUseFlatShading(bool use)
+{
+	m_useFlatShading = use;
 }
 
 
@@ -841,6 +850,13 @@ float Terrain::getLodScale() const
 float Terrain::getMaxDist() const
 {
 	return m_maxDist;
+}
+
+
+///////////////////////////////////////////////////////////
+bool Terrain::usesFlatShading() const
+{
+	return m_useFlatShading;
 }
 
 

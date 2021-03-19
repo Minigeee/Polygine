@@ -97,6 +97,7 @@ int main()
 
     Terrain terrain;
     terrain.create(4000.0f, 200.0f, 1.0f);
+    terrain.setUseFlatShading(false);
     scene.addRenderSystem(&terrain);
 
     FractalNoise noise;
@@ -141,6 +142,9 @@ int main()
     Grass grass;
     grass.setTerrain(&terrain);
     scene.addRenderSystem(&grass);
+
+    CpuParticles<Particle> particles;
+    scene.addRenderSystem(&particles);
 
     DirLightComponent sun;
     // sun.m_diffuse = Vector3f(0.08f, 0.15f, 0.25f) * 0.4f;
@@ -299,9 +303,7 @@ int main()
 // TODO : Add convenience constructor loaders
 // TODO : Document Dropdown
 // TODO : Document Grass
-// TODO : Add option for using smooth or low-poly terrain
 // TODO : Add GPU particle system + document new versions
 // TODO : Improve post processing + document new version
 // TODO : Renderable base class + Billboard
-// TODO : Octree lod system
 // TODO : Bloom effect

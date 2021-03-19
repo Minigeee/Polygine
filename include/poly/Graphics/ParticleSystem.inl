@@ -11,7 +11,7 @@ inline CpuParticles<T>::CpuParticles() :
 	m_shader		(0),
 	m_bufferSize	(0)
 {
-
+	m_fieldsFunc = PARTICLE_FIELDS(T, m_position, m_rotation, m_size, m_color, m_textureRect);
 }
 
 
@@ -23,15 +23,8 @@ inline void CpuParticles<T>::init(Scene* scene)
 	m_vertexBuffer.create((T*)NULL, 256, BufferUsage::Stream);
 	m_bufferSize = 256;
 
-	// Create dummy particle to get property offsets
-	T particle;
-
 	// Create vertex array and add required properties
-	m_vertexArray.addBuffer(m_vertexBuffer, 0, 3, sizeof(T), (Uint32)((Uint8*)&particle.m_position - (Uint8*)&particle));
-	m_vertexArray.addBuffer(m_vertexBuffer, 1, 1, sizeof(T), (Uint32)((Uint8*)&particle.m_rotation - (Uint8*)&particle));
-	m_vertexArray.addBuffer(m_vertexBuffer, 2, 2, sizeof(T), (Uint32)((Uint8*)&particle.m_size - (Uint8*)&particle));
-	m_vertexArray.addBuffer(m_vertexBuffer, 3, 4, sizeof(T), (Uint32)((Uint8*)&particle.m_color - (Uint8*)&particle));
-	m_vertexArray.addBuffer(m_vertexBuffer, 4, 4, sizeof(T), (Uint32)((Uint8*)&particle.m_textureRect - (Uint8*)&particle));
+	updateVertexArray();
 
 	// Render as points
 	m_vertexArray.setDrawMode(DrawMode::Points);
@@ -101,6 +94,17 @@ inline void CpuParticles<T>::addParticle(const T& particle)
 
 ///////////////////////////////////////////////////////////
 template <typename T>
+inline void CpuParticles<T>::setFields(const std::function<std::vector<Vector2u>()>& func)
+{
+	m_fieldsFunc = func;
+
+	if (m_vertexArray.getId())
+		updateVertexArray();
+}
+
+
+///////////////////////////////////////////////////////////
+template <typename T>
 template <typename Func>
 inline void CpuParticles<T>::update(Func&& func)
 {
@@ -151,6 +155,31 @@ template <typename T>
 inline void CpuParticles<T>::setShader(Shader* shader)
 {
 	m_shader = shader;
+}
+
+
+///////////////////////////////////////////////////////////
+template <typename T>
+inline void CpuParticles<T>::updateVertexArray()
+{
+	// Get particle field properties
+	std::vector<Vector2u> info = m_fieldsFunc();
+	Uint32 currentSlot = 0;
+
+	for (Uint32 i = 0; i < info.size(); ++i)
+	{
+		Uint32 offset = info[i].x;
+		Uint32 size = info[i].y;
+
+		// If the property is larger than 4 floats, then multiple slots should be used
+		Uint32 numSlots = (size + 3) / 4;
+		for (Uint32 slot = 0; slot < numSlots; ++slot, ++currentSlot)
+		{
+			m_vertexArray.addBuffer(m_vertexBuffer, currentSlot, size < 4 ? size : 4, sizeof(T), offset);
+			if (size > 4)
+				size -= 4;
+		}
+	}
 }
 
 

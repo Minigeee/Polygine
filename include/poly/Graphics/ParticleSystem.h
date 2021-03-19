@@ -65,6 +65,11 @@ public:
 
 	void setShader(Shader* shader);
 
+	void setFields(const std::function<std::vector<Vector2u>()>& func);
+
+private:
+	void updateVertexArray();
+
 private:
 	Clock m_clock;
 	Texture* m_texture;
@@ -74,7 +79,38 @@ private:
 	VertexArray m_vertexArray;
 	VertexBuffer m_vertexBuffer;
 	std::vector<T> m_particles;
+
+	std::function<std::vector<Vector2u>()> m_fieldsFunc;
 };
+
+
+#include <poly/Core/Macros.h>
+
+
+#ifndef DOXYGEN_SKIP
+
+#define _GET_FIELD_PROPERTIES_EXPR(x) info.push_back(Vector2u((Uint32)((Uint8*)&p.x - (Uint8*)&p), ((Uint32)sizeof(p.x) + 3) / 4));
+
+#define _GET_FIELD_PROPERTIES(...) LOOP(_GET_FIELD_PROPERTIES_EXPR, __VA_ARGS__)
+
+#endif
+
+
+///////////////////////////////////////////////////////////
+/// \brief A macro used to define which particle fields should be sent to the shaders
+///
+/// Usage example:
+/// \code
+///
+/// CpuParticles<Particle> particles;
+/// particles.setFields(PARTICLE_FIELDS(Particle, m_position, m_rotation, m_size, m_color));
+///
+/// \endcode
+///
+///////////////////////////////////////////////////////////
+#define PARTICLE_FIELDS(type, ...) \
+	[]() -> std::vector<Vector2u> { std::vector<Vector2u> info; type p; _GET_FIELD_PROPERTIES(__VA_ARGS__) return info; }
+
 
 }
 
