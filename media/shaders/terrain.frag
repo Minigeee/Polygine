@@ -46,7 +46,7 @@ void main()
     // Calculate directional lighting
     for (int i = 0; i < u_numDirLights; ++i)
     {
-        float shadowFactor = getShadowFactor(u_shadowMaps, v_lightClipSpacePos, u_shadowDists, u_numShadowCascades[i], v_clipSpacePos.z, i, 5);
+        float shadowFactor = getShadowFactor(u_shadowMaps, v_lightClipSpacePos, u_shadowDists, u_numShadowCascades[i], v_clipSpacePos.z, i, 3);
         shadowFactor = mix(1.0f, shadowFactor, u_shadowStrengths[i]);
         result += calcDirLight(u_dirLights[i], material, viewDir, normal, shadowFactor, 0.1f);
     }

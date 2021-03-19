@@ -74,9 +74,9 @@ float getShadowFactor(
     {
         for (int c = -kernelHalfSize; c <= kernelHalfSize; ++c)
         {
-            vec2 texCoords = projCoords.xy / texelSize + vec2(c, r);
+            vec2 texCoords = projCoords.xy / texelSize + vec2(c, r) * 2.0f;
             vec2 offset = random2(texCoords * 0.001f);
-            texCoords += (offset - 0.5f) * 0.5f;
+            texCoords += (offset - 0.5f);
 
             float mapDepth = texture(shadowMaps[mapIndex], texCoords * texelSize).r;
             shadow += mapDepth < projCoords.z - 0.0001f ? 1.0f : 0.0f;

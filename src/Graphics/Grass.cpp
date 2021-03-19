@@ -61,6 +61,17 @@ void Grass::init(Scene* scene)
 		}
 	}
 
+	// Sort front to back for more efficiency (far away transparency isn't noticeable)
+	std::sort(grassData.begin(), grassData.end(),
+		[](const Vector3f& a, const Vector3f& b) -> bool
+		{
+			float distA = a.x * a.x + a.y * a.y;
+			float distB = b.x * b.x + b.y * b.y;
+
+			return distA < distB;
+		}
+	);
+
 	m_vertexBuffer.create(grassData);
 
 	// Create vertex array

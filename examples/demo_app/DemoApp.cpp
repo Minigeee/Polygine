@@ -134,7 +134,7 @@ int main()
 
     ProceduralSkybox skybox;
     skybox.setZenithColor(Vector3f(0.15f, 0.4f, 0.8f));
-    skybox.setHorizonColor(Vector3f(0.9f, 0.55f, 0.35f));
+    skybox.setHorizonColor(Vector3f(0.6f, 0.75f, 0.65f));
     scene.addRenderSystem(&skybox);
     scene.getExtension<Lighting>()->setAmbientColor(0.3f * skybox.getAmbientColor());
 
@@ -147,6 +147,7 @@ int main()
     sun.m_diffuse = Vector3f(0.9f, 0.55f, 0.35f);
     sun.m_specular = sun.m_diffuse * 0.2f;
     sun.m_direction.z = 2.0f;
+    // sun.m_shadowsEnabled = false;
     scene.createEntity(sun);
 
     TransformComponent t;

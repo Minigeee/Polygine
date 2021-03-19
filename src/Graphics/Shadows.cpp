@@ -51,6 +51,9 @@ void Shadows::render(Camera& camera)
 	m_scene->system<DirLightComponent>(
 		[&](const Entity::Id& id, const DirLightComponent& light)
 		{
+			// Skip if disabled
+			if (!light.m_shadowsEnabled) return;
+
 			// Create light camera
 			Camera lightCamera;
 			lightCamera.setDirection(light.m_direction);
