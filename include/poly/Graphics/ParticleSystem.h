@@ -39,6 +39,7 @@ struct Particle
 
 	Vector3f m_velocity;	//!< The velocity of the particle
 	float m_age;			//!< The age of the particle in seconds
+	Uint32 m_type;			//!< The particle type (optional)
 };
 
 
@@ -79,6 +80,56 @@ private:
 	VertexArray m_vertexArray;
 	VertexBuffer m_vertexBuffer;
 	std::vector<T> m_particles;
+
+	std::function<std::vector<Vector2u>()> m_fieldsFunc;
+};
+
+
+///////////////////////////////////////////////////////////
+/// \brief A system of particle effects where processing occurs on GPU
+///
+///////////////////////////////////////////////////////////
+template <typename T>
+class GpuParticles : public RenderSystem
+{
+public:
+	GpuParticles();
+
+	~GpuParticles();
+
+	void init(Scene* scene) override;
+
+	void render(Camera& camera, RenderPass pass) override;
+
+	void addParticle(const T& particle);
+
+	void update(const std::function<void(Shader*)>& func = std::function<void(Shader*)>());
+
+	void setMaxParticles(Uint32 max);
+
+	void setTexture(Texture* texture);
+
+	void setUpdateShader(Shader* shader);
+
+	void setRenderShader(Shader* shader);
+
+	void setFields(const std::function<std::vector<Vector2u>()>& func);
+
+private:
+	void bindInputBuffer(VertexBuffer& buffer);
+
+private:
+	Clock m_clock;
+	Texture* m_texture;
+	Shader* m_updateShader;
+	Shader* m_renderShader;
+
+	Uint32 m_tfQuery;
+	Uint32 m_numParticles;
+	Uint32 m_bufferSize;
+	VertexArray m_vertexArray;
+	VertexBuffer m_vertexBuffers[2];
+	Uint32 m_currentBuffer;
 
 	std::function<std::vector<Vector2u>()> m_fieldsFunc;
 };

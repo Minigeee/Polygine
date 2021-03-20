@@ -143,8 +143,20 @@ int main()
     grass.setTerrain(&terrain);
     scene.addRenderSystem(&grass);
 
-    CpuParticles<Particle> particles;
+    GpuParticles<Particle> particles;
     scene.addRenderSystem(&particles);
+
+    Particle p;
+    p.m_position = Vector3f(0.0f, 60.0f, 0.0f);
+    p.m_size = Vector2f(0.1f);
+    p.m_type = 0;
+    particles.addParticle(p);
+
+    Shader updateShader;
+    updateShader.load("shaders/particles/update.vert", Shader::Vertex);
+    updateShader.load("shaders/particles/gpu_example.geom", Shader::Geometry);
+    updateShader.compile({ "g_position", "g_rotation", "g_size", "g_color", "g_texRect", "g_velocity", "g_age", "g_type" });
+    particles.setUpdateShader(&updateShader);
 
     DirLightComponent sun;
     // sun.m_diffuse = Vector3f(0.08f, 0.15f, 0.25f) * 0.4f;
@@ -279,6 +291,7 @@ int main()
             camera.move(normalize(move) * elapsed * 3.4f);
 
         // Render scene
+        particles.update();
         scene.getExtension<Shadows>()->render(camera);
         skeleton.update(elapsed);
         octree.update();
@@ -302,8 +315,10 @@ int main()
 
 // TODO : Add convenience constructor loaders
 // TODO : Document Dropdown
-// TODO : Document Grass
+// TODO : Move Grass to game project and document it
 // TODO : Add GPU particle system + document new versions
 // TODO : Improve post processing + document new version
 // TODO : Renderable base class + Billboard
 // TODO : Bloom effect
+// TODO : SSAO
+// TODO : Transparency shadows
