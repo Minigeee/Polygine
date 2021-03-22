@@ -277,7 +277,21 @@ public:
 
 	void render(FrameBuffer& input, FrameBuffer& output = FrameBuffer::Default) override;
 
+	void setDistType(DistType type);
+
+	void setKernelSize(Uint32 size);
+
+	void setSpread(float spread);
+
 	void setVerticalBlur(bool vertical);
+
+	DistType getDistType() const;
+
+	Uint32 getKernelSize() const;
+
+	float getSpread() const;
+
+	bool usesVerticalBlur() const;
 
 private:
 	static Shader s_shader;
@@ -285,13 +299,13 @@ private:
 	static Shader& getShader();
 
 private:
-	DistType m_distType;
-	Uint32 m_kernelSize;
-	float m_spread;
-	bool m_verticalBlur;
-	bool m_paramsDirty;
+	DistType m_distType;			//!< Blur weight distrubution type
+	Uint32 m_kernelSize;			//!< The kernel size (how much to blur)
+	float m_spread;					//!< The amount of weight spread
+	bool m_verticalBlur;			//!< Should the effect apply vertical blur?
+	bool m_paramsDirty;				//!< True if blur parameters are different
 
-	std::vector<float> m_weights;
+	std::vector<float> m_weights;	//!< The blur weights
 };
 
 }

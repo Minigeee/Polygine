@@ -367,7 +367,11 @@ void Blur::render(FrameBuffer& input, FrameBuffer& output)
 
 		if (m_distType == Uniform)
 		{
+			Uint32 numWeights = m_kernelSize / 2 + 1;
+			float weight = 1.0f / m_kernelSize;
 
+			for (Uint32 i = 0; i < numWeights; ++i)
+				m_weights.push_back(weight);
 		}
 		else if (m_distType == Gaussian)
 		{

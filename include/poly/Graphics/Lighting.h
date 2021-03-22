@@ -10,23 +10,90 @@ namespace poly
 
 class Shader;
 
+///////////////////////////////////////////////////////////
+/// \brief A scene extension for lighting related features
+///
+///////////////////////////////////////////////////////////
 class Lighting : public Extension
 {
 public:
+	///////////////////////////////////////////////////////////
+	/// \brief The default constructor
+	///
+	/// \param scene A pointer a scene
+	///
+	///////////////////////////////////////////////////////////
 	Lighting(Scene* scene);
 
+	///////////////////////////////////////////////////////////
+	/// \brief Apply lighting parameters to a shader
+	///
+	/// This function should be called as convenience function to
+	/// apply any necessary lighting uniforms to a shader.
+	///
+	/// \param shader A pointer to a shader to apply uniforms to
+	///
+	///////////////////////////////////////////////////////////
 	void apply(Shader* shader);
 
+	///////////////////////////////////////////////////////////
+	/// \brief Set the scene ambient color
+	///
+	/// The ambient color is the default color that gets applied
+	/// to a surface when no light is illuminating it.
+	///
+	/// \param color The ambient color
+	///
+	///////////////////////////////////////////////////////////
 	void setAmbientColor(const Vector3f& color);
 
+	///////////////////////////////////////////////////////////
+	/// \brief Set the scene ambient color
+	///
+	/// The ambient color is the default color that gets applied
+	/// to a surface when no light is illuminating it.
+	///
+	/// \param r The r-component of the ambient color
+	/// \param g The g-component of the ambient color
+	/// \param b The b-component of the ambient color
+	///
+	///////////////////////////////////////////////////////////
 	void setAmbientColor(float r, float g, float b);
 
+	///////////////////////////////////////////////////////////
+	/// \brief Get the scene ambient color
+	///
+	/// \return The scene ambient color
+	///
+	///////////////////////////////////////////////////////////
 	const Vector3f& getAmbientColor() const;
 
 private:
-	Vector3f m_ambientColor;
+	Vector3f m_ambientColor;		//!< The ambient colo
 };
 
 }
 
 #endif
+
+///////////////////////////////////////////////////////////
+/// \class poly::Lighting
+/// \ingroup Graphics
+///
+/// The lighting scene extension is used for lighting related
+/// features. At the moment, it is only used to specify the
+/// scene ambient color though.
+///
+/// Use Scene::getExtension() to access the lighting extension.
+///
+/// Usage example:
+/// \code
+///
+/// using namespace poly;
+///
+/// Scene scene;
+/// scene.getExtension<Lighting>()->setAmbientColor(0.05f, 0.02f, 0.1f);
+///
+/// \endcode
+///
+///////////////////////////////////////////////////////////

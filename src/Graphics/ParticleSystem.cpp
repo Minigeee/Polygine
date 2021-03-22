@@ -31,7 +31,7 @@ Particle::Particle() :
 	m_textureRect	(0.0f, 0.0f, 1.0f, 1.0f),
 	m_velocity		(0.0f),
 	m_age			(0.0f),
-	m_type			(1)
+	m_type			(0)
 {
 
 }

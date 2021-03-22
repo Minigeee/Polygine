@@ -316,9 +316,10 @@ int main()
 // TODO : Add convenience constructor loaders
 // TODO : Document Dropdown
 // TODO : Move Grass to game project and document it
-// TODO : Add GPU particle system + document new versions
-// TODO : Improve post processing + document new version
+// TODO : Improve post processing + document new version (pipeline)
 // TODO : Renderable base class + Billboard
 // TODO : Bloom effect
 // TODO : SSAO
-// TODO : Transparency shadows
+// TODO : Transparency shadows, improve shadow interface
+// TODO : Document Fxaa, Blur (after reworking post processing)
+// TODO : Renderables that do not cast shadows

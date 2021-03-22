@@ -162,6 +162,30 @@ inline void CpuParticles<T>::setFields(const std::function<std::vector<Vector2u>
 
 ///////////////////////////////////////////////////////////
 template <typename T>
+inline Uint32 CpuParticles<T>::getNumParticles() const
+{
+	return m_particles.size();
+}
+
+
+///////////////////////////////////////////////////////////
+template <typename T>
+inline Texture* CpuParticles<T>::getTexture() const
+{
+	return m_texture;
+}
+
+
+///////////////////////////////////////////////////////////
+template <typename T>
+inline Shader* CpuParticles<T>::getShader() const
+{
+	return m_shader;
+}
+
+
+///////////////////////////////////////////////////////////
+template <typename T>
 inline void CpuParticles<T>::updateVertexArray()
 {
 	// Get particle field properties
@@ -321,7 +345,7 @@ inline void GpuParticles<T>::update(const std::function<void(Shader*)>& func)
 
 	// Update particles
 	glCheck(glBeginQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, m_tfQuery));
-	m_vertexArray.draw(m_numParticles);
+	m_vertexArray.draw();
 	glCheck(glEndQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN));
 
 	// End transform feedback
@@ -375,6 +399,50 @@ template <typename T>
 inline void GpuParticles<T>::setFields(const std::function<std::vector<Vector2u>()>& func)
 {
 	m_fieldsFunc = func;
+}
+
+
+///////////////////////////////////////////////////////////
+template <typename T>
+inline Uint32 GpuParticles<T>::getNumParticles()
+{
+	// Update the number of particles
+	glCheck(glGetQueryObjectuiv(m_tfQuery, GL_QUERY_RESULT, &m_numParticles));
+	m_vertexArray.setNumVertices(m_numParticles);
+
+	return m_numParticles;
+}
+
+
+///////////////////////////////////////////////////////////
+template <typename T>
+inline Uint32 GpuParticles<T>::getMaxParticles() const
+{
+	return m_bufferSize;
+}
+
+
+///////////////////////////////////////////////////////////
+template <typename T>
+inline Texture* GpuParticles<T>::getTexture() const
+{
+	return m_texture;
+}
+
+
+///////////////////////////////////////////////////////////
+template <typename T>
+inline Shader* GpuParticles<T>::getUpdateShader() const
+{
+	return m_updateShader;
+}
+
+
+///////////////////////////////////////////////////////////
+template <typename T>
+inline Shader* GpuParticles<T>::getRenderShader() const
+{
+	return m_renderShader;
 }
 
 
