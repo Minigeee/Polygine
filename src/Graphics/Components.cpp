@@ -7,7 +7,8 @@ namespace poly
 ///////////////////////////////////////////////////////////
 RenderComponent::RenderComponent() :
 	m_renderable	(0),
-	m_shader		(0)
+	m_shader		(0),
+	m_castsShadows	(true)
 {
 
 }

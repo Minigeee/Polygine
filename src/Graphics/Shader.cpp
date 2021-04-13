@@ -5,6 +5,109 @@
 namespace poly
 {
 
+namespace priv
+{
+
+
+///////////////////////////////////////////////////////////
+std::string readShaderFile(const std::string& fname, HashSet<std::string>& loadedFiles)
+{
+	// Return if the file has already been loaded
+	if (loadedFiles.contains(fname)) return "";
+
+	// Open file
+	std::ifstream f(fname);
+	if (!f.is_open())
+	{
+		LOG_ERROR("Could not open shader file: %s", fname.c_str());
+		return "";
+	}
+
+	// Read shader code
+	std::string code;
+
+	f.seekg(0, std::ios::end);
+	code.reserve((Uint32)f.tellg());
+	f.seekg(0, std::ios::beg);
+
+	code.assign(std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>());
+
+	// Close file
+	f.close();
+
+	// Add the file to the set of loaded files
+	loadedFiles.insert(fname);
+
+
+	// Process string
+	const std::string verKeyword = "#version";
+	const std::string inclKeyword = "#include";
+
+	for (Uint32 i = 0; i < code.size() - inclKeyword.size(); ++i)
+	{
+		// Only handle lines with '#'
+		if (code[i] != '#') continue;
+
+		// Version
+		if (i > 0 && loadedFiles.size() > 0 && code.substr(i, verKeyword.size()) == verKeyword)
+		{
+			// Remove the line
+			Uint32 keywordEnd = i;
+			for (; keywordEnd < code.size(); ++keywordEnd)
+			{
+				if (code[keywordEnd] == '\n')
+					break;
+			}
+
+			code = code.substr(0, i) + code.substr(keywordEnd + 1);
+		}
+
+		// Includes
+		else if (code.substr(i, inclKeyword.size()) == inclKeyword)
+		{
+			Uint32 fnameStart = i + inclKeyword.size() + 2;
+			Uint32 fnameEnd = fnameStart;
+			for (; fnameEnd < code.size(); ++fnameEnd)
+			{
+				if (code[fnameEnd] == '"')
+					break;
+			}
+
+			std::string inclFname = code.substr(fnameStart, fnameEnd - fnameStart);
+			std::string dirPath = fname.substr(0, fname.find_last_of("/\\"));
+			if (dirPath.size() == fname.size())
+				dirPath = "";
+
+			// Get absolute path (relative to working directory) of new file
+			Uint32 pathSeparatorPos = (Uint32)inclFname.find_first_of("/\\");
+			while (pathSeparatorPos != std::string::npos)
+			{
+				std::string dir = inclFname.substr(0, pathSeparatorPos);
+				inclFname = inclFname.substr(pathSeparatorPos + 1);
+
+				if (dir == "..")
+				{
+					Uint32 index = (Uint32)dirPath.find_last_of("/\\");
+					dirPath = (index == std::string::npos ? "" : dirPath.substr(0, index));
+				}
+				else
+					dirPath += '/' + dir;
+
+				pathSeparatorPos = (Uint32)inclFname.find_first_of("/\\");
+			}
+			inclFname = dirPath + '/' + inclFname;
+
+			// Concatenate include data
+			code = code.substr(0, i) + '\n' + readShaderFile(inclFname, loadedFiles) + '\n' + code.substr(fnameEnd + 1);
+		}
+	}
+
+	return code;
+}
+
+
+}
+
 
 ///////////////////////////////////////////////////////////
 Uint32 Shader::currentBound = 0;
@@ -67,69 +170,10 @@ bool Shader::load(const std::string& fname, Shader::Type type)
 		}
 	}
 
-	// Open file
-	std::ifstream f(fname);
-	if (!f.is_open())
-	{
-		LOG_ERROR("Could not open shader file: %s", fname.c_str());
-		return false;
-	}
+	// Load file (with includes)
+	HashSet<std::string> loadedFiles;
+	std::string code = priv::readShaderFile(fname, loadedFiles);
 
-	// Read shader code
-	std::string code;
-
-	f.seekg(0, std::ios::end);
-	code.reserve((Uint32)f.tellg());
-	f.seekg(0, std::ios::beg);
-
-	code.assign(std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>());
-
-	// Close file
-	f.close();
-
-	// Search code for includes
-	std::string dirPath = fname.substr(0, fname.find_last_of("\\/") + 1);
-	const std::string inclKeyword = "#include";
-
-	// TODO : Allow recursive includes (maybe?)
-
-	for (Uint32 i = 0; i < code.size() - inclKeyword.size(); ++i)
-	{
-		if (code[i] == '#' && code.substr(i, inclKeyword.size()) == inclKeyword)
-		{
-			Uint32 fnameStart = i + inclKeyword.size() + 2;
-			Uint32 fnameEnd = fnameStart;
-			for (; fnameEnd < code.size(); ++fnameEnd)
-			{
-				if (code[fnameEnd] == '"')
-					break;
-			}
-
-			std::string inclFname = dirPath + code.substr(fnameStart, fnameEnd - fnameStart);
-
-			// Open the include file
-			f.open(inclFname);
-			if (!f.is_open())
-			{
-				LOG_ERROR("Could not open shader file: %s", inclFname.c_str());
-				return false;
-			}
-
-			// Read include data
-			std::string includeData;
-
-			f.seekg(0, std::ios::end);
-			includeData.reserve((Uint32)f.tellg());
-			f.seekg(0, std::ios::beg);
-
-			includeData.assign(std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>());
-
-			f.close();
-
-			// Concatenate data
-			code = code.substr(0, i) + '\n' + includeData + '\n' + code.substr(fnameEnd + 1);
-		}
-	}
 
 	// Create shader
 	Uint32 shader = 0;

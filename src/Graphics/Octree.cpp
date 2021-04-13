@@ -71,11 +71,19 @@ bool updateBoundingBox(BoundingBox& a, const BoundingBox& b)
 
 
 ///////////////////////////////////////////////////////////
-void bindShader(Shader* shader, Camera& camera, Scene* scene)
+void bindShader(Shader* shader, Camera& camera, Scene* scene, RenderPass pass)
 {
 	shader->bind();
 	shader->setUniform("u_projView", camera.getProjMatrix() * camera.getViewMatrix());
 	shader->setUniform("u_cameraPos", camera.getPosition());
+
+	// Lighting
+	scene->getExtension<Lighting>()->apply(shader);
+
+	// Shadows
+	if (pass != RenderPass::Shadow)
+		scene->getExtension<Shadows>()->apply(shader);
+	shader->setUniform("u_isShadowPass", pass == RenderPass::Shadow);
 }
 
 }
@@ -361,6 +369,7 @@ void Octree::add(Entity::Id entity)
 	data->m_boundingBox = bbox;
 	data->m_transform = transform;
 	data->m_group = getRenderGroup(r.m_renderable, r.m_shader, skeleton);
+	data->m_castsShadows = r.m_castsShadows;
 
 	// Add to map
 	m_dataMap[entity] = data;
@@ -570,6 +579,7 @@ void Octree::update(const Entity::Id& entity, RenderComponent& r, TransformCompo
 	EntityData* data = m_dataMap[entity];
 	data->m_boundingBox = bbox;
 	data->m_transform = transform;
+	data->m_castsShadows = r.m_castsShadows;
 
 	Node* node = data->m_node;
 
@@ -646,7 +656,7 @@ void Octree::render(Camera& camera, RenderPass pass)
 	// Get entity data
 	std::vector<std::vector<EntityData*>> entityData(m_renderGroups.size());
 	const Frustum& frustum = camera.getFrustum();
-	getRenderData(m_root, frustum, entityData, camera.getPosition());
+	getRenderData(m_root, frustum, entityData, camera.getPosition(), pass);
 	
 	// Get number of visible entities
 	Uint32 numVisible = 0;
@@ -726,14 +736,7 @@ void Octree::render(Camera& camera, RenderPass pass)
 
 	// Bind the first shader
 	Shader* shader = renderData.front().m_shader;
-	priv::bindShader(shader, camera, m_scene);
-
-	// Lighting
-	Lighting* lighting = m_scene->getExtension<Lighting>();
-	Shadows* shadows = m_scene->getExtension<Shadows>();
-	lighting->apply(shader);
-	if (pass != RenderPass::Shadow)
-		shadows->apply(shader);
+	priv::bindShader(shader, camera, m_scene, pass);
 
 	// Iterate through render data and render everything
 	for (Uint32 i = 0; i < renderData.size(); ++i)
@@ -745,12 +748,7 @@ void Octree::render(Camera& camera, RenderPass pass)
 
 		{
 			shader = data.m_shader;
-			priv::bindShader(shader, camera, m_scene);
-
-			// Lighting
-			lighting->apply(shader);
-			if (pass != RenderPass::Shadow)
-				shadows->apply(shader);
+			priv::bindShader(shader, camera, m_scene, pass);
 		}
 
 		Model* model = 0;
@@ -806,13 +804,18 @@ void Octree::render(Camera& camera, RenderPass pass)
 
 
 ///////////////////////////////////////////////////////////
-void Octree::getRenderData(Node* node, const Frustum& frustum, std::vector<std::vector<EntityData*>>& entityData, const Vector3f& cameraPos)
+void Octree::getRenderData(Node* node, const Frustum& frustum, std::vector<std::vector<EntityData*>>& entityData, const Vector3f& cameraPos, RenderPass pass)
 {
 	// Add all data inside the frustum
 	for (Uint32 i = 0; i < node->m_data.size(); ++i)
 	{
 		EntityData* data = node->m_data[i];
 
+		// Skip this object if the render pass is shadow and shadow casting is disabled
+		if (pass == RenderPass::Shadow && !data->m_castsShadows)
+			continue;
+
+		// Frustum culling
 		if (frustum.contains(data->m_boundingBox))
 		{
 			Uint32 groupId = data->m_group;
@@ -840,7 +843,7 @@ void Octree::getRenderData(Node* node, const Frustum& frustum, std::vector<std::
 	{
 		Node* child = node->m_children[i];
 		if (child && frustum.contains(child->m_boundingBox))
-			getRenderData(child, frustum, entityData, cameraPos);
+			getRenderData(child, frustum, entityData, cameraPos, pass);
 	}
 }
 

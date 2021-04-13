@@ -1,6 +1,7 @@
 #version 330 core
 
-#include "common.glsl"
+#include "noise.glsl"
+#include "shadows_v.glsl"
 
 layout (points) in;
 layout (triangle_strip, max_vertices = 5) out;
@@ -18,8 +19,6 @@ out vec3 g_normal;
 out vec3 g_frontNormal;
 out vec4 g_color;
 out float g_dist;
-out vec4 g_clipSpacePos;
-out vec4 g_lightClipSpacePos[MAX_NUM_SHADOW_MAPS];
 
 uniform mat4 u_projView;
 uniform vec3 u_cameraPos;
@@ -29,23 +28,6 @@ uniform float u_grassSpacing;
 const vec2 u_windDir = vec2(1, 0);
 
 uniform float u_time;
-
-uniform mat4 u_lightProjViews[MAX_NUM_SHADOW_MAPS];
-uniform int u_numShadows;
-
-///////////////////////////////////////////////////////////
-
-float noise(vec2 st) {
-    vec2 i = floor(st);
-    vec2 f = fract(st);
-
-    vec2 u = f*f*(3.0-2.0*f);
-
-    return mix( mix( dot( random2(i + vec2(0.0,0.0) ), f - vec2(0.0,0.0) ),
-                     dot( random2(i + vec2(1.0,0.0) ), f - vec2(1.0,0.0) ), u.x),
-                mix( dot( random2(i + vec2(0.0,1.0) ), f - vec2(0.0,1.0) ),
-                     dot( random2(i + vec2(1.0,1.0) ), f - vec2(1.0,1.0) ), u.x), u.y);
-}
 
 ///////////////////////////////////////////////////////////
 
@@ -79,53 +61,39 @@ void main()
     g_normal = normalize(g_normal + windOffset.xyz * 1.0f);
     g_frontNormal = normalize(cross(right * grassWidth, up * grassHeight + windOffset));
 
-    vec3 worldPos = v_position[0] - right * grassWidth;
-    gl_Position = u_projView * vec4(worldPos, 1.0f);
-    g_clipSpacePos = gl_Position;
-    for (int i = 0; i < u_numShadows * MAX_NUM_SHADOW_CASCADES; ++i)
-        g_lightClipSpacePos[i] = u_lightProjViews[i] * vec4(worldPos, 1.0f);
+    vec4 worldPos = vec4(v_position[0] - right * grassWidth, 1.0f);
+    gl_Position = u_projView * worldPos;
+    calcShadowClipSpace(worldPos);
     EmitVertex();
     
-    worldPos = v_position[0] + right * grassWidth;
-    gl_Position = u_projView * vec4(worldPos, 1.0f);
-    g_clipSpacePos = gl_Position;
-    for (int i = 0; i < u_numShadows * MAX_NUM_SHADOW_CASCADES; ++i)
-        g_lightClipSpacePos[i] = u_lightProjViews[i] * vec4(worldPos, 1.0f);
+    worldPos.xyz = v_position[0] + right * grassWidth;
+    gl_Position = u_projView * worldPos;
+    calcShadowClipSpace(worldPos);
     EmitVertex();
     
-    worldPos = v_position[0] - right * grassWidth * 0.8f + 0.3f * up * grassHeight + 0.2f * windOffset;
-    gl_Position = u_projView * vec4(worldPos, 1.0f);
-    g_clipSpacePos = gl_Position;
-    for (int i = 0; i < u_numShadows * MAX_NUM_SHADOW_CASCADES; ++i)
-        g_lightClipSpacePos[i] = u_lightProjViews[i] * vec4(worldPos, 1.0f);
+    worldPos.xyz = v_position[0] - right * grassWidth * 0.8f + 0.3f * up * grassHeight + 0.2f * windOffset;
+    gl_Position = u_projView * worldPos;
+    calcShadowClipSpace(worldPos);
     EmitVertex();
     
-    worldPos = v_position[0] + right * grassWidth * 0.8f + 0.3f * up * grassHeight + 0.2f * windOffset;
-    gl_Position = u_projView * vec4(worldPos, 1.0f);
-    g_clipSpacePos = gl_Position;
-    for (int i = 0; i < u_numShadows * MAX_NUM_SHADOW_CASCADES; ++i)
-        g_lightClipSpacePos[i] = u_lightProjViews[i] * vec4(worldPos, 1.0f);
+    worldPos.xyz = v_position[0] + right * grassWidth * 0.8f + 0.3f * up * grassHeight + 0.2f * windOffset;
+    gl_Position = u_projView * worldPos;
+    calcShadowClipSpace(worldPos);
     EmitVertex();
     
-    worldPos = v_position[0] - right * grassWidth * 0.5f + 0.6f * up * grassHeight + 0.5f * windOffset;
-    gl_Position = u_projView * vec4(worldPos, 1.0f);
-    g_clipSpacePos = gl_Position;
-    for (int i = 0; i < u_numShadows * MAX_NUM_SHADOW_CASCADES; ++i)
-        g_lightClipSpacePos[i] = u_lightProjViews[i] * vec4(worldPos, 1.0f);
+    worldPos.xyz = v_position[0] - right * grassWidth * 0.5f + 0.6f * up * grassHeight + 0.5f * windOffset;
+    gl_Position = u_projView * worldPos;
+    calcShadowClipSpace(worldPos);
     EmitVertex();
     
-    worldPos = v_position[0] + right * grassWidth * 0.5f + 0.6f * up * grassHeight + 0.5f * windOffset;
-    gl_Position = u_projView * vec4(worldPos, 1.0f);
-    g_clipSpacePos = gl_Position;
-    for (int i = 0; i < u_numShadows * MAX_NUM_SHADOW_CASCADES; ++i)
-        g_lightClipSpacePos[i] = u_lightProjViews[i] * vec4(worldPos, 1.0f);
+    worldPos.xyz = v_position[0] + right * grassWidth * 0.5f + 0.6f * up * grassHeight + 0.5f * windOffset;
+    gl_Position = u_projView * worldPos;
+    calcShadowClipSpace(worldPos);
     EmitVertex();
     
-    worldPos = v_position[0] - right * grassWidth * 0.5f + up * grassHeight + 1.0f * windOffset;
-    gl_Position = u_projView * vec4(worldPos, 1.0f);
-    g_clipSpacePos = gl_Position;
-    for (int i = 0; i < u_numShadows * MAX_NUM_SHADOW_CASCADES; ++i)
-        g_lightClipSpacePos[i] = u_lightProjViews[i] * vec4(worldPos, 1.0f);
+    worldPos.xyz = v_position[0] - right * grassWidth * 0.5f + up * grassHeight + 1.0f * windOffset;
+    gl_Position = u_projView * worldPos;
+    calcShadowClipSpace(worldPos);
     EmitVertex();
 
     EndPrimitive();

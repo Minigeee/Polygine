@@ -170,10 +170,13 @@ int main()
     t.m_position.y = 52.0f;
     t.m_scale = Vector3f(0.25f);
     RenderComponent r(&model, &animShader);
+    r.m_castsShadows = true;
     scene.createEntity(t, r, AnimationComponent(&skeleton), DynamicTag());
     r.m_shader = &shader;
+    r.m_castsShadows = false;
     t.m_position.x = 5.0f;
     scene.createEntity(t, r);
+    r.m_castsShadows = false;
     t.m_position.x = -5.0f;
     scene.createEntity(t, r);
 
@@ -320,6 +323,6 @@ int main()
 // TODO : Renderable base class + Billboard
 // TODO : Bloom effect
 // TODO : SSAO
-// TODO : Transparency shadows, improve shadow interface
+// TODO : Sun glare effect
 // TODO : Document Fxaa, Blur (after reworking post processing)
-// TODO : Renderables that do not cast shadows
+// TODO : Point lights

@@ -1,6 +1,6 @@
 #version 330 core
 
-#include "../common.glsl"
+#include "../noise.glsl"
 
 layout (points) in;
 layout (points, max_vertices = 10) out;
@@ -45,7 +45,7 @@ void main()
         EndPrimitive();
 
         // Create another particle
-        g_velocity.xz = random2(vec2(g_age, 2.0f * g_age)) * 0.8f - 0.4f;
+        g_velocity.xz = rand2(vec2(g_age, 2.0f * g_age)) * 0.8f - 0.4f;
         g_age = 0.0f;
         g_type = 1;
 

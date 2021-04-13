@@ -35,6 +35,7 @@ struct RenderComponent
 
 	Renderable* m_renderable;		//!< The model to render
 	Shader* m_shader;				//!< The shader to render the model with
+	bool m_castsShadows;			//!< Controls whether or not this render object casts shadows
 };
 
 

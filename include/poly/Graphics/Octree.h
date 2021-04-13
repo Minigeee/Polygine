@@ -154,6 +154,7 @@ private:
 	{
 		Uint32 m_group;
 		Node* m_node;
+		bool m_castsShadows;
 		BoundingBox m_boundingBox;
 		Matrix4f m_transform;
 	};
@@ -194,7 +195,7 @@ private:
 
 	void update(const Entity::Id& id, RenderComponent& r, TransformComponent& t);
 
-	void getRenderData(Node* node, const Frustum& frustum, std::vector<std::vector<EntityData*>>& entityData, const Vector3f& cameraPos);
+	void getRenderData(Node* node, const Frustum& frustum, std::vector<std::vector<EntityData*>>& entityData, const Vector3f& cameraPos, RenderPass pass);
 
 	Uint32 getRenderGroup(Renderable* renderable, Shader* shader, Skeleton* skeleton);
 

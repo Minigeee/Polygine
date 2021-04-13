@@ -42,7 +42,7 @@ public:
 
 protected:
 	BoundingBox m_boundingBox;			//!< The bounding box surrounding the model
-	Sphere m_boundingSphere;			//!< The bounding sphere surrounding te model
+	Sphere m_boundingSphere;			//!< The bounding sphere surrounding the model
 };
 
 }
