@@ -79,18 +79,10 @@ int main()
     Animation animation("examples/models/character/character.dae", "Armature");
     skeleton.setAnimation(&animation);
 
-    Shader shader;
-    shader.load("shaders/default.vert", Shader::Vertex);
-    shader.load("shaders/default.frag", Shader::Fragment);
-    shader.compile();
-
-    Shader animShader;
-    animShader.load("shaders/animated.vert", Shader::Vertex);
-    animShader.load("shaders/default.frag", Shader::Fragment);
-    animShader.compile();
-
     Billboard billboard;
     billboard.load("examples/models/character/character_d.png");
+    billboard.setLightingEnabled(true);
+    billboard.setAxisLocked(false);
 
     Camera camera;
     camera.setPosition(0.0f, 50.0f, 0.0f);
@@ -158,21 +150,22 @@ int main()
     TransformComponent t;
     t.m_position.y = 52.0f;
     t.m_scale = Vector3f(0.25f);
-    RenderComponent r(&model, &animShader);
+    RenderComponent r(&model, &Model::getAnimatedShader());
     r.m_castsShadows = true;
     scene.createEntity(t, r, AnimationComponent(&skeleton), DynamicTag());
-    r.m_shader = &shader;
-    r.m_castsShadows = false;
+    r.m_shader = &Model::getDefaultShader();
     t.m_position.x = 5.0f;
     scene.createEntity(t, r);
-    r.m_castsShadows = false;
     t.m_position.x = -5.0f;
     scene.createEntity(t, r);
 
     r.m_renderable = &billboard;
     r.m_shader = &Billboard::getDefaultShader();
-    t.m_position.y += 5.0f;
+    t.m_position.x = 0.0f;
+    t.m_position.y += 1.0f;
+    t.m_position.z = 2.0f;
     t.m_scale = Vector3f(1.0f);
+    // t.m_rotation.z = 45.0f;
     scene.createEntity(t, r);
 
     Clock clock;
@@ -314,10 +307,9 @@ int main()
 // TODO : Document Dropdown
 // TODO : Move Grass to game project and document it
 // TODO : Improve post processing + document new version (pipeline)
-// TODO : Renderable base class + Billboard
 // TODO : Bloom effect
 // TODO : SSAO
 // TODO : Sun glare effect
 // TODO : Document Fxaa, Blur (after reworking post processing)
 // TODO : Point lights
-// TODO : Add default and animated shader loaders to Model
+// TODO : Add normal mapping

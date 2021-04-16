@@ -14,10 +14,44 @@ namespace poly
 
 
 ///////////////////////////////////////////////////////////
+Shader Model::s_defaultShader;
+
+///////////////////////////////////////////////////////////
+Shader Model::s_animatedShader;
+
+///////////////////////////////////////////////////////////
 ObjectPool texturePool(sizeof(Texture), 50);
 
 ///////////////////////////////////////////////////////////
 HashMap<std::string, Texture*> textureMap;
+
+
+///////////////////////////////////////////////////////////
+Shader& Model::getDefaultShader()
+{
+	if (!s_defaultShader.getId())
+	{
+		s_defaultShader.load("shaders/default.vert", Shader::Vertex);
+		s_defaultShader.load("shaders/default.frag", Shader::Fragment);
+		s_defaultShader.compile();
+	}
+
+	return s_defaultShader;
+}
+
+
+///////////////////////////////////////////////////////////
+Shader& Model::getAnimatedShader()
+{
+	if (!s_animatedShader.getId())
+	{
+		s_animatedShader.load("shaders/animated.vert", Shader::Vertex);
+		s_animatedShader.load("shaders/default.frag", Shader::Fragment);
+		s_animatedShader.compile();
+	}
+
+	return s_animatedShader;
+}
 
 
 namespace priv

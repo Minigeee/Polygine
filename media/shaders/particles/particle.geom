@@ -27,10 +27,10 @@ void main()
     float s = sin(v_rotation[0] * PI / 180.0f);
 
     // Calculate the three local cardinal vectors of the particle
-    vec3 front = normalize(v_position[0] - u_cameraPos);
-    vec3 right = cross(front, vec3(0, 1, 0));
+    vec3 front = normalize(u_cameraPos - v_position[0]);
+    vec3 right = normalize(cross(vec3(0, 1, 0), front));
     right = normalize(right * c + cross(front, right) * s + front * dot(front, right) * (1.0f - c));
-    vec3 up = normalize(cross(right, front));
+    vec3 up = normalize(cross(front, right));
 
     // Get corner vertices
     vec4 v1 = vec4(v_position[0] - right * v_size[0].x + up * v_size[0].y, 1.0f);
@@ -50,20 +50,20 @@ void main()
 
     // Emit vertices
     gl_Position = v1;
-    g_texCoord = t1;
+    g_texCoord = t3;
     g_color = v_color[0];
     EmitVertex();
     
     gl_Position = v2;
-    g_texCoord = t2;
+    g_texCoord = t1;
     EmitVertex();
     
     gl_Position = v3;
-    g_texCoord = t3;
+    g_texCoord = t4;
     EmitVertex();
     
     gl_Position = v4;
-    g_texCoord = t4;
+    g_texCoord = t2;
     EmitVertex();
 
     EndPrimitive();

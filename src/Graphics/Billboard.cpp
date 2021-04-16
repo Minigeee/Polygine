@@ -46,10 +46,13 @@ Shader& Billboard::getDefaultShader()
 
 ///////////////////////////////////////////////////////////
 Billboard::Billboard() :
-	m_material		(Pool<Material>::alloc()),
-	m_texture		(0),
-	m_size			(1.0f),
-	m_origin		(0.5f)
+	m_material			(Pool<Material>::alloc()),
+	m_texture			(0),
+	m_size				(1.0f),
+	m_origin			(0.5f),
+	m_axisLocked		(false),
+	m_lightingEnabled	(false),
+	m_shadowingEnabled	(false)
 {
 	// By default, the bounding volumes should have a value of 1
 	m_boundingBox.m_min = Vector3f(-0.5f);
@@ -137,6 +140,27 @@ void Billboard::setOrigin(float x, float y)
 
 
 ///////////////////////////////////////////////////////////
+void Billboard::setAxisLocked(bool locked)
+{
+	m_axisLocked = locked;
+}
+
+
+///////////////////////////////////////////////////////////
+void Billboard::setLightingEnabled(bool enabled)
+{
+	m_lightingEnabled = enabled;
+}
+
+
+///////////////////////////////////////////////////////////
+void Billboard::setShadowingEnabled(bool enabled)
+{
+	m_shadowingEnabled = enabled;
+}
+
+
+///////////////////////////////////////////////////////////
 Material* Billboard::getMaterial() const
 {
 	return m_material;
@@ -161,6 +185,27 @@ const Vector2f& Billboard::getSize() const
 const Vector2f& Billboard::getOrigin() const
 {
 	return m_origin;
+}
+
+
+///////////////////////////////////////////////////////////
+bool Billboard::isAxisLocked() const
+{
+	return m_axisLocked;
+}
+
+
+///////////////////////////////////////////////////////////
+bool Billboard::isLightingEnabled() const
+{
+	return m_lightingEnabled;
+}
+
+
+///////////////////////////////////////////////////////////
+bool Billboard::isShadowingEnabled() const
+{
+	return m_shadowingEnabled;
 }
 
 

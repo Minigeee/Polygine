@@ -802,7 +802,7 @@ void Octree::render(Camera& camera, RenderPass pass)
 		}
 
 		// Handle Billboards
-		else if (billboard = dynamic_cast<Billboard*>(data.m_renderable))
+		else if ((billboard = dynamic_cast<Billboard*>(data.m_renderable)) && pass != RenderPass::Shadow)
 		{
 			// Apply the material
 			billboard->getMaterial()->apply(shader);
@@ -810,6 +810,9 @@ void Octree::render(Camera& camera, RenderPass pass)
 			// Set billboard uniforms
 			shader->setUniform("u_size", billboard->getSize());
 			shader->setUniform("u_origin", billboard->getOrigin());
+			shader->setUniform("u_axisLocked", billboard->isAxisLocked());
+			shader->setUniform("u_lightingEnabled", billboard->isLightingEnabled());
+			shader->setUniform("u_shadowingEnabled", billboard->isShadowingEnabled());
 
 			// Get vertex array and do an instanced render
 			VertexArray& vao = Billboard::getVertexArray();

@@ -9,6 +9,7 @@
 
 #include <poly/Graphics/Material.h>
 #include <poly/Graphics/Renderable.h>
+#include <poly/Graphics/Shader.h>
 #include <poly/Graphics/VertexArray.h>
 #include <poly/Graphics/VertexBuffer.h>
 
@@ -133,6 +134,22 @@ public:
 	///////////////////////////////////////////////////////////
 	const std::vector<Material>& getMaterials() const;
 
+	///////////////////////////////////////////////////////////
+	/// \brief Get the default model shader
+	///
+	/// \return The default model shader
+	///
+	///////////////////////////////////////////////////////////
+	static Shader& getDefaultShader();
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the animated model shader
+	///
+	/// \return The default model shader
+	///
+	///////////////////////////////////////////////////////////
+	static Shader& getAnimatedShader();
+
 private:
 	VertexArray m_vertexArray;				//!< The vertex array used to render the model
 	VertexBuffer m_vertexBuffer;			//!< The vertex buffer used to store the main vertex data
@@ -140,6 +157,9 @@ private:
 
 	std::vector<Vertex> m_vertices;			//!< The list of vertex data excluding skeletal data
 	std::vector<Material> m_materials;		//!< The list of materials
+
+	static Shader s_defaultShader;			//!< The default model shader
+	static Shader s_animatedShader;			//!< The animated model shader
 };
 
 }
