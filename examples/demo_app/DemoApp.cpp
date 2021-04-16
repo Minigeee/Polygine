@@ -7,6 +7,7 @@
 #include <poly/Engine/Scene.h>
 
 #include <poly/Graphics/Animation.h>
+#include <poly/Graphics/Billboard.h>
 #include <poly/Graphics/Camera.h>
 #include <poly/Graphics/Components.h>
 #include <poly/Graphics/FrameBuffer.h>
@@ -88,6 +89,9 @@ int main()
     animShader.load("shaders/default.frag", Shader::Fragment);
     animShader.compile();
 
+    Billboard billboard;
+    billboard.load("examples/models/character/character_d.png");
+
     Camera camera;
     camera.setPosition(0.0f, 50.0f, 0.0f);
     camera.setRotation(0.0f, 0.0f);
@@ -143,21 +147,6 @@ int main()
     grass.setTerrain(&terrain);
     scene.addRenderSystem(&grass);
 
-    GpuParticles<Particle> particles;
-    scene.addRenderSystem(&particles);
-
-    Particle p;
-    p.m_position = Vector3f(0.0f, 60.0f, 0.0f);
-    p.m_size = Vector2f(0.1f);
-    p.m_type = 0;
-    particles.addParticle(p);
-
-    Shader updateShader;
-    updateShader.load("shaders/particles/update.vert", Shader::Vertex);
-    updateShader.load("shaders/particles/gpu_example.geom", Shader::Geometry);
-    updateShader.compile({ "g_position", "g_rotation", "g_size", "g_color", "g_texRect", "g_velocity", "g_age", "g_type" });
-    particles.setUpdateShader(&updateShader);
-
     DirLightComponent sun;
     // sun.m_diffuse = Vector3f(0.08f, 0.15f, 0.25f) * 0.4f;
     sun.m_diffuse = Vector3f(0.9f, 0.55f, 0.35f);
@@ -178,6 +167,12 @@ int main()
     scene.createEntity(t, r);
     r.m_castsShadows = false;
     t.m_position.x = -5.0f;
+    scene.createEntity(t, r);
+
+    r.m_renderable = &billboard;
+    r.m_shader = &Billboard::getDefaultShader();
+    t.m_position.y += 5.0f;
+    t.m_scale = Vector3f(1.0f);
     scene.createEntity(t, r);
 
     Clock clock;
@@ -294,7 +289,6 @@ int main()
             camera.move(normalize(move) * elapsed * 3.4f);
 
         // Render scene
-        particles.update();
         scene.getExtension<Shadows>()->render(camera);
         skeleton.update(elapsed);
         octree.update();
@@ -326,3 +320,4 @@ int main()
 // TODO : Sun glare effect
 // TODO : Document Fxaa, Blur (after reworking post processing)
 // TODO : Point lights
+// TODO : Add default and animated shader loaders to Model

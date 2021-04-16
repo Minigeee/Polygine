@@ -3,6 +3,7 @@
 #include <poly/Engine/Components.h>
 #include <poly/Engine/Scene.h>
 
+#include <poly/Graphics/Billboard.h>
 #include <poly/Graphics/Camera.h>
 #include <poly/Graphics/Components.h>
 #include <poly/Graphics/GLCheck.h>
@@ -745,15 +746,15 @@ void Octree::render(Camera& camera, RenderPass pass)
 
 		// If the shader changed, update to the new one
 		if (data.m_shader != shader)
-
 		{
 			shader = data.m_shader;
 			priv::bindShader(shader, camera, m_scene, pass);
 		}
 
 		Model* model = 0;
+		Billboard* billboard = 0;
 
-		// Check if the object is a model type
+		// Handle Model types
 		if (model = dynamic_cast<Model*>(data.m_renderable))
 		{
 			// Apply the materials
@@ -799,6 +800,36 @@ void Octree::render(Camera& camera, RenderPass pass)
 				}
 			}
 		}
+
+		// Handle Billboards
+		else if (billboard = dynamic_cast<Billboard*>(data.m_renderable))
+		{
+			// Apply the material
+			billboard->getMaterial()->apply(shader);
+
+			// Set billboard uniforms
+			shader->setUniform("u_size", billboard->getSize());
+			shader->setUniform("u_origin", billboard->getOrigin());
+
+			// Get vertex array and do an instanced render
+			VertexArray& vao = Billboard::getVertexArray();
+
+			// Bind instance data
+			vao.bind();
+			vao.addBuffer(m_instanceBuffer, 0, 4, sizeof(Matrix4f), data.m_offset + 0 * sizeof(Vector4f), 1);
+			vao.addBuffer(m_instanceBuffer, 1, 4, sizeof(Matrix4f), data.m_offset + 1 * sizeof(Vector4f), 1);
+			vao.addBuffer(m_instanceBuffer, 2, 4, sizeof(Matrix4f), data.m_offset + 2 * sizeof(Vector4f), 1);
+			vao.addBuffer(m_instanceBuffer, 3, 4, sizeof(Matrix4f), data.m_offset + 3 * sizeof(Vector4f), 1);
+
+			// Enable alpha blending
+			glCheck(glEnable(GL_BLEND));
+			glCheck(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+
+			// Draw
+			vao.draw(data.m_instances);
+
+			glCheck(glDisable(GL_BLEND));
+		}
 	}
 }
 
@@ -825,11 +856,13 @@ void Octree::getRenderData(Node* node, const Frustum& frustum, std::vector<std::
 			if (group.m_lodLevels.size())
 			{
 				LodSystem* lod = (LodSystem*)group.m_renderable;
-				float distance = dist(cameraPos, data->m_boundingBox.getCenter());
+
+				Vector3f objectOffset = cameraPos - data->m_boundingBox.getCenter();
+				float distSquared = dot(objectOffset, objectOffset);
 
 				// Find the correct lod level
 				Uint32 level = 0;
-				for (; level < lod->getNumLevels() && distance > lod->getDistance(level); ++level);
+				for (; level < lod->getNumLevels() && distSquared > lod->getDistance(level) * lod->getDistance(level); ++level);
 
 				groupId = level < lod->getNumLevels() ? group.m_lodLevels[level] : groupId;
 			}
