@@ -97,6 +97,44 @@ struct DirLightComponent
 
 
 ///////////////////////////////////////////////////////////
+/// \brief A component that defines properties of a point light
+/// \ingroup Components
+///
+/// A point light is a light that emits light in all directions
+/// equally, and its intensity grows weaker as the distance from
+/// the light increases. The fadeout of intensity can be controlled
+/// with the 3 attenuation coefficients, where the x-component is the
+/// \a constant coefficient, the y-component is the \a linear coefficient,
+/// and the z-component is the \a quadratic coefficient.
+///
+/// \note The position of the point light can be set by attaching
+/// a TransformComponent to the same entity that contains this
+/// point light.
+///
+/// \note There is a maximum radius from the camera, where point
+/// lights outside the range will be disabled. This is for performance
+/// issues.
+///
+///////////////////////////////////////////////////////////
+struct PointLightComponent
+{
+	///////////////////////////////////////////////////////////
+	/// \brief Default constructor
+	///
+	/// Creates a point light component with white diffuse and
+	/// specular color, and with the initial coefficient values
+	/// of (1.0, 0.35, 0.44).
+	///
+	///////////////////////////////////////////////////////////
+	PointLightComponent();
+
+	Vector3f m_diffuse;				//!< The color of the diffuse lighting
+	Vector3f m_specular;			//!< The color of the specular lighting
+	Vector3f m_coefficients;		//!< The three attenuation coefficients
+};
+
+
+///////////////////////////////////////////////////////////
 /// \brief Dynamic renderable component tag
 /// \ingroup Components
 ///

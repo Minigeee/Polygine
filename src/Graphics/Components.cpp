@@ -56,4 +56,14 @@ DirLightComponent::DirLightComponent() :
 }
 
 
+///////////////////////////////////////////////////////////
+PointLightComponent::PointLightComponent() :
+	m_diffuse				(1.0f),
+	m_specular				(1.0f),
+	m_coefficients			(1.0f, 0.35f, 0.44f)
+{
+
+}
+
+
 }

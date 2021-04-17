@@ -79,7 +79,7 @@ void bindShader(Shader* shader, Camera& camera, Scene* scene, RenderPass pass)
 	shader->setUniform("u_cameraPos", camera.getPosition());
 
 	// Lighting
-	scene->getExtension<Lighting>()->apply(shader);
+	scene->getExtension<Lighting>()->apply(camera, shader);
 
 	// Shadows
 	if (pass != RenderPass::Shadow)

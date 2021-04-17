@@ -103,7 +103,7 @@ void Grass::render(Camera& camera, RenderPass pass)
 	shader.setUniform("u_time", m_clock.getElapsedTime().toSeconds());
 
 	// Lighting
-	m_scene->getExtension<Lighting>()->apply(&shader);
+	m_scene->getExtension<Lighting>()->apply(camera, &shader);
 	m_scene->getExtension<Shadows>()->apply(&shader);
 
 	// Terrain maps

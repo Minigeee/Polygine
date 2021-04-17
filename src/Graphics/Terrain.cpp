@@ -543,7 +543,7 @@ void Terrain::render(Camera& camera, RenderPass pass)
 	shader.setUniform("u_clipPlanes[3]", Vector4f(0.0f, 0.0f, 1.0f, m_size * 0.5f));
 
 	// Lighting
-	m_scene->getExtension<Lighting>()->apply(&shader);
+	m_scene->getExtension<Lighting>()->apply(camera, &shader);
 	if (pass != RenderPass::Shadow)
 		m_scene->getExtension<Shadows>()->apply(&shader);
 

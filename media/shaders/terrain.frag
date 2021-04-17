@@ -45,6 +45,10 @@ void main()
         float shadowFactor = getShadowFactor(i, 3);
         result += calcDirLight(u_dirLights[i], material, viewDir, normal, shadowFactor, 0.1f);
     }
+    
+    // Calculate point lights
+    for (int i = 0; i < u_numPointLights; ++i)
+        result += calcPointLight(u_pointLights[i], material, viewDir, v_fragPos, normal, 0.1f);
 
     f_color = vec4(result, 1.0f);
 }

@@ -34,7 +34,7 @@ public:
 	/// \param shader A pointer to a shader to apply uniforms to
 	///
 	///////////////////////////////////////////////////////////
-	void apply(Shader* shader);
+	void apply(Camera& camera, Shader* shader);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the scene ambient color
@@ -61,6 +61,22 @@ public:
 	void setAmbientColor(float r, float g, float b);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Set the maximum distance away from the camera at which point lights are enabled
+	///
+	/// Whenever a point light is greater than 80% of the maximum
+	/// distance away from the camera, its intensity will start
+	/// fading out, and when its distance is greater than the maximum
+	/// distance, it will be completely disabled from rendering until
+	/// it enters the range again.
+	///
+	/// The default max distance is 30.
+	///
+	/// \param dist The maximum distance point lights are enabled
+	///
+	///////////////////////////////////////////////////////////
+	void setPointLightMaxDist(float dist);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the scene ambient color
 	///
 	/// \return The scene ambient color
@@ -69,7 +85,8 @@ public:
 	const Vector3f& getAmbientColor() const;
 
 private:
-	Vector3f m_ambientColor;		//!< The ambient colo
+	Vector3f m_ambientColor;		//!< The ambient color
+	float m_pointLightMaxDist;		//!< The maximum distance at which point lights are enabled
 };
 
 }

@@ -141,11 +141,18 @@ int main()
 
     DirLightComponent sun;
     // sun.m_diffuse = Vector3f(0.08f, 0.15f, 0.25f) * 0.4f;
-    sun.m_diffuse = Vector3f(0.9f, 0.55f, 0.35f);
+    sun.m_diffuse = Vector3f(0.9f, 0.55f, 0.35f) * 0.2f;
     sun.m_specular = sun.m_diffuse * 0.2f;
     sun.m_direction.z = 2.0f;
-    // sun.m_shadowsEnabled = false;
+    sun.m_shadowsEnabled = false;
     scene.createEntity(sun);
+
+    PointLightComponent light;
+    light.m_diffuse = Vector3f(1.0f, 0.95f, 0.85f);
+    light.m_specular = light.m_diffuse * 0.4f;
+    TransformComponent lightT;
+    lightT.m_position.y = 55.0f;
+    scene.createEntity(lightT, light);
 
     TransformComponent t;
     t.m_position.y = 52.0f;
@@ -159,14 +166,6 @@ int main()
     t.m_position.x = -5.0f;
     scene.createEntity(t, r);
 
-    r.m_renderable = &billboard;
-    r.m_shader = &Billboard::getDefaultShader();
-    t.m_position.x = 0.0f;
-    t.m_position.y += 1.0f;
-    t.m_position.z = 2.0f;
-    t.m_scale = Vector3f(1.0f);
-    // t.m_rotation.z = 45.0f;
-    scene.createEntity(t, r);
 
     Clock clock;
     float time = 0.0f;
