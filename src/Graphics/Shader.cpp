@@ -268,6 +268,34 @@ int Shader::getUniformLocation(const std::string& name)
 
 
 ///////////////////////////////////////////////////////////
+Uint32 Shader::getUniformBlockIndex(const std::string& name)
+{
+	// First check if the uniform has been found
+	auto it = m_uniformBlocks.find(name);
+
+	if (it != m_uniformBlocks.end())
+		// Return the location
+		return it->second;
+
+	else
+	{
+		// Find the location
+		Uint32 location = GL_INVALID_INDEX, index = GL_INVALID_INDEX;
+		glCheck(location = glGetUniformBlockIndex(m_id, name.c_str()));
+
+		// Check if it was found
+		if (location == GL_INVALID_INDEX)
+			LOG_WARNING("Could not find shader uniform block: %s", name.c_str());
+		else
+			glCheck(glUniformBlockBinding(m_id, location, index = m_uniformBlocks.size()));
+
+		// Add it to the map
+		return (m_uniformBlocks[name] = index);
+	}
+}
+
+
+///////////////////////////////////////////////////////////
 void Shader::setUniform(const std::string& name, int value)
 {
 	int location = getUniformLocation(name);
@@ -455,6 +483,18 @@ void Shader::setUniform(const std::string& name, Texture& texture)
 	int location = getUniformLocation(name);
 	if (location != -1)
 		glCheck(glUniform1iv(location, 1, &slot));
+}
+
+
+///////////////////////////////////////////////////////////
+void Shader::setUniformBlock(const std::string& name, UniformBlock& block)
+{
+	// Get uniform block index
+	Uint32 index = getUniformBlockIndex(name);
+
+	// Bind uniform block to the index
+	if (index != GL_INVALID_INDEX)
+		block.bind(index);
 }
 
 

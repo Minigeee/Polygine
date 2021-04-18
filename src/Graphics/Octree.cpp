@@ -75,11 +75,12 @@ bool updateBoundingBox(BoundingBox& a, const BoundingBox& b)
 void bindShader(Shader* shader, Camera& camera, Scene* scene, RenderPass pass)
 {
 	shader->bind();
-	shader->setUniform("u_projView", camera.getProjMatrix() * camera.getViewMatrix());
-	shader->setUniform("u_cameraPos", camera.getPosition());
+
+	// Camera
+	camera.apply(shader);
 
 	// Lighting
-	scene->getExtension<Lighting>()->apply(camera, shader);
+	scene->getExtension<Lighting>()->apply(shader);
 
 	// Shadows
 	if (pass != RenderPass::Shadow)
@@ -669,12 +670,12 @@ void Octree::render(Camera& camera, RenderPass pass)
 
 	// Stream instance data
 	Uint32 size = numVisible * sizeof(Matrix4f);
-	int flags = (int)MapBufferFlags::Write | (int)MapBufferFlags::Unsynchronized;
+	MapBufferFlags flags = MapBufferFlags::Write | MapBufferFlags::Unsynchronized;
 
 	// Choose different flags based on how much space is left
 	if (m_instanceBufferOffset + size > m_instanceBuffer.getSize())
 	{
-		flags |= (int)MapBufferFlags::InvalidateBuffer;
+		flags |= MapBufferFlags::InvalidateBuffer;
 		m_instanceBufferOffset = 0;
 	}
 

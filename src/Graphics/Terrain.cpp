@@ -493,12 +493,12 @@ void Terrain::render(Camera& camera, RenderPass pass)
 
 	// Stream instance data
 	Uint32 size = (normalTiles.size() + edgeTiles.size()) * sizeof(InstanceData);
-	int flags = (int)MapBufferFlags::Write | (int)MapBufferFlags::Unsynchronized;
+	MapBufferFlags flags = MapBufferFlags::Write | MapBufferFlags::Unsynchronized;
 
 	// Choose different flags based on how much space is left
 	if (m_instanceBufferOffset + size > m_instanceBuffer.getSize())
 	{
-		flags |= (int)MapBufferFlags::InvalidateBuffer;
+		flags |= MapBufferFlags::InvalidateBuffer;
 		m_instanceBufferOffset = 0;
 	}
 
@@ -533,8 +533,6 @@ void Terrain::render(Camera& camera, RenderPass pass)
 	Shader& shader = getShader();
 
 	shader.bind();
-	shader.setUniform("u_projView", camera.getProjMatrix() * camera.getViewMatrix());
-	shader.setUniform("u_cameraPos", camera.getPosition());
 
 	// Set the clip planes
 	shader.setUniform("u_clipPlanes[0]", Vector4f(-1.0f, 0.0f, 0.0f, m_size * 0.5f));
@@ -542,8 +540,11 @@ void Terrain::render(Camera& camera, RenderPass pass)
 	shader.setUniform("u_clipPlanes[2]", Vector4f(0.0f, 0.0f, -1.0f, m_size * 0.5f));
 	shader.setUniform("u_clipPlanes[3]", Vector4f(0.0f, 0.0f, 1.0f, m_size * 0.5f));
 
+	// Camera
+	camera.apply(&shader);
+
 	// Lighting
-	m_scene->getExtension<Lighting>()->apply(camera, &shader);
+	m_scene->getExtension<Lighting>()->apply(&shader);
 	if (pass != RenderPass::Shadow)
 		m_scene->getExtension<Shadows>()->apply(&shader);
 

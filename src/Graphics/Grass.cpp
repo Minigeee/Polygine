@@ -94,16 +94,17 @@ void Grass::render(Camera& camera, RenderPass pass)
 
 	// Apply shader uniforms
 	shader.bind();
-	shader.setUniform("u_projView", camera.getProjMatrix() * camera.getViewMatrix());
-	shader.setUniform("u_cameraPos", camera.getPosition());
 	shader.setUniform("u_grassRadius", m_lodDists.back());
 	shader.setUniform("u_grassSpacing", m_grassSpacing);
 	shader.setUniform("u_grassWidth", m_grassWidth);
 	shader.setUniform("u_grassHeight", m_grassHeight);
 	shader.setUniform("u_time", m_clock.getElapsedTime().toSeconds());
 
+	// Camera
+	camera.apply(&shader);
+
 	// Lighting
-	m_scene->getExtension<Lighting>()->apply(camera, &shader);
+	m_scene->getExtension<Lighting>()->apply(&shader);
 	m_scene->getExtension<Shadows>()->apply(&shader);
 
 	// Terrain maps

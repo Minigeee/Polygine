@@ -84,6 +84,13 @@ void Material::setSpecTexture(Texture* texture)
 
 
 ///////////////////////////////////////////////////////////
+void Material::setApplyFunc(const std::function<void(Shader*)>& func)
+{
+	m_applyFunc = func;
+}
+
+
+///////////////////////////////////////////////////////////
 void Material::addTexture(const std::string& uniform, Texture* texture)
 {
 	if (texture)
@@ -158,6 +165,7 @@ void Material::apply(Shader* shader, int index) const
 	if (m_specTexture)
 		shader->setUniform("u_specularMaps[" + std::to_string(index) + ']', *m_specTexture);
 
+	// Apply all custom textures
 	auto it = m_textures.begin();
 	for (int i = 2; it != m_textures.end(); ++it, ++i)
 	{
@@ -168,6 +176,10 @@ void Material::apply(Shader* shader, int index) const
 		// Set sampler index
 		shader->setUniform(it->first, i);
 	}
+
+	// Apply function callback
+	if (m_applyFunc)
+		m_applyFunc(shader);
 }
 
 

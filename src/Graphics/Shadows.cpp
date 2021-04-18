@@ -19,7 +19,16 @@ namespace poly
 Shadows::Shadows(Scene* scene) :
 	Extension			(scene)
 {
+	Uint32 size = 0;
+	size += 16 * 6 * sizeof(float);
+	size += 4 * 6 * sizeof(float);
+	size += 4 * 2 * sizeof(float);
+	size += 4 * 2 * sizeof(float);
+	size += sizeof(float);
 
+	size = (size + 15) / 16 * 16;
+
+	m_uniformBlock.setBufferSize(size * 10);
 }
 
 
@@ -133,14 +142,82 @@ void Shadows::render(Camera& camera)
 			}
 		}
 	);
+
+
+	// Update uniform block
+
+	// Light projection-view matrices
+	Uint32 n = 0;
+	for (auto it = m_shadowInfo.begin(); it != m_shadowInfo.end(); ++it, ++n)
+	{
+		ShadowInfo& info = it.value();
+
+		for (Uint32 cascade = 0; cascade < info.m_shadowMaps.size(); ++cascade)
+			m_uniformBlock.addData(info.m_lightProjViews[cascade]);
+
+		// Fill the rest of the data
+		for (Uint32 cascade = info.m_shadowMaps.size(); cascade < 3; ++cascade)
+			m_uniformBlock.addData(Matrix4f());
+	}
+
+	// Fill the rest of the data
+	for (Uint32 i = 3 * n; i < 6; ++i)
+		m_uniformBlock.addData(Matrix4f());
+
+	// Shadow distances
+	n = 0;
+	for (auto it = m_shadowInfo.begin(); it != m_shadowInfo.end(); ++it, ++n)
+	{
+		ShadowInfo& info = it.value();
+
+		for (Uint32 cascade = 0; cascade < info.m_shadowMaps.size(); ++cascade)
+		{
+			Vector4f projCoords = info.m_cameraProj * Vector4f(0.0f, 0.0f, -info.m_shadowDists[cascade], 1.0f);
+			m_uniformBlock.addData(projCoords.z, 4 * sizeof(float));
+		}
+
+		// Fill the rest of the data
+		for (Uint32 cascade = info.m_shadowMaps.size(); cascade < 3; ++cascade)
+			m_uniformBlock.addData(0.0f, 4 * sizeof(float));
+	}
+
+	// Fill the rest of the data
+	for (Uint32 i = 3 * n; i < 6; ++i)
+		m_uniformBlock.addData(0.0f, 4 * sizeof(float));
+
+	// Shadow strengths
+	n = 0;
+	for (auto it = m_shadowInfo.begin(); it != m_shadowInfo.end(); ++it, ++n)
+		m_uniformBlock.addData(it.value().m_shadowStrength, 4 * sizeof(float));
+
+	// Fill the rest of the data
+	for (Uint32 i = n; i < 2; ++i)
+		m_uniformBlock.addData(0.0f, 4 * sizeof(float));
+
+	// Number of shadow cascades
+	n = 0;
+	for (auto it = m_shadowInfo.begin(); it != m_shadowInfo.end(); ++it, ++n)
+		m_uniformBlock.addData((int)it.value().m_shadowMaps.size(), 4 * sizeof(float));
+
+	// Fill the rest of the data
+	for (Uint32 i = n; i < 2; ++i)
+		m_uniformBlock.addData(0, 4 * sizeof(float));
+
+	// Number of lights with shadows enabled
+	m_uniformBlock.addData((int)m_shadowInfo.size(), 4 * sizeof(float));
+
+	// Push data
+	m_uniformBlock.update();
 }
 
 
 ///////////////////////////////////////////////////////////
 void Shadows::apply(Shader* shader)
 {
-	shader->setUniform("u_numShadows", (int)m_shadowInfo.size());
+	// Bind uniform block
+	shader->setUniformBlock("Shadows", m_uniformBlock);
 
+	// Apply shadow maps to shader
 	Uint32 i = 0;
 	for (auto it = m_shadowInfo.begin(); it != m_shadowInfo.end(); ++it, ++i)
 	{
@@ -148,17 +225,10 @@ void Shadows::apply(Shader* shader)
 
 		for (Uint32 cascade = 0; cascade < info.m_shadowMaps.size(); ++cascade)
 		{
-			Vector4f projCoords = info.m_cameraProj * Vector4f(0.0f, 0.0f, -info.m_shadowDists[cascade], 1.0f);
-
 			Uint32 index = i * 3 + cascade;
 			std::string indexStr = '[' + std::to_string(index) + ']';
 			shader->setUniform("u_shadowMaps" + indexStr, *info.m_shadowMaps[cascade]->getDepthTexture());
-			shader->setUniform("u_lightProjViews" + indexStr, info.m_lightProjViews[cascade]);
-			shader->setUniform("u_shadowDists" + indexStr, projCoords.z);
 		}
-
-		shader->setUniform("u_shadowStrengths[" + std::to_string(i) + ']', info.m_shadowStrength);
-		shader->setUniform("u_numShadowCascades[" + std::to_string(i) + ']', (int)info.m_shadowMaps.size());
 	}
 }
 

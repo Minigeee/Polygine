@@ -112,6 +112,10 @@ void Scene::addRenderSystem(RenderSystem* system)
 ///////////////////////////////////////////////////////////
 void Scene::render(Camera& camera, FrameBuffer& target, RenderPass pass)
 {
+	// Update lighting system
+	if (pass != RenderPass::Shadow)
+		getExtension<Lighting>()->update(camera);
+
 	// Bind framebuffer
 	target.bind();
 

@@ -1,5 +1,7 @@
 #version 330 core
 
+#include "camera.glsl"
+
 layout (location = 0) in vec2 a_position;
 layout (location = 1) in float a_spacing;
 
@@ -10,8 +12,6 @@ out float v_density;
 out float v_spacing;
 out float v_grassWidth;
 out float v_grassHeight;
-
-uniform vec3 u_cameraPos;
 
 uniform float u_terrainSize;
 uniform float u_terrainHeight;

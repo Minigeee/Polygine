@@ -148,6 +148,22 @@ public:
 	void setSpecTexture(Texture* texture);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Set the function callback for applying a material to a shader
+	///
+	/// If the function callback exists, then it will be called
+	/// whenever apply() is called. This should be used to set
+	/// the values of custom uniform variables that are needed
+	/// for the shader to work. This callback will be executed
+	/// after applying every default material property.
+	///
+	/// The function should take a shader pointer as its parameter.
+	///
+	/// \param func The apply function callback
+	///
+	///////////////////////////////////////////////////////////
+	void setApplyFunc(const std::function<void(Shader*)>& func);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Add a texture to the material to map to a shader uniform
 	///
 	/// Add a texture to the material that gets mapped to the specified
@@ -219,6 +235,10 @@ public:
 	/// Models are allowed to have multiple materials, so use the \a index
 	/// parameter to specify which material index to apply.
 	///
+	/// After all the default material properties are called, then
+	/// the custom apply function callback will be executed, if it
+	/// exists.
+	///
 	/// The shader should be set up like this:
 	/// \code
 	///
@@ -263,6 +283,7 @@ private:
 	Texture* m_specTexture;						//!< The specular texture
 
 	HashMap<std::string, Texture*> m_textures;	//!< Map of uniform to texture
+	std::function<void(Shader*)> m_applyFunc;	//!< The apply function callback
 };
 
 }

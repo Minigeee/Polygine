@@ -65,10 +65,13 @@ Billboard::Billboard() :
 ///////////////////////////////////////////////////////////
 Billboard::~Billboard()
 {
-	Pool<Material>::free(m_material);
-
+	if (m_material)
+		Pool<Material>::free(m_material);
 	if (m_texture)
 		Pool<Texture>::free(m_texture);
+
+	m_material = 0;
+	m_texture = 0;
 }
 
 

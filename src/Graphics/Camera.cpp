@@ -1,4 +1,6 @@
 #include <poly/Graphics/Camera.h>
+#include <poly/Graphics/Shader.h>
+#include <poly/Graphics/UniformBlock.h>
 
 #include <poly/Math/Functions.h>
 #include <poly/Math/Transform.h>
@@ -24,16 +26,45 @@ Camera::Camera() :
 
 	m_isPerspective	(true),
 	m_isProjDirty	(true),
-	m_isViewDirty	(true)
-{
+	m_isViewDirty	(true),
+	m_isBufferDirty	(true),
 
+	m_uniformBlock	(new UniformBlock())
+{
+	Uint32 size = 0;
+	size += 16 * sizeof(float);
+	size += 4 * sizeof(float);
+	size += sizeof(float);
+	size += sizeof(float);
+
+	size = (size + 15) / 16 * 16;
+
+	m_uniformBlock->setBufferSize(size * 10);
 }
 
 
 ///////////////////////////////////////////////////////////
 Camera::~Camera()
 {
+	delete m_uniformBlock;
+}
 
+
+///////////////////////////////////////////////////////////
+void Camera::apply(Shader* shader)
+{
+	if (m_isProjDirty || m_isViewDirty || m_isBufferDirty)
+	{
+		m_uniformBlock->addData(getProjMatrix() * getViewMatrix());
+		m_uniformBlock->addData(m_position);
+		m_uniformBlock->addData(m_near);
+		m_uniformBlock->addData(m_far);
+
+		m_uniformBlock->update();
+	}
+
+	// Bind to shader
+	shader->setUniformBlock("Camera", *m_uniformBlock);
 }
 
 
@@ -263,6 +294,7 @@ const Matrix4f& Camera::getProjMatrix()
 			m_projMatrix = toOrthographicMatrix(m_left, m_right, m_bottom, m_top, m_near, m_far);
 
 		m_isProjDirty = false;
+		m_isBufferDirty = true;
 	}
 
 	return m_projMatrix;
@@ -275,7 +307,9 @@ const Matrix4f& Camera::getViewMatrix()
 	if (m_isViewDirty)
 	{
 		m_viewMatrix = toViewMatrix(m_position, m_direction, m_rightDir);
+
 		m_isViewDirty = false;
+		m_isBufferDirty = true;
 	}
 
 	return m_viewMatrix;

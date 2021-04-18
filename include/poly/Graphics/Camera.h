@@ -8,6 +8,9 @@
 namespace poly
 {
 
+class Shader;
+class UniformBlock;
+
 ///////////////////////////////////////////////////////////
 /// \brief A camera provides the a perspective to view the world from
 ///
@@ -29,6 +32,22 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	~Camera();
+
+	///////////////////////////////////////////////////////////
+	/// \brief Apply camera properties to a shader
+	///
+	/// All camera properties will be pushed to the uniform buffer
+	/// whenever one of its properties have changed. For most
+	/// efficiency, make sure not to change camera properties too
+	/// much, as new data will have to be pushed very time it changes.
+	/// Try to keep camera property changes in the update section
+	/// of the game loop, so that the data only has to be pushed
+	/// once per frame.
+	///
+	/// \param shader The shader to apply camera property uniforms to
+	///
+	///////////////////////////////////////////////////////////
+	void apply(Shader* shader);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the camera position
@@ -386,6 +405,9 @@ private:
 	bool m_isPerspective;		//!< This is true when the camera is in perspective projection mode
 	bool m_isProjDirty;			//!< This is true when one of the projection parameters has changed
 	bool m_isViewDirty;			//!< This is true when on of the view parameters has changed
+	bool m_isBufferDirty;		//!< This is true when camera properties have been updated
+
+	UniformBlock* m_uniformBlock;	//!< A uniform buffer for storing camera shader uniforms
 };
 
 }

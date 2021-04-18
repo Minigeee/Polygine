@@ -3,7 +3,7 @@
 #define MAX_NUM_DIR_LIGHTS 2
 #define MAX_NUM_SHADOW_CASCADES 3
 #define MAX_NUM_SHADOW_MAPS MAX_NUM_DIR_LIGHTS * MAX_NUM_SHADOW_CASCADES
-#define MAX_NUM_POINT_LIGHTS 64
+#define MAX_NUM_POINT_LIGHTS 32
 
 
 ///////////////////////////////////////////////////////////

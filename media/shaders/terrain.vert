@@ -1,5 +1,6 @@
 #version 330 core
 
+#include "camera.glsl"
 #include "shadows_v.glsl"
 
 layout (location = 0) in vec2 a_position;
@@ -13,8 +14,6 @@ out vec3 v_normal;
 out vec3 v_color;
 out vec2 v_texCoord;
 
-uniform mat4 u_projView;
-uniform vec3 u_cameraPos;
 uniform vec4 u_clipPlanes[4];
 
 uniform sampler2D u_normalMap;

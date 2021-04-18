@@ -22,9 +22,15 @@ struct PointLight
 
 
 ///////////////////////////////////////////////////////////
+layout (std140) uniform Lights
+{
+    uniform vec3 u_ambient;
 
-uniform PointLight u_pointLights[MAX_NUM_POINT_LIGHTS];
-uniform int u_numPointLights;
+    uniform DirLight u_dirLights[MAX_NUM_DIR_LIGHTS];
+    uniform PointLight u_pointLights[MAX_NUM_POINT_LIGHTS];
+    uniform int u_numDirLights;
+    uniform int u_numPointLights;
+};
 
 
 ///////////////////////////////////////////////////////////

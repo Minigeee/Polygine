@@ -1,5 +1,6 @@
 #version 330 core
 
+#include "camera.glsl"
 #include "shadows_v.glsl"
 
 layout (points) in;
@@ -13,8 +14,6 @@ in vec3 v_up[];
 out vec3 g_fragPos;
 out vec3 g_normal;
 out vec2 g_texCoord;
-
-uniform mat4 u_projView;
 
 uniform vec2 u_size;
 uniform vec2 u_origin;

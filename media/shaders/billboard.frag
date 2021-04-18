@@ -1,5 +1,6 @@
 #version 330 core
 
+#include "camera.glsl"
 #include "common.glsl"
 #include "lighting.glsl"
 #include "shadows_f.glsl"
@@ -9,8 +10,6 @@ in vec3 g_normal;
 in vec2 g_texCoord;
 
 out vec4 f_color;
-
-uniform vec3 u_cameraPos;
 
 uniform bool u_lightingEnabled;
 uniform bool u_shadowingEnabled;

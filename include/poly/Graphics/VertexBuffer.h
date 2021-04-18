@@ -22,6 +22,7 @@ enum class BufferTarget
 	Uniform				//!< This is used to store uniform block data (GL_UNIFORM_BUFFER)
 };
 
+
 ///////////////////////////////////////////////////////////
 /// \brief The main usage case of the target vertex buffer
 ///
@@ -32,6 +33,7 @@ enum class BufferUsage
 	Dynamic = 0x88E8,	//!< The vertex buffer data is expected to change pretty often
 	Stream	= 0x88E0	//!< The vertex buffer data is expected to update every frame or every few frames
 };
+
 
 ///////////////////////////////////////////////////////////
 /// \brief An enum defining flags used when mapping a buffer
@@ -45,6 +47,61 @@ enum class MapBufferFlags
 	InvalidateBuffer	= 0x0008,	//!< Indicate that any data stored in the buffer before mapping may be discarded
 	InvalidateRange		= 0x0004	//!< Indicate that any data stored in the specified range before mapping may be discarded
 };
+
+///////////////////////////////////////////////////////////
+/// \brief The binary AND operator for map buffer flags
+///
+/// \param a The first operand
+/// \param b The second operand
+///
+/// \return The result
+///
+///////////////////////////////////////////////////////////
+MapBufferFlags operator&(MapBufferFlags a, MapBufferFlags b);
+
+///////////////////////////////////////////////////////////
+/// \brief The binary OR operator for map buffer flags
+///
+/// \param a The first operand
+/// \param b The second operand
+///
+/// \return The result
+///
+///////////////////////////////////////////////////////////
+MapBufferFlags operator|(MapBufferFlags a, MapBufferFlags b);
+
+///////////////////////////////////////////////////////////
+/// \brief The binary NOT operator for map buffer flags
+///
+/// \param a The operand
+///
+/// \return The result
+///
+///////////////////////////////////////////////////////////
+MapBufferFlags operator~(MapBufferFlags a);
+
+///////////////////////////////////////////////////////////
+/// \brief The binary AND assignment operator for map buffer flags
+///
+/// \param a The first operand (the one that is being assigned to)
+/// \param b The second operand
+///
+/// \return The result
+///
+///////////////////////////////////////////////////////////
+MapBufferFlags& operator&=(MapBufferFlags a, MapBufferFlags b);
+
+///////////////////////////////////////////////////////////
+/// \brief The binary OR assignment operator for map buffer flags
+///
+/// \param a The first operand (the one that is being assigned to)
+/// \param b The second operand
+///
+/// \return The result
+///
+///////////////////////////////////////////////////////////
+MapBufferFlags& operator|=(MapBufferFlags a, MapBufferFlags b);
+
 
 ///////////////////////////////////////////////////////////
 /// \brief A class that stores and manages vertex data on the GPU
@@ -100,14 +157,18 @@ public:
 	///
 	/// The only target that have multiple bind points are
 	/// BufferTarget::TransformFeedback and BufferTarget::Uniform.
+	/// This function also provides the option to bind a specific
+	/// range of the buffer to the specified bind index.
 	///
 	/// \param target The target to bind to
 	/// \param index The bind point index
+	/// \param offset The offset of the range to bind in bytes
+	/// \param size The size of the range to bind in bytes
 	///
 	/// \note Calling this will create a new vertex buffer object if it doesn't exist
 	///
 	///////////////////////////////////////////////////////////
-	void bind(BufferTarget target, Uint32 index);
+	void bind(BufferTarget target, Uint32 index, Uint32 offset = 0, Uint32 size = 0);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Create a vertex buffer from data
@@ -203,7 +264,7 @@ public:
 	/// \return A pointer to the mapped data
 	///
 	///////////////////////////////////////////////////////////
-	void* map(Uint32 offset, Uint32 size, int flags);
+	void* map(Uint32 offset, Uint32 size, MapBufferFlags flags);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Unmap all previously mapped ranges
@@ -268,13 +329,13 @@ private:
 	void bufferSubData(const void* data, Uint32 size, Uint32 offset);
 
 private:
-	Uint32 m_id;			//!< The buffer id
-	Uint32 m_size;			//!< The size of the buffer in bytes
-	BufferUsage m_usage;	//!< The usage of the buffer
-	BufferTarget m_target;	//!< The last bind target
-	GLType m_type;			//!< The buffer data type
+	Uint32 m_id;				//!< The buffer id
+	Uint32 m_size;				//!< The size of the buffer in bytes
+	BufferUsage m_usage;		//!< The usage of the buffer
+	BufferTarget m_target;		//!< The last bind target
+	GLType m_type;				//!< The buffer data type
 
-	static Uint32 currentBound[4];
+	static Uint32 s_currentBound[4];
 };
 
 }

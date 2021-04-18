@@ -1,5 +1,6 @@
 #version 330 core
 
+#include "camera.glsl"
 #include "lighting.glsl"
 #include "shadows_f.glsl"
 
@@ -13,12 +14,7 @@ in float g_dist;
 
 out vec4 f_color;
 
-uniform vec3 u_cameraPos;
 uniform float u_grassRadius;
-
-uniform vec3 u_ambient;
-uniform DirLight u_dirLights[MAX_NUM_DIR_LIGHTS];
-uniform int u_numDirLights;
 
 const float diffFactor = 0.1f;
 

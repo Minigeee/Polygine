@@ -5,6 +5,7 @@
 #include <poly/Engine/Extension.h>
 
 #include <poly/Graphics/Camera.h>
+#include <poly/Graphics/UniformBlock.h>
 
 namespace poly
 {
@@ -47,6 +48,9 @@ public:
 	/// single camera at a time (it can't render shadows for
 	/// multiple cameras).
 	///
+	/// At the end of the render, the new data is pushed to the
+	/// uniform buffer.
+	///
 	/// \param camera The camera to render shadow maps for
 	///
 	///////////////////////////////////////////////////////////
@@ -74,6 +78,7 @@ private:
 	};
 
 private:
+	UniformBlock m_uniformBlock;					//!< A uniform block for shader uniforms
 	HashMap<Entity::Id, ShadowInfo> m_shadowInfo;	//!< Shadow info
 };
 

@@ -1,5 +1,7 @@
 #version 330 core
 
+#include "camera.glsl"
+
 layout (points) in;
 layout (triangle_strip, max_vertices = 4) out;
 
@@ -12,9 +14,6 @@ in vec4 v_color[];
 
 out vec2 g_texCoord;
 out vec4 g_color;
-
-uniform vec3 u_cameraPos;
-uniform mat4 u_projView;
 
 const float PI = 3.1415926535;
 

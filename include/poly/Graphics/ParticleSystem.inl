@@ -49,8 +49,9 @@ inline void CpuParticles<T>::render(Camera& camera, RenderPass pass)
 
 	// Bind shader
 	m_shader->bind();
-	m_shader->setUniform("u_cameraPos", camera.getPosition());
-	m_shader->setUniform("u_projView", camera.getProjMatrix() * camera.getViewMatrix());
+
+	// Camera
+	camera.apply(m_shader);
 
 	// Bind texture
 	if (m_texture)
@@ -274,8 +275,9 @@ inline void GpuParticles<T>::render(Camera& camera, RenderPass pass)
 
 	// Bind shader
 	m_renderShader->bind();
-	m_renderShader->setUniform("u_cameraPos", camera.getPosition());
-	m_renderShader->setUniform("u_projView", camera.getProjMatrix() * camera.getViewMatrix());
+
+	// Camera
+	camera.apply(m_renderShader);
 
 	// Bind texture
 	if (m_texture)

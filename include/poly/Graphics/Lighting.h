@@ -3,6 +3,8 @@
 
 #include <poly/Engine/Extension.h>
 
+#include <poly/Graphics/UniformBlock.h>
+
 #include <poly/Math/Vector3.h>
 
 namespace poly
@@ -26,15 +28,29 @@ public:
 	Lighting(Scene* scene);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Update the lighting uniform buffer
+	///
+	/// This will push all lighting data to the uniform buffer,
+	/// and as this can be an expensive operation, it should not
+	/// be used too often.
+	///
+	/// Most of the time, the user will not need to use this function
+	/// because the scene automatically calls this at the beginning
+	/// of each render.
+	///
+	///////////////////////////////////////////////////////////
+	void update(Camera& camera);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Apply lighting parameters to a shader
 	///
 	/// This function should be called as convenience function to
-	/// apply any necessary lighting uniforms to a shader.
+	/// apply all necessary lighting uniforms to a shader.
 	///
 	/// \param shader A pointer to a shader to apply uniforms to
 	///
 	///////////////////////////////////////////////////////////
-	void apply(Camera& camera, Shader* shader);
+	void apply(Shader* shader);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the scene ambient color
@@ -85,6 +101,7 @@ public:
 	const Vector3f& getAmbientColor() const;
 
 private:
+	UniformBlock m_uniformBlock;	//!< A uniform block for storing lighting uniform data
 	Vector3f m_ambientColor;		//!< The ambient color
 	float m_pointLightMaxDist;		//!< The maximum distance at which point lights are enabled
 };

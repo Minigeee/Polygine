@@ -1,5 +1,7 @@
 #version 330 core
 
+#include "camera.glsl"
+
 layout (location = 0) in mat4 a_transform;
 
 out vec3 v_position;
@@ -7,7 +9,6 @@ out vec3 v_front;
 out vec3 v_right;
 out vec3 v_up;
 
-uniform vec3 u_cameraPos;
 uniform bool u_axisLocked;
 
 void main()

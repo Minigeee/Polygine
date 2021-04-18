@@ -1,5 +1,6 @@
 #version 330 core
 
+#include "camera.glsl"
 #include "noise.glsl"
 #include "shadows_v.glsl"
 
@@ -19,9 +20,6 @@ out vec3 g_normal;
 out vec3 g_frontNormal;
 out vec4 g_color;
 out float g_dist;
-
-uniform mat4 u_projView;
-uniform vec3 u_cameraPos;
 
 uniform float u_grassRadius;
 uniform float u_grassSpacing;

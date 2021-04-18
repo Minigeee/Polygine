@@ -3,6 +3,8 @@
 
 #include <poly/Core/DataTypes.h>
 
+#include <poly/Graphics/UniformBlock.h>
+
 #include <poly/Math/Vector2.h>
 #include <poly/Math/Vector3.h>
 #include <poly/Math/Vector4.h>
@@ -259,6 +261,18 @@ public:
 	void setUniform(const std::string& name, Texture& texture);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Bind a uniform block object to a block in this shader
+	///
+	/// This will bind the uniform block to the next available bind
+	/// point.
+	///
+	/// \param name The uniform block name
+	/// \param block The value to assign the uniform block
+	///
+	///////////////////////////////////////////////////////////
+	void setUniformBlock(const std::string& name, UniformBlock& block);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the internal shader program id
 	///
 	/// This returns the id that is used by OpenGL
@@ -271,11 +285,14 @@ public:
 private:
 	int getUniformLocation(const std::string& name);
 
+	Uint32 getUniformBlockIndex(const std::string& name);
+
 private:
-	Uint32 m_id;							//!< The program id
-	std::vector<Uint32> m_shaders;			//!< A list of shader ids
-	HashMap<std::string, int> m_uniforms;	//!< A map of uniform names to uniform locations
-	HashMap<Uint32, Uint32> m_textures;		//!< A map of texture ids to texture slot
+	Uint32 m_id;									//!< The program id
+	std::vector<Uint32> m_shaders;					//!< A list of shader ids
+	HashMap<std::string, int> m_uniforms;			//!< A map of uniform names to uniform locations
+	HashMap<std::string, Uint32> m_uniformBlocks;	//!< A map of uniform names to uniform block index
+	HashMap<Uint32, Uint32> m_textures;				//!< A map of texture ids to texture slot
 
 	static Uint32 currentBound;
 	static HashMap<std::string, Uint32> loadedShaders;

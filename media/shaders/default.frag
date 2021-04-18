@@ -1,5 +1,6 @@
 #version 330 core
 
+#include "camera.glsl"
 #include "lighting.glsl"
 #include "shadows_f.glsl"
 
@@ -13,14 +14,9 @@ flat in int v_materialIndex;
 
 out vec4 f_color;
 
-uniform vec3 u_cameraPos;
-
-uniform vec3 u_ambient;
 uniform Material u_materials[MAX_NUM_MATERIALS];
 uniform sampler2D u_diffuseMaps[MAX_NUM_MATERIALS];
 uniform sampler2D u_specularMaps[MAX_NUM_MATERIALS];
-uniform DirLight u_dirLights[MAX_NUM_DIR_LIGHTS];
-uniform int u_numDirLights;
 
 ///////////////////////////////////////////////////////////
 

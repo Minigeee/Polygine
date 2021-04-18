@@ -1,5 +1,6 @@
 #version 330 core
 
+#include "camera.glsl"
 #include "shadows_v.glsl"
 
 layout (location = 0) in vec3 a_position;
@@ -14,8 +15,6 @@ out vec3 v_normal;
 out vec2 v_texCoord;
 out vec4 v_color;
 flat out int v_materialIndex;
-
-uniform mat4 u_projView;
 
 
 void main()

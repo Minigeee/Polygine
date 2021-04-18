@@ -15,32 +15,49 @@ Lighting::Lighting(Scene* scene) :
 	m_ambientColor			(0.02f),
 	m_pointLightMaxDist		(30.0f)
 {
+	// Calculate uniform data size
+	Uint32 size = 0;
+	size += 4 * sizeof(float);
+	size += 12 * 2 * sizeof(float);
+	size += 16 * 32 * sizeof(float);
+	size += 2 *sizeof(float);
 
+	size = (size + 15) / 16 * 16;
+
+	m_uniformBlock.setBufferSize(size * 10);
 }
 
 
 ///////////////////////////////////////////////////////////
-void Lighting::apply(Camera& camera, Shader* shader)
+void Lighting::update(Camera& camera)
 {
 	// Need a scene
 	if (!m_scene) return;
 
 	// Apply main ambient color
-	shader->setUniform("u_ambient", m_ambientColor);
+	m_uniformBlock.addData(m_ambientColor);
 
 	// Apply directional lights
 	int i = 0;
 	m_scene->system<DirLightComponent>(
 		[&](const Entity::Id id, DirLightComponent& light)
 		{
-			std::string prefix = "u_dirLights[" + std::to_string(i++) + "].";
+			m_uniformBlock.addData(light.m_diffuse);
+			m_uniformBlock.addData(light.m_specular);
+			m_uniformBlock.addData(normalize(light.m_direction));
 
-			shader->setUniform(prefix + "diffuse", light.m_diffuse);
-			shader->setUniform(prefix + "specular", light.m_specular);
-			shader->setUniform(prefix + "direction", normalize(light.m_direction));
+			++i;
 		}
 	);
-	shader->setUniform("u_numDirLights", i);
+	int numDirLights = i;
+
+	// Fill the rest of the empty lights
+	for (int i = numDirLights; i < 2; ++i)
+	{
+		m_uniformBlock.addData(Vector3f());
+		m_uniformBlock.addData(Vector3f());
+		m_uniformBlock.addData(Vector3f());
+	}
 
 	// Apply point lights
 	i = 0;
@@ -58,15 +75,39 @@ void Lighting::apply(Camera& camera, Shader* shader)
 			if (intensity > 1.0f)
 				intensity = 1.0f;
 
-			std::string prefix = "u_pointLights[" + std::to_string(i++) + "].";
+			m_uniformBlock.addData(t.m_position);
+			m_uniformBlock.addData(light.m_diffuse * intensity);
+			m_uniformBlock.addData(light.m_specular * intensity);
+			m_uniformBlock.addData(light.m_coefficients);
 
-			shader->setUniform(prefix + "position", t.m_position);
-			shader->setUniform(prefix + "diffuse", light.m_diffuse * intensity);
-			shader->setUniform(prefix + "specular", light.m_specular * intensity);
-			shader->setUniform(prefix + "coefficients", light.m_coefficients);
+			++i;
 		}
 	);
-	shader->setUniform("u_numPointLights", i);
+	int numPointLights = i;
+
+	// Fill the rest of the empty lights
+	for (int i = numPointLights; i < 32; ++i)
+	{
+		m_uniformBlock.addData(Vector3f());
+		m_uniformBlock.addData(Vector3f());
+		m_uniformBlock.addData(Vector3f());
+		m_uniformBlock.addData(Vector3f());
+	}
+
+	// Number of lights
+	m_uniformBlock.addData(numDirLights);
+	m_uniformBlock.addData(numPointLights);
+
+	// Push data
+	m_uniformBlock.update();
+}
+
+
+///////////////////////////////////////////////////////////
+void Lighting::apply(Shader* shader)
+{
+	// Bind uniform block
+	shader->setUniformBlock("Lights", m_uniformBlock);
 }
 
 

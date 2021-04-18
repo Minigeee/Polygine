@@ -1,6 +1,7 @@
 
 #include "common.glsl"
 #include "noise.glsl"
+#include "shadows.glsl"
 
 // Shadow functions in the fragment shader
 
@@ -10,10 +11,6 @@ in vec4 v_clipSpacePos;
 in vec4 v_lightClipSpacePos[MAX_NUM_SHADOW_MAPS];
 
 uniform sampler2D u_shadowMaps[MAX_NUM_SHADOW_MAPS];
-uniform float u_shadowDists[MAX_NUM_SHADOW_MAPS];
-uniform float u_shadowStrengths[MAX_NUM_DIR_LIGHTS];
-uniform int u_numShadowCascades[MAX_NUM_DIR_LIGHTS];
-uniform int u_numShadows;
 
 
 ///////////////////////////////////////////////////////////

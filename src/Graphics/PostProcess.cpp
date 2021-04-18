@@ -155,13 +155,14 @@ void Fog::render(FrameBuffer& input, FrameBuffer& output)
 	Shader& shader = getShader();
 
 	shader.bind();
-	shader.setUniform("u_cameraPos", m_camera->getPosition());
 	shader.setUniform("u_color", *input.getColorTexture());
 	shader.setUniform("u_depth", *input.getDepthTexture());
 	shader.setUniform("u_fogColor", m_color);
 	shader.setUniform("u_fogDensity", m_density);
 	shader.setUniform("u_scatterStrength", m_scatterStrength);
 	shader.setUniform("u_applyToSkybox", (int)m_applyToSkybox);
+
+	m_camera->apply(&shader);
 
 	if (m_scene)
 	{
