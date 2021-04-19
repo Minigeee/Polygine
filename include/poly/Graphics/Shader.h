@@ -3,7 +3,7 @@
 
 #include <poly/Core/DataTypes.h>
 
-#include <poly/Graphics/UniformBlock.h>
+#include <poly/Graphics/UniformBuffer.h>
 
 #include <poly/Math/Vector2.h>
 #include <poly/Math/Vector3.h>
@@ -268,9 +268,11 @@ public:
 	///
 	/// \param name The uniform block name
 	/// \param block The value to assign the uniform block
+	/// \param offset The offset of the range to bind in the uniform buffer (in bytes)
+	/// \param size The size of the rainge to bind in the uniform buffer (in bytes)
 	///
 	///////////////////////////////////////////////////////////
-	void setUniformBlock(const std::string& name, UniformBlock& block);
+	void setUniformBlock(const std::string& name, UniformBuffer& block, Uint32 offset = 0xFFFFFFFFu, Uint32 size = 0);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the internal shader program id

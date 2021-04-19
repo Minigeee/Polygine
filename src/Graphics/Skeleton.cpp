@@ -132,12 +132,28 @@ Bone* copyBone(Bone* bone, Bone* parent, ObjectPool& pool)
 
 
 ///////////////////////////////////////////////////////////
+UniformBuffer Skeleton::s_uniformBuffer;
+
+
+///////////////////////////////////////////////////////////
+UniformBuffer& Skeleton::getUniformBuffer()
+{
+	if (!s_uniformBuffer.getId())
+		// Create a buffer with 2 MB space
+		s_uniformBuffer.setSize(2 * 1024 * 1024);
+
+	return s_uniformBuffer;
+}
+
+
+///////////////////////////////////////////////////////////
 Skeleton::Skeleton() :
 	m_root				(0),
 	m_bonePool			(sizeof(Bone), 10),
 	m_animation			(0),
 	m_animTime			(0.0f),
-	m_animSpeed			(1.0f)
+	m_animSpeed			(1.0f),
+	m_uniformOffset		(0)
 {
 
 }
@@ -149,7 +165,8 @@ Skeleton::Skeleton(const std::string& fname) :
 	m_bonePool			(sizeof(Bone), 10),
 	m_animation			(0),
 	m_animTime			(0.0f),
-	m_animSpeed			(1.0f)
+	m_animSpeed			(1.0f),
+	m_uniformOffset		(0)
 {
 	load(fname);
 }
@@ -161,7 +178,8 @@ Skeleton::Skeleton(const Skeleton& skeleton) :
 	m_bonePool			(sizeof(Bone), 10),
 	m_animation			(skeleton.m_animation),
 	m_animTime			(skeleton.m_animTime),
-	m_animSpeed			(skeleton.m_animSpeed)
+	m_animSpeed			(skeleton.m_animSpeed),
+	m_uniformOffset		(0)
 {
 	// Do a depth first search and copy all bones to the new object pool
 	m_root = priv::copyBone(skeleton.m_root, 0, m_bonePool);
@@ -229,16 +247,8 @@ bool Skeleton::load(const std::string& fname)
 ///////////////////////////////////////////////////////////
 void Skeleton::apply(Shader* shader)
 {
-	for (auto it = m_boneMap.begin(); it != m_boneMap.end(); ++it)
-	{
-		Bone* bone = it.value();
-
-		// Calculate final transform
-		Matrix4f transform = bone->getGlobalTransform() * bone->getOffset();
-
-		// Set bone transform
-		shader->setUniform("u_bones[" + std::to_string(bone->getId()) + "]", transform);
-	}
+	// Bind uniform buffer
+	shader->setUniformBlock("Skeleton", getUniformBuffer(), m_uniformOffset, sizeof(UniformBlock_Skeleton));
 }
 
 
@@ -256,6 +266,22 @@ void Skeleton::update(float dt)
 
 		// Recursively apply animation
 		priv::applyAnimation(m_root, m_animation, m_animTime);
+
+		// Add bones to the uniform buffer
+		UniformBlock_Skeleton block;
+		for (auto it = m_boneMap.begin(); it != m_boneMap.end(); ++it)
+		{
+			Bone* bone = it.value();
+
+			// Calculate final transform
+			Matrix4f transform = bone->getGlobalTransform() * bone->getOffset();
+
+			// Set bone transform
+			block.m_bones[bone->getId()] = transform;
+		}
+
+		// Keep track of uniform offset
+		m_uniformOffset = getUniformBuffer().pushData(block);
 	}
 }
 

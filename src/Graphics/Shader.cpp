@@ -487,14 +487,14 @@ void Shader::setUniform(const std::string& name, Texture& texture)
 
 
 ///////////////////////////////////////////////////////////
-void Shader::setUniformBlock(const std::string& name, UniformBlock& block)
+void Shader::setUniformBlock(const std::string& name, UniformBuffer& block, Uint32 offset, Uint32 size)
 {
 	// Get uniform block index
 	Uint32 index = getUniformBlockIndex(name);
 
 	// Bind uniform block to the index
 	if (index != GL_INVALID_INDEX)
-		block.bind(index);
+		block.bind(index, offset, size);
 }
 
 

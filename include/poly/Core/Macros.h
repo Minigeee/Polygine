@@ -66,6 +66,30 @@
 #define RECURSIVE_32(func, x, ...) func(x) EXPAND(RECURSIVE_31(func, __VA_ARGS__))
 
 
+///////////////////////////////////////////////////////////
+#define CMP_0(op, x, y, ...)
+#define CMP_1(op, x, y, ...)
+#define CMP_2(op, x, y, ...) (x op y ? x : y)
+#define CMP_3(op, x, ...) (EXPAND(CMP_2(op, __VA_ARGS__) op x ? CMP_2(op, __VA_ARGS__) : x))
+#define CMP_4(op, x, ...) (EXPAND(CMP_3(op, __VA_ARGS__) op x ? CMP_3(op, __VA_ARGS__) : x))
+#define CMP_5(op, x, ...) (EXPAND(CMP_4(op, __VA_ARGS__) op x ? CMP_4(op, __VA_ARGS__) : x))
+#define CMP_6(op, x, ...) (EXPAND(CMP_5(op, __VA_ARGS__) op x ? CMP_5(op, __VA_ARGS__) : x))
+#define CMP_7(op, x, ...) (EXPAND(CMP_6(op, __VA_ARGS__) op x ? CMP_6(op, __VA_ARGS__) : x))
+#define CMP_8(op, x, ...) (EXPAND(CMP_7(op, __VA_ARGS__) op x ? CMP_7(op, __VA_ARGS__) : x))
+#define CMP_9(op, x, ...) (EXPAND(CMP_8(op, __VA_ARGS__) op x ? CMP_8(op, __VA_ARGS__) : x))
+#define CMP_10(op, x, ...) (EXPAND(CMP_9(op, __VA_ARGS__) op x ? CMP_9(op, __VA_ARGS__) : x))
+#define CMP_11(op, x, ...) (EXPAND(CMP_10(op, __VA_ARGS__) op x ? CMP_10(op, __VA_ARGS__) : x))
+#define CMP_12(op, x, ...) (EXPAND(CMP_11(op, __VA_ARGS__) op x ? CMP_11(op, __VA_ARGS__) : x))
+#define CMP_13(op, x, ...) (EXPAND(CMP_12(op, __VA_ARGS__) op x ? CMP_12(op, __VA_ARGS__) : x))
+#define CMP_14(op, x, ...) (EXPAND(CMP_13(op, __VA_ARGS__) op x ? CMP_13(op, __VA_ARGS__) : x))
+#define CMP_15(op, x, ...) (EXPAND(CMP_14(op, __VA_ARGS__) op x ? CMP_14(op, __VA_ARGS__) : x))
+#define CMP_16(op, x, ...) (EXPAND(CMP_15(op, __VA_ARGS__) op x ? CMP_15(op, __VA_ARGS__) : x))
+#define CMP_17(op, x, ...) (EXPAND(CMP_16(op, __VA_ARGS__) op x ? CMP_16(op, __VA_ARGS__) : x))
+#define CMP_18(op, x, ...) (EXPAND(CMP_17(op, __VA_ARGS__) op x ? CMP_17(op, __VA_ARGS__) : x))
+#define CMP_19(op, x, ...) (EXPAND(CMP_18(op, __VA_ARGS__) op x ? CMP_18(op, __VA_ARGS__) : x))
+#define CMP_20(op, x, ...) (EXPAND(CMP_19(op, __VA_ARGS__) op x ? CMP_19(op, __VA_ARGS__) : x))
+
+
 #endif
 
 
@@ -87,6 +111,14 @@
 
 ///////////////////////////////////////////////////////////
 #define LOOP_XTIMES(N, expr, ...) EXPAND(CONCAT(RECURSIVE_, N)(expr, __VA_ARGS__))
+
+
+///////////////////////////////////////////////////////////
+#define MAX(...) EXPAND(CONCAT(CMP_, NARGS(__VA_ARGS__))(>, __VA_ARGS__))
+
+
+///////////////////////////////////////////////////////////
+#define MIN(...) EXPAND(CONCAT(CMP_, NARGS(__VA_ARGS__))(<, __VA_ARGS__))
 
 
 ///////////////////////////////////////////////////////////
@@ -130,6 +162,10 @@
 ///////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////
 #define PARAM_EXPAND(expr) { int _temp[] = {0, ((void)(expr), 0)...}; }
+
+
+template<typename T> struct MacroArgType;
+template<typename T, typename U> struct MacroArgType<T(U)> { typedef U Type; };
 
 
 

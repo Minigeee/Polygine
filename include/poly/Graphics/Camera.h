@@ -1,6 +1,8 @@
 #ifndef POLY_CAMERA_H
 #define POLY_CAMERA_H
 
+#include <poly/Graphics/UniformBuffer.h>
+
 #include <poly/Math/Frustum.h>
 #include <poly/Math/Matrix4.h>
 #include <poly/Math/Vector3.h>
@@ -9,7 +11,17 @@ namespace poly
 {
 
 class Shader;
-class UniformBlock;
+
+
+///////////////////////////////////////////////////////////
+struct UniformBlock_Camera
+{
+	UniformBufferType<Matrix4f> m_projView;
+	UniformBufferType<Vector3f> m_cameraPos;
+	UniformBufferType<float> m_near;
+	UniformBufferType<float> m_far;
+};
+
 
 ///////////////////////////////////////////////////////////
 /// \brief A camera provides the a perspective to view the world from
@@ -383,6 +395,13 @@ public:
 	float getTop() const;
 
 private:
+	static UniformBuffer* getUniformBuffer();
+
+	static void free(UniformBuffer* buffer);
+
+	static std::vector<UniformBuffer*> s_unusedUniformBuffers;
+
+private:
 	Matrix4f m_projMatrix;		//!< The projection matrix
 	Matrix4f m_viewMatrix;		//!< The view matrix
 	Frustum m_frustum;			//!< The camera frustum
@@ -407,7 +426,7 @@ private:
 	bool m_isViewDirty;			//!< This is true when on of the view parameters has changed
 	bool m_isBufferDirty;		//!< This is true when camera properties have been updated
 
-	UniformBlock* m_uniformBlock;	//!< A uniform buffer for storing camera shader uniforms
+	UniformBuffer* m_uniformBuffer;	//!< A uniform buffer for storing camera shader uniforms
 };
 
 }

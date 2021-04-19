@@ -18,7 +18,10 @@ out vec2 v_texCoord;
 out vec4 v_color;
 flat out int v_materialIndex;
 
-uniform mat4 u_bones[20];
+layout (std140) uniform Skeleton
+{
+    uniform mat4 u_bones[20];
+};
 
 void main()
 {

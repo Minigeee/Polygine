@@ -24,6 +24,7 @@
 #include <poly/Graphics/Skybox.h>
 #include <poly/Graphics/Terrain.h>
 #include <poly/Graphics/Texture.h>
+#include <poly/Graphics/UniformBuffer.h>
 #include <poly/Graphics/VertexArray.h>
 #include <poly/Graphics/VertexBuffer.h>
 #include <poly/Graphics/Window.h>
@@ -75,9 +76,17 @@ int main()
     Model model;
     model.load("examples/models/character/character.dae");
 
-    Skeleton skeleton("examples/models/character/character.dae");
+    Skeleton skeletons[3];
     Animation animation("examples/models/character/character.dae", "Armature");
-    skeleton.setAnimation(&animation);
+    skeletons[0].load("examples/models/character/character.dae");
+    skeletons[0].setAnimation(&animation);
+    skeletons[1].load("examples/models/character/character.dae");
+    skeletons[1].setAnimation(&animation);
+    skeletons[1].setAnimationTime(0.5f);
+    skeletons[2].load("examples/models/character/character.dae");
+    skeletons[2].setAnimation(&animation);
+    skeletons[2].setAnimationTime(0.5f);
+    skeletons[2].setAnimationSpeed(1.5f);
 
     Billboard billboard;
     billboard.load("examples/models/character/character_d.png");
@@ -144,7 +153,7 @@ int main()
     sun.m_diffuse = Vector3f(0.9f, 0.55f, 0.35f);
     sun.m_specular = sun.m_diffuse * 0.2f;
     sun.m_direction.z = 2.0f;
-    sun.m_shadowsEnabled = false;
+    // sun.m_shadowsEnabled = false;
     scene.createEntity(sun);
 
     PointLightComponent light;
@@ -159,12 +168,12 @@ int main()
     t.m_scale = Vector3f(0.25f);
     RenderComponent r(&model, &Model::getAnimatedShader());
     r.m_castsShadows = true;
-    scene.createEntity(t, r, AnimationComponent(&skeleton), DynamicTag());
-    r.m_shader = &Model::getDefaultShader();
+    scene.createEntity(t, r, AnimationComponent(&skeletons[0]), DynamicTag());
+    // r.m_shader = &Model::getDefaultShader();
     t.m_position.x = 5.0f;
-    scene.createEntity(t, r);
+    scene.createEntity(t, r, AnimationComponent(&skeletons[1]), DynamicTag());
     t.m_position.x = -5.0f;
-    scene.createEntity(t, r);
+    scene.createEntity(t, r, AnimationComponent(&skeletons[2]), DynamicTag());
 
 
     Clock clock;
@@ -281,8 +290,10 @@ int main()
             camera.move(normalize(move) * elapsed * 3.4f);
 
         // Render scene
+        skeletons[0].update(elapsed);
+        skeletons[1].update(elapsed);
+        skeletons[2].update(elapsed);
         scene.getExtension<Shadows>()->render(camera);
-        skeleton.update(elapsed);
         octree.update();
         scene.render(camera, framebuffers[0]);
 
@@ -310,6 +321,5 @@ int main()
 // TODO : SSAO
 // TODO : Sun glare effect
 // TODO : Document Fxaa, Blur (after reworking post processing)
-// TODO : Point lights
 // TODO : Add normal mapping
-// TODO : Document UniformBlock
+// TODO : Document UniformBuffer

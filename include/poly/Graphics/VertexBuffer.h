@@ -89,7 +89,7 @@ MapBufferFlags operator~(MapBufferFlags a);
 /// \return The result
 ///
 ///////////////////////////////////////////////////////////
-MapBufferFlags& operator&=(MapBufferFlags a, MapBufferFlags b);
+MapBufferFlags& operator&=(MapBufferFlags& a, MapBufferFlags b);
 
 ///////////////////////////////////////////////////////////
 /// \brief The binary OR assignment operator for map buffer flags
@@ -100,7 +100,7 @@ MapBufferFlags& operator&=(MapBufferFlags a, MapBufferFlags b);
 /// \return The result
 ///
 ///////////////////////////////////////////////////////////
-MapBufferFlags& operator|=(MapBufferFlags a, MapBufferFlags b);
+MapBufferFlags& operator|=(MapBufferFlags& a, MapBufferFlags b);
 
 
 ///////////////////////////////////////////////////////////

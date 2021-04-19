@@ -1,12 +1,18 @@
+#include <poly/Core/ObjectPool.h>
+
 #include <poly/Graphics/Camera.h>
 #include <poly/Graphics/Shader.h>
-#include <poly/Graphics/UniformBlock.h>
+#include <poly/Graphics/UniformBuffer.h>
 
 #include <poly/Math/Functions.h>
 #include <poly/Math/Transform.h>
 
 namespace poly
 {
+
+
+///////////////////////////////////////////////////////////
+std::vector<UniformBuffer*> Camera::s_unusedUniformBuffers;
 
 
 ///////////////////////////////////////////////////////////
@@ -29,24 +35,49 @@ Camera::Camera() :
 	m_isViewDirty	(true),
 	m_isBufferDirty	(true),
 
-	m_uniformBlock	(new UniformBlock())
+	m_uniformBuffer	(getUniformBuffer())
 {
-	Uint32 size = 0;
-	size += 16 * sizeof(float);
-	size += 4 * sizeof(float);
-	size += sizeof(float);
-	size += sizeof(float);
 
-	size = (size + 15) / 16 * 16;
-
-	m_uniformBlock->setBufferSize(size * 10);
 }
 
 
 ///////////////////////////////////////////////////////////
 Camera::~Camera()
 {
-	delete m_uniformBlock;
+	Camera::free(m_uniformBuffer);
+}
+
+
+///////////////////////////////////////////////////////////
+UniformBuffer* Camera::getUniformBuffer()
+{
+	if (s_unusedUniformBuffers.size())
+	{
+		// Get an unused buffer if available
+		UniformBuffer* buffer = s_unusedUniformBuffers.back();
+		s_unusedUniformBuffers.pop_back();
+		return buffer;
+	}
+	else
+	{
+		// Allocate a new one
+		UniformBuffer* buffer = Pool<UniformBuffer>::alloc();
+
+		// Make enough space for 10 blocks
+		Uint32 align = UniformBuffer::getUniformBlockAlignment();
+		Uint32 size = (sizeof(UniformBlock_Camera) + align - 1) / align * align;
+		buffer->setSize(size * 10);
+
+		return buffer;
+	}
+}
+
+
+///////////////////////////////////////////////////////////
+void Camera::free(UniformBuffer* buffer)
+{
+	// Return to unused buffers
+	s_unusedUniformBuffers.push_back(buffer);
 }
 
 
@@ -55,16 +86,19 @@ void Camera::apply(Shader* shader)
 {
 	if (m_isProjDirty || m_isViewDirty || m_isBufferDirty)
 	{
-		m_uniformBlock->addData(getProjMatrix() * getViewMatrix());
-		m_uniformBlock->addData(m_position);
-		m_uniformBlock->addData(m_near);
-		m_uniformBlock->addData(m_far);
+		UniformBlock_Camera block;
+		block.m_projView = getProjMatrix() * getViewMatrix();
+		block.m_cameraPos = m_position;
+		block.m_near = m_near;
+		block.m_far = m_far;
 
-		m_uniformBlock->update();
+		m_uniformBuffer->pushData(block);
+
+		m_isBufferDirty = false;
 	}
 
 	// Bind to shader
-	shader->setUniformBlock("Camera", *m_uniformBlock);
+	shader->setUniformBlock("Camera", *m_uniformBuffer);
 }
 
 

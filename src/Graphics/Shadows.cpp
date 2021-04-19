@@ -19,16 +19,10 @@ namespace poly
 Shadows::Shadows(Scene* scene) :
 	Extension			(scene)
 {
-	Uint32 size = 0;
-	size += 16 * 6 * sizeof(float);
-	size += 4 * 6 * sizeof(float);
-	size += 4 * 2 * sizeof(float);
-	size += 4 * 2 * sizeof(float);
-	size += sizeof(float);
-
-	size = (size + 15) / 16 * 16;
-
-	m_uniformBlock.setBufferSize(size * 10);
+	// Make enough space for 10 blocks
+	Uint32 align = UniformBuffer::getUniformBlockAlignment();
+	Uint32 size = (sizeof(UniformBlock_Shadows) + align - 1) / align * align;
+	m_uniformBuffer.setSize(size * 10);
 }
 
 
@@ -145,69 +139,31 @@ void Shadows::render(Camera& camera)
 
 
 	// Update uniform block
+	UniformBlock_Shadows block;
 
-	// Light projection-view matrices
-	Uint32 n = 0;
-	for (auto it = m_shadowInfo.begin(); it != m_shadowInfo.end(); ++it, ++n)
-	{
-		ShadowInfo& info = it.value();
-
-		for (Uint32 cascade = 0; cascade < info.m_shadowMaps.size(); ++cascade)
-			m_uniformBlock.addData(info.m_lightProjViews[cascade]);
-
-		// Fill the rest of the data
-		for (Uint32 cascade = info.m_shadowMaps.size(); cascade < 3; ++cascade)
-			m_uniformBlock.addData(Matrix4f());
-	}
-
-	// Fill the rest of the data
-	for (Uint32 i = 3 * n; i < 6; ++i)
-		m_uniformBlock.addData(Matrix4f());
-
-	// Shadow distances
-	n = 0;
-	for (auto it = m_shadowInfo.begin(); it != m_shadowInfo.end(); ++it, ++n)
+	// Apply shadow maps to shader
+	Uint32 i = 0;
+	for (auto it = m_shadowInfo.begin(); it != m_shadowInfo.end(); ++it, ++i)
 	{
 		ShadowInfo& info = it.value();
 
 		for (Uint32 cascade = 0; cascade < info.m_shadowMaps.size(); ++cascade)
 		{
 			Vector4f projCoords = info.m_cameraProj * Vector4f(0.0f, 0.0f, -info.m_shadowDists[cascade], 1.0f);
-			m_uniformBlock.addData(projCoords.z, 4 * sizeof(float));
+
+			Uint32 index = i * 3 + cascade;
+			block.m_lightProjViews[index] = info.m_lightProjViews[cascade];
+			block.m_shadowDists[index] = projCoords.z;
 		}
 
-		// Fill the rest of the data
-		for (Uint32 cascade = info.m_shadowMaps.size(); cascade < 3; ++cascade)
-			m_uniformBlock.addData(0.0f, 4 * sizeof(float));
+		block.m_shadowStrengths[i] = info.m_shadowStrength;
+		block.m_numShadowCascades[i] = (int)info.m_shadowMaps.size();
 	}
 
-	// Fill the rest of the data
-	for (Uint32 i = 3 * n; i < 6; ++i)
-		m_uniformBlock.addData(0.0f, 4 * sizeof(float));
-
-	// Shadow strengths
-	n = 0;
-	for (auto it = m_shadowInfo.begin(); it != m_shadowInfo.end(); ++it, ++n)
-		m_uniformBlock.addData(it.value().m_shadowStrength, 4 * sizeof(float));
-
-	// Fill the rest of the data
-	for (Uint32 i = n; i < 2; ++i)
-		m_uniformBlock.addData(0.0f, 4 * sizeof(float));
-
-	// Number of shadow cascades
-	n = 0;
-	for (auto it = m_shadowInfo.begin(); it != m_shadowInfo.end(); ++it, ++n)
-		m_uniformBlock.addData((int)it.value().m_shadowMaps.size(), 4 * sizeof(float));
-
-	// Fill the rest of the data
-	for (Uint32 i = n; i < 2; ++i)
-		m_uniformBlock.addData(0, 4 * sizeof(float));
-
-	// Number of lights with shadows enabled
-	m_uniformBlock.addData((int)m_shadowInfo.size(), 4 * sizeof(float));
+	block.m_numShadows = (int)m_shadowInfo.size();
 
 	// Push data
-	m_uniformBlock.update();
+	m_uniformBuffer.pushData(block);
 }
 
 
@@ -215,7 +171,7 @@ void Shadows::render(Camera& camera)
 void Shadows::apply(Shader* shader)
 {
 	// Bind uniform block
-	shader->setUniformBlock("Shadows", m_uniformBlock);
+	shader->setUniformBlock("Shadows", m_uniformBuffer);
 
 	// Apply shadow maps to shader
 	Uint32 i = 0;

@@ -3,7 +3,7 @@
 
 #include <poly/Engine/Extension.h>
 
-#include <poly/Graphics/UniformBlock.h>
+#include <poly/Graphics/UniformBuffer.h>
 
 #include <poly/Math/Vector3.h>
 
@@ -11,6 +11,37 @@ namespace poly
 {
 
 class Shader;
+
+
+///////////////////////////////////////////////////////////
+struct UniformStruct_DirLight
+{
+	UniformBufferType<Vector3f>		m_diffuse;
+	UniformBufferType<Vector3f>		m_specular;
+	UniformBufferType<Vector3f>		m_direction;
+};
+
+
+///////////////////////////////////////////////////////////
+struct UniformStruct_PointLight
+{
+	UniformBufferType<Vector3f>		m_position;
+	UniformBufferType<Vector3f>		m_diffuse;
+	UniformBufferType<Vector3f>		m_specular;
+	UniformBufferType<Vector3f>		m_coefficients;
+};
+
+
+///////////////////////////////////////////////////////////
+struct UniformBlock_Lights
+{
+	UniformBufferType<Vector3f>		m_ambient;
+	UniformStruct_DirLight			m_dirLights[2];
+	UniformStruct_PointLight		m_pointLights[32];
+	UniformBufferType<int>			m_numDirLights;
+	UniformBufferType<int>			m_numPointLights;
+};
+
 
 ///////////////////////////////////////////////////////////
 /// \brief A scene extension for lighting related features
@@ -101,7 +132,7 @@ public:
 	const Vector3f& getAmbientColor() const;
 
 private:
-	UniformBlock m_uniformBlock;	//!< A uniform block for storing lighting uniform data
+	UniformBuffer m_uniformBuffer;	//!< A uniform buffer for storing lighting uniform data
 	Vector3f m_ambientColor;		//!< The ambient color
 	float m_pointLightMaxDist;		//!< The maximum distance at which point lights are enabled
 };

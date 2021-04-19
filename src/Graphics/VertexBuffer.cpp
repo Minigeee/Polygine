@@ -50,14 +50,14 @@ MapBufferFlags operator~(MapBufferFlags a)
 
 
 ///////////////////////////////////////////////////////////
-MapBufferFlags& operator&=(MapBufferFlags a, MapBufferFlags b)
+MapBufferFlags& operator&=(MapBufferFlags& a, MapBufferFlags b)
 {
 	return a = a & b;
 }
 
 
 ///////////////////////////////////////////////////////////
-MapBufferFlags& operator|=(MapBufferFlags a, MapBufferFlags b)
+MapBufferFlags& operator|=(MapBufferFlags& a, MapBufferFlags b)
 {
 	return a = a | b;
 }

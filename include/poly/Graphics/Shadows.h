@@ -5,13 +5,25 @@
 #include <poly/Engine/Extension.h>
 
 #include <poly/Graphics/Camera.h>
-#include <poly/Graphics/UniformBlock.h>
+#include <poly/Graphics/UniformBuffer.h>
 
 namespace poly
 {
 
 class FrameBuffer;
 class Shader;
+
+
+///////////////////////////////////////////////////////////
+struct UniformBlock_Shadows
+{
+	UniformBufferType<Matrix4f>		m_lightProjViews[6];
+	UniformBufferType<float, 4>		m_shadowDists[6];
+	UniformBufferType<float, 4>		m_shadowStrengths[2];
+	UniformBufferType<int, 4>		m_numShadowCascades[2];
+	UniformBufferType<int>			m_numShadows;
+};
+
 
 ///////////////////////////////////////////////////////////
 /// \brief A scene extension used for rendering shadows
@@ -78,7 +90,7 @@ private:
 	};
 
 private:
-	UniformBlock m_uniformBlock;					//!< A uniform block for shader uniforms
+	UniformBuffer m_uniformBuffer;					//!< A uniform block for shader uniforms
 	HashMap<Entity::Id, ShadowInfo> m_shadowInfo;	//!< Shadow info
 };
 
