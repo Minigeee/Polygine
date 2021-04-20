@@ -47,10 +47,10 @@ void UniformBuffer::bind(Uint32 index, Uint32 offset, Uint32 size)
 
 
 ///////////////////////////////////////////////////////////
-void UniformBuffer::setSize(Uint32 size)
+void UniformBuffer::create(Uint32 size, BufferUsage usage)
 {
 	// Create a new uniform buffer
-	m_uniformBuffer.create((Uint8*)NULL, size, BufferUsage::Stream, GLType::Float);
+	m_uniformBuffer.create((Uint8*)NULL, size, usage, GLType::Float);
 	m_uniformBuffer.setTarget(BufferTarget::Uniform);
 }
 

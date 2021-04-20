@@ -18,7 +18,7 @@ Lighting::Lighting(Scene* scene) :
 	// Make enough space for 10 blocks
 	Uint32 align = UniformBuffer::getUniformBlockAlignment();
 	Uint32 size = (sizeof(UniformBlock_Lights) + align - 1) / align * align;
-	m_uniformBuffer.setSize(size * 10);
+	m_uniformBuffer.create(size * 10);
 }
 
 
@@ -85,7 +85,7 @@ void Lighting::update(Camera& camera)
 void Lighting::apply(Shader* shader)
 {
 	// Bind uniform block
-	shader->setUniformBlock("Lights", m_uniformBuffer);
+	shader->bindUniformBlock("Lights", m_uniformBuffer);
 }
 
 

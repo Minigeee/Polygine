@@ -272,7 +272,7 @@ public:
 	/// \param size The size of the rainge to bind in the uniform buffer (in bytes)
 	///
 	///////////////////////////////////////////////////////////
-	void setUniformBlock(const std::string& name, UniformBuffer& block, Uint32 offset = 0xFFFFFFFFu, Uint32 size = 0);
+	void bindUniformBlock(const std::string& name, UniformBuffer& block, Uint32 offset = 0xFFFFFFFFu, Uint32 size = 0);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the internal shader program id

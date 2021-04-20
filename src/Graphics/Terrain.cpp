@@ -83,9 +83,10 @@ Terrain::Terrain() :
 	m_useFlatShading		(true),
 	m_normalMapData			(0),
 	m_instanceBufferOffset	(0),
-	m_ambientColor			(0.02f)
+	m_ambientColor			(0.02f),
+	m_isUniformDirty		(true)
 {
-
+	m_uniformBuffer.create(sizeof(UniformBlock_Terrain), BufferUsage::Static);
 }
 
 
@@ -529,16 +530,34 @@ void Terrain::render(Camera& camera, RenderPass pass)
 	m_instanceBuffer.unmap();
 
 
+	// Update uniform buffer
+	if (m_isUniformDirty)
+	{
+		UniformBlock_Terrain block;
+		block.m_clipPlanes[0] = Vector4f(-1.0f, 0.0f, 0.0f, m_size * 0.5f);
+		block.m_clipPlanes[1] = Vector4f(1.0f, 0.0f, 0.0f, m_size * 0.5f);
+		block.m_clipPlanes[2] = Vector4f(0.0f, 0.0f, -1.0f, m_size * 0.5f);
+		block.m_clipPlanes[3] = Vector4f(0.0f, 0.0f, 1.0f, m_size * 0.5f);
+
+		block.m_size = m_size;
+		block.m_height = m_height;
+		block.m_tileScale = m_tileScale;
+		block.m_blendLodDist = m_lodDists[m_lodDists.size() - 2];
+		block.m_useFlatShading = m_useFlatShading;
+
+		// Push data
+		m_uniformBuffer.pushData(block);
+
+		m_isUniformDirty = false;
+	}
+
+
 	// Bind shader and set uniforms
 	Shader& shader = getShader();
-
 	shader.bind();
 
-	// Set the clip planes
-	shader.setUniform("u_clipPlanes[0]", Vector4f(-1.0f, 0.0f, 0.0f, m_size * 0.5f));
-	shader.setUniform("u_clipPlanes[1]", Vector4f(1.0f, 0.0f, 0.0f, m_size * 0.5f));
-	shader.setUniform("u_clipPlanes[2]", Vector4f(0.0f, 0.0f, -1.0f, m_size * 0.5f));
-	shader.setUniform("u_clipPlanes[3]", Vector4f(0.0f, 0.0f, 1.0f, m_size * 0.5f));
+	// Terrain
+	shader.bindUniformBlock("Terrain", m_uniformBuffer);
 
 	// Camera
 	camera.apply(&shader);
@@ -555,13 +574,6 @@ void Terrain::render(Camera& camera, RenderPass pass)
 		shader.setUniform("u_normalMap", m_normalMap);
 	if (m_colorMap.getId())
 		shader.setUniform("u_colorMap", m_colorMap);
-
-	// Terrain parameters
-	shader.setUniform("u_size", m_size);
-	shader.setUniform("u_height", m_height);
-	shader.setUniform("u_tileScale", m_tileScale);
-	shader.setUniform("u_blendLodDist", m_lodDists[m_lodDists.size() - 2]);
-	shader.setUniform("u_useFlatShading", m_useFlatShading);
 
 	// Enable depth testing
 	glCheck(glEnable(GL_DEPTH_TEST));
@@ -613,6 +625,7 @@ void Terrain::setSize(float size)
 
 	// Update normal map
 	updateNormalMap(scale);
+	m_isUniformDirty = true;
 }
 
 
@@ -628,6 +641,7 @@ void Terrain::setHeight(float height)
 
 	// Update normal map
 	updateNormalMap(scale);
+	m_isUniformDirty = true;
 }
 
 
@@ -638,6 +652,7 @@ void Terrain::setTileScale(float scale)
 
 	// Update tile layout
 	createTileLayout();
+	m_isUniformDirty = true;
 }
 
 
@@ -648,6 +663,7 @@ void Terrain::setLodScale(float scale)
 
 	// Update tile layout
 	createTileLayout();
+	m_isUniformDirty = true;
 }
 
 
@@ -665,6 +681,7 @@ void Terrain::setMaxDist(float dist)
 void Terrain::setUseFlatShading(bool use)
 {
 	m_useFlatShading = use;
+	m_isUniformDirty = true;
 }
 
 

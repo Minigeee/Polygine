@@ -4,11 +4,26 @@
 #include <poly/Graphics/Shader.h>
 #include <poly/Graphics/RenderSystem.h>
 #include <poly/Graphics/Texture.h>
+#include <poly/Graphics/UniformBuffer.h>
 #include <poly/Graphics/VertexArray.h>
 #include <poly/Graphics/VertexBuffer.h>
 
 namespace poly
 {
+
+
+///////////////////////////////////////////////////////////
+struct UniformBlock_Terrain
+{
+	UniformBufferType<Vector4f> m_clipPlanes[4];
+
+	UniformBufferType<float> m_size;
+	UniformBufferType<float> m_height;
+	UniformBufferType<float> m_tileScale;
+	UniformBufferType<float> m_blendLodDist;
+	UniformBufferType<bool> m_useFlatShading;
+};
+
 
 ///////////////////////////////////////////////////////////
 /// \brief A render system that render low-poly style terrain
@@ -322,6 +337,7 @@ private:
 	Texture m_colorMap;						//!< Color map texture
 	Vector3f* m_normalMapData;				//!< Normal map texture data
 
+	UniformBuffer m_uniformBuffer;			//!< The uniform buffer used to store terrain uniform data
 	VertexArray m_normalTile;				//!< The mesh for a normal tile
 	VertexArray m_edgeTile;					//!< The mesh for an edge tile
 	VertexBuffer m_normalBuffer;			//!< The data buffer for a normal tile
@@ -334,6 +350,7 @@ private:
 	std::vector<float> m_lodDists;			//!< A list of exact lod distances
 
 	Vector3f m_ambientColor;				//!< The ambient color
+	bool m_isUniformDirty;					//!< This is true when one of the uniform parameters has changed
 
 	static Shader s_shader;
 };

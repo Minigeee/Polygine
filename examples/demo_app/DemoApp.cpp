@@ -322,4 +322,3 @@ int main()
 // TODO : Sun glare effect
 // TODO : Document Fxaa, Blur (after reworking post processing)
 // TODO : Add normal mapping
-// TODO : Document UniformBuffer

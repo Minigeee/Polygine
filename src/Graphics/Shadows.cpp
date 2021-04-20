@@ -22,7 +22,7 @@ Shadows::Shadows(Scene* scene) :
 	// Make enough space for 10 blocks
 	Uint32 align = UniformBuffer::getUniformBlockAlignment();
 	Uint32 size = (sizeof(UniformBlock_Shadows) + align - 1) / align * align;
-	m_uniformBuffer.setSize(size * 10);
+	m_uniformBuffer.create(size * 10);
 }
 
 
@@ -171,7 +171,7 @@ void Shadows::render(Camera& camera)
 void Shadows::apply(Shader* shader)
 {
 	// Bind uniform block
-	shader->setUniformBlock("Shadows", m_uniformBuffer);
+	shader->bindUniformBlock("Shadows", m_uniformBuffer);
 
 	// Apply shadow maps to shader
 	Uint32 i = 0;

@@ -140,7 +140,7 @@ UniformBuffer& Skeleton::getUniformBuffer()
 {
 	if (!s_uniformBuffer.getId())
 		// Create a buffer with 2 MB space
-		s_uniformBuffer.setSize(2 * 1024 * 1024);
+		s_uniformBuffer.create(2 * 1024 * 1024);
 
 	return s_uniformBuffer;
 }
@@ -248,7 +248,7 @@ bool Skeleton::load(const std::string& fname)
 void Skeleton::apply(Shader* shader)
 {
 	// Bind uniform buffer
-	shader->setUniformBlock("Skeleton", getUniformBuffer(), m_uniformOffset, sizeof(UniformBlock_Skeleton));
+	shader->bindUniformBlock("Skeleton", getUniformBuffer(), m_uniformOffset, sizeof(UniformBlock_Skeleton));
 }
 
 

@@ -13,9 +13,19 @@ in vec2 v_texCoord;
 
 out vec4 f_color;
 
+layout (std140) uniform Terrain
+{
+    uniform vec4 u_clipPlanes[4];
+
+    uniform float u_size;
+    uniform float u_height;
+    uniform float u_tileScale;
+    uniform float u_blendLodDist;
+    uniform bool u_useFlatShading;
+};
+
 uniform sampler2D u_normalMap;
 uniform sampler2D u_colorMap;
-uniform bool u_useFlatShading;
 
 ///////////////////////////////////////////////////////////
 

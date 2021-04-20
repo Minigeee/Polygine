@@ -66,7 +66,7 @@ UniformBuffer* Camera::getUniformBuffer()
 		// Make enough space for 10 blocks
 		Uint32 align = UniformBuffer::getUniformBlockAlignment();
 		Uint32 size = (sizeof(UniformBlock_Camera) + align - 1) / align * align;
-		buffer->setSize(size * 10);
+		buffer->create(size * 10);
 
 		return buffer;
 	}
@@ -98,7 +98,7 @@ void Camera::apply(Shader* shader)
 	}
 
 	// Bind to shader
-	shader->setUniformBlock("Camera", *m_uniformBuffer);
+	shader->bindUniformBlock("Camera", *m_uniformBuffer);
 }
 
 

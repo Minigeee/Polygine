@@ -14,17 +14,21 @@ out vec3 v_normal;
 out vec3 v_color;
 out vec2 v_texCoord;
 
-uniform vec4 u_clipPlanes[4];
+layout (std140) uniform Terrain
+{
+    uniform vec4 u_clipPlanes[4];
+
+    uniform float u_size;
+    uniform float u_height;
+    uniform float u_tileScale;
+    uniform float u_blendLodDist;
+    uniform bool u_useFlatShading;
+};
 
 uniform sampler2D u_normalMap;
 uniform sampler2D u_colorMap;
 
-uniform float u_size;
-uniform float u_height;
-uniform float u_tileScale;
-uniform float u_blendLodDist;
 uniform sampler2D u_heightMap;
-uniform bool u_useFlatShading;
 
 float gl_ClipDistance[4];
 
