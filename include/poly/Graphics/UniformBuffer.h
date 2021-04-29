@@ -125,9 +125,18 @@ private:
 
 
 ///////////////////////////////////////////////////////////
+/// \brief A wrapper struct for uniform buffer data types
+///
+/// This will add the required padding for the std140 uniform
+/// block layout rules, with the option of adding extra padding
+/// at the end.
+///
+///////////////////////////////////////////////////////////
 template <typename T, Uint32 N = 0>
 struct UniformBufferType { };
 
+
+#ifndef DOXYGEN_SKIP
 
 ///////////////////////////////////////////////////////////
 template <Uint32 N>
@@ -349,6 +358,8 @@ struct UniformBufferType<Matrix4f, 0>
 private:
 	Matrix4f m;
 };
+
+#endif
 
 }
 

@@ -7,7 +7,6 @@ namespace poly
 ///////////////////////////////////////////////////////////
 RenderComponent::RenderComponent() :
 	m_renderable	(0),
-	m_shader		(0),
 	m_castsShadows	(true)
 {
 
@@ -15,9 +14,9 @@ RenderComponent::RenderComponent() :
 
 
 ///////////////////////////////////////////////////////////
-RenderComponent::RenderComponent(Renderable* renderable, Shader* shader) :
+RenderComponent::RenderComponent(Renderable* renderable) :
 	m_renderable	(renderable),
-	m_shader		(shader)
+	m_castsShadows	(true)
 {
 
 }

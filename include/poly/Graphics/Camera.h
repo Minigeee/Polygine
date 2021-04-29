@@ -13,6 +13,8 @@ namespace poly
 class Shader;
 
 
+#ifndef DOXYGEN_SKIP
+
 ///////////////////////////////////////////////////////////
 struct UniformBlock_Camera
 {
@@ -21,6 +23,8 @@ struct UniformBlock_Camera
 	UniformBufferType<float> m_near;
 	UniformBufferType<float> m_far;
 };
+
+#endif
 
 
 ///////////////////////////////////////////////////////////

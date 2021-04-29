@@ -14,6 +14,8 @@ class FrameBuffer;
 class Shader;
 
 
+#ifndef DOXYGEN_SKIP
+
 ///////////////////////////////////////////////////////////
 struct UniformBlock_Shadows
 {
@@ -23,6 +25,8 @@ struct UniformBlock_Shadows
 	UniformBufferType<int, 4>		m_numShadowCascades[2];
 	UniformBufferType<int>			m_numShadows;
 };
+
+#endif
 
 
 ///////////////////////////////////////////////////////////

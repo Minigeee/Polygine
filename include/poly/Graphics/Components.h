@@ -26,15 +26,12 @@ struct RenderComponent
 	RenderComponent();
 
 	///////////////////////////////////////////////////////////
-	/// \brief Create the render component from a model, and a shader
-	///
-	/// If no shader is provided, the default shader will be used
+	/// \brief Create the render component from a renderable object
 	///
 	///////////////////////////////////////////////////////////
-	RenderComponent(Renderable* renderable, Shader* shader = 0);
+	RenderComponent(Renderable* renderable);
 
 	Renderable* m_renderable;		//!< The model to render
-	Shader* m_shader;				//!< The shader to render the model with
 	bool m_castsShadows;			//!< Controls whether or not this render object casts shadows
 };
 

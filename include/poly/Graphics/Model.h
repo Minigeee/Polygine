@@ -23,6 +23,24 @@ class Texture;
 
 
 ///////////////////////////////////////////////////////////
+/// \brief A collection of vertices that can be rendered with a single material
+///
+///////////////////////////////////////////////////////////
+struct Mesh
+{
+	///////////////////////////////////////////////////////////
+	/// \brief Default constructor
+	///
+	///////////////////////////////////////////////////////////
+	Mesh();
+
+	VertexArray m_vertexArray;		//!< The vertex array containing the vertex data
+	Material m_material;			//!< The mesh material
+	Shader* m_shader;				//!< A pointer to the shader
+};
+
+
+///////////////////////////////////////////////////////////
 /// \brief A struct that contains vertex data
 ///
 ///////////////////////////////////////////////////////////
@@ -38,12 +56,13 @@ struct Vertex
 	Vector3f m_normal;		//!< Vertex normal vector
 	Vector2f m_texCoord;	//!< Texture coordinate
 	Colorf m_color;			//!< Vertex color
-	int m_material;			//!< Material index
+	Vector3f m_tangent;		//!< Vertex tangent vector
+	Vector3f m_bitangent;	//!< Vertex bitangent vector
 };
 
 
 ///////////////////////////////////////////////////////////
-/// \brief A class that contains vertex and material data
+/// \brief A class that contains vertex data through collection of meshes
 ///
 ///////////////////////////////////////////////////////////
 class Model : public Renderable
@@ -89,24 +108,28 @@ public:
 	void setVertices(const std::vector<Vertex>& vertices);
 
 	///////////////////////////////////////////////////////////
-	/// \brief Set the material
+	/// \brief Set the material for the specified mesh index
 	///
-	/// Each model can have more than one material, so use
-	/// \a index to specify which material to set.
+	/// Each model can have more than one mesh, and each mesh
+	/// has a single material.
 	///
 	/// \param material The material to set
-	/// \param index The material index to set
+	/// \param index The mesh index to assign the material to
 	///
 	///////////////////////////////////////////////////////////
 	void setMaterial(const Material& material, Uint32 index = 0);
 
 	///////////////////////////////////////////////////////////
-	/// \brief Get the vertex array used to render the model
+	/// \brief Set the shader for the specified mesh index
 	///
-	/// \return A vertex array
+	/// Each model can have more than one mesh, and each mesh
+	/// has a single shader it uses to render the mesh.
+	///
+	/// \param shader The shader to set
+	/// \param index The mesh index to assign the shader to
 	///
 	///////////////////////////////////////////////////////////
-	VertexArray& getVertexArray();
+	void setShader(Shader* material, Uint32 index = 0);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the list of vertices
@@ -117,22 +140,26 @@ public:
 	const std::vector<Vertex>& getVertices() const;
 
 	///////////////////////////////////////////////////////////
-	/// \brief Get the material at the specified index
+	/// \brief Get the number of meshes contained within the model
 	///
-	/// \param index The index of the material to retrieve
-	///
-	/// \return The material
+	/// \return The number of meshes in the model
 	///
 	///////////////////////////////////////////////////////////
-	const Material& getMaterial(Uint32 index = 0) const;
+	Uint32 getNumMeshes() const;
 
 	///////////////////////////////////////////////////////////
-	/// \brief Get the list of materials
+	/// \brief Get the model mesh at the specified index
 	///
-	/// \return The list of materials
+	/// A mesh contains the vertex array containing the vertex
+	/// data, a material, and a shader that should be used to
+	/// render the mesh.
+	///
+	/// \param index The index of the mesh to retrieve
+	///
+	/// \return The mesh at the specified index
 	///
 	///////////////////////////////////////////////////////////
-	const std::vector<Material>& getMaterials() const;
+	Mesh* getMesh(Uint32 index = 0) const;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the default model shader
@@ -151,15 +178,14 @@ public:
 	static Shader& getAnimatedShader();
 
 private:
-	VertexArray m_vertexArray;				//!< The vertex array used to render the model
-	VertexBuffer m_vertexBuffer;			//!< The vertex buffer used to store the main vertex data
-	VertexBuffer m_skeletalVertexBuffer;	//!< The vertex buffer used to store skeletal vertex data
+	VertexBuffer m_vertexBuffer;				//!< The vertex buffer used to store the main vertex data
+	VertexBuffer m_skeletalVertexBuffer;		//!< The vertex buffer used to store skeletal vertex data
 
-	std::vector<Vertex> m_vertices;			//!< The list of vertex data excluding skeletal data
-	std::vector<Material> m_materials;		//!< The list of materials
+	std::vector<Vertex> m_vertices;				//!< The list of vertex data excluding skeletal data
+	std::vector<Mesh*> m_meshes;					//!< The vertex array used to render the model
 
-	static Shader s_defaultShader;			//!< The default model shader
-	static Shader s_animatedShader;			//!< The animated model shader
+	static Shader s_defaultShader;				//!< The default model shader
+	static Shader s_animatedShader;				//!< The animated model shader
 };
 
 }

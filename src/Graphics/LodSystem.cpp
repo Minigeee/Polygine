@@ -8,7 +8,7 @@ namespace poly
 void LodSystem::addLevel(float dist, Renderable* renderable, Shader* shader)
 {
 	// Add an lod level
-	m_lodLevels.push_back(LodLevel{ renderable, shader, dist });
+	m_lodLevels.push_back(LodLevel{ renderable, dist });
 
 	// Sort levels by distance
 	std::sort(m_lodLevels.begin(), m_lodLevels.end(),
@@ -50,25 +50,6 @@ Renderable* LodSystem::getRenderable(float dist) const
 Renderable* LodSystem::getRenderable(Uint32 level) const
 {
 	return m_lodLevels[level].m_renderable;
-}
-
-
-///////////////////////////////////////////////////////////
-Shader* LodSystem::getShader(float dist) const
-{
-	// Find the correct lod level
-	Uint32 i = 0;
-	for (; i < m_lodLevels.size() && dist > m_lodLevels[i].m_distance; ++i);
-
-	// Return null if the distance is too far
-	return i < m_lodLevels.size() ? m_lodLevels[i].m_shader : 0;
-}
-
-
-///////////////////////////////////////////////////////////
-Shader* LodSystem::getShader(Uint32 level) const
-{
-	return m_lodLevels[level].m_shader;
 }
 
 

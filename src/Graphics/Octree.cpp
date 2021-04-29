@@ -370,7 +370,7 @@ void Octree::add(Entity::Id entity)
 	EntityData* data = (EntityData*)m_dataPool.alloc();
 	data->m_boundingBox = bbox;
 	data->m_transform = transform;
-	data->m_group = getRenderGroup(r.m_renderable, r.m_shader, skeleton);
+	data->m_group = getRenderGroup(r.m_renderable, skeleton);
 	data->m_castsShadows = r.m_castsShadows;
 
 	// Add to map
@@ -698,12 +698,36 @@ void Octree::render(Camera& camera, RenderPass pass)
 
 		// Create render data
 		RenderData data;
-		data.m_renderable = group.m_renderable;
-		data.m_shader = group.m_shader;
 		data.m_skeleton = group.m_skeleton;
 		data.m_offset = m_instanceBufferOffset;
 		data.m_instances = entities.size();
-		renderData.push_back(data);
+
+		// Take different actions based on what type of renderable being dealt with
+		Model* model = 0;
+		Billboard* billboard = 0;
+		if ((model = dynamic_cast<Model*>(group.m_renderable)) != 0)
+		{
+			// Add data for every mesh in the model
+			for (Uint32 j = 0; j < model->getNumMeshes(); ++j)
+			{
+				Mesh* mesh = model->getMesh(j);
+
+				data.m_vertexArray = &mesh->m_vertexArray;
+				data.m_material = &mesh->m_material;
+				data.m_shader = mesh->m_shader;
+				renderData.push_back(data);
+			}
+		}
+		else if ((billboard = dynamic_cast<Billboard*>(group.m_renderable)) != 0)
+		{
+			data.m_vertexArray = &billboard->getVertexArray();
+			data.m_material = billboard->getMaterial();
+			data.m_shader = billboard->getShader();
+			renderData.push_back(data);
+		}
+		else
+			// Otherwise, the renderable is not a valid type, and should be skipped
+			continue;
 
 		// Push instance data
 		for (Uint32 j = 0; j < entities.size(); ++j)
@@ -736,6 +760,10 @@ void Octree::render(Camera& camera, RenderPass pass)
 	glCheck(glEnable(GL_CULL_FACE));
 	glCheck(glCullFace(GL_BACK));
 
+	// Enable alpha blending
+	glCheck(glEnable(GL_BLEND));
+	glCheck(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+
 	// Bind the first shader
 	Shader* shader = renderData.front().m_shader;
 	priv::bindShader(shader, camera, m_scene, pass);
@@ -755,84 +783,46 @@ void Octree::render(Camera& camera, RenderPass pass)
 		Model* model = 0;
 		Billboard* billboard = 0;
 
-		// Handle Model types
-		if (model = dynamic_cast<Model*>(data.m_renderable))
+		// Apply the material to the shader
+		if (data.m_material)
+			data.m_material->apply(shader);
+
+		// Get vertex array and do an instanced render
+		VertexArray& vao = *data.m_vertexArray;
+
+		// Different rendering behavior based on if the model is animated or not
+		if (!data.m_skeleton)
 		{
-			// Apply the materials
-			const std::vector<Material>& materials = model->getMaterials();
-			for (Uint32 i = 0; i < materials.size(); ++i)
-				materials[i].apply(shader, i);
-
-			// Get vertex array and do an instanced render
-			VertexArray& vao = model->getVertexArray();
-
-			// Different rendering behavior based on if the model is animated or not
-			if (!data.m_skeleton)
-			{
-				// Bind instance data
-				vao.bind();
-				vao.addBuffer(m_instanceBuffer, 5, 4, sizeof(Matrix4f), data.m_offset + 0 * sizeof(Vector4f), 1);
-				vao.addBuffer(m_instanceBuffer, 6, 4, sizeof(Matrix4f), data.m_offset + 1 * sizeof(Vector4f), 1);
-				vao.addBuffer(m_instanceBuffer, 7, 4, sizeof(Matrix4f), data.m_offset + 2 * sizeof(Vector4f), 1);
-				vao.addBuffer(m_instanceBuffer, 8, 4, sizeof(Matrix4f), data.m_offset + 3 * sizeof(Vector4f), 1);
-
-				// Draw
-				vao.draw(data.m_instances);
-			}
-			else
-			{
-				vao.bind();
-
-				// Have to render each animated model individually
-				for (Uint32 e = 0; e < data.m_instances; ++e)
-				{
-					// Bind transform data
-					Uint32 offset = data.m_offset + e * sizeof(Matrix4f);
-					vao.addBuffer(m_instanceBuffer, 5, 4, sizeof(Matrix4f), offset + 0 * sizeof(Vector4f), 1);
-					vao.addBuffer(m_instanceBuffer, 6, 4, sizeof(Matrix4f), offset + 1 * sizeof(Vector4f), 1);
-					vao.addBuffer(m_instanceBuffer, 7, 4, sizeof(Matrix4f), offset + 2 * sizeof(Vector4f), 1);
-					vao.addBuffer(m_instanceBuffer, 8, 4, sizeof(Matrix4f), offset + 3 * sizeof(Vector4f), 1);
-
-					// Apply skeleton
-					data.m_skeleton->apply(shader);
-
-					// Render model
-					vao.draw();
-				}
-			}
-		}
-
-		// Handle Billboards
-		else if ((billboard = dynamic_cast<Billboard*>(data.m_renderable)) && pass != RenderPass::Shadow)
-		{
-			// Apply the material
-			billboard->getMaterial()->apply(shader);
-
-			// Set billboard uniforms
-			shader->setUniform("u_size", billboard->getSize());
-			shader->setUniform("u_origin", billboard->getOrigin());
-			shader->setUniform("u_axisLocked", billboard->isAxisLocked());
-			shader->setUniform("u_lightingEnabled", billboard->isLightingEnabled());
-			shader->setUniform("u_shadowingEnabled", billboard->isShadowingEnabled());
-
-			// Get vertex array and do an instanced render
-			VertexArray& vao = Billboard::getVertexArray();
-
 			// Bind instance data
 			vao.bind();
-			vao.addBuffer(m_instanceBuffer, 0, 4, sizeof(Matrix4f), data.m_offset + 0 * sizeof(Vector4f), 1);
-			vao.addBuffer(m_instanceBuffer, 1, 4, sizeof(Matrix4f), data.m_offset + 1 * sizeof(Vector4f), 1);
-			vao.addBuffer(m_instanceBuffer, 2, 4, sizeof(Matrix4f), data.m_offset + 2 * sizeof(Vector4f), 1);
-			vao.addBuffer(m_instanceBuffer, 3, 4, sizeof(Matrix4f), data.m_offset + 3 * sizeof(Vector4f), 1);
-
-			// Enable alpha blending
-			glCheck(glEnable(GL_BLEND));
-			glCheck(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+			vao.addBuffer(m_instanceBuffer, 6, 4, sizeof(Matrix4f), data.m_offset + 0 * sizeof(Vector4f), 1);
+			vao.addBuffer(m_instanceBuffer, 7, 4, sizeof(Matrix4f), data.m_offset + 1 * sizeof(Vector4f), 1);
+			vao.addBuffer(m_instanceBuffer, 8, 4, sizeof(Matrix4f), data.m_offset + 2 * sizeof(Vector4f), 1);
+			vao.addBuffer(m_instanceBuffer, 9, 4, sizeof(Matrix4f), data.m_offset + 3 * sizeof(Vector4f), 1);
 
 			// Draw
 			vao.draw(data.m_instances);
+		}
+		else
+		{
+			vao.bind();
 
-			glCheck(glDisable(GL_BLEND));
+			// Have to render each animated model individually
+			for (Uint32 e = 0; e < data.m_instances; ++e)
+			{
+				// Bind transform data
+				Uint32 offset = data.m_offset + e * sizeof(Matrix4f);
+				vao.addBuffer(m_instanceBuffer, 6, 4, sizeof(Matrix4f), offset + 0 * sizeof(Vector4f), 1);
+				vao.addBuffer(m_instanceBuffer, 7, 4, sizeof(Matrix4f), offset + 1 * sizeof(Vector4f), 1);
+				vao.addBuffer(m_instanceBuffer, 8, 4, sizeof(Matrix4f), offset + 2 * sizeof(Vector4f), 1);
+				vao.addBuffer(m_instanceBuffer, 9, 4, sizeof(Matrix4f), offset + 3 * sizeof(Vector4f), 1);
+
+				// Apply skeleton
+				data.m_skeleton->apply(shader);
+
+				// Render model
+				vao.draw();
+			}
 		}
 	}
 }
@@ -886,7 +876,7 @@ void Octree::getRenderData(Node* node, const Frustum& frustum, std::vector<std::
 
 
 ///////////////////////////////////////////////////////////
-Uint32 Octree::getRenderGroup(Renderable* renderable, Shader* shader, Skeleton* skeleton)
+Uint32 Octree::getRenderGroup(Renderable* renderable, Skeleton* skeleton)
 {
 	Uint32 groupId = 0;
 
@@ -897,7 +887,6 @@ Uint32 Octree::getRenderGroup(Renderable* renderable, Shader* shader, Skeleton* 
 		const RenderGroup& group = m_renderGroups[i];
 		if (
 			group.m_renderable == renderable &&
-			group.m_shader == shader &&
 			group.m_skeleton == skeleton)
 		{
 			groupId = i;
@@ -912,7 +901,6 @@ Uint32 Octree::getRenderGroup(Renderable* renderable, Shader* shader, Skeleton* 
 
 		RenderGroup group;
 		group.m_renderable = renderable;
-		group.m_shader = shader;
 		group.m_skeleton = skeleton;
 
 		// If the renderable is an lod system, add lod levels
@@ -923,7 +911,7 @@ Uint32 Octree::getRenderGroup(Renderable* renderable, Shader* shader, Skeleton* 
 
 			// Get or create render groups for lod levels
 			for (Uint32 i = 0; i < numLevels; ++i)
-				group.m_lodLevels.push_back(getRenderGroup(lod->getRenderable(i), lod->getShader(i), skeleton));
+				group.m_lodLevels.push_back(getRenderGroup(lod->getRenderable(i), skeleton));
 		}
 
 		m_renderGroups.push_back(group);

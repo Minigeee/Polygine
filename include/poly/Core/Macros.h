@@ -164,9 +164,12 @@
 #define PARAM_EXPAND(expr) { int _temp[] = {0, ((void)(expr), 0)...}; }
 
 
+#ifndef DOXYGEN_SKIP
+
 template<typename T> struct MacroArgType;
 template<typename T, typename U> struct MacroArgType<T(U)> { typedef U Type; };
 
+#endif
 
 
 #endif

@@ -31,6 +31,13 @@ public:
 	///////////////////////////////////////////////////////////
 	~Billboard();
 
+#ifndef DOXYGEN_SKIP
+	Billboard(const Billboard& other);
+	Billboard& operator=(const Billboard& other);
+	Billboard(Billboard&& other);
+	Billboard& operator=(Billboard&& other);
+#endif
+
 	///////////////////////////////////////////////////////////
 	/// \brief Load a diffuse texture from an image file
 	///
@@ -107,6 +114,19 @@ public:
 	void setOrigin(float x, float y);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Set the shader that should be used to render the billboard
+	///
+	/// By default the shader that is used to render billboards
+	/// is the default billboard shader that is provided with this
+	/// project. To see how billboard shaders should be written,
+	/// look at "media/shaders/billboard.*" as an example.
+	///
+	/// \param shader A pointer to the shader
+	///
+	///////////////////////////////////////////////////////////
+	void setShader(Shader* shader);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Set whether rotation along the x-axis of the billboard should be locked
 	///
 	/// Locking the rotational x-axis would still allow the billboard
@@ -178,6 +198,14 @@ public:
 	const Vector2f& getOrigin() const;
 
 	///////////////////////////////////////////////////////////
+	/// \brief Get the shader being used to render the billboard
+	///
+	/// \return A pointer to the billboard shader
+	///
+	///////////////////////////////////////////////////////////
+	Shader* getShader() const;
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get whether the rotational x-axis is locked
 	///
 	/// \return A boolean indicating whether the rotational x-axis is locked
@@ -220,9 +248,12 @@ public:
 private:
 	void updateBoundingVolumes();
 
+	void materialApplyFunc(Shader* shader);
+
 private:
 	Material* m_material;				//!< The billboard material
 	Texture* m_texture;					//!< The diffuse texture
+	Shader* m_shader;					//!< The shader that is used to render the billboard
 	Vector2f m_size;					//!< The billboard size
 	Vector2f m_origin;					//!< The billbaord origin
 	bool m_axisLocked;					//!< Indicates if the rotational x-axis is locked

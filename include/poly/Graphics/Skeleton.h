@@ -15,11 +15,15 @@ class Animation;
 class Bone;
 
 
+#ifndef DOXYGEN_SKIP
+
 ///////////////////////////////////////////////////////////
 struct UniformBlock_Skeleton
 {
 	UniformBufferType<Matrix4f> m_bones[20];
 };
+
+#endif
 
 
 ///////////////////////////////////////////////////////////

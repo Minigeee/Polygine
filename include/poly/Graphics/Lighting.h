@@ -13,6 +13,8 @@ namespace poly
 class Shader;
 
 
+#ifndef DOXYGEN_SKIP
+
 ///////////////////////////////////////////////////////////
 struct UniformStruct_DirLight
 {
@@ -41,6 +43,8 @@ struct UniformBlock_Lights
 	UniformBufferType<int>			m_numDirLights;
 	UniformBufferType<int>			m_numPointLights;
 };
+
+#endif
 
 
 ///////////////////////////////////////////////////////////

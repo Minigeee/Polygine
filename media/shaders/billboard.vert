@@ -2,7 +2,7 @@
 
 #include "camera.glsl"
 
-layout (location = 0) in mat4 a_transform;
+layout (location = 6) in mat4 a_transform;
 
 out vec3 v_position;
 out vec3 v_front;

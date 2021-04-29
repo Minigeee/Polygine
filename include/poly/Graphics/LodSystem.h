@@ -69,26 +69,6 @@ public:
 	Renderable* getRenderable(Uint32 level) const;
 
 	///////////////////////////////////////////////////////////
-	/// \brief Get the shader of a lod level at a certain distance
-	///
-	/// \param dist A distance that determines which lod level to get a shader from
-	///
-	/// \return A pointer to a shader
-	///
-	///////////////////////////////////////////////////////////
-	Shader* getShader(float dist) const;
-
-	///////////////////////////////////////////////////////////
-	/// \brief Get the renderable of a lod level at a certain distance
-	///
-	/// \param level The lod level index to get a shader from
-	///
-	/// \return A pointer to a shader
-	///
-	///////////////////////////////////////////////////////////
-	Shader* getShader(Uint32 level) const;
-
-	///////////////////////////////////////////////////////////
 	/// \brief Get the local bounding box
 	///
 	/// \return The bounding box
@@ -108,7 +88,6 @@ private:
 	struct LodLevel
 	{
 		Renderable* m_renderable;
-		Shader* m_shader;
 		float m_distance;
 	};
 

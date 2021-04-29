@@ -48,6 +48,7 @@ Shader& Billboard::getDefaultShader()
 Billboard::Billboard() :
 	m_material			(Pool<Material>::alloc()),
 	m_texture			(0),
+	m_shader			(0),
 	m_size				(1.0f),
 	m_origin			(0.5f),
 	m_axisLocked		(false),
@@ -59,6 +60,9 @@ Billboard::Billboard() :
 	m_boundingBox.m_max = Vector3f(0.5f);
 
 	m_boundingSphere.m_radius = sqrtf(0.5f);
+
+	// Set material apply function
+	m_material->setApplyFunc(std::bind(&Billboard::materialApplyFunc, this, std::placeholders::_1));
 }
 
 
@@ -72,6 +76,100 @@ Billboard::~Billboard()
 
 	m_material = 0;
 	m_texture = 0;
+}
+
+
+///////////////////////////////////////////////////////////
+Billboard::Billboard(const Billboard& other) :
+	m_material			(other.m_material),
+	m_texture			(other.m_texture),
+	m_shader			(other.m_shader),
+	m_size				(other.m_size),
+	m_origin			(other.m_origin),
+	m_axisLocked		(other.m_axisLocked),
+	m_lightingEnabled	(other.m_lightingEnabled),
+	m_shadowingEnabled	(other.m_shadowingEnabled)
+{
+	// Update material apply function
+	m_material->setApplyFunc(std::bind(&Billboard::materialApplyFunc, this, std::placeholders::_1));
+}
+
+
+///////////////////////////////////////////////////////////
+Billboard& Billboard::operator=(const Billboard& other)
+{
+	if (&other != this)
+	{
+		m_material = other.m_material;
+		m_texture = other.m_texture;
+		m_shader = other.m_shader;
+		m_size = other.m_size;
+		m_origin = other.m_origin;
+		m_axisLocked = other.m_axisLocked;
+		m_lightingEnabled = other.m_lightingEnabled;
+		m_shadowingEnabled = other.m_shadowingEnabled;
+
+		// Update material apply function
+		m_material->setApplyFunc(std::bind(&Billboard::materialApplyFunc, this, std::placeholders::_1));
+	}
+
+	return *this;
+}
+
+
+///////////////////////////////////////////////////////////
+Billboard::Billboard(Billboard&& other) :
+	m_material			(other.m_material),
+	m_texture			(other.m_texture),
+	m_shader			(other.m_shader),
+	m_size				(other.m_size),
+	m_origin			(other.m_origin),
+	m_axisLocked		(other.m_axisLocked),
+	m_lightingEnabled	(other.m_lightingEnabled),
+	m_shadowingEnabled	(other.m_shadowingEnabled)
+{
+	other.m_material = 0;
+	other.m_texture = 0;
+	other.m_shader = 0;
+	other.m_size = Vector2f(0.0f);
+	other.m_origin = Vector2f(0.0f);
+	other.m_axisLocked = false;
+	other.m_lightingEnabled = false;
+	other.m_shadowingEnabled = false;
+
+	// Update material apply function
+	m_material->setApplyFunc(std::bind(&Billboard::materialApplyFunc, this, std::placeholders::_1));
+}
+
+
+///////////////////////////////////////////////////////////
+Billboard& Billboard::operator=(Billboard&& other)
+{
+	if (&other != this)
+	{
+		m_material = other.m_material;
+		m_texture = other.m_texture;
+		m_shader = other.m_shader;
+		m_size = other.m_size;
+		m_origin = other.m_origin;
+		m_axisLocked = other.m_axisLocked;
+		m_lightingEnabled = other.m_lightingEnabled;
+		m_shadowingEnabled = other.m_shadowingEnabled;
+
+		other.m_material = 0;
+		other.m_texture = 0;
+		other.m_shader = 0;
+		other.m_size = Vector2f(0.0f);
+		other.m_origin = Vector2f(0.0f);
+		other.m_axisLocked = false;
+		other.m_lightingEnabled = false;
+		other.m_shadowingEnabled = false;
+
+		// Update material apply function
+		m_material->setApplyFunc(std::bind(&Billboard::materialApplyFunc, this, std::placeholders::_1));
+	}
+
+	return *this;
 }
 
 
@@ -90,6 +188,10 @@ bool Billboard::load(const std::string& fname)
 
 	// Set texture data
 	m_texture->create(image);
+
+	// Set the default shader, if a shader hasn't been set yet
+	if (!m_shader)
+		m_shader = &getDefaultShader();
 
 	return true;
 }
@@ -143,6 +245,13 @@ void Billboard::setOrigin(float x, float y)
 
 
 ///////////////////////////////////////////////////////////
+void Billboard::setShader(Shader* shader)
+{
+	m_shader = shader;
+}
+
+
+///////////////////////////////////////////////////////////
 void Billboard::setAxisLocked(bool locked)
 {
 	m_axisLocked = locked;
@@ -192,6 +301,13 @@ const Vector2f& Billboard::getOrigin() const
 
 
 ///////////////////////////////////////////////////////////
+Shader* Billboard::getShader() const
+{
+	return m_shader;
+}
+
+
+///////////////////////////////////////////////////////////
 bool Billboard::isAxisLocked() const
 {
 	return m_axisLocked;
@@ -224,6 +340,17 @@ void Billboard::updateBoundingVolumes()
 	m_boundingSphere.m_position.y = -m_origin.y + 0.5f;
 	m_boundingSphere.m_position.z = 0.0f;
 	m_boundingSphere.m_radius = sqrtf(2.0f * powf(0.5f * std::max(m_size.x, m_size.y), 2.0f));
+}
+
+
+///////////////////////////////////////////////////////////
+void Billboard::materialApplyFunc(Shader* shader)
+{
+	shader->setUniform("u_size", m_size);
+	shader->setUniform("u_origin", m_origin);
+	shader->setUniform("u_axisLocked", m_axisLocked);
+	shader->setUniform("u_lightingEnabled", m_lightingEnabled);
+	shader->setUniform("u_shadowingEnabled", m_shadowingEnabled);
 }
 
 

@@ -147,9 +147,9 @@ Texture* Material::getTexture(const std::string& uniform) const
 
 
 ///////////////////////////////////////////////////////////
-void Material::apply(Shader* shader, int index) const
+void Material::apply(Shader* shader) const
 {
-	std::string prefix = "u_materials[" + std::to_string(index) + "].";
+	std::string prefix = "u_material.";
 	shader->setUniform(prefix + "ambient", m_ambient);
 	shader->setUniform(prefix + "diffuse", m_diffuse);
 	shader->setUniform(prefix + "specular", m_specular);
@@ -159,11 +159,11 @@ void Material::apply(Shader* shader, int index) const
 
 	// Bind diffuse texture
 	if (m_diffTexture)
-		shader->setUniform("u_diffuseMaps[" + std::to_string(index) + ']', *m_diffTexture);
+		shader->setUniform("u_diffuseMap", *m_diffTexture);
 
 	// Bind specular texture
 	if (m_specTexture)
-		shader->setUniform("u_specularMaps[" + std::to_string(index) + ']', *m_specTexture);
+		shader->setUniform("u_specularMap", *m_specTexture);
 
 	// Apply all custom textures
 	auto it = m_textures.begin();

@@ -166,10 +166,9 @@ int main()
     TransformComponent t;
     t.m_position.y = 52.0f;
     t.m_scale = Vector3f(0.25f);
-    RenderComponent r(&model, &Model::getAnimatedShader());
+    RenderComponent r(&model);
     r.m_castsShadows = true;
     scene.createEntity(t, r, AnimationComponent(&skeletons[0]), DynamicTag());
-    // r.m_shader = &Model::getDefaultShader();
     t.m_position.x = 5.0f;
     scene.createEntity(t, r, AnimationComponent(&skeletons[1]), DynamicTag());
     t.m_position.x = -5.0f;

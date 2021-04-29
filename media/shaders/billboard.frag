@@ -14,25 +14,21 @@ out vec4 f_color;
 uniform bool u_lightingEnabled;
 uniform bool u_shadowingEnabled;
 
-uniform vec3 u_ambient;
-uniform Material u_materials[1];
-uniform sampler2D u_diffuseMaps[1];
-uniform sampler2D u_specularMaps[1];
-uniform sampler2D u_normalMaps[1];
-
-uniform DirLight u_dirLights[MAX_NUM_DIR_LIGHTS];
-uniform int u_numDirLights;
+uniform Material u_materials;
+uniform sampler2D u_diffuseMaps;
+uniform sampler2D u_specularMaps;
+uniform sampler2D u_normalMaps;
 
 
 ///////////////////////////////////////////////////////////
 void main()
 {
-    Material material = u_materials[0];
+    Material material = u_materials;
     
     // Get diffuse color
     vec4 diffColor = vec4(material.diffuse, 1.0f);
     if (material.hasDiffTexture)
-        diffColor *= texture(u_diffuseMaps[0], g_texCoord);
+        diffColor *= texture(u_diffuseMaps, g_texCoord);
 
     vec3 result = diffColor.rgb;
 
@@ -46,7 +42,7 @@ void main()
 
         // Get specular color
         if (material.hasSpecTexture)
-            material.specular *= texture(u_specularMaps[0], g_texCoord).rgb;
+            material.specular *= texture(u_specularMaps, g_texCoord).rgb;
 
         result *= material.ambient * u_ambient;
         

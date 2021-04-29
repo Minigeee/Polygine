@@ -12,6 +12,8 @@ namespace poly
 {
 
 
+#ifndef DOXYGEN_SKIP
+
 ///////////////////////////////////////////////////////////
 struct UniformBlock_Terrain
 {
@@ -23,6 +25,8 @@ struct UniformBlock_Terrain
 	UniformBufferType<float> m_blendLodDist;
 	UniformBufferType<bool> m_useFlatShading;
 };
+
+#endif
 
 
 ///////////////////////////////////////////////////////////

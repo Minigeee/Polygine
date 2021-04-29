@@ -25,6 +25,16 @@ public:
 	Material();
 
 	///////////////////////////////////////////////////////////
+	/// \brief Set the shader that should be used to render this material
+	///
+	/// When the renderable object this materail is attached to
+	/// is rendered, the specified shader will be used.
+	///
+	/// \param shader A pointer to a shader
+	///
+	///////////////////////////////////////////////////////////
+
+	///////////////////////////////////////////////////////////
 	/// \brief Set the ambient color multiplier of the material
 	///
 	/// The ambient color multiplier is the color that gets multplied
@@ -188,6 +198,14 @@ public:
 	void removeTexture(const std::string& uniform);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Get the shader that should be used by the material
+	///
+	/// \return A pointer to the material shader
+	///
+	///////////////////////////////////////////////////////////
+	Shader* getShader() const;
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the ambient color multiplier
 	///
 	/// \return The ambient color multiplier
@@ -232,20 +250,15 @@ public:
 	///////////////////////////////////////////////////////////
 	/// \brief Apply the material to a shader
 	///
-	/// Models are allowed to have multiple materials, so use the \a index
-	/// parameter to specify which material index to apply.
-	///
-	/// After all the default material properties are called, then
-	/// the custom apply function callback will be executed, if it
-	/// exists.
+	/// This function sets all the required shader uniforms on the
+	/// given shader. After all the default material properties are
+	/// called, then the custom apply function callback will be
+	/// executed, if it exists.
 	///
 	/// The shader should be set up like this:
 	/// \code
 	///
 	/// // shader.frag
-	///
-	/// // Set this to however many materials you want to support
-	/// #define MAX_NUM_MATERIALS 4
 	///
 	/// struct Material
 	/// {
@@ -255,11 +268,11 @@ public:
 	/// };
 	///
 	/// // The materials
-	/// uniform Material u_materials[MAX_NUM_MATERIALS];
+	/// uniform Material u_material;
 	///
 	/// // Textures used by model loader
-	/// uniform sampler2D u_diffuseMaps[MAX_NUM_MATERIALS];
-	/// uniform sampler2D u_specularMaps[MAX_NUM_MATERIALS];
+	/// uniform sampler2D u_diffuseMap;
+	/// uniform sampler2D u_specularMap;
 	///
 	/// // Any other optional textures
 	/// uniform sampler1D u_texture1d;
@@ -271,9 +284,10 @@ public:
 	/// \endcode
 	///
 	///////////////////////////////////////////////////////////
-	void apply(Shader* shader, int index = 0) const;
+	void apply(Shader* shader) const;
 
 private:
+	Shader* m_shader;							//!< The shader that should be used to render the renderable
 	Vector3f m_ambient;							//!< The ambient color multiplier
 	Vector3f m_diffuse;							//!< The diffuse color
 	Vector3f m_specular;						//!< The specular color
@@ -373,12 +387,6 @@ private:
 ///
 /// shader.bind();
 /// material.apply(&shader);
-///
-/// // Use these if more than 1 material is required
-/// // material.apply(&shader, 0);
-/// // material.apply(&shader, 1);
-/// // material.apply(&shader, 2);
-/// // material.apply(&shader, 3);
 ///
 /// \endcode
 ///
