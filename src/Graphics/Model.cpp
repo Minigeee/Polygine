@@ -85,12 +85,14 @@ struct ModelLoadState
 {
 	std::vector<Vertex> m_vertices;
 	std::vector<SkeletalData> m_skeletalData;
+	std::vector<Uint32> m_indices;
 	std::vector<Mesh*>* m_meshes;
 	std::vector<Uint32> m_vertexOffsets;
 	HashMap<std::string, int> m_bones;
 
 	const aiScene* m_scene;
 	std::string m_directory;
+	bool m_flatShading;
 };
 
 #endif
@@ -165,7 +167,8 @@ void processMesh(aiMesh* mesh, ModelLoadState& state)
 		state.m_skeletalData.resize(mesh->mNumVertices);
 
 	// Keep track of mesh vertex offsets
-	state.m_vertexOffsets.push_back(state.m_vertices.size());
+	Uint32 vertexOffset = state.m_flatShading ? state.m_vertices.size() : state.m_indices.size();
+	state.m_vertexOffsets.push_back(vertexOffset);
 
 	// Process bones
 	for (Uint32 i = 0; i < mesh->mNumBones; ++i)
@@ -257,6 +260,17 @@ void processMesh(aiMesh* mesh, ModelLoadState& state)
 
 		// Add to list
 		state.m_vertices.push_back(vertex);
+	}
+
+	// Load indices array if flat shading is disabled
+	if (!state.m_flatShading)
+	{
+		for (Uint32 i = 0; i < mesh->mNumFaces; ++i)
+		{
+			aiFace& face = mesh->mFaces[i];
+			for (Uint32 j = 0; j < face.mNumIndices; ++j)
+				state.m_indices.push_back(face.mIndices[j]);
+		}
 	}
 
 	// Create the mesh
@@ -402,7 +416,7 @@ Vertex::Vertex(const Vector3f& pos, const Vector3f& normal, const Vector2f& texC
 
 
 ///////////////////////////////////////////////////////////
-bool Model::load(const std::string& fname)
+bool Model::load(const std::string& fname, bool flatShading)
 {
 	// Load the model scene
 	Assimp::Importer importer;
@@ -420,6 +434,7 @@ bool Model::load(const std::string& fname)
 	state.m_scene = scene;
 	state.m_directory = fname.substr(0, fname.find_last_of("/\\"));
 	state.m_meshes = &m_meshes;
+	state.m_flatShading = flatShading;
 
 	// Process bone data
 	int numBones = 0;
@@ -435,25 +450,12 @@ bool Model::load(const std::string& fname)
 
 	// Create vertex buffer
 	m_vertices = std::move(state.m_vertices);
+	m_indices = std::move(state.m_indices);
 	m_vertexBuffer.create(m_vertices);
 
-	// Create vertex arrays
-	for (Uint32 i = 0; i < m_meshes.size(); ++i)
-	{
-		// Calculate buffer offset
-		Uint32 offset = state.m_vertexOffsets[i] * sizeof(Vertex);
-
-		VertexArray& vao = m_meshes[i]->m_vertexArray;
-		vao.addBuffer(m_vertexBuffer, 0, 3, sizeof(Vertex), offset + 0 * sizeof(float));
-		vao.addBuffer(m_vertexBuffer, 1, 3, sizeof(Vertex), offset + 3 * sizeof(float));
-		vao.addBuffer(m_vertexBuffer, 2, 2, sizeof(Vertex), offset + 6 * sizeof(float));
-		vao.addBuffer(m_vertexBuffer, 3, 4, sizeof(Vertex), offset + 8 * sizeof(float));
-		vao.addBuffer(m_vertexBuffer, 4, 3, sizeof(Vertex), offset + 12 * sizeof(float));
-		vao.addBuffer(m_vertexBuffer, 5, 3, sizeof(Vertex), offset + 15 * sizeof(float));
-
-		// Set the default shader
-		m_meshes[i]->m_shader = shader;
-	}
+	// Setup indices array if smooth shading enabled
+	if (!flatShading)
+		m_indicesBuffer.create(m_indices);
 
 	// Create skeletal data buffer
 	// NOTE : Skeletal data for only a single mesh is supported atm
@@ -470,6 +472,31 @@ bool Model::load(const std::string& fname)
 			vao.addBuffer(m_skeletalVertexBuffer, 11, 4, sizeof(priv::SkeletalData), 4 * sizeof(float), 0, GLType::Int32);
 		}
 	}
+
+	// Create vertex arrays
+	for (Uint32 i = 0; i < m_meshes.size(); ++i)
+	{
+		// Calculate buffer offset
+		Uint32 offset = state.m_vertexOffsets[i] * sizeof(Vertex);
+
+		VertexArray& vao = m_meshes[i]->m_vertexArray;
+		vao.addBuffer(m_vertexBuffer, 0, 3, sizeof(Vertex), offset + 0 * sizeof(float));
+		vao.addBuffer(m_vertexBuffer, 1, 3, sizeof(Vertex), offset + 3 * sizeof(float));
+		vao.addBuffer(m_vertexBuffer, 2, 2, sizeof(Vertex), offset + 6 * sizeof(float));
+		vao.addBuffer(m_vertexBuffer, 3, 4, sizeof(Vertex), offset + 8 * sizeof(float));
+		vao.addBuffer(m_vertexBuffer, 4, 3, sizeof(Vertex), offset + 12 * sizeof(float));
+		vao.addBuffer(m_vertexBuffer, 5, 3, sizeof(Vertex), offset + 15 * sizeof(float));
+
+		if (!flatShading)
+			vao.setElementBuffer(m_indicesBuffer);
+
+		// Set the default shader
+		m_meshes[i]->m_shader = shader;
+	}
+
+	// Unbind indices buffer to reset state
+	if (!flatShading)
+		m_indicesBuffer.unbind();
 
 	// Create bounding box
 	m_boundingBox = priv::calcBoundingBox(m_vertices);

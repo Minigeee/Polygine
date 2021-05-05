@@ -148,6 +148,17 @@ void VertexBuffer::bind(BufferTarget target, Uint32 index, Uint32 offset, Uint32
 
 
 ///////////////////////////////////////////////////////////
+void VertexBuffer::unbind()
+{
+	if (s_currentBound[(Uint32)m_target] == m_id)
+	{
+		glCheck(glBindBuffer(targetToGLEnum(m_target), 0));
+		s_currentBound[(Uint32)m_target] = 0;
+	}
+}
+
+
+///////////////////////////////////////////////////////////
 void VertexBuffer::update(const VertexBuffer& buffer, Uint32 offset)
 {
 	if (&buffer != this)

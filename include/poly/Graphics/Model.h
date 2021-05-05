@@ -80,12 +80,19 @@ public:
 	/// specular, shininess, and a single diffuse map and a single
 	/// specular map.
 	///
+	/// This function also gives the option to load models with
+	/// the smooth shading option, by having each vertex share 
+	/// normals for each face. Set \a flatShading to false to use
+	/// smooth shading. The model file must also have vertex normals
+	/// setup correctly as well.
+	///
 	/// \param fname The model file name to load
+	/// \param flatShading Set whether the model should be loaded with flat shading
 	///
 	/// \return True if the file was successfully loaded
 	///
 	///////////////////////////////////////////////////////////
-	bool load(const std::string& fname);
+	bool load(const std::string& fname, bool flatShading = true);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Create a model from a list of vertices
@@ -180,9 +187,11 @@ public:
 private:
 	VertexBuffer m_vertexBuffer;				//!< The vertex buffer used to store the main vertex data
 	VertexBuffer m_skeletalVertexBuffer;		//!< The vertex buffer used to store skeletal vertex data
+	VertexBuffer m_indicesBuffer;				//!< The vertex buffer used to store vertex index data
 
 	std::vector<Vertex> m_vertices;				//!< The list of vertex data excluding skeletal data
-	std::vector<Mesh*> m_meshes;					//!< The vertex array used to render the model
+	std::vector<Uint32> m_indices;				//!< A list of vertex indices specifying the order of vertices (only for smooth shading)
+	std::vector<Mesh*> m_meshes;				//!< The vertex array used to render the model
 
 	static Shader s_defaultShader;				//!< The default model shader
 	static Shader s_animatedShader;				//!< The animated model shader

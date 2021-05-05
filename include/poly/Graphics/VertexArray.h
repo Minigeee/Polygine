@@ -66,6 +66,14 @@ public:
 	void bind();
 
 	///////////////////////////////////////////////////////////
+	/// \brief Unbind the current vertex array if it is the current bound
+	///
+	/// If this vertex array is not bound, nothing happens.
+	///
+	///////////////////////////////////////////////////////////
+	void unbind();
+
+	///////////////////////////////////////////////////////////
 	/// \brief Add a vertex buffer and additional metadata
 	///
 	/// Add a vertex buffer to the specified index in the vertex array.
@@ -133,6 +141,21 @@ public:
 	void setDrawMode(DrawMode mode);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Set the element buffer that should be used to render the vertex array
+	///
+	/// The element buffer is used when smooth shading is desired.
+	/// The given buffer must already have been created and its data
+	/// should already be pushed to the GPU.
+	///
+	/// \note The vertex array is unbound immediately after the element buffer is set
+	/// \note The element buffer will be bound, but won't be unbound, so keep this in mind for future OpenGL operations
+	///
+	/// \param buffer The element buffer
+	///
+	///////////////////////////////////////////////////////////
+	void setElementBuffer(VertexBuffer& buffer);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the internal vertex array id
 	///
 	/// The id is the same as the OpenGL id
@@ -172,7 +195,7 @@ private:
 	DrawMode m_drawMode;		//!< The current draw mode
 	bool m_hasElementBuffer;	//!< True if an element vertex buffer was added
 
-	static Uint32 currentBound;
+	static Uint32 s_currentBound;
 };
 
 }

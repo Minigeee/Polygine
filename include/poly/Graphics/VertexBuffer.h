@@ -143,6 +143,17 @@ public:
 	void bind();
 
 	///////////////////////////////////////////////////////////
+	/// \brief Unbind the current vertex buffer if it is the current bound
+	///
+	/// If this vertex array is not bound, nothing happens. This
+	/// may not work when the buffer is bound to multiple targets
+	/// at once. When that is the case, the buffer is only unbound
+	/// from the last target it was bound to.
+	///
+	///////////////////////////////////////////////////////////
+	void unbind();
+
+	///////////////////////////////////////////////////////////
 	/// \brief Bind the vertex buffer to a target
 	///
 	/// \param target The target to bind to

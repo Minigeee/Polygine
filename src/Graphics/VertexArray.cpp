@@ -33,7 +33,7 @@ Uint32 getTypeSize(GLType type)
 
 
 ///////////////////////////////////////////////////////////
-Uint32 VertexArray::currentBound = 0;
+Uint32 VertexArray::s_currentBound = 0;
 
 
 ///////////////////////////////////////////////////////////
@@ -65,10 +65,21 @@ void VertexArray::bind()
 		glCheck(glGenVertexArrays(1, &m_id));
 
 	// Only bind if it already isn't bound
-	if (currentBound != m_id)
+	if (s_currentBound != m_id)
 	{
 		glCheck(glBindVertexArray(m_id));
-		currentBound = m_id;
+		s_currentBound = m_id;
+	}
+}
+
+
+///////////////////////////////////////////////////////////
+void VertexArray::unbind()
+{
+	if (s_currentBound == m_id)
+	{
+		glCheck(glBindVertexArray(0));
+		s_currentBound = 0;
 	}
 }
 
@@ -113,10 +124,6 @@ void VertexArray::addBuffer(VertexBuffer& buffer, Uint32 index, Uint32 size, Uin
 		else
 			m_numVertices = buffer.getSize() / (size * getTypeSize(dtype));
 	}
-
-	// Check if the buffer is an element buffer
-	if (buffer.getTarget() == BufferTarget::Element)
-		m_hasElementBuffer = true;
 }
 
 
@@ -157,6 +164,21 @@ void VertexArray::setNumVertices(Uint32 numVertices)
 void VertexArray::setDrawMode(DrawMode mode)
 {
 	m_drawMode = mode;
+}
+
+
+///////////////////////////////////////////////////////////
+void VertexArray::setElementBuffer(VertexBuffer& buffer)
+{
+	// Make sure array is bound
+	bind();
+
+	// Bind the buffer to the element target
+	buffer.bind(BufferTarget::Element);
+	m_hasElementBuffer = true;
+
+	// Unbind to save vertex array state
+	unbind();
 }
 
 
