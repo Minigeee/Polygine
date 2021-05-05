@@ -100,16 +100,13 @@ void freeBone(Bone* bone, ObjectPool& pool)
 
 
 ///////////////////////////////////////////////////////////
-Bone* copyBone(Bone* bone, Bone* parent, ObjectPool& pool)
+Bone* copyBone(Skeleton* skeleton, Bone* bone, Bone* parent, ObjectPool& pool)
 {
 	// Skip if the source bone does not exist
 	if (!bone) return 0;
 
-	// Allocate space for new bone
-	Bone* newBone = (Bone*)pool.alloc();
-
-	// Use name and id constructor
-	new(newBone)Bone(bone->getName(), bone->getId());
+	// Create a new bone
+	Bone* newBone = skeleton->createBone(bone->getName());
 
 	// Set offset and local transform
 	newBone->setOffset(bone->getOffset());
@@ -121,7 +118,7 @@ Bone* copyBone(Bone* bone, Bone* parent, ObjectPool& pool)
 
 	// For each child bone from the original bone, copy the child bone
 	for (Uint32 i = 0; i < bone->getChildren().size(); ++i)
-		copyBone(bone->getChildren()[i], newBone, pool);
+		copyBone(skeleton, bone->getChildren()[i], newBone, pool);
 
 	// Return the new bone
 	return newBone;
@@ -182,7 +179,7 @@ Skeleton::Skeleton(const Skeleton& skeleton) :
 	m_uniformOffset		(0)
 {
 	// Do a depth first search and copy all bones to the new object pool
-	m_root = priv::copyBone(skeleton.m_root, 0, m_bonePool);
+	m_root = priv::copyBone(this, skeleton.m_root, 0, m_bonePool);
 }
 
 
@@ -199,9 +196,10 @@ Skeleton& Skeleton::operator=(const Skeleton& skeleton)
 		m_animation = skeleton.m_animation;
 		m_animTime = skeleton.m_animTime;
 		m_animSpeed = skeleton.m_animSpeed;
+		m_uniformOffset = 0;
 
 		// Do a depth first search and copy all bones to the new object pool
-		m_root = priv::copyBone(skeleton.m_root, 0, m_bonePool);
+		m_root = priv::copyBone(this, skeleton.m_root, 0, m_bonePool);
 	}
 
 	return *this;
@@ -236,9 +234,6 @@ bool Skeleton::load(const std::string& fname)
 
 	// Create skeleton
 	priv::addBones(scene->mRootNode, 0, scene, this, offsets);
-
-	// Read animations
-	aiNodeAnim anim;
 
 	return true;
 }

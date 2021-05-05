@@ -80,11 +80,9 @@ int main()
     Animation animation("examples/models/character/character_flat.dae", "Armature");
     skeletons[0].load("examples/models/character/character_flat.dae");
     skeletons[0].setAnimation(&animation);
-    skeletons[1].load("examples/models/character/character_flat.dae");
-    skeletons[1].setAnimation(&animation);
+    skeletons[1] = skeletons[0];
     skeletons[1].setAnimationTime(0.5f);
-    skeletons[2].load("examples/models/character/character_flat.dae");
-    skeletons[2].setAnimation(&animation);
+    skeletons[2] = skeletons[0];
     skeletons[2].setAnimationTime(0.5f);
     skeletons[2].setAnimationSpeed(1.5f);
 
