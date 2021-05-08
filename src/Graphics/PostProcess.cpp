@@ -1,3 +1,5 @@
+#include <poly/Core/ObjectPool.h>
+
 #include <poly/Engine/Scene.h>
 
 #include <poly/Graphics/Components.h>
@@ -9,10 +11,10 @@ namespace poly
 
 
 ///////////////////////////////////////////////////////////
-VertexArray PostProcess::quadVao;
+VertexArray PostProcess::s_quadVao;
 
 ///////////////////////////////////////////////////////////
-VertexBuffer PostProcess::quadVbo;
+VertexBuffer PostProcess::s_quadVbo;
 
 ///////////////////////////////////////////////////////////
 Shader ColorAdjust::s_shader;
@@ -26,11 +28,17 @@ Shader Fxaa::s_shader;
 ///////////////////////////////////////////////////////////
 Shader Blur::s_shader;
 
+///////////////////////////////////////////////////////////
+Shader Bloom::s_thresholdShader;
+
+///////////////////////////////////////////////////////////
+Shader Bloom::s_addShader;
+
 
 ///////////////////////////////////////////////////////////
 VertexArray& PostProcess::getVertexArray()
 {
-	if (!quadVao.getId())
+	if (!s_quadVao.getId())
 	{
 		float vertices[] =
 		{
@@ -44,14 +52,14 @@ VertexArray& PostProcess::getVertexArray()
 		};
 
 		// Create vertex buffer
-		quadVbo.create(vertices, 12);
+		s_quadVbo.create(vertices, 12);
 
 		// Create vertex array
-		quadVao.bind();
-		quadVao.addBuffer(quadVbo, 0, 2);
+		s_quadVao.bind();
+		s_quadVao.addBuffer(s_quadVbo, 0, 2);
 	}
 
-	return quadVao;
+	return s_quadVao;
 }
 
 
@@ -274,7 +282,7 @@ Shader& Fog::getShader()
 
 ///////////////////////////////////////////////////////////
 Fxaa::Fxaa() :
-	m_threshold		(0.1f)
+	m_threshold			(0.1f)
 {
 
 }
@@ -341,7 +349,7 @@ Shader& Fxaa::getShader()
 Blur::Blur() :
 	m_distType		(Gaussian),
 	m_kernelSize	(5),
-	m_spread		(1.0f),
+	m_spread		(1.7f),
 	m_verticalBlur	(true),
 	m_paramsDirty	(true)
 {
@@ -409,9 +417,61 @@ void Blur::render(FrameBuffer& input, FrameBuffer& output)
 
 
 ///////////////////////////////////////////////////////////
+void Blur::setDistType(Blur::DistType type)
+{
+	m_distType = type;
+	m_paramsDirty = true;
+}
+
+
+///////////////////////////////////////////////////////////
+void Blur::setKernelSize(Uint32 size)
+{
+	m_kernelSize = size;
+	m_paramsDirty = true;
+}
+
+
+///////////////////////////////////////////////////////////
+void Blur::setSpread(float spread)
+{
+	m_spread = spread;
+	m_paramsDirty = true;
+}
+
+
+///////////////////////////////////////////////////////////
 void Blur::setVerticalBlur(bool vertical)
 {
 	m_verticalBlur = vertical;
+}
+
+
+///////////////////////////////////////////////////////////
+Blur::DistType Blur::getDistType() const
+{
+	return m_distType;
+}
+
+
+///////////////////////////////////////////////////////////
+Uint32 Blur::getKernelSize() const
+{
+	return m_kernelSize;
+}
+
+
+///////////////////////////////////////////////////////////
+float Blur::getSpread() const
+{
+	return m_spread;
+}
+
+
+///////////////////////////////////////////////////////////
+bool Blur::usesVerticalBlur() const
+{
+	return m_verticalBlur;
 }
 
 
@@ -427,6 +487,194 @@ Shader& Blur::getShader()
 	}
 
 	return s_shader;
+}
+
+
+///////////////////////////////////////////////////////////
+Bloom::Bloom() :
+	m_blurTarget			(0),
+	m_blurTexture			(0),
+	m_intensity				(1.0f),
+	m_threshold				(1.0f),
+	m_thresholdInterval		(0.8f),
+	m_radius				(0.015f),
+	m_numBlurs				(3)
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
+Bloom::~Bloom()
+{
+	if (m_blurTexture)
+		Pool<Texture>::free(m_blurTexture);
+
+	if (m_blurTexture)
+		Pool<FrameBuffer>::free(m_blurTarget);
+
+	m_blurTexture = 0;
+	m_blurTarget = 0;
+}
+
+
+///////////////////////////////////////////////////////////
+void Bloom::render(FrameBuffer& input, FrameBuffer& output)
+{
+	// Create the blur framebuffer if it hasn't been created yet
+	if (!m_blurTarget)
+	{
+		m_blurTarget = Pool<FrameBuffer>::alloc();
+		m_blurTexture = Pool<Texture>::alloc();
+
+		m_blurTarget->create(output.getWidth(), output.getHeight());
+		m_blurTarget->attachColor(m_blurTexture, PixelFormat::Rgb, GLType::Uint16);
+
+		// Update blur settings
+		Uint32 size = (Uint32)(output.getHeight() * m_radius);
+		m_blurEffect.setKernelSize(size);
+		m_blurEffect.setSpread((float)size * 0.34f);
+	}
+
+	// Disable depth test
+	glCheck(glDisable(GL_DEPTH_TEST));
+
+	// Disable cull face
+	glCheck(glDisable(GL_CULL_FACE));
+
+	// Get vertex array
+	VertexArray& vao = PostProcess::getVertexArray();
+
+
+	Shader& thresholdShader = getThresholdShader();
+	Shader& addShader = getAddShader();
+	Uint32 currentTarget = 0;
+
+	// Render threshold stage
+	m_blurTarget->bind();
+
+	thresholdShader.bind();
+	thresholdShader.setUniform("u_texture", *input.getColorTexture());
+	thresholdShader.setUniform("u_threshold", m_threshold);
+	thresholdShader.setUniform("u_interval", m_thresholdInterval);
+	vao.draw();
+
+	// Blur the threshold texture
+	for (Uint32 i = 0; i < m_numBlurs; ++i)
+	{
+		m_blurEffect.setVerticalBlur(false);
+		m_blurEffect.render(*m_blurTarget, output);
+		m_blurEffect.setVerticalBlur(true);
+		m_blurEffect.render(output, *m_blurTarget);
+	}
+
+	// Render the bloom effect
+	output.bind();
+
+	addShader.bind();
+	addShader.setUniform("u_texture1", *input.getColorTexture());
+	addShader.setUniform("u_texture2", *m_blurTarget->getColorTexture());
+	addShader.setUniform("u_factor1", 1.0f);
+	addShader.setUniform("u_factor2", m_intensity);
+	vao.draw();
+}
+
+
+///////////////////////////////////////////////////////////
+void Bloom::setIntensity(float intensity)
+{
+	m_intensity = intensity;
+}
+
+
+///////////////////////////////////////////////////////////
+void Bloom::setThreshold(float threshold)
+{
+	m_threshold = threshold;
+}
+
+
+///////////////////////////////////////////////////////////
+void Bloom::setThresholdInterval(float interaval)
+{
+	m_thresholdInterval = interaval;
+}
+
+
+///////////////////////////////////////////////////////////
+void Bloom::setRadius(float radius)
+{
+	m_radius = radius;
+}
+
+
+///////////////////////////////////////////////////////////
+void Bloom::setNumBlurs(Uint32 numBlurs)
+{
+	m_numBlurs = numBlurs;
+}
+
+
+///////////////////////////////////////////////////////////
+float Bloom::getIntensity() const
+{
+	return m_intensity;
+}
+
+
+///////////////////////////////////////////////////////////
+float Bloom::getThreshold() const
+{
+	return m_threshold;
+}
+
+
+///////////////////////////////////////////////////////////
+float Bloom::getThresholdInterval() const
+{
+	return m_thresholdInterval;
+}
+
+
+///////////////////////////////////////////////////////////
+float Bloom::getRadius() const
+{
+	return m_radius;
+}
+
+
+///////////////////////////////////////////////////////////
+Uint32 Bloom::getNumBlurs() const
+{
+	return m_numBlurs;
+}
+
+
+///////////////////////////////////////////////////////////
+Shader& Bloom::getThresholdShader()
+{
+	if (!s_thresholdShader.getId())
+	{
+		s_thresholdShader.load("shaders/postprocess/quad.vert", Shader::Vertex);
+		s_thresholdShader.load("shaders/postprocess/threshold.frag", Shader::Fragment);
+		s_thresholdShader.compile();
+	}
+
+	return s_thresholdShader;
+}
+
+
+///////////////////////////////////////////////////////////
+Shader& Bloom::getAddShader()
+{
+	if (!s_addShader.getId())
+	{
+		s_addShader.load("shaders/postprocess/quad.vert", Shader::Vertex);
+		s_addShader.load("shaders/postprocess/add.frag", Shader::Fragment);
+		s_addShader.compile();
+	}
+
+	return s_addShader;
 }
 
 

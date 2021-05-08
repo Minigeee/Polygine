@@ -50,6 +50,7 @@ using namespace poly;
 
 int main()
 {
+    Logger::init("game.log");
     srand(time(NULL));
 
     Window window;
@@ -85,11 +86,6 @@ int main()
     skeletons[2] = skeletons[0];
     skeletons[2].setAnimationTime(0.5f);
     skeletons[2].setAnimationSpeed(1.5f);
-
-    Billboard billboard;
-    billboard.load("examples/models/character/character_d.png");
-    billboard.setLightingEnabled(true);
-    billboard.setAxisLocked(false);
 
     Camera camera;
     camera.setPosition(0.0f, 50.0f, 0.0f);
@@ -151,7 +147,7 @@ int main()
     sun.m_diffuse = Vector3f(0.9f, 0.55f, 0.35f);
     sun.m_specular = sun.m_diffuse * 0.2f;
     sun.m_direction.z = 2.0f;
-    // sun.m_shadowsEnabled = false;
+    sun.m_shadowsEnabled = false;
     scene.createEntity(sun);
 
     PointLightComponent light;
@@ -195,6 +191,7 @@ int main()
     fog.setScatterStrength(0.5f);
     fog.setSkyboxFog(true);
 
+    Bloom bloom;
     Fxaa fxaa;
 
 
@@ -265,7 +262,7 @@ int main()
         scene.system<TransformComponent>(
             [&](const Entity::Id& id, TransformComponent& t)
             {
-                t.m_rotation.y = time * 60.0f;
+                t.m_rotation.y = 0.0f;
             }
         );
 
@@ -288,15 +285,16 @@ int main()
 
         // Render scene
         skeletons[0].update(elapsed);
-        skeletons[1].update(elapsed);
+        // skeletons[1].update(elapsed);
         skeletons[2].update(elapsed);
         scene.getExtension<Shadows>()->render(camera);
         octree.update();
         scene.render(camera, framebuffers[0]);
 
         fog.render(framebuffers[0], framebuffers[1]);
-        colorAdjust.render(framebuffers[1], framebuffers[0]);
-        fxaa.render(framebuffers[0]);
+        bloom.render(framebuffers[1], framebuffers[0]);
+        colorAdjust.render(framebuffers[0], framebuffers[1]);
+        fxaa.render(framebuffers[1]);
 
         STOP_PROFILING(GameLoop);
 

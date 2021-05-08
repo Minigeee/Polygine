@@ -30,8 +30,8 @@ public:
 	virtual void render(FrameBuffer& input, FrameBuffer& output = FrameBuffer::Default) = 0;
 
 private:
-	static VertexArray quadVao;
-	static VertexBuffer quadVbo;
+	static VertexArray s_quadVao;
+	static VertexBuffer s_quadVbo;
 
 protected:
 	static VertexArray& getVertexArray();
@@ -306,6 +306,57 @@ private:
 	bool m_paramsDirty;				//!< True if blur parameters are different
 
 	std::vector<float> m_weights;	//!< The blur weights
+};
+
+
+///////////////////////////////////////////////////////////
+class Bloom : public PostProcess
+{
+public:
+	Bloom();
+
+	~Bloom();
+
+	void render(FrameBuffer& input, FrameBuffer& output = FrameBuffer::Default) override;
+
+	void setIntensity(float intensity);
+
+	void setThreshold(float threshold);
+
+	void setThresholdInterval(float interval);
+
+	void setRadius(float radius);
+
+	void setNumBlurs(Uint32 numBlurs);
+
+	float getIntensity() const;
+
+	float getThreshold() const;
+
+	float getThresholdInterval() const;
+
+	float getRadius() const;
+
+	Uint32 getNumBlurs() const;
+
+private:
+	static Shader s_thresholdShader;
+	static Shader s_addShader;
+
+	static Shader& getThresholdShader();
+
+	static Shader& getAddShader();
+
+private:
+	Blur m_blurEffect;
+	FrameBuffer* m_blurTarget;
+	Texture* m_blurTexture;
+
+	float m_intensity;
+	float m_threshold;
+	float m_thresholdInterval;
+	float m_radius;
+	Uint32 m_numBlurs;
 };
 
 }
