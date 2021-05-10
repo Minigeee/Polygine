@@ -138,32 +138,35 @@ void Shadows::render(Camera& camera)
 	);
 
 
-	// Update uniform block
-	UniformBlock_Shadows block;
-
-	// Apply shadow maps to shader
-	Uint32 i = 0;
-	for (auto it = m_shadowInfo.begin(); it != m_shadowInfo.end(); ++it, ++i)
+	if (m_shadowInfo.size())
 	{
-		ShadowInfo& info = it.value();
+		// Update uniform block
+		UniformBlock_Shadows block;
 
-		for (Uint32 cascade = 0; cascade < info.m_shadowMaps.size(); ++cascade)
+		// Apply shadow maps to shader
+		Uint32 i = 0;
+		for (auto it = m_shadowInfo.begin(); it != m_shadowInfo.end(); ++it, ++i)
 		{
-			Vector4f projCoords = info.m_cameraProj * Vector4f(0.0f, 0.0f, -info.m_shadowDists[cascade], 1.0f);
+			ShadowInfo& info = it.value();
 
-			Uint32 index = i * 3 + cascade;
-			block.m_lightProjViews[index] = info.m_lightProjViews[cascade];
-			block.m_shadowDists[index] = projCoords.z;
+			for (Uint32 cascade = 0; cascade < info.m_shadowMaps.size(); ++cascade)
+			{
+				Vector4f projCoords = info.m_cameraProj * Vector4f(0.0f, 0.0f, -info.m_shadowDists[cascade], 1.0f);
+
+				Uint32 index = i * 3 + cascade;
+				block.m_lightProjViews[index] = info.m_lightProjViews[cascade];
+				block.m_shadowDists[index] = projCoords.z;
+			}
+
+			block.m_shadowStrengths[i] = info.m_shadowStrength;
+			block.m_numShadowCascades[i] = (int)info.m_shadowMaps.size();
 		}
 
-		block.m_shadowStrengths[i] = info.m_shadowStrength;
-		block.m_numShadowCascades[i] = (int)info.m_shadowMaps.size();
+		block.m_numShadows = (int)m_shadowInfo.size();
+
+		// Push data
+		m_uniformBuffer.pushData(block);
 	}
-
-	block.m_numShadows = (int)m_shadowInfo.size();
-
-	// Push data
-	m_uniformBuffer.pushData(block);
 }
 
 
