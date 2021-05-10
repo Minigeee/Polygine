@@ -242,14 +242,14 @@ bool Shader::compile(const std::vector<const char*>& feedback)
 
 
 ///////////////////////////////////////////////////////////
-int Shader::getUniformLocation(const std::string& name)
+Shader::UniformData& Shader::getUniformData(const std::string& name)
 {
 	// First check if the uniform has been found
 	auto it = m_uniforms.find(name);
 
 	if (it != m_uniforms.end())
 		// Return the location
-		return it->second;
+		return it.value();
 
 	else
 	{
@@ -262,7 +262,10 @@ int Shader::getUniformLocation(const std::string& name)
 			LOG_WARNING("Could not find shader uniform: %s", name.c_str());
 
 		// Add it to the map
-		return (m_uniforms[name] = location);
+		UniformData data;
+		data.m_location = location;
+
+		return (m_uniforms[name] = data);
 	}
 }
 
@@ -298,72 +301,96 @@ Uint32 Shader::getUniformBlockIndex(const std::string& name)
 ///////////////////////////////////////////////////////////
 void Shader::setUniform(const std::string& name, int value)
 {
-	int location = getUniformLocation(name);
-	if (location != -1)
-		glCheck(glUniform1iv(location, 1, &value));
+	UniformData& data = getUniformData(name);
+	if (data.m_location != -1 && *(int*)data.m_data != value)
+	{
+		glCheck(glUniform1iv(data.m_location, 1, &value));
+		*(int*)data.m_data = value;
+	}
 }
 
 
 ///////////////////////////////////////////////////////////
 void Shader::setUniform(const std::string& name, float value)
 {
-	int location = getUniformLocation(name);
-	if (location != -1)
-		glCheck(glUniform1fv(location, 1, &value));
+	UniformData& data = getUniformData(name);
+	if (data.m_location != -1 && *(float*)data.m_data != value)
+	{
+		glCheck(glUniform1fv(data.m_location, 1, &value));
+		*(float*)data.m_data = value;
+	}
 }
 
 
 ///////////////////////////////////////////////////////////
 void Shader::setUniform(const std::string& name, const Vector2f& value)
 {
-	int location = getUniformLocation(name);
-	if (location != -1)
-		glCheck(glUniform2fv(location, 1, &value.x));
+	UniformData& data = getUniformData(name);
+	if (data.m_location != -1 && *(Vector2f*)data.m_data != value)
+	{
+		glCheck(glUniform2fv(data.m_location, 1, &value.x));
+		*(Vector2f*)data.m_data = value;
+	}
 }
 
 
 ///////////////////////////////////////////////////////////
 void Shader::setUniform(const std::string& name, const Vector3f& value)
 {
-	int location = getUniformLocation(name);
-	if (location != -1)
-		glCheck(glUniform3fv(location, 1, &value.x));
+	UniformData& data = getUniformData(name);
+	if (data.m_location != -1 && *(Vector3f*)data.m_data != value)
+	{
+		glCheck(glUniform3fv(data.m_location, 1, &value.x));
+		*(Vector3f*)data.m_data = value;
+	}
 }
 
 
 ///////////////////////////////////////////////////////////
 void Shader::setUniform(const std::string& name, const Vector4f& value)
 {
-	int location = getUniformLocation(name);
-	if (location != -1)
-		glCheck(glUniform4fv(location, 1, &value.x));
+	UniformData& data = getUniformData(name);
+	if (data.m_location != -1 && *(Vector4f*)data.m_data != value)
+	{
+		glCheck(glUniform4fv(data.m_location, 1, &value.x));
+		*(Vector4f*)data.m_data = value;
+	}
 }
 
 
 ///////////////////////////////////////////////////////////
 void Shader::setUniform(const std::string& name, const Matrix2f& value)
 {
-	int location = getUniformLocation(name);
-	if (location != -1)
-		glCheck(glUniformMatrix2fv(location, 1, shouldTranspose, &value.x.x));
+	UniformData& data = getUniformData(name);
+	if (data.m_location != -1 && *(Matrix2f*)data.m_data != value)
+	{
+		glCheck(glUniformMatrix2fv(data.m_location, 1, shouldTranspose, &value.x.x));
+		*(Matrix2f*)data.m_data = value;
+	}
 }
 
 
 ///////////////////////////////////////////////////////////
 void Shader::setUniform(const std::string& name, const Matrix3f& value)
 {
-	int location = getUniformLocation(name);
-	if (location != -1)
-		glCheck(glUniformMatrix3fv(location, 1, shouldTranspose, &value.x.x));
+	UniformData& data = getUniformData(name);
+	if (data.m_location != -1 && *(Matrix3f*)data.m_data != value)
+	{
+		glCheck(glUniformMatrix3fv(data.m_location, 1, shouldTranspose, &value.x.x));
+		*(Matrix3f*)data.m_data = value;
+	}
 }
 
 
 ///////////////////////////////////////////////////////////
 void Shader::setUniform(const std::string& name, const Matrix4f& value)
 {
-	int location = getUniformLocation(name);
-	if (location != -1)
-		glCheck(glUniformMatrix4fv(location, 1, shouldTranspose, &value.x.x));
+	UniformData& data = getUniformData(name);
+	if (data.m_location != -1 && *(Matrix4f*)data.m_data != value)
+	{
+		glCheck(glUniformMatrix4fv(data.m_location, 1, shouldTranspose, &value.x.x));
+		*(Matrix4f*)data.m_data = value;
+	}
 }
 
 
@@ -372,9 +399,9 @@ void Shader::setUniform(const std::string& name, const std::vector<int>& values)
 {
 	if (values.size())
 	{
-		int location = getUniformLocation(name);
-		if (location != -1)
-			glCheck(glUniform1iv(location, values.size(), &values[0]));
+		UniformData& data = getUniformData(name);
+		if (data.m_location != -1)
+			glCheck(glUniform1iv(data.m_location, values.size(), &values[0]));
 	}
 }
 
@@ -384,9 +411,9 @@ void Shader::setUniform(const std::string& name, const std::vector<float>& value
 {
 	if (values.size())
 	{
-		int location = getUniformLocation(name);
-		if (location != -1)
-			glCheck(glUniform1fv(location, values.size(), &values[0]));
+		UniformData& data = getUniformData(name);
+		if (data.m_location != -1)
+			glCheck(glUniform1fv(data.m_location, values.size(), &values[0]));
 	}
 }
 
@@ -396,9 +423,9 @@ void Shader::setUniform(const std::string& name, const std::vector<Vector2f>& va
 {
 	if (values.size())
 	{
-		int location = getUniformLocation(name);
-		if (location != -1)
-			glCheck(glUniform2fv(location, values.size(), &values[0].x));
+		UniformData& data = getUniformData(name);
+		if (data.m_location != -1)
+			glCheck(glUniform2fv(data.m_location, values.size(), &values[0].x));
 	}
 }
 
@@ -408,9 +435,9 @@ void Shader::setUniform(const std::string& name, const std::vector<Vector3f>& va
 {
 	if (values.size())
 	{
-		int location = getUniformLocation(name);
-		if (location != -1)
-			glCheck(glUniform3fv(location, values.size(), &values[0].x));
+		UniformData& data = getUniformData(name);
+		if (data.m_location != -1)
+			glCheck(glUniform3fv(data.m_location, values.size(), &values[0].x));
 	}
 }
 
@@ -420,9 +447,9 @@ void Shader::setUniform(const std::string& name, const std::vector<Vector4f>& va
 {
 	if (values.size())
 	{
-		int location = getUniformLocation(name);
-		if (location != -1)
-			glCheck(glUniform4fv(location, values.size(), &values[0].x));
+		UniformData& data = getUniformData(name);
+		if (data.m_location != -1)
+			glCheck(glUniform4fv(data.m_location, values.size(), &values[0].x));
 	}
 }
 
@@ -432,9 +459,9 @@ void Shader::setUniform(const std::string& name, const std::vector<Matrix2f>& va
 {
 	if (values.size())
 	{
-		int location = getUniformLocation(name);
-		if (location != -1)
-			glCheck(glUniformMatrix2fv(location, values.size(), shouldTranspose, &values[0].x.x));
+		UniformData& data = getUniformData(name);
+		if (data.m_location != -1)
+			glCheck(glUniformMatrix2fv(data.m_location, values.size(), shouldTranspose, &values[0].x.x));
 	}
 }
 
@@ -444,9 +471,9 @@ void Shader::setUniform(const std::string& name, const std::vector<Matrix3f>& va
 {
 	if (values.size())
 	{
-		int location = getUniformLocation(name);
-		if (location != -1)
-			glCheck(glUniformMatrix3fv(location, values.size(), shouldTranspose, &values[0].x.x));
+		UniformData& data = getUniformData(name);
+		if (data.m_location != -1)
+			glCheck(glUniformMatrix3fv(data.m_location, values.size(), shouldTranspose, &values[0].x.x));
 	}
 }
 
@@ -456,9 +483,9 @@ void Shader::setUniform(const std::string& name, const std::vector<Matrix4f>& va
 {
 	if (values.size())
 	{
-		int location = getUniformLocation(name);
-		if (location != -1)
-			glCheck(glUniformMatrix4fv(location, values.size(), shouldTranspose, &values[0].x.x));
+		UniformData& data = getUniformData(name);
+		if (data.m_location != -1)
+			glCheck(glUniformMatrix4fv(data.m_location, values.size(), shouldTranspose, &values[0].x.x));
 	}
 }
 
@@ -480,9 +507,12 @@ void Shader::setUniform(const std::string& name, Texture& texture)
 	texture.bind(slot);
 
 	// Set uniform
-	int location = getUniformLocation(name);
-	if (location != -1)
-		glCheck(glUniform1iv(location, 1, &slot));
+	UniformData& data = getUniformData(name);
+	if (data.m_location != -1 && *(int*)data.m_data != slot)
+	{
+		glCheck(glUniform1iv(data.m_location, 1, &slot));
+		*(int*)data.m_data = slot;
+	}
 }
 
 

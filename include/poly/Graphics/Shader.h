@@ -17,6 +17,7 @@ namespace poly
 
 class Texture;
 
+
 ///////////////////////////////////////////////////////////
 /// \brief A shader class that controls render behavior
 ///
@@ -285,14 +286,24 @@ public:
 	Uint32 getId() const;
 
 private:
-	int getUniformLocation(const std::string& name);
+	///////////////////////////////////////////////////////////
+	/// \brief A struct containing uniform data
+	///
+	///////////////////////////////////////////////////////////
+	struct UniformData
+	{
+		int m_location;
+		float m_data[16];
+	};
+
+	UniformData& getUniformData(const std::string& name);
 
 	Uint32 getUniformBlockIndex(const std::string& name);
 
 private:
 	Uint32 m_id;									//!< The program id
 	std::vector<Uint32> m_shaders;					//!< A list of shader ids
-	HashMap<std::string, int> m_uniforms;			//!< A map of uniform names to uniform locations
+	HashMap<std::string, UniformData> m_uniforms;			//!< A map of uniform names to uniform locations
 	HashMap<std::string, Uint32> m_uniformBlocks;	//!< A map of uniform names to uniform block index
 	HashMap<Uint32, Uint32> m_textures;				//!< A map of texture ids to texture slot
 
