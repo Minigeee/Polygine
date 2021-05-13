@@ -281,6 +281,10 @@ public:
 
 	void setKernelSize(Uint32 size);
 
+	void setKernelSpacing(float spacing);
+
+	void setNoiseFactor(float factor);
+
 	void setSpread(float spread);
 
 	void setVerticalBlur(bool vertical);
@@ -288,6 +292,10 @@ public:
 	DistType getDistType() const;
 
 	Uint32 getKernelSize() const;
+
+	float getKernelSpacing() const;
+
+	float getNoiseFactor() const;
 
 	float getSpread() const;
 
@@ -301,6 +309,8 @@ private:
 private:
 	DistType m_distType;			//!< Blur weight distrubution type
 	Uint32 m_kernelSize;			//!< The kernel size (how much to blur)
+	float m_kernelSpacing;			//!< The amount of spacing between each sample location in a kernel
+	float m_noiseFactor;			//!< The amount of sampling offset noise has on the blur
 	float m_spread;					//!< The amount of weight spread
 	bool m_verticalBlur;			//!< Should the effect apply vertical blur?
 	bool m_paramsDirty;				//!< True if blur parameters are different

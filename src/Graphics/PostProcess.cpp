@@ -349,6 +349,8 @@ Shader& Fxaa::getShader()
 Blur::Blur() :
 	m_distType		(Gaussian),
 	m_kernelSize	(5),
+	m_kernelSpacing	(1.0f),
+	m_noiseFactor	(1.0f),
 	m_spread		(1.7f),
 	m_verticalBlur	(true),
 	m_paramsDirty	(true)
@@ -406,6 +408,8 @@ void Blur::render(FrameBuffer& input, FrameBuffer& output)
 
 	shader.setUniform("u_verticalBlur", (int)m_verticalBlur);
 	shader.setUniform("u_kernelSize", (int)m_kernelSize);
+	shader.setUniform("u_kernelSpacing", m_kernelSpacing);
+	shader.setUniform("u_noiseFactor", m_noiseFactor);
 	for (Uint32 i = 0; i < m_weights.size(); ++i)
 		shader.setUniform("u_weights[" + std::to_string(i) + ']', m_weights[i]);
 
@@ -429,6 +433,20 @@ void Blur::setKernelSize(Uint32 size)
 {
 	m_kernelSize = size;
 	m_paramsDirty = true;
+}
+
+
+///////////////////////////////////////////////////////////
+void Blur::setKernelSpacing(float spacing)
+{
+	m_kernelSpacing = spacing;
+}
+
+
+///////////////////////////////////////////////////////////
+void Blur::setNoiseFactor(float factor)
+{
+	m_noiseFactor = factor;
 }
 
 
@@ -458,6 +476,20 @@ Blur::DistType Blur::getDistType() const
 Uint32 Blur::getKernelSize() const
 {
 	return m_kernelSize;
+}
+
+
+///////////////////////////////////////////////////////////
+float Blur::getKernelSpacing() const
+{
+	return m_kernelSpacing;
+}
+
+
+///////////////////////////////////////////////////////////
+float Blur::getNoiseFactor() const
+{
+	return m_noiseFactor;
 }
 
 
@@ -494,10 +526,10 @@ Shader& Blur::getShader()
 Bloom::Bloom() :
 	m_blurTarget			(0),
 	m_blurTexture			(0),
-	m_intensity				(1.0f),
+	m_intensity				(2.0f),
 	m_threshold				(1.0f),
 	m_thresholdInterval		(0.8f),
-	m_radius				(0.015f),
+	m_radius				(0.05f),
 	m_numBlurs				(3)
 {
 
@@ -531,9 +563,10 @@ void Bloom::render(FrameBuffer& input, FrameBuffer& output)
 		m_blurTarget->attachColor(m_blurTexture, PixelFormat::Rgb, GLType::Uint16);
 
 		// Update blur settings
-		Uint32 size = (Uint32)(output.getHeight() * m_radius);
-		m_blurEffect.setKernelSize(size);
-		m_blurEffect.setSpread((float)size * 0.34f);
+		float spacing = output.getHeight() * m_radius / 11.0f;
+		m_blurEffect.setKernelSize(11);
+		m_blurEffect.setKernelSpacing(spacing);
+		m_blurEffect.setSpread(3.75f);
 	}
 
 	// Disable depth test
