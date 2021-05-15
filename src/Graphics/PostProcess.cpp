@@ -34,6 +34,9 @@ Shader Bloom::s_thresholdShader;
 ///////////////////////////////////////////////////////////
 Shader Bloom::s_addShader;
 
+///////////////////////////////////////////////////////////
+Shader Ssao::s_shader;
+
 
 ///////////////////////////////////////////////////////////
 VertexArray& PostProcess::getVertexArray()
@@ -708,6 +711,173 @@ Shader& Bloom::getAddShader()
 	}
 
 	return s_addShader;
+}
+
+
+///////////////////////////////////////////////////////////
+Ssao::Ssao() :
+	m_camera			(0),
+	m_depthTexture		(0),
+	m_radius			(0.2f),
+	m_bias				(0.005f),
+	m_range				(30.0f),
+	m_falloff			(0.1f),
+	m_intensity			(0.8f),
+	m_noiseFactor		(0.1f)
+{
+
+}
+
+
+
+///////////////////////////////////////////////////////////
+void Ssao::render(FrameBuffer& input, FrameBuffer& output)
+{
+	// A depth texture and camera are required for SSAO to be used
+	if (!m_camera || !m_depthTexture) return;
+
+	// Bind output target
+	output.bind();
+
+	// Disable depth test
+	glCheck(glDisable(GL_DEPTH_TEST));
+
+	// Disable cull face
+	glCheck(glDisable(GL_CULL_FACE));
+
+	// Bind shader
+	Shader& shader = getShader();
+
+	shader.bind();
+	shader.setUniform("u_colorTexture", *input.getColorTexture());
+	shader.setUniform("u_depthTexture", *m_depthTexture);
+	shader.setUniform("u_radius", m_radius);
+	shader.setUniform("u_bias", m_bias);
+	shader.setUniform("u_range", m_range);
+	shader.setUniform("u_falloff", m_falloff);
+	shader.setUniform("u_intensity", m_intensity);
+	shader.setUniform("u_noiseFactor", m_noiseFactor);
+
+	m_camera->apply(&shader);
+	shader.setUniform("u_invProjView", inverse(m_camera->getProjMatrix() * m_camera->getViewMatrix()));
+
+	// Render vertex array
+	VertexArray& vao = PostProcess::getVertexArray();
+	vao.bind();
+	vao.draw();
+}
+
+
+///////////////////////////////////////////////////////////
+void Ssao::setCamera(Camera* camera)
+{
+	m_camera = camera;
+}
+
+
+///////////////////////////////////////////////////////////
+void Ssao::setDepthTexture(Texture* texture)
+{
+	m_depthTexture = texture;
+}
+
+
+///////////////////////////////////////////////////////////
+void Ssao::setRadius(float radius)
+{
+	m_radius = radius;
+}
+
+
+///////////////////////////////////////////////////////////
+void Ssao::setBias(float bias)
+{
+	m_bias = bias;
+}
+
+
+///////////////////////////////////////////////////////////
+void Ssao::setRange(float range)
+{
+	m_range = range;
+}
+
+
+///////////////////////////////////////////////////////////
+void Ssao::setFalloff(float falloff)
+{
+	m_falloff = falloff;
+}
+
+
+///////////////////////////////////////////////////////////
+void Ssao::setIntensity(float intensity)
+{
+	m_intensity = intensity;
+}
+
+
+///////////////////////////////////////////////////////////
+void Ssao::setNoiseFactor(float noiseFactor)
+{
+	m_noiseFactor = noiseFactor;
+}
+
+
+///////////////////////////////////////////////////////////
+float Ssao::getRadius() const
+{
+	return m_radius;
+}
+
+
+///////////////////////////////////////////////////////////
+float Ssao::getBias() const
+{
+	return m_bias;
+}
+
+
+///////////////////////////////////////////////////////////
+float Ssao::getRange() const
+{
+	return m_range;
+}
+
+
+///////////////////////////////////////////////////////////
+float Ssao::getFalloff() const
+{
+	return m_falloff;
+}
+
+
+///////////////////////////////////////////////////////////
+float Ssao::getIntensity() const
+{
+	return m_intensity;
+}
+
+
+///////////////////////////////////////////////////////////
+float Ssao::getNoiseFactor() const
+{
+	return m_noiseFactor;
+}
+
+
+///////////////////////////////////////////////////////////
+Shader& Ssao::getShader()
+{
+	if (!s_shader.getId())
+	{
+		// Load shader
+		s_shader.load("shaders/postprocess/quad.vert", Shader::Vertex);
+		s_shader.load("shaders/postprocess/ssao.frag", Shader::Fragment);
+		s_shader.compile();
+	}
+
+	return s_shader;
 }
 
 

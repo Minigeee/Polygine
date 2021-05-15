@@ -369,6 +369,60 @@ private:
 	Uint32 m_numBlurs;
 };
 
+
+///////////////////////////////////////////////////////////
+class Ssao : public PostProcess
+{
+public:
+	Ssao();
+
+	void render(FrameBuffer& input, FrameBuffer& output = FrameBuffer::Default) override;
+
+	void setCamera(Camera* camera);
+
+	void setDepthTexture(Texture* texture);
+
+	void setRadius(float radius);
+
+	void setBias(float bias);
+
+	void setRange(float range);
+
+	void setFalloff(float falloff);
+
+	void setIntensity(float intensity);
+
+	void setNoiseFactor(float factor);
+
+	float getRadius() const;
+
+	float getBias() const;
+
+	float getRange() const;
+
+	float getFalloff() const;
+
+	float getIntensity() const;
+
+	float getNoiseFactor() const;
+
+private:
+	static Shader s_shader;
+
+	static Shader& getShader();
+
+private:
+	Camera* m_camera;
+	Texture* m_depthTexture;
+
+	float m_radius;
+	float m_bias;
+	float m_range;
+	float m_falloff;
+	float m_intensity;
+	float m_noiseFactor;
+};
+
 }
 
 #endif

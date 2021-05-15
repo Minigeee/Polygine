@@ -250,7 +250,6 @@ struct UniformBufferType<Vector3f, 0>
 
 private:
 	Vector3f m_data;
-	float m_padding[1];
 };
 
 

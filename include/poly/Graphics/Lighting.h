@@ -18,26 +18,26 @@ class Shader;
 ///////////////////////////////////////////////////////////
 struct UniformStruct_DirLight
 {
-	UniformBufferType<Vector3f>		m_diffuse;
-	UniformBufferType<Vector3f>		m_specular;
-	UniformBufferType<Vector3f>		m_direction;
+	UniformBufferType<Vector3f, 4>		m_diffuse;
+	UniformBufferType<Vector3f, 4>		m_specular;
+	UniformBufferType<Vector3f, 4>		m_direction;
 };
 
 
 ///////////////////////////////////////////////////////////
 struct UniformStruct_PointLight
 {
-	UniformBufferType<Vector3f>		m_position;
-	UniformBufferType<Vector3f>		m_diffuse;
-	UniformBufferType<Vector3f>		m_specular;
-	UniformBufferType<Vector3f>		m_coefficients;
+	UniformBufferType<Vector3f, 4>		m_position;
+	UniformBufferType<Vector3f, 4>		m_diffuse;
+	UniformBufferType<Vector3f, 4>		m_specular;
+	UniformBufferType<Vector3f, 4>		m_coefficients;
 };
 
 
 ///////////////////////////////////////////////////////////
 struct UniformBlock_Lights
 {
-	UniformBufferType<Vector3f>		m_ambient;
+	UniformBufferType<Vector3f, 4>	m_ambient;
 	UniformStruct_DirLight			m_dirLights[2];
 	UniformStruct_PointLight		m_pointLights[32];
 	UniformBufferType<int>			m_numDirLights;

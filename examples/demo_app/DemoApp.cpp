@@ -147,7 +147,7 @@ int main()
     sun.m_diffuse = Vector3f(0.9f, 0.55f, 0.35f);
     sun.m_specular = sun.m_diffuse * 0.2f;
     sun.m_direction.z = 2.0f;
-    sun.m_shadowsEnabled = false;
+    // sun.m_shadowsEnabled = false;
     scene.createEntity(sun);
 
     PointLightComponent light;
@@ -191,7 +191,10 @@ int main()
     fog.setScatterStrength(0.5f);
     fog.setSkyboxFog(true);
 
-    Bloom bloom;
+    Ssao ssao;
+    ssao.setCamera(&camera);
+    ssao.setDepthTexture(framebuffers[0].getDepthTexture());
+
     Fxaa fxaa;
 
 
@@ -292,7 +295,7 @@ int main()
         scene.render(camera, framebuffers[0]);
 
         fog.render(framebuffers[0], framebuffers[1]);
-        bloom.render(framebuffers[1], framebuffers[0]);
+        ssao.render(framebuffers[1], framebuffers[0]);
         colorAdjust.render(framebuffers[0], framebuffers[1]);
         fxaa.render(framebuffers[1]);
 
