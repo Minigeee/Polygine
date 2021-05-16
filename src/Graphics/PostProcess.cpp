@@ -141,6 +141,7 @@ float ColorAdjust::getGamma() const
 Fog::Fog() :
 	m_scene				(0),
 	m_camera			(0),
+	m_depthTexture		(0),
 	m_color				(0.272f, 0.548f, 0.675f),
 	m_density			(0.0005f),
 	m_scatterStrength	(0.0f),
@@ -153,6 +154,9 @@ Fog::Fog() :
 ///////////////////////////////////////////////////////////
 void Fog::render(FrameBuffer& input, FrameBuffer& output)
 {
+	if (!m_camera || !m_depthTexture)
+		return;
+
 	// Bind output target
 	output.bind();
 
@@ -167,7 +171,7 @@ void Fog::render(FrameBuffer& input, FrameBuffer& output)
 
 	shader.bind();
 	shader.setUniform("u_color", *input.getColorTexture());
-	shader.setUniform("u_depth", *input.getDepthTexture());
+	shader.setUniform("u_depth", *m_depthTexture);
 	shader.setUniform("u_fogColor", m_color);
 	shader.setUniform("u_fogDensity", m_density);
 	shader.setUniform("u_scatterStrength", m_scatterStrength);
@@ -216,6 +220,13 @@ void Fog::setScene(Scene* scene)
 void Fog::setCamera(Camera* camera)
 {
 	m_camera = camera;
+}
+
+
+///////////////////////////////////////////////////////////
+void Fog::setDepthTexture(Texture* texture)
+{
+	m_depthTexture = texture;
 }
 
 
@@ -351,7 +362,7 @@ Shader& Fxaa::getShader()
 ///////////////////////////////////////////////////////////
 Blur::Blur() :
 	m_distType		(Gaussian),
-	m_kernelSize	(5),
+	m_kernelSize	(11),
 	m_kernelSpacing	(1.0f),
 	m_noiseFactor	(1.0f),
 	m_spread		(1.7f),
@@ -719,7 +730,7 @@ Ssao::Ssao() :
 	m_camera			(0),
 	m_depthTexture		(0),
 	m_radius			(0.2f),
-	m_bias				(0.005f),
+	m_bias				(0.0f),
 	m_range				(30.0f),
 	m_falloff			(0.1f),
 	m_intensity			(0.8f),

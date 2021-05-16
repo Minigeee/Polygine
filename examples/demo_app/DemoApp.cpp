@@ -187,6 +187,7 @@ int main()
     Fog fog;
     fog.setCamera(&camera);
     fog.setScene(&scene);
+    fog.setDepthTexture(framebuffers[0].getDepthTexture());
     fog.setColor(0.272f, 0.348f, 0.675f);
     fog.setScatterStrength(0.5f);
     fog.setSkyboxFog(true);
@@ -294,8 +295,8 @@ int main()
         octree.update();
         scene.render(camera, framebuffers[0]);
 
-        fog.render(framebuffers[0], framebuffers[1]);
-        ssao.render(framebuffers[1], framebuffers[0]);
+        ssao.render(framebuffers[0], framebuffers[1]);
+        fog.render(framebuffers[1], framebuffers[0]);
         colorAdjust.render(framebuffers[0], framebuffers[1]);
         fxaa.render(framebuffers[1]);
 
@@ -314,9 +315,7 @@ int main()
 // TODO : Add convenience constructor loaders
 // TODO : Document Dropdown
 // TODO : Move Grass to game project and document it
-// TODO : Improve post processing + document new version (pipeline)
-// TODO : Bloom effect
-// TODO : SSAO
 // TODO : Sun glare effect
-// TODO : Document Fxaa, Blur (after reworking post processing)
 // TODO : Add normal mapping
+// TODO : Make all framebuffers resizeable (in post-processing effects too)
+// TODO : Possibly optimize GPU particles by allowing parallel updates (for transform feedback queries)
