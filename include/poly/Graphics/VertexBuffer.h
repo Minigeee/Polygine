@@ -10,6 +10,9 @@
 namespace poly
 {
 
+class VertexArray;
+
+
 ///////////////////////////////////////////////////////////
 /// \brief Targets to bind vertex buffers to
 ///
@@ -109,6 +112,8 @@ MapBufferFlags& operator|=(MapBufferFlags& a, MapBufferFlags b);
 ///////////////////////////////////////////////////////////
 class VertexBuffer
 {
+	friend VertexArray;
+
 public:
 
 #ifndef DOXYGEN_SKIP

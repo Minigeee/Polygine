@@ -416,6 +416,14 @@ Vertex::Vertex(const Vector3f& pos, const Vector3f& normal, const Vector2f& texC
 
 
 ///////////////////////////////////////////////////////////
+Model::~Model()
+{
+	for (Uint32 i = 0; i < m_meshes.size(); ++i)
+		Pool<Mesh>::free(m_meshes[i]);
+}
+
+
+///////////////////////////////////////////////////////////
 bool Model::load(const std::string& fname, bool flatShading)
 {
 	// Load the model scene
@@ -477,7 +485,9 @@ bool Model::load(const std::string& fname, bool flatShading)
 	for (Uint32 i = 0; i < m_meshes.size(); ++i)
 	{
 		// Calculate buffer offset
-		Uint32 offset = state.m_vertexOffsets[i] * sizeof(Vertex);
+		Uint32 offset = state.m_vertexOffsets[i];
+		Uint32 size = (i == m_meshes.size() - 1 ? m_vertices.size() - offset : state.m_vertexOffsets[i + 1] - offset);
+		offset *= sizeof(Vertex);
 
 		VertexArray& vao = m_meshes[i]->m_vertexArray;
 		vao.addBuffer(m_vertexBuffer, 0, 3, sizeof(Vertex), offset + 0 * sizeof(float));
@@ -489,6 +499,10 @@ bool Model::load(const std::string& fname, bool flatShading)
 
 		if (!flatShading)
 			vao.setElementBuffer(m_indicesBuffer);
+
+		// Set vertex info
+		vao.setNumVertices(size);
+		vao.setVertexOffset(offset);
 
 		// Set the default shader
 		m_meshes[i]->m_shader = shader;
@@ -512,14 +526,34 @@ bool Model::load(const std::string& fname, bool flatShading)
 
 
 ///////////////////////////////////////////////////////////
-void Model::create(const std::vector<Vertex>& vertices, BufferUsage usage)
+void Model::addMesh(const std::vector<Vertex>& vertices, const std::vector<Uint32>& indices, const Material& material, BufferUsage usage)
 {
-	m_vertices = vertices;
-	m_vertexBuffer.create(vertices, usage);
+	// Keep track of the vertex offsets
+	Uint32 vertexOffset = m_vertices.size();
+	Uint32 indexOffset = m_indices.size();
+	Uint32 offset = indices.size() ? m_indices.size() : m_vertices.size();
+	Uint32 size = indices.size() ? indices.size() : vertices.size();
+
+	// Append this list of vertices to the end of the other
+	m_vertices.insert(m_vertices.end(), vertices.begin(), vertices.end());
+	m_indices.insert(m_indices.end(), indices.begin(), indices.end());
+	m_vertexBuffer.create(m_vertices, usage);
+
+	// If indices are being used, update the index buffer
+	if (indices.size())
+	{
+		// Adjust the index values, since there may be data previously in the buffer
+		for (Uint32 i = indexOffset; i < m_indices.size(); ++i)
+			m_indices[i] += vertexOffset;
+
+		m_indicesBuffer.bind(BufferTarget::Element);
+		m_indicesBuffer.create(m_indices, usage);
+	}
 
 	// Create a single mesh
 	m_meshes.push_back(Pool<Mesh>::alloc());
-	VertexArray& vao = m_meshes.back()->m_vertexArray;
+	Mesh* mesh = m_meshes.back();
+	VertexArray& vao = mesh->m_vertexArray;
 
 	// Create vertex array
 	vao.addBuffer(m_vertexBuffer, 0, 3, sizeof(Vertex), 0 * sizeof(float));
@@ -529,37 +563,36 @@ void Model::create(const std::vector<Vertex>& vertices, BufferUsage usage)
 	vao.addBuffer(m_vertexBuffer, 4, 3, sizeof(Vertex), 12 * sizeof(float));
 	vao.addBuffer(m_vertexBuffer, 5, 3, sizeof(Vertex), 15 * sizeof(float));
 
+	if (indices.size())
+		vao.setElementBuffer(m_indicesBuffer);
+
+	// Set vertex info
+	vao.setNumVertices(size);
+	vao.setVertexOffset(offset);
+
+	// Set the material
+	mesh->m_material = material;
+
 	// Set a default shader
-	m_meshes.back()->m_shader = &getDefaultShader();
+	mesh->m_shader = &getDefaultShader();
 
 	// Create bounding box
-	m_boundingBox = priv::calcBoundingBox(vertices);
+	BoundingBox box = priv::calcBoundingBox(vertices);
 
-	// Create bounding sphere
-	m_boundingSphere.m_position = m_boundingBox.getCenter();
-	m_boundingSphere.m_radius = length(m_boundingBox.getDimensions()) * 0.5f;
-}
+	if (box.m_min.x < m_boundingBox.m_min.x)
+		m_boundingBox.m_min.x = box.m_min.x;
+	if (box.m_max.x > m_boundingBox.m_max.x)
+		m_boundingBox.m_max.x = box.m_max.x;
 
+	if (box.m_min.y < m_boundingBox.m_min.y)
+		m_boundingBox.m_min.y = box.m_min.y;
+	if (box.m_max.y > m_boundingBox.m_max.y)
+		m_boundingBox.m_max.y = box.m_max.y;
 
-///////////////////////////////////////////////////////////
-void Model::setVertices(const std::vector<Vertex>& vertices)
-{
-	// Don't set vertices if model hasn't been created yet
-	if (!m_vertexBuffer.getId()) return;
-
-	// Check if the number of new vertices is not equal to the previous number of vertices
-	if (m_vertices.size() != vertices.size())
-		// Create a new buffer if new data has more vertices
-		m_vertexBuffer.create(vertices, m_vertexBuffer.getUsage());
-
-	else
-		m_vertexBuffer.update(vertices);
-
-	// Update vector
-	m_vertices = vertices;
-
-	// Create bounding box
-	m_boundingBox = priv::calcBoundingBox(vertices);
+	if (box.m_min.z < m_boundingBox.m_min.z)
+		m_boundingBox.m_min.z = box.m_min.z;
+	if (box.m_max.z > m_boundingBox.m_max.z)
+		m_boundingBox.m_max.z = box.m_max.z;
 
 	// Create bounding sphere
 	m_boundingSphere.m_position = m_boundingBox.getCenter();

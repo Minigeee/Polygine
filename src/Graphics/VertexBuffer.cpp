@@ -171,7 +171,6 @@ void VertexBuffer::update(const VertexBuffer& buffer, Uint32 offset)
 		}
 
 		// Bind buffers
-		glCheck(glBindBuffer(GL_COPY_READ_BUFFER, buffer.m_id));
 		glCheck(glBindBuffer(GL_COPY_WRITE_BUFFER, m_id));
 
 		// Buffer data

@@ -37,6 +37,7 @@ struct Mesh
 	VertexArray m_vertexArray;		//!< The vertex array containing the vertex data
 	Material m_material;			//!< The mesh material
 	Shader* m_shader;				//!< A pointer to the shader
+	Uint32 m_offset;				//!< The vertex offset of the mesh
 };
 
 
@@ -69,6 +70,14 @@ class Model : public Renderable
 {
 public:
 	///////////////////////////////////////////////////////////
+	/// \brief Destructor
+	///
+	/// Remove all allocated meshes
+	///
+	///////////////////////////////////////////////////////////
+	~Model();
+
+	///////////////////////////////////////////////////////////
 	/// \brief Load a model from a file
 	///
 	/// This will load all vertex positions, normals, texture
@@ -95,24 +104,21 @@ public:
 	bool load(const std::string& fname, bool flatShading = true);
 
 	///////////////////////////////////////////////////////////
-	/// \brief Create a model from a list of vertices
+	/// \brief Create a model with a single mesh from a list of vertices
+	///
+	/// This function should be used to create a model with a single
+	/// mesh. The single mesh will 
 	///
 	/// \param vertices The list of vertices
 	/// \param usage The vertex buffer usage pattern
 	///
 	///////////////////////////////////////////////////////////
-	void create(const std::vector<Vertex>& vertices, BufferUsage usage = BufferUsage::Static);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Set the model vertices
-	///
-	/// The internal vertex buffer will be updated every time
-	/// this function is called.
-	///
-	/// \param vertices The list of vertices
-	///
-	///////////////////////////////////////////////////////////
-	void setVertices(const std::vector<Vertex>& vertices);
+	void addMesh(
+		const std::vector<Vertex>& vertices,
+		const std::vector<Uint32>& indices = std::vector<Uint32>(),
+		const Material& material = Material(),
+		BufferUsage usage = BufferUsage::Static
+	);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the material for the specified mesh index

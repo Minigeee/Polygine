@@ -104,6 +104,20 @@ void Texture::bind(Uint32 slot)
 
 
 ///////////////////////////////////////////////////////////
+bool Texture::load(const std::string& fname, GLType dtype)
+{
+	// Load the image
+	Image img;
+	if (!img.load(fname, dtype))
+		return false;
+
+	create(img);
+
+	return true;
+}
+
+
+///////////////////////////////////////////////////////////
 void Texture::create(void* data, PixelFormat fmt, Uint32 w, Uint32 h, Uint32 d, GLType dtype, TextureFilter filter, TextureWrap wrap, bool multisampled)
 {
 	// Set multisampled

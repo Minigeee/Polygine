@@ -118,11 +118,18 @@ public:
 	/// specified using setDrawMode(), which is DrawMode::Triangles
 	/// by default.
 	///
+	/// It is possible to specify the vertex range to rendering.
+	/// By default, the vertex array will used the offset and number
+	/// of vertices stored internally, set by setVertexOffset() and
+	/// setNumVertices(), but the \a offset and \a vertices parameter
+	/// will override the internal value if their values are set to
+	/// anything other than 0xFFFFFFFF.
+	///
 	/// \param instances The number of instances to draw
 	/// \param offset The offset to start drawing at, in number of vertices
 	///
 	///////////////////////////////////////////////////////////
-	void draw(Uint32 instances = 1, Uint32 offset = 0);
+	void draw(Uint32 instances = 1, Uint32 offset = 0xFFFFFFFF, Uint32 vertices = 0xFFFFFFFF);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the number of vertices
@@ -131,6 +138,17 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	void setNumVertices(Uint32 numVertices);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the vertex offset (in number of vertices)
+	///
+	/// Set the vertex offset that should be used during rendering
+	/// of the vertex offset.
+	///
+	/// \param offset The vertex offset
+	///
+	///////////////////////////////////////////////////////////
+	void setVertexOffset(Uint32 offset);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the draw mode
@@ -174,6 +192,14 @@ public:
 	Uint32 getNumVertices() const;
 
 	///////////////////////////////////////////////////////////
+	/// \brief Get the vertex offset that is used during rendering (in number of vertices)
+	///
+	/// \return The vertex offset used during rendering
+	///
+	///////////////////////////////////////////////////////////
+	Uint32 getVertexOffset() const;
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the current draw mode
 	///
 	/// \return The current draw mode
@@ -192,8 +218,9 @@ public:
 private:
 	Uint32 m_id;				//!< OpenGL id
 	Uint32 m_numVertices;		//!< The number of vertices
+	Uint32 m_vertexOffset;		//!< The vertex offset to use when rendering
 	DrawMode m_drawMode;		//!< The current draw mode
-	bool m_hasElementBuffer;	//!< True if an element vertex buffer was added
+	Uint32 m_elementBuffer;		//!< True if an element vertex buffer was added
 
 	static Uint32 s_currentBound;
 };

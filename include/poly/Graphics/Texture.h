@@ -70,6 +70,23 @@ public:
 	void bind(Uint32 slot = 0);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Load a texture from an image file
+	///
+	/// This creates a temporary image object and loads the file
+	/// using Image::load(). The function returns \a true if the image
+	/// was successfully loaded, and \a false if an error occured.
+	///
+	/// \see Image::load
+	///
+	/// \param fname The relative path to the image file
+	/// \param dtype The data type to use when loading the image
+	///
+	/// \return True if the file was successfully loaded
+	///
+	///////////////////////////////////////////////////////////
+	bool load(const std::string& fname, GLType dtype = GLType::Uint8);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Create a new texture from pixel data
 	///
 	/// This will create a new 1D, 2D, or 3D texture, depending on

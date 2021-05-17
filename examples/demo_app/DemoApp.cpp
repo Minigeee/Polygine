@@ -87,6 +87,27 @@ int main()
     skeletons[2].setAnimationTime(0.5f);
     skeletons[2].setAnimationSpeed(1.5f);
 
+    std::vector<Vertex> vertices =
+    {
+        Vertex(Vector3f(-1.0f, 0.0f, -1.0f), Vector3f(0.0f, 1.0f, 0.0f), Vector2f(0.0f, 1.0f)),
+        Vertex(Vector3f(-1.0f, 0.0f, 1.0f), Vector3f(0.0f, 1.0f, 0.0f), Vector2f(0.0f, 0.0f)),
+        Vertex(Vector3f(1.0f, 0.0f, -1.0f), Vector3f(0.0f, 1.0f, 0.0f), Vector2f(1.0f, 1.0f)),
+        Vertex(Vector3f(1.0f, 0.0f, 1.0f), Vector3f(0.0f, 1.0f, 0.0f), Vector2f(1.0f, 0.0f))
+    };
+    std::vector<Uint32> indices =
+    {
+        0, 1, 2,
+        1, 3, 2
+    };
+
+    Texture bricks;
+    bricks.load("examples/textures/bricks_d.jpg");
+    Material bricksMat;
+    bricksMat.setDiffTexture(&bricks);
+
+    Model plane;
+    plane.addMesh(vertices, indices, bricksMat);
+
     Camera camera;
     camera.setPosition(0.0f, 50.0f, 0.0f);
     camera.setRotation(0.0f, 0.0f);
@@ -147,7 +168,7 @@ int main()
     sun.m_diffuse = Vector3f(0.9f, 0.55f, 0.35f);
     sun.m_specular = sun.m_diffuse * 0.2f;
     sun.m_direction.z = 2.0f;
-    // sun.m_shadowsEnabled = false;
+    sun.m_shadowsEnabled = false;
     scene.createEntity(sun);
 
     PointLightComponent light;
@@ -167,6 +188,10 @@ int main()
     scene.createEntity(t, r, AnimationComponent(&skeletons[1]), DynamicTag());
     t.m_position.x = -5.0f;
     scene.createEntity(t, r, AnimationComponent(&skeletons[2]), DynamicTag());
+
+    t.m_scale = Vector3f(1.0f);
+    t.m_position.y = 45.0f;
+    scene.createEntity(t, RenderComponent(&plane));
 
 
     Clock clock;
@@ -319,3 +344,4 @@ int main()
 // TODO : Add normal mapping
 // TODO : Make all framebuffers resizeable (in post-processing effects too)
 // TODO : Possibly optimize GPU particles by allowing parallel updates (for transform feedback queries)
+// TODO : Improve Model
