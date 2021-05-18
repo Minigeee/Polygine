@@ -58,7 +58,6 @@ struct Vertex
 	Vector2f m_texCoord;	//!< Texture coordinate
 	Colorf m_color;			//!< Vertex color
 	Vector3f m_tangent;		//!< Vertex tangent vector
-	Vector3f m_bitangent;	//!< Vertex bitangent vector
 };
 
 

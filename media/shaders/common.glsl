@@ -15,4 +15,5 @@ struct Material
     float shininess;
     bool hasDiffTexture;
     bool hasSpecTexture;
+    bool hasNormalTexture;
 };

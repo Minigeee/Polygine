@@ -219,8 +219,9 @@ void processMesh(aiMesh* mesh, ModelLoadState& state)
 	{
 		aiVector3D& p = mesh->mVertices[i];
 		aiVector3D& n = mesh->mNormals[i];
+		aiVector3D& t = mesh->mTangents[i];
 
-		// Position and normal
+		// Position, normal, tangent
 		Vertex vertex;
 		vertex.m_position.x = p.x;
 		vertex.m_position.y = p.y;
@@ -228,6 +229,9 @@ void processMesh(aiMesh* mesh, ModelLoadState& state)
 		vertex.m_normal.x = n.x;
 		vertex.m_normal.y = n.y;
 		vertex.m_normal.z = n.z;
+		vertex.m_tangent.x = t.x;
+		vertex.m_tangent.y = t.y;
+		vertex.m_tangent.z = t.z;
 
 		// Texture coords
 		if (mesh->mTextureCoords[0])
@@ -428,7 +432,7 @@ bool Model::load(const std::string& fname, bool flatShading)
 {
 	// Load the model scene
 	Assimp::Importer importer;
-	const aiScene* scene = importer.ReadFile(fname, aiProcess_Triangulate | aiProcess_FlipUVs);
+	const aiScene* scene = importer.ReadFile(fname, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
 
 	// Check for errors
 	if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
@@ -476,8 +480,8 @@ bool Model::load(const std::string& fname, bool flatShading)
 		for (Uint32 i = 0; i < m_meshes.size(); ++i)
 		{
 			VertexArray& vao = m_meshes[i]->m_vertexArray;
-			vao.addBuffer(m_skeletalVertexBuffer, 10, 4, sizeof(priv::SkeletalData), 0 * sizeof(float));
-			vao.addBuffer(m_skeletalVertexBuffer, 11, 4, sizeof(priv::SkeletalData), 4 * sizeof(float), 0, GLType::Int32);
+			vao.addBuffer(m_skeletalVertexBuffer, 9, 4, sizeof(priv::SkeletalData), 0 * sizeof(float));
+			vao.addBuffer(m_skeletalVertexBuffer, 10, 4, sizeof(priv::SkeletalData), 4 * sizeof(float), 0, GLType::Int32);
 		}
 	}
 
@@ -495,7 +499,6 @@ bool Model::load(const std::string& fname, bool flatShading)
 		vao.addBuffer(m_vertexBuffer, 2, 2, sizeof(Vertex), offset + 6 * sizeof(float));
 		vao.addBuffer(m_vertexBuffer, 3, 4, sizeof(Vertex), offset + 8 * sizeof(float));
 		vao.addBuffer(m_vertexBuffer, 4, 3, sizeof(Vertex), offset + 12 * sizeof(float));
-		vao.addBuffer(m_vertexBuffer, 5, 3, sizeof(Vertex), offset + 15 * sizeof(float));
 
 		if (!flatShading)
 			vao.setElementBuffer(m_indicesBuffer);

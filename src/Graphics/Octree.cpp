@@ -795,10 +795,10 @@ void Octree::render(Camera& camera, RenderPass pass)
 		{
 			// Bind instance data
 			vao.bind();
-			vao.addBuffer(m_instanceBuffer, 6, 4, sizeof(Matrix4f), data.m_offset + 0 * sizeof(Vector4f), 1);
-			vao.addBuffer(m_instanceBuffer, 7, 4, sizeof(Matrix4f), data.m_offset + 1 * sizeof(Vector4f), 1);
-			vao.addBuffer(m_instanceBuffer, 8, 4, sizeof(Matrix4f), data.m_offset + 2 * sizeof(Vector4f), 1);
-			vao.addBuffer(m_instanceBuffer, 9, 4, sizeof(Matrix4f), data.m_offset + 3 * sizeof(Vector4f), 1);
+			vao.addBuffer(m_instanceBuffer, 5, 4, sizeof(Matrix4f), data.m_offset + 0 * sizeof(Vector4f), 1);
+			vao.addBuffer(m_instanceBuffer, 6, 4, sizeof(Matrix4f), data.m_offset + 1 * sizeof(Vector4f), 1);
+			vao.addBuffer(m_instanceBuffer, 7, 4, sizeof(Matrix4f), data.m_offset + 2 * sizeof(Vector4f), 1);
+			vao.addBuffer(m_instanceBuffer, 8, 4, sizeof(Matrix4f), data.m_offset + 3 * sizeof(Vector4f), 1);
 
 			// Draw
 			vao.draw(data.m_instances);
@@ -812,10 +812,10 @@ void Octree::render(Camera& camera, RenderPass pass)
 			{
 				// Bind transform data
 				Uint32 offset = data.m_offset + e * sizeof(Matrix4f);
-				vao.addBuffer(m_instanceBuffer, 6, 4, sizeof(Matrix4f), offset + 0 * sizeof(Vector4f), 1);
-				vao.addBuffer(m_instanceBuffer, 7, 4, sizeof(Matrix4f), offset + 1 * sizeof(Vector4f), 1);
-				vao.addBuffer(m_instanceBuffer, 8, 4, sizeof(Matrix4f), offset + 2 * sizeof(Vector4f), 1);
-				vao.addBuffer(m_instanceBuffer, 9, 4, sizeof(Matrix4f), offset + 3 * sizeof(Vector4f), 1);
+				vao.addBuffer(m_instanceBuffer, 5, 4, sizeof(Matrix4f), offset + 0 * sizeof(Vector4f), 1);
+				vao.addBuffer(m_instanceBuffer, 6, 4, sizeof(Matrix4f), offset + 1 * sizeof(Vector4f), 1);
+				vao.addBuffer(m_instanceBuffer, 7, 4, sizeof(Matrix4f), offset + 2 * sizeof(Vector4f), 1);
+				vao.addBuffer(m_instanceBuffer, 8, 4, sizeof(Matrix4f), offset + 3 * sizeof(Vector4f), 1);
 
 				// Apply skeleton
 				data.m_skeleton->apply(shader);

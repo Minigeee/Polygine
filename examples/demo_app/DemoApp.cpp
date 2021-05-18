@@ -29,6 +29,7 @@
 #include <poly/Graphics/VertexBuffer.h>
 #include <poly/Graphics/Window.h>
 
+#include <poly/Math/Functions.h>
 #include <poly/Math/Noise.h>
 #include <poly/Math/Transform.h>
 
@@ -100,10 +101,32 @@ int main()
         1, 3, 2
     };
 
-    Texture bricks;
-    bricks.load("examples/textures/bricks_d.jpg");
+    Vector3f tangent, bitangent;
+
+    Vector3f edge1 = vertices[1].m_position - vertices[0].m_position;
+    Vector3f edge2 = vertices[2].m_position - vertices[0].m_position;
+    Vector2f deltaUV1 = vertices[1].m_texCoord - vertices[0].m_texCoord;
+    Vector2f deltaUV2 = vertices[2].m_texCoord - vertices[0].m_texCoord;
+
+    float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+
+    tangent.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+    tangent.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+    tangent.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+
+    for (Uint32 i = 0; i < 4; ++i)
+        vertices[i].m_tangent = tangent;
+
+    Texture bricksD;
+    bricksD.load("examples/textures/bricks_d.jpg", GLType::Uint8, true);
+    Texture bricksN;
+    bricksN.load("examples/textures/bricks_n.jpg", GLType::Uint8, true);
+
     Material bricksMat;
-    bricksMat.setDiffTexture(&bricks);
+    bricksMat.setSpecular(Vector3f(1.0f));
+    bricksMat.setShininess(16.0f);
+    bricksMat.setDiffTexture(&bricksD);
+    bricksMat.setNormalTexture(&bricksN);
 
     Model plane;
     plane.addMesh(vertices, indices, bricksMat);
@@ -153,9 +176,40 @@ int main()
     octree.create();
     scene.addRenderSystem(&octree);
 
+
+    // Noon
+    // Zenith - 0.25f, 0.5f, 0.9f
+    // Horizon - 0.6f, 0.8f, 0.6f
+    // Light - 0.9f, 0.8f, 0.45f
+
+    // Early afternoon
+    // Zenith - 0.25f, 0.45f, 0.7f
+    // Horizon - 0.6f, 0.8f, 0.6f
+    // Light - 0.8f, 0.7f, 0.4f
+
+    // Early evening
+    // Zenith - 0.25f, 0.4f, 0.5f
+    // Horizon - 0.7f, 0.6f, 0.45f
+    // Light - 0.8f, 0.5f, 0.2f
+
+    // Evening
+    // Zenith - 0.25f, 0.35f, 0.6f
+    // Horizon - 0.4f, 0.3f, 0.2f
+    // Light - 0.7f, 0.4f, 0.2f
+
+    // Dusk
+    // Zenith - 0.15f, 0.15f, 0.3f
+    // Horizon - 0.25f, 0.2f, 0.2f
+    // Light - 0.7f, 0.42f, 0.2f
+
+    // Night
+    // Zenith - 0.0f, 0.04f, 0.06f
+    // Horizon - 0.01f, 0.05f, 0.1f
+    // Light - 0.01f, 0.05f, 0.1f
+
     ProceduralSkybox skybox;
-    skybox.setZenithColor(Vector3f(0.15f, 0.4f, 0.8f));
-    skybox.setHorizonColor(Vector3f(0.6f, 0.75f, 0.65f));
+    skybox.setZenithColor(Vector3f(0.25f, 0.5f, 0.9f));
+    skybox.setHorizonColor(Vector3f(0.6f, 0.8f, 0.6f));
     scene.addRenderSystem(&skybox);
     scene.getExtension<Lighting>()->setAmbientColor(0.3f * skybox.getAmbientColor());
 
@@ -165,11 +219,11 @@ int main()
 
     DirLightComponent sun;
     // sun.m_diffuse = Vector3f(0.08f, 0.15f, 0.25f) * 0.4f;
-    sun.m_diffuse = Vector3f(0.9f, 0.55f, 0.35f);
+    sun.m_diffuse = Vector3f(0.9f, 0.8f, 0.45f);
     sun.m_specular = sun.m_diffuse * 0.2f;
     sun.m_direction.z = 2.0f;
-    sun.m_shadowsEnabled = false;
-    scene.createEntity(sun);
+    // sun.m_shadowsEnabled = false;
+    Entity sunEntity = scene.createEntity(sun);
 
     PointLightComponent light;
     light.m_diffuse = Vector3f(1.0f, 0.95f, 0.85f);
@@ -213,15 +267,62 @@ int main()
     fog.setCamera(&camera);
     fog.setScene(&scene);
     fog.setDepthTexture(framebuffers[0].getDepthTexture());
-    fog.setColor(0.272f, 0.348f, 0.675f);
+    fog.setColor(0.25f, 0.5f, 0.9f);
     fog.setScatterStrength(0.5f);
-    fog.setSkyboxFog(true);
+    fog.setSkyboxFog(false);
 
     Ssao ssao;
     ssao.setCamera(&camera);
     ssao.setDepthTexture(framebuffers[0].getDepthTexture());
 
+    Bloom bloom;
+    bloom.setRadius(0.2f);
+    bloom.setNumBlurs(3);
+    bloom.setIntensity(2.5f);
+
     Fxaa fxaa;
+
+    // Sky colors
+    std::vector<float> angles =
+    {
+        55.0f,
+        45.0f,
+        35.0f,
+        25.0f,
+        15.0f,
+        -10.0f,
+        -90.0f
+    };
+
+    std::vector<Vector3f> zeniths =
+    {
+        Vector3f(0.25f, 0.5f, 0.9f),
+        Vector3f(0.25f, 0.45f, 0.7f),
+        Vector3f(0.2f, 0.4f, 0.6f),
+        Vector3f(0.15f, 0.3f, 0.6f),
+        Vector3f(0.15f, 0.15f, 0.3f),
+        Vector3f(0.0f, 0.04f, 0.06f)
+    };
+
+    std::vector<Vector3f> horizons =
+    {
+        Vector3f(0.6f, 0.8f, 0.6f),
+        Vector3f(0.6f, 0.8f, 0.6f),
+        Vector3f(0.7f, 0.6f, 0.45f),
+        Vector3f(0.4f, 0.3f, 0.2f),
+        Vector3f(0.25f, 0.2f, 0.2f),
+        Vector3f(0.01f, 0.05f, 0.1f)
+    };
+
+    std::vector<Vector3f> lightColors =
+    {
+        Vector3f(0.9f, 0.8f, 0.45f),
+        Vector3f(0.8f, 0.7f, 0.4f),
+        Vector3f(0.8f, 0.5f, 0.2f),
+        Vector3f(0.7f, 0.4f, 0.2f),
+        Vector3f(0.7f, 0.42f, 0.2f),
+        Vector3f(0.02f, 0.06f, 0.12f)
+    };
 
 
     window.addListener<E_WindowResize>(
@@ -237,16 +338,18 @@ int main()
         }
     );
 
-    bool mouseDown = false;
+    bool leftDown = false, rightDown = false;
     window.addListener<E_MouseButton>(
         [&](const E_MouseButton& e)
         {
             if (e.m_button == Mouse::Left)
-                mouseDown = e.m_action == InputAction::Press;
+                leftDown = e.m_action == InputAction::Press;
+            else if (e.m_button == Mouse::Right)
+                rightDown = e.m_action == InputAction::Press;
         }
     );
 
-    Vector2f mousePos, cameraRot;
+    Vector2f mousePos, cameraRot, lightRot;
     bool firstRun = true;
     window.addListener<E_MouseMove>(
         [&](const E_MouseMove& e)
@@ -263,17 +366,80 @@ int main()
             Vector2f delta = sensitivity * (pos - mousePos);
             mousePos = pos;
 
-            if (!mouseDown) return;
+            if (leftDown)
+            {
+                // Update camera
+                cameraRot.x = fmod(cameraRot.x - delta.y, 360.0f);
+                cameraRot.y = fmod(cameraRot.y + delta.x, 360.0f);
+                if (cameraRot.x > 89.0f)
+                    cameraRot.x = 89.0f;
+                else if (cameraRot.x < -89.0f)
+                    cameraRot.x = -89.0f;
 
-            // Update camera
-            cameraRot.x = fmod(cameraRot.x - delta.y, 360.0f);
-            cameraRot.y = fmod(cameraRot.y + delta.x, 360.0f);
-            if (cameraRot.x > 89.0f)
-                cameraRot.x = 89.0f;
-            else if (cameraRot.x < -89.0f)
-                cameraRot.x = -89.0f;
+                camera.setRotation(cameraRot);
+            }
+            else if (rightDown)
+            {
+                // Update camera
+                lightRot.x = fmod(lightRot.x + delta.y, 360.0f);
+                lightRot.y = fmod(lightRot.y + delta.x, 360.0f);
+                if (lightRot.x > 89.0f)
+                    lightRot.x = 89.0f;
+                else if (lightRot.x < -89.0f)
+                    lightRot.x = -89.0f;
 
-            camera.setRotation(cameraRot);
+                lightRot.x = -lightRot.x;
+
+                // Get index and interpolation factor
+                Uint32 index = 0, index2 = 0;
+                float factor = 0.0f;
+
+                for (; index < angles.size(); ++index)
+                {
+                    if (lightRot.x > angles[index])
+                        break;
+                }
+
+                if (index == 0)
+                {
+                    index2 = 0;
+                    factor = 0.0f;
+                }
+                else if (index == zeniths.size())
+                {
+                    index2 = zeniths.size() - 1;
+                    factor = 0.0f;
+                    --index;
+                }
+                else
+                {
+                    index2 = index - 1;
+                    factor = (lightRot.x - angles[index]) / (angles[index2] - angles[index]);
+                }
+
+                Vector3f zenith = zeniths[index] + factor * (zeniths[index2] - zeniths[index]);
+                Vector3f horizon = horizons[index] + factor * (horizons[index2] - horizons[index]);
+                Vector3f lightColor = lightColors[index] + factor * (lightColors[index2] - lightColors[index]);
+                skybox.setZenithColor(zenith);
+                skybox.setHorizonColor(horizon);
+                fog.setColor(zenith.r, zenith.g, zenith.b);
+
+                lightRot.x = -lightRot.x;
+                float x = rad(lightRot.x > 10.0f ? lightRot.x + 180.0f : lightRot.x);
+                float y = rad(lightRot.y - 90.0f);
+
+                float cx = cos(x);
+                float cy = cos(y);
+                float sx = sin(x);
+                float sy = sin(y);
+
+                DirLightComponent* lightComponent = sunEntity.get<DirLightComponent>();
+                lightComponent->m_direction = normalize(Vector3f(cy * cx, sx, sy * cx));
+                lightComponent->m_diffuse = lightColor;
+                lightComponent->m_specular = lightColor * 0.2f;
+
+                scene.getExtension<Lighting>()->setAmbientColor(0.3f * skybox.getAmbientColor());
+            }
         }
     );
 
@@ -322,8 +488,9 @@ int main()
 
         ssao.render(framebuffers[0], framebuffers[1]);
         fog.render(framebuffers[1], framebuffers[0]);
-        colorAdjust.render(framebuffers[0], framebuffers[1]);
-        fxaa.render(framebuffers[1]);
+        bloom.render(framebuffers[0], framebuffers[1]);
+        colorAdjust.render(framebuffers[1], framebuffers[0]);
+        fxaa.render(framebuffers[0]);
 
         STOP_PROFILING(GameLoop);
 

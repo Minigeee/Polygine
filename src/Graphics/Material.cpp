@@ -16,7 +16,8 @@ Material::Material() :
 	m_specular		(0.1f),
 	m_shininess		(16.0f),
 	m_diffTexture	(0),
-	m_specTexture	(0)
+	m_specTexture	(0),
+	m_normalTexture	(0)
 { }
 
 
@@ -80,6 +81,13 @@ void Material::setDiffTexture(Texture* texture)
 void Material::setSpecTexture(Texture* texture)
 {
 	m_specTexture = texture;
+}
+
+
+///////////////////////////////////////////////////////////
+void Material::setNormalTexture(Texture* texture)
+{
+	m_normalTexture = texture;
 }
 
 
@@ -156,6 +164,7 @@ void Material::apply(Shader* shader) const
 	shader->setUniform(prefix + "shininess", m_shininess);
 	shader->setUniform(prefix + "hasDiffTexture", (int)m_diffTexture);
 	shader->setUniform(prefix + "hasSpecTexture", (int)m_specTexture);
+	shader->setUniform(prefix + "hasNormalTexture", (int)m_normalTexture);
 
 	// Bind diffuse texture
 	if (m_diffTexture)
@@ -164,6 +173,10 @@ void Material::apply(Shader* shader) const
 	// Bind specular texture
 	if (m_specTexture)
 		shader->setUniform("u_specularMap", *m_specTexture);
+
+	// Bind normal texture
+	if (m_normalTexture)
+		shader->setUniform("u_normalMap", *m_normalTexture);
 
 	// Apply all custom textures
 	auto it = m_textures.begin();

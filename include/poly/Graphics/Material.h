@@ -25,16 +25,6 @@ public:
 	Material();
 
 	///////////////////////////////////////////////////////////
-	/// \brief Set the shader that should be used to render this material
-	///
-	/// When the renderable object this materail is attached to
-	/// is rendered, the specified shader will be used.
-	///
-	/// \param shader A pointer to a shader
-	///
-	///////////////////////////////////////////////////////////
-
-	///////////////////////////////////////////////////////////
 	/// \brief Set the ambient color multiplier of the material
 	///
 	/// The ambient color multiplier is the color that gets multplied
@@ -158,6 +148,17 @@ public:
 	void setSpecTexture(Texture* texture);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Set the material normal texture
+	///
+	/// The normal texture provides per pixel surface normals, which
+	/// are used for lighting calculations.
+	///
+	/// \param texture The normal texture
+	///
+	///////////////////////////////////////////////////////////
+	void setNormalTexture(Texture* texture);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Set the function callback for applying a material to a shader
 	///
 	/// If the function callback exists, then it will be called
@@ -196,14 +197,6 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	void removeTexture(const std::string& uniform);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Get the shader that should be used by the material
-	///
-	/// \return A pointer to the material shader
-	///
-	///////////////////////////////////////////////////////////
-	Shader* getShader() const;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the ambient color multiplier
@@ -287,7 +280,6 @@ public:
 	void apply(Shader* shader) const;
 
 private:
-	Shader* m_shader;							//!< The shader that should be used to render the renderable
 	Vector3f m_ambient;							//!< The ambient color multiplier
 	Vector3f m_diffuse;							//!< The diffuse color
 	Vector3f m_specular;						//!< The specular color
@@ -295,6 +287,7 @@ private:
 
 	Texture* m_diffTexture;						//!< The diffuse texture
 	Texture* m_specTexture;						//!< The specular texture
+	Texture* m_normalTexture;					//!< The normal texture
 
 	HashMap<std::string, Texture*> m_textures;	//!< Map of uniform to texture
 	std::function<void(Shader*)> m_applyFunc;	//!< The apply function callback

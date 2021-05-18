@@ -104,21 +104,21 @@ void Texture::bind(Uint32 slot)
 
 
 ///////////////////////////////////////////////////////////
-bool Texture::load(const std::string& fname, GLType dtype)
+bool Texture::load(const std::string& fname, GLType dtype, bool mipmap)
 {
 	// Load the image
 	Image img;
 	if (!img.load(fname, dtype))
 		return false;
 
-	create(img);
+	create(img, TextureFilter::Linear, TextureWrap::ClampToEdge, mipmap);
 
 	return true;
 }
 
 
 ///////////////////////////////////////////////////////////
-void Texture::create(void* data, PixelFormat fmt, Uint32 w, Uint32 h, Uint32 d, GLType dtype, TextureFilter filter, TextureWrap wrap, bool multisampled)
+void Texture::create(void* data, PixelFormat fmt, Uint32 w, Uint32 h, Uint32 d, GLType dtype, TextureFilter filter, TextureWrap wrap, bool mipmap, bool multisampled)
 {
 	// Set multisampled
 	m_multisampled = multisampled;
@@ -175,14 +175,27 @@ void Texture::create(void* data, PixelFormat fmt, Uint32 w, Uint32 h, Uint32 d, 
 	// If the texture is not multisampled, then set texture filter and wrap parameters
 	if (!m_multisampled)
 	{
-		// Set filter parameter
-		glCheck(glTexParameteri(dims, GL_TEXTURE_MIN_FILTER, (GLint)filter));
-		glCheck(glTexParameteri(dims, GL_TEXTURE_MAG_FILTER, (GLint)filter));
-
 		// Set wrap parameter
 		glCheck(glTexParameteri(dims, GL_TEXTURE_WRAP_S, (GLint)wrap));
 		glCheck(glTexParameteri(dims, GL_TEXTURE_WRAP_T, (GLint)wrap));
 		glCheck(glTexParameteri(dims, GL_TEXTURE_WRAP_R, (GLint)wrap));
+
+		// Generate mipmap if enabled
+		if (mipmap)
+		{
+			glCheck(glGenerateMipmap(dims));
+
+			// Set filter parameters
+			GLint magFilter = filter == TextureFilter::Nearest ? GL_NEAREST_MIPMAP_LINEAR : GL_LINEAR_MIPMAP_LINEAR;
+			glCheck(glTexParameteri(dims, GL_TEXTURE_MIN_FILTER, magFilter));
+			glCheck(glTexParameteri(dims, GL_TEXTURE_MAG_FILTER, (GLint)filter));
+		}
+		else
+		{
+			// Set filter parameters
+			glCheck(glTexParameteri(dims, GL_TEXTURE_MIN_FILTER, (GLint)filter));
+			glCheck(glTexParameteri(dims, GL_TEXTURE_MAG_FILTER, (GLint)filter));
+		}
 	}
 
 	// Set member variables
@@ -197,7 +210,7 @@ void Texture::create(void* data, PixelFormat fmt, Uint32 w, Uint32 h, Uint32 d, 
 
 
 ///////////////////////////////////////////////////////////
-void Texture::create(const Image& image, TextureFilter filter, TextureWrap wrap)
+void Texture::create(const Image& image, TextureFilter filter, TextureWrap wrap, bool mipmap)
 {
 	// Can only create texture once
 	if (m_id) return;
@@ -227,7 +240,9 @@ void Texture::create(const Image& image, TextureFilter filter, TextureWrap wrap)
 		0,
 		image.getDataType(),
 		filter,
-		wrap
+		wrap,
+		mipmap,
+		false
 	);
 }
 
