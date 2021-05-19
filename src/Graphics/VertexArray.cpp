@@ -153,7 +153,7 @@ void VertexArray::draw(Uint32 instances, Uint32 offset, Uint32 vertices)
 		if (instances == 1)
 			glCheck(glDrawElements((GLenum)m_drawMode, vertices, GL_UNSIGNED_INT, (const void*)(offset * sizeof(Uint32))));
 		else
-			glCheck(glDrawElementsInstanced((GLenum)m_drawMode, vertices - offset, GL_UNSIGNED_INT, (const void*)(offset * sizeof(Uint32)), instances));
+			glCheck(glDrawElementsInstanced((GLenum)m_drawMode, vertices, GL_UNSIGNED_INT, (const void*)(offset * sizeof(Uint32)), instances));
 	}
 	else
 	{

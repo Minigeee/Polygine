@@ -83,9 +83,8 @@ void bindShader(Shader* shader, Camera& camera, Scene* scene, RenderPass pass)
 	scene->getExtension<Lighting>()->apply(shader);
 
 	// Shadows
-	if (pass != RenderPass::Shadow)
-		scene->getExtension<Shadows>()->apply(shader);
-	shader->setUniform("u_isShadowPass", pass == RenderPass::Shadow);
+	scene->getExtension<Shadows>()->apply(shader);
+	// shader->setUniform("u_isShadowPass", pass == RenderPass::Shadow);
 }
 
 }
@@ -692,8 +691,8 @@ void Octree::render(Camera& camera, RenderPass pass)
 		RenderGroup& group = m_renderGroups[i];
 		const std::vector<EntityData*>& entities = entityData[i];
 
-		// Skip the group if lod
-		if (group.m_lodLevels.size())
+		// Skip the group if no entities or if lod
+		if (!entities.size() || group.m_lodLevels.size())
 			continue;
 
 		// Create render data

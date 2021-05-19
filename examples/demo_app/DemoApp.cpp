@@ -88,49 +88,6 @@ int main()
     skeletons[2].setAnimationTime(0.5f);
     skeletons[2].setAnimationSpeed(1.5f);
 
-    std::vector<Vertex> vertices =
-    {
-        Vertex(Vector3f(-1.0f, 0.0f, -1.0f), Vector3f(0.0f, 1.0f, 0.0f), Vector2f(0.0f, 1.0f)),
-        Vertex(Vector3f(-1.0f, 0.0f, 1.0f), Vector3f(0.0f, 1.0f, 0.0f), Vector2f(0.0f, 0.0f)),
-        Vertex(Vector3f(1.0f, 0.0f, -1.0f), Vector3f(0.0f, 1.0f, 0.0f), Vector2f(1.0f, 1.0f)),
-        Vertex(Vector3f(1.0f, 0.0f, 1.0f), Vector3f(0.0f, 1.0f, 0.0f), Vector2f(1.0f, 0.0f))
-    };
-    std::vector<Uint32> indices =
-    {
-        0, 1, 2,
-        1, 3, 2
-    };
-
-    Vector3f tangent, bitangent;
-
-    Vector3f edge1 = vertices[1].m_position - vertices[0].m_position;
-    Vector3f edge2 = vertices[2].m_position - vertices[0].m_position;
-    Vector2f deltaUV1 = vertices[1].m_texCoord - vertices[0].m_texCoord;
-    Vector2f deltaUV2 = vertices[2].m_texCoord - vertices[0].m_texCoord;
-
-    float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
-
-    tangent.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
-    tangent.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
-    tangent.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
-
-    for (Uint32 i = 0; i < 4; ++i)
-        vertices[i].m_tangent = tangent;
-
-    Texture bricksD;
-    bricksD.load("examples/textures/bricks_d.jpg", GLType::Uint8, true);
-    Texture bricksN;
-    bricksN.load("examples/textures/bricks_n.jpg", GLType::Uint8, true);
-
-    Material bricksMat;
-    bricksMat.setSpecular(Vector3f(1.0f));
-    bricksMat.setShininess(16.0f);
-    bricksMat.setDiffTexture(&bricksD);
-    bricksMat.setNormalTexture(&bricksN);
-
-    Model plane;
-    plane.addMesh(vertices, indices, bricksMat);
-
     Camera camera;
     camera.setPosition(0.0f, 50.0f, 0.0f);
     camera.setRotation(0.0f, 0.0f);
@@ -176,37 +133,6 @@ int main()
     octree.create();
     scene.addRenderSystem(&octree);
 
-
-    // Noon
-    // Zenith - 0.25f, 0.5f, 0.9f
-    // Horizon - 0.6f, 0.8f, 0.6f
-    // Light - 0.9f, 0.8f, 0.45f
-
-    // Early afternoon
-    // Zenith - 0.25f, 0.45f, 0.7f
-    // Horizon - 0.6f, 0.8f, 0.6f
-    // Light - 0.8f, 0.7f, 0.4f
-
-    // Early evening
-    // Zenith - 0.25f, 0.4f, 0.5f
-    // Horizon - 0.7f, 0.6f, 0.45f
-    // Light - 0.8f, 0.5f, 0.2f
-
-    // Evening
-    // Zenith - 0.25f, 0.35f, 0.6f
-    // Horizon - 0.4f, 0.3f, 0.2f
-    // Light - 0.7f, 0.4f, 0.2f
-
-    // Dusk
-    // Zenith - 0.15f, 0.15f, 0.3f
-    // Horizon - 0.25f, 0.2f, 0.2f
-    // Light - 0.7f, 0.42f, 0.2f
-
-    // Night
-    // Zenith - 0.0f, 0.04f, 0.06f
-    // Horizon - 0.01f, 0.05f, 0.1f
-    // Light - 0.01f, 0.05f, 0.1f
-
     ProceduralSkybox skybox;
     skybox.setZenithColor(Vector3f(0.25f, 0.5f, 0.9f));
     skybox.setHorizonColor(Vector3f(0.6f, 0.8f, 0.6f));
@@ -243,10 +169,6 @@ int main()
     t.m_position.x = -5.0f;
     scene.createEntity(t, r, AnimationComponent(&skeletons[2]), DynamicTag());
 
-    t.m_scale = Vector3f(1.0f);
-    t.m_position.y = 45.0f;
-    scene.createEntity(t, RenderComponent(&plane));
-
 
     Clock clock;
     float time = 0.0f;
@@ -279,6 +201,7 @@ int main()
     bloom.setRadius(0.2f);
     bloom.setNumBlurs(3);
     bloom.setIntensity(2.5f);
+    bloom.setThresholdInterval(0.5f);
 
     Fxaa fxaa;
 
@@ -288,8 +211,8 @@ int main()
         55.0f,
         45.0f,
         35.0f,
-        25.0f,
-        15.0f,
+        20.0f,
+        10.0f,
         -10.0f,
         -90.0f
     };
@@ -299,8 +222,8 @@ int main()
         Vector3f(0.25f, 0.5f, 0.9f),
         Vector3f(0.25f, 0.45f, 0.7f),
         Vector3f(0.2f, 0.4f, 0.6f),
-        Vector3f(0.15f, 0.3f, 0.6f),
-        Vector3f(0.15f, 0.15f, 0.3f),
+        Vector3f(0.15f, 0.3f, 0.5f),
+        Vector3f(0.1f, 0.2f, 0.3f),
         Vector3f(0.0f, 0.04f, 0.06f)
     };
 
@@ -308,9 +231,9 @@ int main()
     {
         Vector3f(0.6f, 0.8f, 0.6f),
         Vector3f(0.6f, 0.8f, 0.6f),
-        Vector3f(0.7f, 0.6f, 0.45f),
-        Vector3f(0.4f, 0.3f, 0.2f),
-        Vector3f(0.25f, 0.2f, 0.2f),
+        Vector3f(0.7f, 0.65f, 0.4f),
+        Vector3f(0.6f, 0.55f, 0.25f),
+        Vector3f(0.5f, 0.45f, 0.2f),
         Vector3f(0.01f, 0.05f, 0.1f)
     };
 
@@ -318,9 +241,9 @@ int main()
     {
         Vector3f(0.9f, 0.8f, 0.45f),
         Vector3f(0.8f, 0.7f, 0.4f),
-        Vector3f(0.8f, 0.5f, 0.2f),
-        Vector3f(0.7f, 0.4f, 0.2f),
-        Vector3f(0.7f, 0.42f, 0.2f),
+        Vector3f(0.8f, 0.6f, 0.3f),
+        Vector3f(0.7f, 0.55f, 0.3f),
+        Vector3f(0.7f, 0.5f, 0.3f),
         Vector3f(0.02f, 0.06f, 0.12f)
     };
 
@@ -481,7 +404,7 @@ int main()
         // Render scene
         skeletons[0].update(elapsed);
         // skeletons[1].update(elapsed);
-        skeletons[2].update(elapsed);
+        // skeletons[2].update(elapsed);
         scene.getExtension<Shadows>()->render(camera);
         octree.update();
         scene.render(camera, framebuffers[0]);

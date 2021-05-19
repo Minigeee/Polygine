@@ -73,7 +73,9 @@ void applyAnimation(Bone* bone, Animation* animation, float time)
 {
 	// Apply transform
 	bone->setTransform(animation->getTransform(bone->getName(), time));
-	int test = 0;
+
+	if (bone->getName() == "Armature_Foot_R")
+		int test = 0;
 
 	// Apply transform for children
 	for (Uint32 i = 0; i < bone->getChildren().size(); ++i)

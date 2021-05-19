@@ -505,7 +505,7 @@ bool Model::load(const std::string& fname, bool flatShading)
 
 		// Set vertex info
 		vao.setNumVertices(size);
-		vao.setVertexOffset(offset);
+		vao.setVertexOffset(0);
 
 		// Set the default shader
 		m_meshes[i]->m_shader = shader;
