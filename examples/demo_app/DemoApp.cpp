@@ -179,8 +179,8 @@ int main()
     for (Uint32 i = 0; i < 2; ++i)
     {
         framebuffers[i].create(1280, 720);
-        framebuffers[i].attachColor(&texture[2 * i + 1], PixelFormat::Rgb, GLType::Uint16);
-        framebuffers[i].attachDepth(&texture[2 * i + 2]);
+        framebuffers[i].attachColor(&texture[2 * i], PixelFormat::Rgb, GLType::Uint16);
+        framebuffers[i].attachDepth(&texture[2 * i + 1]);
     }
 
     // Post process stuff

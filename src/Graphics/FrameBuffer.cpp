@@ -149,7 +149,7 @@ void FrameBuffer::attachColor(Texture* texture, PixelFormat fmt, GLType dtype, T
 	if (texture)
 	{
 		// Create an empty texture
-		texture->create(0, fmt, m_size.x, m_size.y, m_size.z, dtype, filter, wrap, m_multisampled);
+		texture->create(0, fmt, m_size.x, m_size.y, m_size.z, dtype, filter, wrap, false, m_multisampled);
 
 		// Attach to color attachment target using correct number of dimensions
 		if (m_size.z == 0)
@@ -198,7 +198,7 @@ void FrameBuffer::attachDepth(Texture* texture, GLType dtype, TextureFilter filt
 	if (texture)
 	{
 		// Create an empty texture
-		texture->create(0, PixelFormat::Depth, m_size.x, m_size.y, m_size.z, dtype, filter, wrap, m_multisampled);
+		texture->create(0, PixelFormat::Depth, m_size.x, m_size.y, m_size.z, dtype, filter, wrap, false, m_multisampled);
 
 		// Attach to depth attachment target using correct number of dimensions
 		if (m_size.z == 0)

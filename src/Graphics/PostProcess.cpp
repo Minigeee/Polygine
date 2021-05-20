@@ -582,6 +582,12 @@ void Bloom::render(FrameBuffer& input, FrameBuffer& output)
 		m_blurEffect.setKernelSpacing(spacing);
 		m_blurEffect.setSpread(3.75f);
 	}
+	else if (m_blurTarget->getWidth() != input.getWidth() || m_blurTarget->getHeight() != input.getHeight())
+	{
+		m_blurTarget->reset();
+		m_blurTarget->create(input.getWidth(), input.getHeight());
+		m_blurTarget->attachColor(m_blurTexture, PixelFormat::Rgb, GLType::Uint16);
+	}
 
 	// Disable depth test
 	glCheck(glDisable(GL_DEPTH_TEST));
