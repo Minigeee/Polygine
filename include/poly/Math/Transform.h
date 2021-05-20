@@ -57,6 +57,21 @@ Matrix4f toViewMatrix(const Vector3f& p, const Vector3f& f, const Vector3f& r);
 ///////////////////////////////////////////////////////////
 Matrix4f toPerspectiveMatrix(float fov, float ar, float near, float far);
 
+///////////////////////////////////////////////////////////
+/// \brief Create an orthographic projection matrix based on left, right, bottom, top, near, and far planes
+///
+/// \param left The distance from the camera to the left orthographic plane
+/// \param right The distance from the camera to the right orthographic plane
+/// \param bottom The distance from the camera to the bottom orthographic plane
+/// \param top The distance from the camera to the top orthographic plane
+/// \param near The distance from the camera to the near orthographic plane
+/// \param far The distance from the camera to the far orthographic plane
+///
+/// \return The resulting projection matrix
+///
+///////////////////////////////////////////////////////////
+Matrix4f toOrthographicMatrix(float left, float right, float bottom, float top, float near, float far);
+
 }
 
 #endif

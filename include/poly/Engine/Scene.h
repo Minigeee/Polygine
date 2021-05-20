@@ -5,15 +5,14 @@
 
 #include <poly/Engine/Ecs.h>
 #include <poly/Engine/Entity.h>
+#include <poly/Engine/Extension.h>
 
 #include <poly/Graphics/Camera.h>
 #include <poly/Graphics/FrameBuffer.h>
+#include <poly/Graphics/RenderSystem.h>
 
 namespace poly
 {
-
-
-class RenderSystem;
 
 
 ///////////////////////////////////////////////////////////
@@ -499,6 +498,25 @@ public:
 	void sendEvent(const E& event);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Get a scene extension module
+	///
+	/// A scene extension is an object that adds extra properties
+	/// or functionality to a scene, without requiring the scene to
+	/// have any extra dependencies. Extensions should add properties
+	/// that are unique per scene.
+	///
+	/// Examples of scene extensions are shadows and lighting,
+	/// which are not related to the scene framework as they are
+	/// graphics related components, but contain properties which
+	/// should belong to the scene instead of its entities.
+	///
+	/// \return A pointer to the requested scene extension
+	///
+	///////////////////////////////////////////////////////////
+	template <typename T>
+	T* getExtension();
+
+	///////////////////////////////////////////////////////////
 	/// \brief Add a render system
 	///
 	/// Render systems define custom rendering procedures.
@@ -520,9 +538,10 @@ public:
 	///
 	/// \param camera The camera used to render the scene
 	/// \param target The target framebuffer to render the scene to
+	/// \param pass The render pass that should be executed
 	///
 	///////////////////////////////////////////////////////////
-	void render(Camera& camera, FrameBuffer& target = FrameBuffer::Default);
+	void render(Camera& camera, FrameBuffer& target = FrameBuffer::Default, RenderPass passes = RenderPass::Default);
 
 private:
 	Handle m_handle;									//!< The scene handle used for scene id
@@ -530,9 +549,11 @@ private:
 	HashMap<Uint32, priv::EntityGroup> m_entityGroups;	//!< Map of group id to priv::EntityGroup
 	std::mutex m_entityMutex;							//!< Mutex to protect creation and removal of entities
 
+	HashMap<Uint32, Extension*> m_extensions;			//!< Map of scene extensions
+
 	std::vector<RenderSystem*> m_renderSystems;			//!< List of render systems
 
-	static HandleArray<bool> idArray;					//!< HandleArray to handle scene id generation
+	static HandleArray<bool> s_idArray;					//!< HandleArray to handle scene id generation
 };
 
 }

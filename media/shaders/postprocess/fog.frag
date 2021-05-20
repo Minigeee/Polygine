@@ -1,5 +1,7 @@
 #version 330 core
 
+#include "../camera.glsl"
+
 ///////////////////////////////////////////////////////////////////////////////
 
 in vec2 v_texCoord;
@@ -10,7 +12,6 @@ uniform sampler2D u_color;
 uniform sampler2D u_depth;
 
 uniform mat4 u_invProjView;
-uniform vec3 u_cameraPos;
 
 uniform vec3 u_fogColor;
 uniform float u_fogDensity;

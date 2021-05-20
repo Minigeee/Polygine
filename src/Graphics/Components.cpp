@@ -6,17 +6,17 @@ namespace poly
 
 ///////////////////////////////////////////////////////////
 RenderComponent::RenderComponent() :
-	m_model		(0),
-	m_shader	(0)
+	m_renderable	(0),
+	m_castsShadows	(true)
 {
 
 }
 
 
 ///////////////////////////////////////////////////////////
-RenderComponent::RenderComponent(Model* model, Shader* shader) :
-	m_model		(model),
-	m_shader	(shader)
+RenderComponent::RenderComponent(Renderable* renderable) :
+	m_renderable	(renderable),
+	m_castsShadows	(true)
 {
 
 }
@@ -40,9 +40,26 @@ AnimationComponent::AnimationComponent(Skeleton* skeleton) :
 
 ///////////////////////////////////////////////////////////
 DirLightComponent::DirLightComponent() :
-	m_diffuse		(1.0f),
-	m_specular		(1.0f),
-	m_direction		(0.0f, -1.0f, 0.0f)
+	m_diffuse				(1.0f),
+	m_specular				(1.0f),
+	m_direction				(0.0f, -1.0f, 0.0f),
+	m_shadowResolution		(2048),
+	m_shadowDistance		(50.0f),
+	m_shadowStrength		(1.0f),
+	m_shadowCascades		(3),
+	m_cascadeResMultiplier	(0.5f),
+	m_cascadeDistMultiplier	(1.5f),
+	m_shadowsEnabled		(true)
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
+PointLightComponent::PointLightComponent() :
+	m_diffuse				(1.0f),
+	m_specular				(1.0f),
+	m_coefficients			(1.0f, 0.35f, 0.44f)
 {
 
 }

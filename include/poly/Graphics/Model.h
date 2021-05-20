@@ -8,6 +8,8 @@
 #include <poly/Math/Vector3.h>
 
 #include <poly/Graphics/Material.h>
+#include <poly/Graphics/Renderable.h>
+#include <poly/Graphics/Shader.h>
 #include <poly/Graphics/VertexArray.h>
 #include <poly/Graphics/VertexBuffer.h>
 
@@ -18,6 +20,25 @@ namespace poly
 {
 
 class Texture;
+
+
+///////////////////////////////////////////////////////////
+/// \brief A collection of vertices that can be rendered with a single material
+///
+///////////////////////////////////////////////////////////
+struct Mesh
+{
+	///////////////////////////////////////////////////////////
+	/// \brief Default constructor
+	///
+	///////////////////////////////////////////////////////////
+	Mesh();
+
+	VertexArray m_vertexArray;		//!< The vertex array containing the vertex data
+	Material m_material;			//!< The mesh material
+	Shader* m_shader;				//!< A pointer to the shader
+	Uint32 m_offset;				//!< The vertex offset of the mesh
+};
 
 
 ///////////////////////////////////////////////////////////
@@ -36,17 +57,25 @@ struct Vertex
 	Vector3f m_normal;		//!< Vertex normal vector
 	Vector2f m_texCoord;	//!< Texture coordinate
 	Colorf m_color;			//!< Vertex color
-	int m_material;			//!< Material index
+	Vector3f m_tangent;		//!< Vertex tangent vector
 };
 
 
 ///////////////////////////////////////////////////////////
-/// \brief A class that contains vertex and material data
+/// \brief A class that contains vertex data through collection of meshes
 ///
 ///////////////////////////////////////////////////////////
-class Model
+class Model : public Renderable
 {
 public:
+	///////////////////////////////////////////////////////////
+	/// \brief Destructor
+	///
+	/// Remove all allocated meshes
+	///
+	///////////////////////////////////////////////////////////
+	~Model();
+
 	///////////////////////////////////////////////////////////
 	/// \brief Load a model from a file
 	///
@@ -59,68 +88,60 @@ public:
 	/// specular, shininess, and a single diffuse map and a single
 	/// specular map.
 	///
+	/// This function also gives the option to load models with
+	/// the smooth shading option, by having each vertex share 
+	/// normals for each face. Set \a flatShading to false to use
+	/// smooth shading. The model file must also have vertex normals
+	/// setup correctly as well.
+	///
 	/// \param fname The model file name to load
+	/// \param flatShading Set whether the model should be loaded with flat shading
 	///
 	/// \return True if the file was successfully loaded
 	///
 	///////////////////////////////////////////////////////////
-	bool load(const std::string& fname);
+	bool load(const std::string& fname, bool flatShading = true);
 
 	///////////////////////////////////////////////////////////
-	/// \brief Create a model from a list of vertices
+	/// \brief Create a model with a single mesh from a list of vertices
+	///
+	/// This function should be used to create a model with a single
+	/// mesh. The single mesh will 
 	///
 	/// \param vertices The list of vertices
 	/// \param usage The vertex buffer usage pattern
 	///
 	///////////////////////////////////////////////////////////
-	void create(const std::vector<Vertex>& vertices, BufferUsage usage = BufferUsage::Static);
+	void addMesh(
+		const std::vector<Vertex>& vertices,
+		const std::vector<Uint32>& indices = std::vector<Uint32>(),
+		const Material& material = Material(),
+		BufferUsage usage = BufferUsage::Static
+	);
 
 	///////////////////////////////////////////////////////////
-	/// \brief Set the model vertices
+	/// \brief Set the material for the specified mesh index
 	///
-	/// The internal vertex buffer will be updated every time
-	/// this function is called.
-	///
-	/// \param vertices The list of vertices
-	///
-	///////////////////////////////////////////////////////////
-	void setVertices(const std::vector<Vertex>& vertices);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Set the material
-	///
-	/// Each model can have more than one material, so use
-	/// \a index to specify which material to set.
+	/// Each model can have more than one mesh, and each mesh
+	/// has a single material.
 	///
 	/// \param material The material to set
-	/// \param index The material index to set
+	/// \param index The mesh index to assign the material to
 	///
 	///////////////////////////////////////////////////////////
 	void setMaterial(const Material& material, Uint32 index = 0);
 
 	///////////////////////////////////////////////////////////
-	/// \brief Get the internal vertex array
+	/// \brief Set the shader for the specified mesh index
 	///
-	/// \return The vertex array
+	/// Each model can have more than one mesh, and each mesh
+	/// has a single shader it uses to render the mesh.
 	///
-	///////////////////////////////////////////////////////////
-	VertexArray& getVertexArray();
-
-	///////////////////////////////////////////////////////////
-	/// \brief Get the local bounding box
-	///
-	/// \return The bounding box
+	/// \param shader The shader to set
+	/// \param index The mesh index to assign the shader to
 	///
 	///////////////////////////////////////////////////////////
-	const BoundingBox& getBoundingBox() const;
-	
-	///////////////////////////////////////////////////////////
-	/// \brief Get the local bounding sphere
-	///
-	/// \brief The bounding sphere
-	///
-	///////////////////////////////////////////////////////////
-	const Sphere& getBoundingSphere() const;
+	void setShader(Shader* material, Uint32 index = 0);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the list of vertices
@@ -131,32 +152,54 @@ public:
 	const std::vector<Vertex>& getVertices() const;
 
 	///////////////////////////////////////////////////////////
-	/// \brief Get the material at the specified index
+	/// \brief Get the number of meshes contained within the model
 	///
-	/// \param index The index of the material to retrieve
-	///
-	/// \return The material
+	/// \return The number of meshes in the model
 	///
 	///////////////////////////////////////////////////////////
-	const Material& getMaterial(Uint32 index = 0) const;
+	Uint32 getNumMeshes() const;
 
 	///////////////////////////////////////////////////////////
-	/// \brief Get the list of materials
+	/// \brief Get the model mesh at the specified index
 	///
-	/// \return The list of materials
+	/// A mesh contains the vertex array containing the vertex
+	/// data, a material, and a shader that should be used to
+	/// render the mesh.
+	///
+	/// \param index The index of the mesh to retrieve
+	///
+	/// \return The mesh at the specified index
 	///
 	///////////////////////////////////////////////////////////
-	const std::vector<Material>& getMaterials() const;
+	Mesh* getMesh(Uint32 index = 0) const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the default model shader
+	///
+	/// \return The default model shader
+	///
+	///////////////////////////////////////////////////////////
+	static Shader& getDefaultShader();
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the animated model shader
+	///
+	/// \return The default model shader
+	///
+	///////////////////////////////////////////////////////////
+	static Shader& getAnimatedShader();
 
 private:
-	VertexArray m_vertexArray;				//!< The vertex array used to render the model
-	VertexBuffer m_vertexBuffer;			//!< The vertex buffer used to store the main vertex data
-	VertexBuffer m_skeletalVertexBuffer;	//!< The vertex buffer used to store skeletal vertex data
-	BoundingBox m_boundingBox;				//!< The bounding box surrounding the model
-	Sphere m_boundingSphere;				//!< The bounding sphere surrounding te model
+	VertexBuffer m_vertexBuffer;				//!< The vertex buffer used to store the main vertex data
+	VertexBuffer m_skeletalVertexBuffer;		//!< The vertex buffer used to store skeletal vertex data
+	VertexBuffer m_indicesBuffer;				//!< The vertex buffer used to store vertex index data
 
-	std::vector<Vertex> m_vertices;			//!< The list of vertex data excluding skeletal data
-	std::vector<Material> m_materials;		//!< The list of materials
+	std::vector<Vertex> m_vertices;				//!< The list of vertex data excluding skeletal data
+	std::vector<Uint32> m_indices;				//!< A list of vertex indices specifying the order of vertices (only for smooth shading)
+	std::vector<Mesh*> m_meshes;				//!< The vertex array used to render the model
+
+	static Shader s_defaultShader;				//!< The default model shader
+	static Shader s_animatedShader;				//!< The animated model shader
 };
 
 }

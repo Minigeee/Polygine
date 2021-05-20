@@ -4,6 +4,8 @@
 
 #include <poly/Graphics/Components.h>
 #include <poly/Graphics/GLCheck.h>
+#include <poly/Graphics/Lighting.h>
+#include <poly/Graphics/Shadows.h>
 #include <poly/Graphics/Terrain.h>
 
 #include <poly/Math/Transform.h>
@@ -78,11 +80,13 @@ Terrain::Terrain() :
 	m_tileScale				(0.0f),
 	m_lodScale				(0.0f),
 	m_maxDist				(0.0f),
+	m_useFlatShading		(true),
 	m_normalMapData			(0),
 	m_instanceBufferOffset	(0),
-	m_ambientColor			(0.02f)
+	m_ambientColor			(0.02f),
+	m_isUniformDirty		(true)
 {
-
+	m_uniformBuffer.create(sizeof(UniformBlock_Terrain), BufferUsage::Static);
 }
 
 
@@ -423,8 +427,10 @@ void Terrain::createTileLayout()
 
 
 ///////////////////////////////////////////////////////////
-void Terrain::render(Camera& camera)
+void Terrain::render(Camera& camera, RenderPass pass)
 {
+	// The terrain should be rendered regardless of render pass
+
 	ASSERT(m_scene, "The terrain must be initialized before using, by calling the init() function");
 
 	START_PROFILING_FUNC;
@@ -488,12 +494,12 @@ void Terrain::render(Camera& camera)
 
 	// Stream instance data
 	Uint32 size = (normalTiles.size() + edgeTiles.size()) * sizeof(InstanceData);
-	int flags = (int)MapBufferFlags::Write | (int)MapBufferFlags::Unsynchronized;
+	MapBufferFlags flags = MapBufferFlags::Write | MapBufferFlags::Unsynchronized;
 
 	// Choose different flags based on how much space is left
 	if (m_instanceBufferOffset + size > m_instanceBuffer.getSize())
 	{
-		flags |= (int)MapBufferFlags::InvalidateBuffer;
+		flags |= MapBufferFlags::InvalidateBuffer;
 		m_instanceBufferOffset = 0;
 	}
 
@@ -524,33 +530,41 @@ void Terrain::render(Camera& camera)
 	m_instanceBuffer.unmap();
 
 
+	// Update uniform buffer
+	if (m_isUniformDirty)
+	{
+		UniformBlock_Terrain block;
+		block.m_clipPlanes[0] = Vector4f(-1.0f, 0.0f, 0.0f, m_size * 0.5f);
+		block.m_clipPlanes[1] = Vector4f(1.0f, 0.0f, 0.0f, m_size * 0.5f);
+		block.m_clipPlanes[2] = Vector4f(0.0f, 0.0f, -1.0f, m_size * 0.5f);
+		block.m_clipPlanes[3] = Vector4f(0.0f, 0.0f, 1.0f, m_size * 0.5f);
+
+		block.m_size = m_size;
+		block.m_height = m_height;
+		block.m_tileScale = m_tileScale;
+		block.m_blendLodDist = m_lodDists[m_lodDists.size() - 2];
+		block.m_useFlatShading = m_useFlatShading;
+
+		// Push data
+		m_uniformBuffer.pushData(block);
+
+		m_isUniformDirty = false;
+	}
+
+
 	// Bind shader and set uniforms
 	Shader& shader = getShader();
-
 	shader.bind();
-	shader.setUniform("u_projView", camera.getProjMatrix() * camera.getViewMatrix());
-	shader.setUniform("u_cameraPos", camera.getPosition());
-	shader.setUniform("u_ambient", m_ambientColor);
 
-	// Set the clip planes
-	shader.setUniform("u_clipPlanes[0]", Vector4f(-1.0f, 0.0f, 0.0f, m_size * 0.5f));
-	shader.setUniform("u_clipPlanes[1]", Vector4f(1.0f, 0.0f, 0.0f, m_size * 0.5f));
-	shader.setUniform("u_clipPlanes[2]", Vector4f(0.0f, 0.0f, -1.0f, m_size * 0.5f));
-	shader.setUniform("u_clipPlanes[3]", Vector4f(0.0f, 0.0f, 1.0f, m_size * 0.5f));
+	// Terrain
+	shader.bindUniformBlock("Terrain", m_uniformBuffer);
 
-	// Apply directional lights
-	int i = 0;
-	m_scene->system<DirLightComponent>(
-		[&](const Entity::Id id, DirLightComponent& light)
-		{
-			std::string prefix = "u_dirLights[" + std::to_string(i++) + "].";
+	// Camera
+	camera.apply(&shader);
 
-			shader.setUniform(prefix + "diffuse", light.m_diffuse);
-			shader.setUniform(prefix + "specular", light.m_specular);
-			shader.setUniform(prefix + "direction", normalize(light.m_direction));
-		}
-	);
-	shader.setUniform("u_numDirLights", i);
+	// Lighting
+	m_scene->getExtension<Lighting>()->apply(&shader);
+	m_scene->getExtension<Shadows>()->apply(&shader);
 
 	// Terrain maps
 	if (m_heightMap.getId())
@@ -560,11 +574,12 @@ void Terrain::render(Camera& camera)
 	if (m_colorMap.getId())
 		shader.setUniform("u_colorMap", m_colorMap);
 
-	// Terrain parameters
-	shader.setUniform("u_size", m_size);
-	shader.setUniform("u_height", m_height);
-	shader.setUniform("u_tileScale", m_tileScale);
-	shader.setUniform("u_blendLodDist", m_lodDists[m_lodDists.size() - 2]);
+	// Enable depth testing
+	glCheck(glEnable(GL_DEPTH_TEST));
+
+	// Single side render
+	glCheck(glEnable(GL_CULL_FACE));
+	glCheck(glCullFace(pass == RenderPass::Shadow ? GL_FRONT : GL_BACK));
 
 	// Enable clip planes
 	for (Uint32 i = 0; i < 4; ++i)
@@ -609,6 +624,7 @@ void Terrain::setSize(float size)
 
 	// Update normal map
 	updateNormalMap(scale);
+	m_isUniformDirty = true;
 }
 
 
@@ -624,6 +640,7 @@ void Terrain::setHeight(float height)
 
 	// Update normal map
 	updateNormalMap(scale);
+	m_isUniformDirty = true;
 }
 
 
@@ -634,6 +651,7 @@ void Terrain::setTileScale(float scale)
 
 	// Update tile layout
 	createTileLayout();
+	m_isUniformDirty = true;
 }
 
 
@@ -644,6 +662,7 @@ void Terrain::setLodScale(float scale)
 
 	// Update tile layout
 	createTileLayout();
+	m_isUniformDirty = true;
 }
 
 
@@ -654,6 +673,14 @@ void Terrain::setMaxDist(float dist)
 
 	// Update tile layout
 	createTileLayout();
+}
+
+
+///////////////////////////////////////////////////////////
+void Terrain::setUseFlatShading(bool use)
+{
+	m_useFlatShading = use;
+	m_isUniformDirty = true;
 }
 
 
@@ -844,21 +871,28 @@ float Terrain::getMaxDist() const
 
 
 ///////////////////////////////////////////////////////////
-const Texture& Terrain::getHeightMap() const
+bool Terrain::usesFlatShading() const
+{
+	return m_useFlatShading;
+}
+
+
+///////////////////////////////////////////////////////////
+Texture& Terrain::getHeightMap()
 {
 	return m_heightMap;
 }
 
 
 ///////////////////////////////////////////////////////////
-const Texture& Terrain::getColorMap() const
+Texture& Terrain::getColorMap()
 {
 	return m_colorMap;
 }
 
 
 ///////////////////////////////////////////////////////////
-const Texture& Terrain::getNormalMap() const
+Texture& Terrain::getNormalMap()
 {
 	return m_normalMap;
 }

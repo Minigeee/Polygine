@@ -102,6 +102,10 @@ void FrameBuffer::create(Uint32 w, Uint32 h, Uint32 d, bool multisampled)
 	{
 		glCheck(glGenFramebuffers(1, &m_id));
 
+		bind();
+		glCheck(glDrawBuffer(GL_NONE));
+		glCheck(glReadBuffer(GL_NONE));
+
 		m_size = Vector3u(w, h, d);
 		m_multisampled = multisampled;
 	}
@@ -145,7 +149,7 @@ void FrameBuffer::attachColor(Texture* texture, PixelFormat fmt, GLType dtype, T
 	if (texture)
 	{
 		// Create an empty texture
-		texture->create(0, fmt, m_size.x, m_size.y, m_size.z, dtype, filter, wrap, m_multisampled);
+		texture->create(0, fmt, m_size.x, m_size.y, m_size.z, dtype, filter, wrap, false, m_multisampled);
 
 		// Attach to color attachment target using correct number of dimensions
 		if (m_size.z == 0)
@@ -178,7 +182,7 @@ void FrameBuffer::attachColor(Texture* texture, PixelFormat fmt, GLType dtype, T
 	}
 
 	// Specify color attachments to draw
-	glDrawBuffers(m_colorTextures.size() + m_colorIds.size(), priv::drawBuffers);
+	glCheck(glDrawBuffers(m_colorTextures.size() + m_colorIds.size(), priv::drawBuffers));
 }
 
 
@@ -194,7 +198,7 @@ void FrameBuffer::attachDepth(Texture* texture, GLType dtype, TextureFilter filt
 	if (texture)
 	{
 		// Create an empty texture
-		texture->create(0, PixelFormat::Depth, m_size.x, m_size.y, m_size.z, dtype, filter, wrap, m_multisampled);
+		texture->create(0, PixelFormat::Depth, m_size.x, m_size.y, m_size.z, dtype, filter, wrap, false, m_multisampled);
 
 		// Attach to depth attachment target using correct number of dimensions
 		if (m_size.z == 0)

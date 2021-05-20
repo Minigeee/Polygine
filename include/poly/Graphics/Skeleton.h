@@ -6,12 +6,25 @@
 
 #include <poly/Graphics/Bone.h>
 #include <poly/Graphics/Shader.h>
+#include <poly/Graphics/UniformBuffer.h>
 
 namespace poly
 {
 
 class Animation;
 class Bone;
+
+
+#ifndef DOXYGEN_SKIP
+
+///////////////////////////////////////////////////////////
+struct UniformBlock_Skeleton
+{
+	UniformBufferType<Matrix4f> m_bones[20];
+};
+
+#endif
+
 
 ///////////////////////////////////////////////////////////
 /// \brief A class that contains bone transform data to animate models
@@ -220,13 +233,19 @@ public:
 	float getAnimationSpeed() const;
 	
 private:
+	static UniformBuffer& getUniformBuffer();
+
+private:
 	Bone* m_root;							//!< The root node
 	ObjectPool m_bonePool;					//!< The bone object pool
 	HashMap<std::string, Bone*> m_boneMap;	//!< Maps bone name to bone objects
+	Uint32 m_uniformOffset;					//!< The offset where the previous bone data is stored in the uniform buffer
 
 	Animation* m_animation;					//!< The current animation applied to the skeleton
 	float m_animTime;						//!< The current time in the animation
 	float m_animSpeed;						//!< The animation speed, or time multiplier
+
+	static UniformBuffer s_uniformBuffer;	//!< THe global skeleton uniform buffer
 };
 
 }

@@ -3,11 +3,16 @@
 #include <poly/Engine/Components.h>
 #include <poly/Engine/Scene.h>
 
+#include <poly/Graphics/Billboard.h>
 #include <poly/Graphics/Camera.h>
 #include <poly/Graphics/Components.h>
+#include <poly/Graphics/GLCheck.h>
+#include <poly/Graphics/Lighting.h>
+#include <poly/Graphics/LodSystem.h>
 #include <poly/Graphics/Model.h>
 #include <poly/Graphics/Octree.h>
 #include <poly/Graphics/Shader.h>
+#include <poly/Graphics/Shadows.h>
 #include <poly/Graphics/Skeleton.h>
 
 #include <poly/Math/Transform.h>
@@ -67,26 +72,19 @@ bool updateBoundingBox(BoundingBox& a, const BoundingBox& b)
 
 
 ///////////////////////////////////////////////////////////
-void bindShader(Shader* shader, Camera& camera, Scene* scene, const Vector3f& ambient)
+void bindShader(Shader* shader, Camera& camera, Scene* scene, RenderPass pass)
 {
 	shader->bind();
-	shader->setUniform("u_projView", camera.getProjMatrix() * camera.getViewMatrix());
-	shader->setUniform("u_cameraPos", camera.getPosition());
-	shader->setUniform("u_ambient", ambient);
 
-	// Apply directional lights
-	int i = 0;
-	scene->system<DirLightComponent>(
-		[&](const Entity::Id id, DirLightComponent& light)
-		{
-			std::string prefix = "u_dirLights[" + std::to_string(i++) + "].";
+	// Camera
+	camera.apply(shader);
 
-			shader->setUniform(prefix + "diffuse", light.m_diffuse);
-			shader->setUniform(prefix + "specular", light.m_specular);
-			shader->setUniform(prefix + "direction", normalize(light.m_direction));
-		}
-	);
-	shader->setUniform("u_numDirLights", i);
+	// Lighting
+	scene->getExtension<Lighting>()->apply(shader);
+
+	// Shadows
+	scene->getExtension<Shadows>()->apply(shader);
+	// shader->setUniform("u_isShadowPass", pass == RenderPass::Shadow);
 }
 
 }
@@ -120,12 +118,10 @@ Octree::Node::Node() :
 Octree::Octree() :
 	m_nodePool				(sizeof(Node)),
 	m_dataPool				(sizeof(EntityData)),
-	m_scene					(0),
 	m_root					(0),
 	m_size					(0.0f),
 	m_maxPerCell			(0),
-	m_instanceBufferOffset	(0),
-	m_ambientColor			(0.02f)
+	m_instanceBufferOffset	(0)
 {
 
 }
@@ -333,7 +329,7 @@ void Octree::add(Entity::Id entity)
 	Matrix4f transform = toTransformMatrix(t.m_position, t.m_rotation, t.m_scale);
 
 	// Get bounding box
-	BoundingBox bbox = r.m_model->getBoundingBox();
+	BoundingBox bbox = r.m_renderable->getBoundingBox();
 	Vector3f vertices[] =
 	{
 		Vector3f(bbox.m_min.x, bbox.m_min.y, bbox.m_min.z),
@@ -373,36 +369,12 @@ void Octree::add(Entity::Id entity)
 	EntityData* data = (EntityData*)m_dataPool.alloc();
 	data->m_boundingBox = bbox;
 	data->m_transform = transform;
+	data->m_group = getRenderGroup(r.m_renderable, skeleton);
+	data->m_castsShadows = r.m_castsShadows;
 
 	// Add to map
 	m_dataMap[entity] = data;
 
-	// Add render group
-	bool groupExists = false;
-	for (Uint32 i = 0; i < m_renderGroups.size(); ++i)
-	{
-		const RenderGroup& group = m_renderGroups[i];
-		if (
-			group.m_model == r.m_model &&
-			group.m_shader == r.m_shader && 
-			group.m_skeleton == skeleton)
-		{
-			data->m_group = i;
-			groupExists = true;
-			break;
-		}
-	}
-
-	if (!groupExists)
-	{
-		data->m_group = m_renderGroups.size();
-
-		RenderGroup group;
-		group.m_model = r.m_model;
-		group.m_shader = r.m_shader;
-		group.m_skeleton = skeleton;
-		m_renderGroups.push_back(group);
-	}
 
 	// Insert into the octree
 	insert(data);
@@ -567,7 +539,7 @@ void Octree::update(const Entity::Id& entity, RenderComponent& r, TransformCompo
 	Matrix4f transform = toTransformMatrix(t.m_position, t.m_rotation, t.m_scale);
 
 	// Get bounding box
-	BoundingBox bbox = r.m_model->getBoundingBox();
+	BoundingBox bbox = r.m_renderable->getBoundingBox();
 	Vector3f vertices[] =
 	{
 		Vector3f(bbox.m_min.x, bbox.m_min.y, bbox.m_min.z),
@@ -608,6 +580,7 @@ void Octree::update(const Entity::Id& entity, RenderComponent& r, TransformCompo
 	EntityData* data = m_dataMap[entity];
 	data->m_boundingBox = bbox;
 	data->m_transform = transform;
+	data->m_castsShadows = r.m_castsShadows;
 
 	Node* node = data->m_node;
 
@@ -672,8 +645,10 @@ void Octree::remove(Entity::Id entity)
 
 
 ///////////////////////////////////////////////////////////
-void Octree::render(Camera& camera)
+void Octree::render(Camera& camera, RenderPass pass)
 {
+	// Anything in the octree should be rendered for all passes
+
 	ASSERT(m_scene, "The octree must be initialized before using, by calling the init() function");
 
 	START_PROFILING_FUNC;
@@ -682,7 +657,7 @@ void Octree::render(Camera& camera)
 	// Get entity data
 	std::vector<std::vector<EntityData*>> entityData(m_renderGroups.size());
 	const Frustum& frustum = camera.getFrustum();
-	getRenderData(m_root, frustum, entityData);
+	getRenderData(m_root, frustum, entityData, camera.getPosition(), pass);
 	
 	// Get number of visible entities
 	Uint32 numVisible = 0;
@@ -694,12 +669,12 @@ void Octree::render(Camera& camera)
 
 	// Stream instance data
 	Uint32 size = numVisible * sizeof(Matrix4f);
-	int flags = (int)MapBufferFlags::Write | (int)MapBufferFlags::Unsynchronized;
+	MapBufferFlags flags = MapBufferFlags::Write | MapBufferFlags::Unsynchronized;
 
 	// Choose different flags based on how much space is left
 	if (m_instanceBufferOffset + size > m_instanceBuffer.getSize())
 	{
-		flags |= (int)MapBufferFlags::InvalidateBuffer;
+		flags |= MapBufferFlags::InvalidateBuffer;
 		m_instanceBufferOffset = 0;
 	}
 
@@ -713,16 +688,45 @@ void Octree::render(Camera& camera)
 	// Iterate through visible entities and stream data
 	for (Uint32 i = 0; i < entityData.size(); ++i)
 	{
+		RenderGroup& group = m_renderGroups[i];
 		const std::vector<EntityData*>& entities = entityData[i];
+
+		// Skip the group if no entities or if lod
+		if (!entities.size() || group.m_lodLevels.size())
+			continue;
 
 		// Create render data
 		RenderData data;
-		data.m_model = m_renderGroups[i].m_model;
-		data.m_shader = m_renderGroups[i].m_shader;
-		data.m_skeleton = m_renderGroups[i].m_skeleton;
+		data.m_skeleton = group.m_skeleton;
 		data.m_offset = m_instanceBufferOffset;
 		data.m_instances = entities.size();
-		renderData.push_back(data);
+
+		// Take different actions based on what type of renderable being dealt with
+		Model* model = 0;
+		Billboard* billboard = 0;
+		if ((model = dynamic_cast<Model*>(group.m_renderable)) != 0)
+		{
+			// Add data for every mesh in the model
+			for (Uint32 j = 0; j < model->getNumMeshes(); ++j)
+			{
+				Mesh* mesh = model->getMesh(j);
+
+				data.m_vertexArray = &mesh->m_vertexArray;
+				data.m_material = &mesh->m_material;
+				data.m_shader = mesh->m_shader;
+				renderData.push_back(data);
+			}
+		}
+		else if ((billboard = dynamic_cast<Billboard*>(group.m_renderable)) != 0)
+		{
+			data.m_vertexArray = &billboard->getVertexArray();
+			data.m_material = billboard->getMaterial();
+			data.m_shader = billboard->getShader();
+			renderData.push_back(data);
+		}
+		else
+			// Otherwise, the renderable is not a valid type, and should be skipped
+			continue;
 
 		// Push instance data
 		for (Uint32 j = 0; j < entities.size(); ++j)
@@ -747,9 +751,21 @@ void Octree::render(Camera& camera)
 		}
 	);
 
+
+	// Enable depth testing
+	glCheck(glEnable(GL_DEPTH_TEST));
+
+	// Single side render
+	glCheck(glEnable(GL_CULL_FACE));
+	glCheck(glCullFace(GL_BACK));
+
+	// Enable alpha blending
+	glCheck(glEnable(GL_BLEND));
+	glCheck(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+
 	// Bind the first shader
 	Shader* shader = renderData.front().m_shader;
-	priv::bindShader(shader, camera, m_scene, m_ambientColor);
+	priv::bindShader(shader, camera, m_scene, pass);
 
 	// Iterate through render data and render everything
 	for (Uint32 i = 0; i < renderData.size(); ++i)
@@ -760,16 +776,18 @@ void Octree::render(Camera& camera)
 		if (data.m_shader != shader)
 		{
 			shader = data.m_shader;
-			priv::bindShader(shader, camera, m_scene, m_ambientColor);
+			priv::bindShader(shader, camera, m_scene, pass);
 		}
 
-		// Apply the materials
-		const std::vector<Material>& materials = data.m_model->getMaterials();
-		for (Uint32 i = 0; i < materials.size(); ++i)
-			materials[i].apply(shader, i);
+		Model* model = 0;
+		Billboard* billboard = 0;
+
+		// Apply the material to the shader
+		if (data.m_material)
+			data.m_material->apply(shader);
 
 		// Get vertex array and do an instanced render
-		VertexArray& vao = data.m_model->getVertexArray();
+		VertexArray& vao = *data.m_vertexArray;
 
 		// Different rendering behavior based on if the model is animated or not
 		if (!data.m_skeleton)
@@ -810,15 +828,40 @@ void Octree::render(Camera& camera)
 
 
 ///////////////////////////////////////////////////////////
-void Octree::getRenderData(Node* node, const Frustum& frustum, std::vector<std::vector<EntityData*>>& entityData)
+void Octree::getRenderData(Node* node, const Frustum& frustum, std::vector<std::vector<EntityData*>>& entityData, const Vector3f& cameraPos, RenderPass pass)
 {
 	// Add all data inside the frustum
 	for (Uint32 i = 0; i < node->m_data.size(); ++i)
 	{
 		EntityData* data = node->m_data[i];
 
+		// Skip this object if the render pass is shadow and shadow casting is disabled
+		if (pass == RenderPass::Shadow && !data->m_castsShadows)
+			continue;
+
+		// Frustum culling
 		if (frustum.contains(data->m_boundingBox))
-			entityData[data->m_group].push_back(data);
+		{
+			Uint32 groupId = data->m_group;
+
+			// If the renderable is an lod system, add the correct group
+			RenderGroup& group = m_renderGroups[groupId];
+			if (group.m_lodLevels.size())
+			{
+				LodSystem* lod = (LodSystem*)group.m_renderable;
+
+				Vector3f objectOffset = cameraPos - data->m_boundingBox.getCenter();
+				float distSquared = dot(objectOffset, objectOffset);
+
+				// Find the correct lod level
+				Uint32 level = 0;
+				for (; level < lod->getNumLevels() && distSquared > lod->getDistance(level) * lod->getDistance(level); ++level);
+
+				groupId = level < lod->getNumLevels() ? group.m_lodLevels[level] : groupId;
+			}
+
+			entityData[groupId].push_back(data);
+		}
 	}
 
 	// Call for children
@@ -826,22 +869,54 @@ void Octree::getRenderData(Node* node, const Frustum& frustum, std::vector<std::
 	{
 		Node* child = node->m_children[i];
 		if (child && frustum.contains(child->m_boundingBox))
-			getRenderData(child, frustum, entityData);
+			getRenderData(child, frustum, entityData, cameraPos, pass);
 	}
 }
 
 
 ///////////////////////////////////////////////////////////
-void Octree::setAmbientColor(const Vector3f& color)
+Uint32 Octree::getRenderGroup(Renderable* renderable, Skeleton* skeleton)
 {
-	m_ambientColor = color;
-}
+	Uint32 groupId = 0;
 
+	// Add render group
+	bool groupExists = false;
+	for (Uint32 i = 0; i < m_renderGroups.size(); ++i)
+	{
+		const RenderGroup& group = m_renderGroups[i];
+		if (
+			group.m_renderable == renderable &&
+			group.m_skeleton == skeleton)
+		{
+			groupId = i;
+			groupExists = true;
+			break;
+		}
+	}
 
-///////////////////////////////////////////////////////////
-const Vector3f& Octree::getAmbientColor() const
-{
-	return m_ambientColor;
+	if (!groupExists)
+	{
+		groupId = m_renderGroups.size();
+
+		RenderGroup group;
+		group.m_renderable = renderable;
+		group.m_skeleton = skeleton;
+
+		// If the renderable is an lod system, add lod levels
+		LodSystem* lod = 0;
+		if (lod = dynamic_cast<LodSystem*>(renderable))
+		{
+			Uint32 numLevels = lod->getNumLevels();
+
+			// Get or create render groups for lod levels
+			for (Uint32 i = 0; i < numLevels; ++i)
+				group.m_lodLevels.push_back(getRenderGroup(lod->getRenderable(i), skeleton));
+		}
+
+		m_renderGroups.push_back(group);
+	}
+
+	return groupId;
 }
 
 

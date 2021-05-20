@@ -258,4 +258,20 @@ inline void Scene::sendEvent(const E& event)
 	priv::SceneEvents<E>::sendEvent(m_handle.m_index, event);
 }
 
+
+///////////////////////////////////////////////////////////
+template <typename T>
+inline T* Scene::getExtension()
+{
+	auto it = m_extensions.find(TypeInfo::getId<T>());
+	if (it == m_extensions.end())
+	{
+		// Create the extension if it doesn't exist
+		return (T*)(m_extensions[TypeInfo::getId<T>()] = new T(this));
+	}
+
+	return (T*)it.value();
+}
+
+
 }

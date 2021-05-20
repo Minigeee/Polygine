@@ -142,25 +142,10 @@ public:
 	/// is used, or if the view matrix of the camera is changed.
 	///
 	/// \param camera The camera to render from the perspective of
+	/// \param pass The render pass that is being executed
 	///
 	///////////////////////////////////////////////////////////
-	void render(Camera& camera) override;
-
-	///////////////////////////////////////////////////////////
-	/// \brief Set the ambient color
-	///
-	/// \param color The ambient color
-	///
-	///////////////////////////////////////////////////////////
-	void setAmbientColor(const Vector3f& color);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Get the ambient color
-	///
-	/// \return The ambient color
-	///
-	///////////////////////////////////////////////////////////
-	const Vector3f& getAmbientColor() const;
+	void render(Camera& camera, RenderPass pass) override;
 
 private:
 	struct Node;
@@ -169,6 +154,7 @@ private:
 	{
 		Uint32 m_group;
 		Node* m_node;
+		bool m_castsShadows;
 		BoundingBox m_boundingBox;
 		Matrix4f m_transform;
 	};
@@ -186,14 +172,15 @@ private:
 
 	struct RenderGroup
 	{
-		Model* m_model;
-		Shader* m_shader;
+		Renderable* m_renderable;
+		std::vector<Uint32> m_lodLevels;
 		Skeleton* m_skeleton;
 	};
 
 	struct RenderData
 	{
-		Model* m_model;
+		VertexArray* m_vertexArray;
+		Material* m_material;
 		Shader* m_shader;
 		Skeleton* m_skeleton;
 		Uint32 m_offset;
@@ -208,13 +195,14 @@ private:
 
 	void update(const Entity::Id& id, RenderComponent& r, TransformComponent& t);
 
-	void getRenderData(Node* node, const Frustum& frustum, std::vector<std::vector<EntityData*>>& entityData);
+	void getRenderData(Node* node, const Frustum& frustum, std::vector<std::vector<EntityData*>>& entityData, const Vector3f& cameraPos, RenderPass pass);
+
+	Uint32 getRenderGroup(Renderable* renderable, Skeleton* skeleton);
 
 private:
 	ObjectPool m_nodePool;								//!< The object pool that holds node data
 	ObjectPool m_dataPool;								//!< The object pool that holds render data
 
-	Scene* m_scene;										//!< A pointer to the scene
 	Node* m_root;										//!< A pointer to the root node
 	float m_size;										//!< The size of the highest octree level
 	Uint32 m_maxPerCell;								//!< The max number of entities allowed per cell
@@ -223,8 +211,6 @@ private:
 	VertexBuffer m_instanceBuffer;						//!< The instance buffer that stores instance transform data
 	Uint32 m_instanceBufferOffset;						//!< The offset of the valid range of the instance buffer
 	std::vector<RenderGroup> m_renderGroups;			//!< A list of render groups
-
-	Vector3f m_ambientColor;							//!< The ambient color
 
 	static Vector3f nodeOffsets[8];
 };

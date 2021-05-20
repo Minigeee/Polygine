@@ -4,11 +4,30 @@
 #include <poly/Graphics/Shader.h>
 #include <poly/Graphics/RenderSystem.h>
 #include <poly/Graphics/Texture.h>
+#include <poly/Graphics/UniformBuffer.h>
 #include <poly/Graphics/VertexArray.h>
 #include <poly/Graphics/VertexBuffer.h>
 
 namespace poly
 {
+
+
+#ifndef DOXYGEN_SKIP
+
+///////////////////////////////////////////////////////////
+struct UniformBlock_Terrain
+{
+	UniformBufferType<Vector4f> m_clipPlanes[4];
+
+	UniformBufferType<float> m_size;
+	UniformBufferType<float> m_height;
+	UniformBufferType<float> m_tileScale;
+	UniformBufferType<float> m_blendLodDist;
+	UniformBufferType<bool> m_useFlatShading;
+};
+
+#endif
+
 
 ///////////////////////////////////////////////////////////
 /// \brief A render system that render low-poly style terrain
@@ -70,9 +89,10 @@ public:
 	/// this function will not be directly called.
 	///
 	/// \param camera The camera to render from the perspective of
+	/// \param pass The render pass that is being executed
 	///
 	///////////////////////////////////////////////////////////
-	void render(Camera& camera) override;
+	void render(Camera& camera, RenderPass pass) override;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the size of the terrain
@@ -124,6 +144,14 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	void setMaxDist(float maxDist);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set whether the terrain should use flat shading (low-poly style)
+	///
+	/// \param use The boolean controlling whether to use flat shading or not
+	///
+	///////////////////////////////////////////////////////////
+	void setUseFlatShading(bool use);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the terrain height map
@@ -225,12 +253,20 @@ public:
 	float getMaxDist() const;
 
 	///////////////////////////////////////////////////////////
+	/// \brief Check if this terrain is rendered using flat shading
+	///
+	/// \return True if the terrain uses flat shading
+	///
+	///////////////////////////////////////////////////////////
+	bool usesFlatShading() const;
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get height map texture
 	///
 	/// \return A reference to the height map texture
 	///
 	///////////////////////////////////////////////////////////
-	const Texture& getHeightMap() const;
+	Texture& getHeightMap();
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get color map texture
@@ -238,7 +274,7 @@ public:
 	/// \return A reference to the color map texture
 	///
 	///////////////////////////////////////////////////////////
-	const Texture& getColorMap() const;
+	Texture& getColorMap();
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get normal map texture
@@ -246,7 +282,7 @@ public:
 	/// \return A reference to the normal map texture
 	///
 	///////////////////////////////////////////////////////////
-	const Texture& getNormalMap() const;
+	Texture& getNormalMap();
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get terrain ambient color
@@ -293,18 +329,19 @@ private:
 	void updateNormalMap(const Vector3f& scale);
 
 private:
-	Scene* m_scene;							//!< A pointer to a scene
 	float m_size;							//!< Terrain size
 	float m_height;							//!< Maximume terrain height
 	float m_tileScale;						//!< Tile scale
 	float m_lodScale;						//!< Lod distance scale
-	float m_maxDist;						//!< Maximume view distance
+	float m_maxDist;						//!< Maximum view distance
+	bool m_useFlatShading;					//!< Controls if the terrain should be rendered using flat shading
 
 	Texture m_heightMap;					//!< Height map texture
 	Texture m_normalMap;					//!< Normal map texture
 	Texture m_colorMap;						//!< Color map texture
 	Vector3f* m_normalMapData;				//!< Normal map texture data
 
+	UniformBuffer m_uniformBuffer;			//!< The uniform buffer used to store terrain uniform data
 	VertexArray m_normalTile;				//!< The mesh for a normal tile
 	VertexArray m_edgeTile;					//!< The mesh for an edge tile
 	VertexBuffer m_normalBuffer;			//!< The data buffer for a normal tile
@@ -317,6 +354,7 @@ private:
 	std::vector<float> m_lodDists;			//!< A list of exact lod distances
 
 	Vector3f m_ambientColor;				//!< The ambient color
+	bool m_isUniformDirty;					//!< This is true when one of the uniform parameters has changed
 
 	static Shader s_shader;
 };

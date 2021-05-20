@@ -1,0 +1,22 @@
+#include <poly/Engine/Extension.h>
+
+namespace poly
+{
+
+
+///////////////////////////////////////////////////////////
+Extension::Extension(Scene* scene) :
+	m_scene			(scene)
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
+Extension::~Extension()
+{
+
+}
+
+
+}

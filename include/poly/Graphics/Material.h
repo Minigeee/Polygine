@@ -25,6 +25,36 @@ public:
 	Material();
 
 	///////////////////////////////////////////////////////////
+	/// \brief Set the ambient color multiplier of the material
+	///
+	/// The ambient color multiplier is the color that gets multplied
+	/// by the global ambient color when applying ambient lighting.
+	/// Ambient lighting is the lighting that comes from the environment
+	/// and is what lights up surfaces of models when there is no direct
+	/// light shining on it.
+	///
+	/// \param color The diffuse color
+	///
+	///////////////////////////////////////////////////////////
+	void setAmbient(const Vector3f& color);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the ambient color multiplier of the material
+	///
+	/// The ambient color multiplier is the color that gets multplied
+	/// by the global ambient color when applying ambient lighting.
+	/// Ambient lighting is the lighting that comes from the environment
+	/// and is what lights up surfaces of models when there is no direct
+	/// light shining on it.
+	///
+	/// \param r The r component of the ambient color
+	/// \param g The g component of the ambient color
+	/// \param b The b component of the ambient color
+	///
+	///////////////////////////////////////////////////////////
+	void setAmbient(float r, float g, float b);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Set the diffuse color of the material
 	///
 	/// The diffuse color is the main color that appears on a model,
@@ -118,6 +148,33 @@ public:
 	void setSpecTexture(Texture* texture);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Set the material normal texture
+	///
+	/// The normal texture provides per pixel surface normals, which
+	/// are used for lighting calculations.
+	///
+	/// \param texture The normal texture
+	///
+	///////////////////////////////////////////////////////////
+	void setNormalTexture(Texture* texture);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the function callback for applying a material to a shader
+	///
+	/// If the function callback exists, then it will be called
+	/// whenever apply() is called. This should be used to set
+	/// the values of custom uniform variables that are needed
+	/// for the shader to work. This callback will be executed
+	/// after applying every default material property.
+	///
+	/// The function should take a shader pointer as its parameter.
+	///
+	/// \param func The apply function callback
+	///
+	///////////////////////////////////////////////////////////
+	void setApplyFunc(const std::function<void(Shader*)>& func);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Add a texture to the material to map to a shader uniform
 	///
 	/// Add a texture to the material that gets mapped to the specified
@@ -140,6 +197,14 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	void removeTexture(const std::string& uniform);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the ambient color multiplier
+	///
+	/// \return The ambient color multiplier
+	///
+	///////////////////////////////////////////////////////////
+	Vector3f& getAmbient();
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the diffuse color
@@ -178,16 +243,15 @@ public:
 	///////////////////////////////////////////////////////////
 	/// \brief Apply the material to a shader
 	///
-	/// Models are allowed to have multiple materials, so use the \a index
-	/// parameter to specify which material index to apply.
+	/// This function sets all the required shader uniforms on the
+	/// given shader. After all the default material properties are
+	/// called, then the custom apply function callback will be
+	/// executed, if it exists.
 	///
 	/// The shader should be set up like this:
 	/// \code
 	///
 	/// // shader.frag
-	///
-	/// // Set this to however many materials you want to support
-	/// #define MAX_NUM_MATERIALS 4
 	///
 	/// struct Material
 	/// {
@@ -197,11 +261,11 @@ public:
 	/// };
 	///
 	/// // The materials
-	/// uniform Material u_materials[MAX_NUM_MATERIALS];
+	/// uniform Material u_material;
 	///
 	/// // Textures used by model loader
-	/// uniform sampler2D u_diffuseMaps[MAX_NUM_MATERIALS];
-	/// uniform sampler2D u_specularMaps[MAX_NUM_MATERIALS];
+	/// uniform sampler2D u_diffuseMap;
+	/// uniform sampler2D u_specularMap;
 	///
 	/// // Any other optional textures
 	/// uniform sampler1D u_texture1d;
@@ -213,17 +277,20 @@ public:
 	/// \endcode
 	///
 	///////////////////////////////////////////////////////////
-	void apply(Shader* shader, int index = 0) const;
+	void apply(Shader* shader) const;
 
 private:
+	Vector3f m_ambient;							//!< The ambient color multiplier
 	Vector3f m_diffuse;							//!< The diffuse color
 	Vector3f m_specular;						//!< The specular color
 	float m_shininess;							//!< The shininess value
 
 	Texture* m_diffTexture;						//!< The diffuse texture
 	Texture* m_specTexture;						//!< The specular texture
+	Texture* m_normalTexture;					//!< The normal texture
 
 	HashMap<std::string, Texture*> m_textures;	//!< Map of uniform to texture
+	std::function<void(Shader*)> m_applyFunc;	//!< The apply function callback
 };
 
 }
@@ -313,12 +380,6 @@ private:
 ///
 /// shader.bind();
 /// material.apply(&shader);
-///
-/// // Use these if more than 1 material is required
-/// // material.apply(&shader, 0);
-/// // material.apply(&shader, 1);
-/// // material.apply(&shader, 2);
-/// // material.apply(&shader, 3);
 ///
 /// \endcode
 ///

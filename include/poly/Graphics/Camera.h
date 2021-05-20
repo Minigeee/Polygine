@@ -1,12 +1,31 @@
 #ifndef POLY_CAMERA_H
 #define POLY_CAMERA_H
 
+#include <poly/Graphics/UniformBuffer.h>
+
 #include <poly/Math/Frustum.h>
 #include <poly/Math/Matrix4.h>
 #include <poly/Math/Vector3.h>
 
 namespace poly
 {
+
+class Shader;
+
+
+#ifndef DOXYGEN_SKIP
+
+///////////////////////////////////////////////////////////
+struct UniformBlock_Camera
+{
+	UniformBufferType<Matrix4f> m_projView;
+	UniformBufferType<Vector3f> m_cameraPos;
+	UniformBufferType<float> m_near;
+	UniformBufferType<float> m_far;
+};
+
+#endif
+
 
 ///////////////////////////////////////////////////////////
 /// \brief A camera provides the a perspective to view the world from
@@ -29,6 +48,22 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	~Camera();
+
+	///////////////////////////////////////////////////////////
+	/// \brief Apply camera properties to a shader
+	///
+	/// All camera properties will be pushed to the uniform buffer
+	/// whenever one of its properties have changed. For most
+	/// efficiency, make sure not to change camera properties too
+	/// much, as new data will have to be pushed very time it changes.
+	/// Try to keep camera property changes in the update section
+	/// of the game loop, so that the data only has to be pushed
+	/// once per frame.
+	///
+	/// \param shader The shader to apply camera property uniforms to
+	///
+	///////////////////////////////////////////////////////////
+	void apply(Shader* shader);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the camera position
@@ -147,15 +182,15 @@ public:
 	const Vector3f& getDirection() const;
 
 	///////////////////////////////////////////////////////////
-	/// \brief Get the camera right vector
+	/// \brief Get the camera right direction vector
 	///
 	/// The right vector points at a 90 degree angle to the right
 	/// of the direction the camera is facing, and it has 0 y component.
 	///
-	/// \return The camera right vector
+	/// \return The camera right direction vector
 	///
 	///////////////////////////////////////////////////////////
-	const Vector3f& getRight() const;
+	const Vector3f& getRightDir() const;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the camera zoom factor
@@ -216,12 +251,59 @@ public:
 	void setFar(float far);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Set the camera orthographic parameters
+	///
+	/// This specifies the parameters needed to create an orthographic
+	/// projection matrix, including the left, right, bottom, top, near,
+	/// and far planes.
+	///
+	/// \param left The distance from the camera to the left orthographic plane
+	/// \param right The distance from the camera to the right orthographic plane
+	/// \param bottom The distance from the camera to the bottom orthographic plane
+	/// \param top The distance from the camera to the top orthographic plane
+	/// \param near The distance from the camera to the near orthographic plane
+	/// \param far The distance from the camera to the far orthographic plane
+	///
+	///////////////////////////////////////////////////////////
+	void setOrthographic(float left, float right, float bottom, float top, float near, float far);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the distance to the left orthographic plane
+	///
+	/// \param left The distance from the camera to the left orthographic plane
+	///
+	///////////////////////////////////////////////////////////
+	void setLeft(float left);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the distance to the right orthographic plane
+	///
+	/// \param right The distance from the camera to the right orthographic plane
+	///
+	///////////////////////////////////////////////////////////
+	void setRight(float right);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the distance to the bottom orthographic plane
+	///
+	/// \param bottom The distance from the camera to the bottom orthographic plane
+	///
+	///////////////////////////////////////////////////////////
+	void setBottom(float bottom);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the distance to the top orthographic plane
+	///
+	/// \param top The distance from the camera to the top orthographic plane
+	///
+	///////////////////////////////////////////////////////////
+	void setTop(float top);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the projection matrix
 	///
-	/// Currently only perspective projection matrices are supported.
-	/// Every time one of the perspective projection parameters
-	/// is changed, the projection matrix will be recalculated and
-	/// cached.
+	/// Every time one of the projection parameters is changed,
+	/// the projection matrix will be recalculated and cached.
 	///
 	/// \return The projection matrix
 	///
@@ -269,7 +351,7 @@ public:
 	float getAspectRatio() const;
 
 	///////////////////////////////////////////////////////////
-	///  \brief Get the distance to the near plane
+	/// \brief Get the distance to the near plane
 	///
 	/// \return The distance to the near plane
 	///
@@ -284,6 +366,45 @@ public:
 	///////////////////////////////////////////////////////////
 	float getFar() const;
 
+	///////////////////////////////////////////////////////////
+	/// \brief Get the distance to the left orthographic plane
+	///
+	/// \return The distance to the left orthographic plane
+	///
+	///////////////////////////////////////////////////////////
+	float getLeft() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the distance to the right orthographic plane
+	///
+	/// \return The distance to the right orthographic plane
+	///
+	///////////////////////////////////////////////////////////
+	float getRight() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the distance to the bottom orthographic plane
+	///
+	/// \return The distance to the bottom orthographic plane
+	///
+	///////////////////////////////////////////////////////////
+	float getBottom() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the distance to the top orthographic plane
+	///
+	/// \return The distance to the top orthographic plane
+	///
+	///////////////////////////////////////////////////////////
+	float getTop() const;
+
+private:
+	static UniformBuffer* getUniformBuffer();
+
+	static void free(UniformBuffer* buffer);
+
+	static std::vector<UniformBuffer*> s_unusedUniformBuffers;
+
 private:
 	Matrix4f m_projMatrix;		//!< The projection matrix
 	Matrix4f m_viewMatrix;		//!< The view matrix
@@ -291,7 +412,7 @@ private:
 
 	Vector3f m_position;		//!< The position in world space
 	Vector3f m_direction;		//!< The direction vector
-	Vector3f m_right;			//!< The right vector
+	Vector3f m_rightDir;		//!< The right direction vector
 	float m_zoom;				//!< The zoom factor
 
 	float m_fov;				//!< The field of view in the x axis
@@ -299,8 +420,17 @@ private:
 	float m_near;				//!< The distance to the near plane
 	float m_far;				//!< The distance to the far plane
 
+	float m_left;				//!< The distance to the left plane in orthographic mode
+	float m_right;				//!< The distance to the right plane in orthographic mode
+	float m_bottom;				//!< The distance to the bottom plane in orthographic mode
+	float m_top;				//!< The distance to the top plane in orthographic mode
+
+	bool m_isPerspective;		//!< This is true when the camera is in perspective projection mode
 	bool m_isProjDirty;			//!< This is true when one of the projection parameters has changed
 	bool m_isViewDirty;			//!< This is true when on of the view parameters has changed
+	bool m_isBufferDirty;		//!< This is true when camera properties have been updated
+
+	UniformBuffer* m_uniformBuffer;	//!< A uniform buffer for storing camera shader uniforms
 };
 
 }

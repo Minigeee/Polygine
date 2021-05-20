@@ -96,12 +96,12 @@ void UISystem::render(FrameBuffer& target, bool overlay)
 
 	// Stream instance data
 	Uint32 size = numInstances * sizeof(UIInstanceData);
-	int flags = (int)MapBufferFlags::Write | (int)MapBufferFlags::Unsynchronized;
+	MapBufferFlags flags = MapBufferFlags::Write | MapBufferFlags::Unsynchronized;
 
 	// Choose different flags based on how much space is left
 	if (m_instanceBufferOffset + size > m_instanceBuffer.getSize())
 	{
-		flags |= (int)MapBufferFlags::InvalidateBuffer;
+		flags |= MapBufferFlags::InvalidateBuffer;
 		m_instanceBufferOffset = 0;
 	}
 
