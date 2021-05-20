@@ -882,6 +882,174 @@ private:
 	float m_noiseFactor;		//!< The random positional sampling offset factor
 };
 
+
+///////////////////////////////////////////////////////////
+/// \brief A post processing effect for applying lens flare to a single directional light
+///
+/// The lens flare effect requires a scene pointer and a camera
+/// pointer to work. Note that lens flare will only be applied
+/// to the first directional light it finds.
+///
+/// See PostProcess for an example of how to use post processing effects.
+///
+/// \see setScene, setCamera
+///
+///////////////////////////////////////////////////////////
+class LensFlare : public PostProcess
+{
+public:
+	LensFlare();
+
+	///////////////////////////////////////////////////////////
+	/// \brief Apply the lens flare effect to the input framebuffer
+	///
+	/// \param input The input framebuffer
+	/// \param output The output framebuffer
+	///
+	///////////////////////////////////////////////////////////
+	void render(FrameBuffer& input, FrameBuffer& output = FrameBuffer::Default) override;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the scene pointer
+	///
+	/// A scene pointer is needed to access directional lights.
+	///
+	/// \param scene A pointer to a scene
+	///
+	///////////////////////////////////////////////////////////
+	void setScene(Scene* scene);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set a pointer to a camera
+	///
+	/// The camera is needed to calculate the directional light's position
+	/// in screen space.
+	///
+	/// \param camera A pointer to a camera
+	///
+	///////////////////////////////////////////////////////////
+	void setCamera(Camera* camera);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the color of the lens flare
+	///
+	/// By default, the color of the lens flare is set to be the
+	/// color of the light it is being applied to.
+	///
+	/// \param r The red component of the lens flare color
+	/// \param g The green component of the lens flare color
+	/// \param b The blue component of the lens flare color
+	///
+	///////////////////////////////////////////////////////////
+	void setColor(float r, float g, float b);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the color of the lens flare
+	///
+	/// By default, the color of the lens flare is set to be the
+	/// color of the light it is being applied to.
+	///
+	/// \param color The color of the lens flare
+	///
+	///////////////////////////////////////////////////////////
+	void setColor(const Vector3f& color);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the intensity of the lens flare effect
+	///
+	/// The intensity is the multiplier to the effect when it is
+	/// overlayed onto the main scene.
+	///
+	/// The default value is 0.8.
+	///
+	/// \param intensity The intensity of the lens flare effect
+	///
+	///////////////////////////////////////////////////////////
+	void setIntensity(float intensity);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the luminosity factor
+	///
+	/// When the effect is applied, the location the light is coming
+	/// from is sampled and its luminosity is calculated. This
+	/// luminosity is multiplied by the luminosity factor, which
+	/// is then applied to the intensity. This will make it so that
+	/// lens flare is not applied when the light is blocked by an object.
+	///
+	/// The default value is 0.5.
+	///
+	/// \param factor The luminosity factor
+	///
+	///////////////////////////////////////////////////////////
+	void setLuminosityFactor(float factor);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the screen space cutoff bounds
+	///
+	/// The bounds are used to set boundaries to stop showing the
+	/// lens flare effect. This is needed so that the effect
+	/// doesn't continue while the light is off screen. The
+	/// x-component should contain the horizontal cutoff value,
+	/// and the y-component should contain the vertical cutoff
+	/// value. The cutoff values should be in screen space
+	/// coordinates, where a value of 1 in the x-component would
+	/// indicate bounds of [-1, 1], meaning the bounds are the
+	/// left and right sides of the screen.
+	///
+	/// The default value is (0.9, 1.3).
+	///
+	/// \param bounds The effect cutoff bounds
+	///
+	///////////////////////////////////////////////////////////
+	void setBounds(const Vector2f& bounds);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the color of the lens flare effect
+	///
+	/// \return The color of the lens flare effect
+	///
+	///////////////////////////////////////////////////////////
+	const Vector3f& getColor() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the intensity of the lens flare effect
+	///
+	/// \return The intensity of the lens flare effect
+	///
+	///////////////////////////////////////////////////////////
+	float getIntensity() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the luminosity factor
+	///
+	/// \return The luminosity factor
+	///
+	///////////////////////////////////////////////////////////
+	float getLuminosityFactor() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the screen space cutoff bound of the effect
+	///
+	/// \return The screen space cutoff bounds
+	///
+	///////////////////////////////////////////////////////////
+	const Vector2f& getBounds() const;
+
+private:
+	static Shader s_shader;
+
+	static Shader& getShader();
+
+private:
+	Scene* m_scene;				//!< A pointer to a scene
+	Camera* m_camera;			//!< A pointer to a camera
+
+	Vector3f m_color;			//!< The color of the lens flare
+	float m_intensity;			//!< The intensity of the lens flare
+	float m_luminosityFactor;	//!< The luminosity factor
+	Vector2f m_bounds;			//!< The screen space cutoff bounds
+};
+
 }
 
 #endif

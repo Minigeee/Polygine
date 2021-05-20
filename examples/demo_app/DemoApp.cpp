@@ -205,6 +205,10 @@ int main()
 
     Fxaa fxaa;
 
+    LensFlare flare;
+    flare.setScene(&scene);
+    flare.setCamera(&camera);
+
     // Sky colors
     std::vector<float> angles =
     {
@@ -412,8 +416,9 @@ int main()
         ssao.render(framebuffers[0], framebuffers[1]);
         fog.render(framebuffers[1], framebuffers[0]);
         bloom.render(framebuffers[0], framebuffers[1]);
-        colorAdjust.render(framebuffers[1], framebuffers[0]);
-        fxaa.render(framebuffers[0]);
+        flare.render(framebuffers[1], framebuffers[0]);
+        colorAdjust.render(framebuffers[0], framebuffers[1]);
+        fxaa.render(framebuffers[1]);
 
         STOP_PROFILING(GameLoop);
 
@@ -431,4 +436,3 @@ int main()
 // TODO : Document Dropdown
 // TODO : Move Grass to game project and document it
 // TODO : Sun glare effect
-// TODO : Make all framebuffers resizeable (in post-processing effects too)

@@ -37,6 +37,9 @@ Shader Bloom::s_addShader;
 ///////////////////////////////////////////////////////////
 Shader Ssao::s_shader;
 
+///////////////////////////////////////////////////////////
+Shader LensFlare::s_shader;
+
 
 ///////////////////////////////////////////////////////////
 VertexArray& PostProcess::getVertexArray()
@@ -746,7 +749,6 @@ Ssao::Ssao() :
 }
 
 
-
 ///////////////////////////////////////////////////////////
 void Ssao::render(FrameBuffer& input, FrameBuffer& output)
 {
@@ -891,6 +893,168 @@ Shader& Ssao::getShader()
 		// Load shader
 		s_shader.load("shaders/postprocess/quad.vert", Shader::Vertex);
 		s_shader.load("shaders/postprocess/ssao.frag", Shader::Fragment);
+		s_shader.compile();
+	}
+
+	return s_shader;
+}
+
+
+///////////////////////////////////////////////////////////
+LensFlare::LensFlare() :
+	m_scene				(0),
+	m_camera			(0),
+	m_color				(-1.0f),
+	m_intensity			(0.8f),
+	m_luminosityFactor	(0.5f),
+	m_bounds			(0.9f, 1.3f)
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
+void LensFlare::render(FrameBuffer& input, FrameBuffer& output)
+{
+	// A depth texture and camera are required for SSAO to be used
+	if (!m_scene || !m_camera) return;
+
+	// Bind output target
+	output.bind();
+
+	// Disable depth test
+	glCheck(glDisable(GL_DEPTH_TEST));
+
+	// Disable cull face
+	glCheck(glDisable(GL_CULL_FACE));
+
+	// Get light data
+	Vector3f lightDir(0.0f);
+	Vector3f lightColor(0.0f);
+
+	int i = 0;
+	m_scene->system<DirLightComponent>(
+		[&](const Entity::Id id, DirLightComponent& light)
+		{
+			if (i++ == 0)
+			{
+				lightDir = normalize(light.m_direction);
+				lightColor = light.m_diffuse;
+			}
+		}
+	);
+
+	Vector4f lightPos = Vector4f(m_camera->getPosition() - 10.0f * m_camera->getNear() * lightDir, 1.0f);
+	lightPos = m_camera->getProjMatrix() * m_camera->getViewMatrix() * lightPos;
+	bool outOfScreen = lightPos.x < -m_bounds.x || lightPos.x > m_bounds.x || lightPos.y < -m_bounds.y || lightPos.y > m_bounds.y || lightPos.z < 0.0f;
+
+	// Set light color
+	if (m_color.r >= 0.0f && m_color.g >= 0.0f && m_color.b >= 0.0f)
+		lightColor = m_color;
+
+	// Bind shader
+	Shader& shader = getShader();
+
+	shader.bind();
+	shader.setUniform("u_texture", *input.getColorTexture());
+	shader.setUniform("u_screenSize", Vector2f(input.getWidth(), input.getHeight()));
+	shader.setUniform("u_lightPos", Vector2f(lightPos.x, lightPos.y));
+	shader.setUniform("u_intensity", outOfScreen ? 0.0f : m_intensity);
+	shader.setUniform("u_color", lightColor);
+	shader.setUniform("u_luminosityFactor", m_luminosityFactor);
+
+	// Render vertex array
+	VertexArray& vao = PostProcess::getVertexArray();
+	vao.bind();
+	vao.draw();
+}
+
+
+///////////////////////////////////////////////////////////
+void LensFlare::setScene(Scene* scene)
+{
+	m_scene = scene;
+}
+
+
+///////////////////////////////////////////////////////////
+void LensFlare::setCamera(Camera* camera)
+{
+	m_camera = camera;
+}
+
+
+///////////////////////////////////////////////////////////
+void LensFlare::setColor(float r, float g, float b)
+{
+	m_color = Vector3f(r, g, b);
+}
+
+
+///////////////////////////////////////////////////////////
+void LensFlare::setColor(const Vector3f& color)
+{
+	m_color = color;
+}
+
+
+///////////////////////////////////////////////////////////
+void LensFlare::setIntensity(float intensity)
+{
+	m_intensity = intensity;
+}
+
+
+///////////////////////////////////////////////////////////
+void LensFlare::setLuminosityFactor(float factor)
+{
+	m_luminosityFactor = factor;
+}
+
+
+///////////////////////////////////////////////////////////
+void LensFlare::setBounds(const Vector2f& bounds)
+{
+	m_bounds = bounds;
+}
+
+
+///////////////////////////////////////////////////////////
+const Vector3f& LensFlare::getColor() const
+{
+	return m_color;
+}
+
+
+///////////////////////////////////////////////////////////
+float LensFlare::getIntensity() const
+{
+	return m_intensity;
+}
+
+
+///////////////////////////////////////////////////////////
+float LensFlare::getLuminosityFactor() const
+{
+	return m_luminosityFactor;
+}
+
+
+///////////////////////////////////////////////////////////
+const Vector2f& LensFlare::getBounds() const
+{
+	return m_bounds;
+}
+
+
+///////////////////////////////////////////////////////////
+Shader& LensFlare::getShader()
+{
+	if (!s_shader.getId())
+	{
+		// Load shader
+		s_shader.load("shaders/postprocess/quad.vert", Shader::Vertex);
+		s_shader.load("shaders/postprocess/lens_flare.frag", Shader::Fragment);
 		s_shader.compile();
 	}
 
