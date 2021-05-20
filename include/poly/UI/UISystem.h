@@ -63,6 +63,15 @@ public:
 	UISystem();
 
 	///////////////////////////////////////////////////////////
+	/// \brief Destructor
+	///
+	/// Used to free all textures that were loaded using the
+	/// load() function.
+	///
+	///////////////////////////////////////////////////////////
+	~UISystem();
+
+	///////////////////////////////////////////////////////////
 	/// \brief Update UI elements and animations
 	///
 	/// \brief dt The time elapsed since the last frame in seconds
@@ -87,7 +96,13 @@ public:
 	///////////////////////////////////////////////////////////
 	void setWindow(Window* window);
 
+	bool load(const std::string& fname);
+
+	UIElement* getElement(const std::string& id) const;
+
 private:
+	UIElement* createElementFromXml(void* node);
+
 	void getRenderQuads(
 		UIElement* element,
 		std::vector<std::vector<UIQuad>>& quads,
@@ -126,6 +141,9 @@ private:
 
 	UIElement* m_hovered;
 	UIElement* m_focused;
+
+	HashMap<std::string, UIElement*> m_elements;
+	HashMap<std::string, Texture*> m_loadedTextures;
 };
 
 }

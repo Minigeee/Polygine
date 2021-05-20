@@ -1,3 +1,4 @@
+#include <poly/Core/ObjectPool.h>
 #include <poly/Core/Profiler.h>
 
 #include <poly/Graphics/GLCheck.h>
@@ -5,10 +6,363 @@
 
 #include <poly/Math/Functions.h>
 
+#include <poly/UI/Button.h>
+#include <poly/UI/Dropdown.h>
+#include <poly/UI/ListView.h>
+#include <poly/UI/ScrollView.h>
+#include <poly/UI/Slider.h>
+#include <poly/UI/Text.h>
+#include <poly/UI/TextInput.h>
 #include <poly/UI/UISystem.h>
+
+#include <rapidxml.hpp>
+
+#include <stack>
 
 namespace poly
 {
+
+
+///////////////////////////////////////////////////////////
+HashMap<std::string, Vector3u> g_namedColors;
+
+
+///////////////////////////////////////////////////////////
+const Vector4f& getNamedColor(const std::string& color)
+{
+	if (!g_namedColors.size())
+	{
+
+		g_namedColors["light_salmon"]				= Vector3u(255, 160, 122);
+		g_namedColors["salmon"]						= Vector3u(250, 128, 114);
+		g_namedColors["dark_salmon"]				= Vector3u(233, 150, 122);
+		g_namedColors["light_coral"]				= Vector3u(240, 128, 128);
+		g_namedColors["indian_red"]					= Vector3u(205, 92, 92);
+		g_namedColors["crimson"]					= Vector3u(220, 20, 60);
+		g_namedColors["firebrick"]					= Vector3u(178, 34, 34);
+		g_namedColors["red"]						= Vector3u(255, 0, 0);
+		g_namedColors["dark_red"]					= Vector3u(139, 0, 0);
+
+		g_namedColors["coral"]						= Vector3u(255, 127, 80);
+		g_namedColors["tomato"]						= Vector3u(255, 99, 71);
+		g_namedColors["orange_red"]					= Vector3u(255, 69, 0);
+		g_namedColors["gold"]						= Vector3u(255, 215, 0);
+		g_namedColors["orange"]						= Vector3u(255, 165, 0);
+		g_namedColors["dark_orange"]				= Vector3u(255, 140, 0);
+
+		g_namedColors["light_yellow"]				= Vector3u(255, 255, 224);
+		g_namedColors["lemon_chiffon"]				= Vector3u(255, 250, 205);
+		g_namedColors["light_goldenrod_yellow"]		= Vector3u(250, 250, 210);
+		g_namedColors["papaya_whip"]				= Vector3u(255, 239, 213);
+		g_namedColors["moccasin"]					= Vector3u(255, 228, 181);
+		g_namedColors["peach_puff"]					= Vector3u(255, 218, 185);
+		g_namedColors["pale_goldenrod"]				= Vector3u(238, 232, 170);
+		g_namedColors["khaki"]						= Vector3u(240, 230, 140);
+		g_namedColors["dark_khaki"]					= Vector3u(189, 183, 107);
+		g_namedColors["yellow"]						= Vector3u(255, 255, 0);
+
+		g_namedColors["lawn_green"]					= Vector3u(124, 252, 0);
+		g_namedColors["chartreuse"]					= Vector3u(127, 255, 0);
+		g_namedColors["lime_green"]					= Vector3u(50, 205, 50);
+		g_namedColors["lime"]						= Vector3u(0, 255, 0);
+		g_namedColors["forest_green"]				= Vector3u(34, 139, 34);
+		g_namedColors["green"]						= Vector3u(0, 128, 0);
+		g_namedColors["dark_green"]					= Vector3u(0, 100, 0);
+		g_namedColors["green_yellow"]				= Vector3u(173, 255, 47);
+		g_namedColors["yellow_green"]				= Vector3u(154, 205, 50);
+		g_namedColors["spring_green"]				= Vector3u(0, 255, 127);
+		g_namedColors["medium_spring_green"]		= Vector3u(0, 250, 154);
+		g_namedColors["light_green"]				= Vector3u(144, 238, 144);
+		g_namedColors["pale_green"]					= Vector3u(152, 251, 152);
+		g_namedColors["dark_sea_green"]				= Vector3u(143, 188, 143);
+		g_namedColors["medium_sea_green"]			= Vector3u(60, 179, 113);
+		g_namedColors["sea_green"]					= Vector3u(46, 139, 87);
+		g_namedColors["olive"]						= Vector3u(128, 128, 0);
+		g_namedColors["dark_olive_green"]			= Vector3u(85, 107, 47);
+		g_namedColors["olive_drab"]					= Vector3u(107, 142, 35);
+
+		g_namedColors["light_cyan"]					= Vector3u(224, 255, 255);
+		g_namedColors["cyan"]						= Vector3u(0, 255, 255);
+		g_namedColors["aqua"]						= Vector3u(0, 255, 255);
+		g_namedColors["aquamarine"]					= Vector3u(127, 255, 212);
+		g_namedColors["medium_aquamarine"]			= Vector3u(102, 205, 170);
+		g_namedColors["pale_turquoise"]				= Vector3u(175, 238, 238);
+		g_namedColors["turquoise"]					= Vector3u(64, 224, 208);
+		g_namedColors["medium_turquoise"]			= Vector3u(72, 209, 204);
+		g_namedColors["dark_turquoise"]				= Vector3u(0, 206, 209);
+		g_namedColors["light_sea_green"]			= Vector3u(32, 178, 170);
+		g_namedColors["cadet_blue"]					= Vector3u(95, 158, 160);
+		g_namedColors["dark_cyan"]					= Vector3u(0, 139, 139);
+		g_namedColors["teal"]						= Vector3u(0, 128, 128);
+
+		g_namedColors["poweder_blue"]				= Vector3u(176, 224, 230);
+		g_namedColors["light_blue"]					= Vector3u(173, 216, 230);
+		g_namedColors["light_sky_blue"]				= Vector3u(135, 206, 250);
+		g_namedColors["sky_blue"]					= Vector3u(135, 206, 235);
+		g_namedColors["deep_sky_blue"]				= Vector3u(0, 191, 255);
+		g_namedColors["light_steel_blue"]			= Vector3u(176, 196, 222);
+		g_namedColors["dodger_blue"]				= Vector3u(30, 144, 255);
+		g_namedColors["cornflower_blue"]			= Vector3u(100, 149, 237);
+		g_namedColors["steel_blue"]					= Vector3u(70, 130, 180);
+		g_namedColors["royal_blue"]					= Vector3u(65, 105, 225);
+		g_namedColors["blue"]						= Vector3u(0, 0, 255);
+		g_namedColors["medium_blue"]				= Vector3u(0, 0, 205);
+		g_namedColors["dark_blue"]					= Vector3u(0, 0, 139);
+		g_namedColors["navy"]						= Vector3u(0, 0, 128);
+		g_namedColors["midnight_blue"]				= Vector3u(25, 25, 112);
+		g_namedColors["midnight_slate_blue"]		= Vector3u(123, 104, 238);
+		g_namedColors["slate_blue"]					= Vector3u(106, 90, 205);
+		g_namedColors["dark_slate_blue"]			= Vector3u(72, 61, 139);
+
+		g_namedColors["lavender"]					= Vector3u(230, 230, 250);
+		g_namedColors["thistle"]					= Vector3u(216, 191, 216);
+		g_namedColors["plum"]						= Vector3u(221, 160, 221);
+		g_namedColors["violet"]						= Vector3u(238, 130, 238);
+		g_namedColors["orchid"]						= Vector3u(218, 112, 214);
+		g_namedColors["fuchsia"]					= Vector3u(255, 0, 255);
+		g_namedColors["magenta"]					= Vector3u(255, 0, 255);
+		g_namedColors["medium_orchid"]				= Vector3u(186, 85, 211);
+		g_namedColors["medium_purple"]				= Vector3u(147, 112, 219);
+		g_namedColors["blue_violet"]				= Vector3u(138, 43, 226);
+		g_namedColors["dark_violet"]				= Vector3u(148, 0, 211);
+		g_namedColors["dark_orchid"]				= Vector3u(153, 50, 204);
+		g_namedColors["dark_magenta"]				= Vector3u(139, 0, 139);
+		g_namedColors["purple"]						= Vector3u(128, 0, 128);
+		g_namedColors["indigo"]						= Vector3u(75, 0, 130);
+
+		g_namedColors["pink"]						= Vector3u(255, 192, 203);
+		g_namedColors["light_pink"]					= Vector3u(255, 182, 193);
+		g_namedColors["hot_pink"]					= Vector3u(255, 105, 180);
+		g_namedColors["deep_pink"]					= Vector3u(255, 20, 147);
+		g_namedColors["pale_violet_red"]			= Vector3u(219, 112, 147);
+		g_namedColors["medium_violet_red"]			= Vector3u(199, 21, 133);
+
+		g_namedColors["white"]						= Vector3u(255, 255, 255);
+		g_namedColors["snow"]						= Vector3u(255, 250, 250);
+		g_namedColors["honeydew"]					= Vector3u(240, 255, 240);
+		g_namedColors["mint_cream"]					= Vector3u(245, 255, 250);
+		g_namedColors["azure"]						= Vector3u(240, 255, 255);
+		g_namedColors["alice_blue"]					= Vector3u(240, 248, 255);
+		g_namedColors["ghost_white"]				= Vector3u(248, 248, 255);
+		g_namedColors["white_smoke"]				= Vector3u(245, 245, 245);
+		g_namedColors["seashell"]					= Vector3u(255, 245, 238);
+		g_namedColors["beige"]						= Vector3u(245, 245, 220);
+		g_namedColors["old_lace"]					= Vector3u(253, 245, 230);
+		g_namedColors["floral_white"]				= Vector3u(255, 250, 240);
+		g_namedColors["ivory"]						= Vector3u(255, 255, 240);
+		g_namedColors["antique_white"]				= Vector3u(250, 235, 215);
+		g_namedColors["linen"]						= Vector3u(250, 240, 230);
+		g_namedColors["lavender_blush"]				= Vector3u(255, 240, 245);
+		g_namedColors["misty_rose"]					= Vector3u(255, 228, 225);
+
+		g_namedColors["gainsboro"]					= Vector3u(220, 220, 220);
+		g_namedColors["light_gray"]					= Vector3u(211, 211, 211);
+		g_namedColors["silver"]						= Vector3u(192, 192, 192);
+		g_namedColors["dark_gray"]					= Vector3u(169, 169, 169);
+		g_namedColors["gray"]						= Vector3u(128, 128, 128);
+		g_namedColors["dim_gray"]					= Vector3u(105, 105, 105);
+		g_namedColors["light_slate_gray"]			= Vector3u(119, 136, 153);
+		g_namedColors["slate_gray"]					= Vector3u(112, 128, 144);
+		g_namedColors["dark_slate_gray"]			= Vector3u(47, 79, 79);
+		g_namedColors["black"]						= Vector3u(0, 0, 0);
+
+		g_namedColors["cornsilk"]					= Vector3u(255, 248, 220);
+		g_namedColors["blanched_almond"]			= Vector3u(255, 235, 205);
+		g_namedColors["bisque"]						= Vector3u(255, 228, 196);
+		g_namedColors["navajo_white"]				= Vector3u(255, 222, 173);
+		g_namedColors["wheat"]						= Vector3u(245, 222, 179);
+		g_namedColors["burlywood"]					= Vector3u(222, 184, 135);
+		g_namedColors["tan"]						= Vector3u(210, 180, 140);
+		g_namedColors["rosy_brown"]					= Vector3u(188, 143, 143);
+		g_namedColors["sandy_brown"]				= Vector3u(244, 164, 96);
+		g_namedColors["goldenrod"]					= Vector3u(218, 165, 32);
+		g_namedColors["peru"]						= Vector3u(205, 133, 63);
+		g_namedColors["chocolate"]					= Vector3u(210, 105, 30);
+		g_namedColors["saddle_brown"]				= Vector3u(139, 69, 19);
+		g_namedColors["sienna"]						= Vector3u(160, 82, 45);
+		g_namedColors["brown"]						= Vector3u(165, 42, 42);
+		g_namedColors["maroon"]						= Vector3u(128, 0, 0);
+	}
+
+	auto it = g_namedColors.find(color);
+	if (it != g_namedColors.end())
+	{
+		const Vector3u& c = it->second;
+		return Vector4f(c.r / 255.0f, c.g / 255.0f, c.b / 255.0f, 1.0f);
+	}
+
+	return Vector4f(1.0f);
+}
+
+
+///////////////////////////////////////////////////////////
+bool uiXmlParseFloat(char* c, float& v)
+{
+	char* e;
+	v = std::strtof(c, &e);
+
+	return *e != 0;
+}
+
+
+///////////////////////////////////////////////////////////
+bool uiXmlParseVec2(char* c, Vector2f& out)
+{
+	float* v = &out.x;
+
+	Uint32 index = 0;
+	char* start = c;
+
+	while (*c != 0)
+	{
+		if (*c == ' ' || *c == ',')
+		{
+			// Null terminator
+			*c = 0;
+
+			// Parse string
+			char* e;
+			v[index++] = std::strtof(start, &e);
+
+			// Catch errors
+			if (*e != 0)
+				return false;
+
+			while (*++c == ' ' || *c == ',');
+			start = c;
+		}
+
+		++c;
+	}
+
+	// Parse last number
+	char* e;
+	v[index] = std::strtof(start, &e);
+
+	return *e == 0;
+}
+
+
+///////////////////////////////////////////////////////////
+bool uiXmlParseVec3(char* c, Vector3f& out)
+{
+	float* v = &out.x;
+
+	Uint32 index = 0;
+	char* start = c;
+
+	while (*c != 0)
+	{
+		if (*c == ' ' || *c == ',')
+		{
+			// Null terminator
+			*c = 0;
+
+			// Parse string
+			char* e;
+			v[index++] = std::strtof(start, &e);
+
+			// Catch errors
+			if (*e != 0)
+				return false;
+
+			while (*++c == ' ' || *c == ',');
+			start = c;
+		}
+
+		++c;
+	}
+
+	// Parse last number
+	char* e;
+	v[index] = std::strtof(start, &e);
+
+	return *e == 0;
+}
+
+
+///////////////////////////////////////////////////////////
+bool uiXmlParseVec4(char* c, Vector4f& out)
+{
+	float* v = &out.x;
+
+	Uint32 index = 0;
+	char* start = c;
+
+	while (*c != 0)
+	{
+		if (*c == ' ' || *c == ',')
+		{
+			// Null terminator
+			*c = 0;
+
+			// Parse string
+			char* e;
+			v[index++] = std::strtof(start, &e);
+
+			// Catch errors
+			if (*e != 0)
+				return false;
+
+			while (*++c == ' ' || *c == ',');
+			start = c;
+		}
+
+		++c;
+	}
+
+	// Parse last number
+	char* e;
+	v[index] = std::strtof(start, &e);
+
+	return *e == 0;
+}
+
+
+///////////////////////////////////////////////////////////
+bool uiXmlParseHexColor(char* c, Vector4f& out)
+{
+	// Parse hex color
+	Uint32 r, g, b, a = 255;
+
+	Uint32 len = strlen(c);
+	char* e;
+	char temp;
+
+	if (c[0] != '#' || len < 7)
+		return false;
+
+	temp = c[3]; c[3] = 0;
+	r = std::strtoul(c + 1, &e, 16);
+	if (*e != 0) return false;
+
+	c[3] = temp; temp = c[5]; c[5] = 0;
+	g = std::strtoul(c + 3, &e, 16);
+	if (*e != 0) return false;
+
+	c[5] = temp;
+	if (len == 9)
+	{
+		temp = c[7];
+		c[7] = 0;
+	}
+	b = std::strtoul(c + 5, &e, 16);
+	if (*e != 0) return false;
+
+	if (len == 9)
+	{
+		c[7] = temp;
+		a = std::strtoul(c + 7, &e, 16);
+		if (*e != 0) return false;
+	}
+
+	out.r = r / 255.0f;
+	out.g = g / 255.0f;
+	out.b = b / 255.0f;
+	out.a = a / 255.0f;
+
+	return true;
+}
 
 
 ///////////////////////////////////////////////////////////
@@ -23,6 +377,14 @@ UISystem::UISystem() :
 	m_vertexArray.setNumVertices(1);
 	m_vertexArray.setDrawMode(DrawMode::Points);
 	m_instanceBuffer.create((UIInstanceData*)0, 65536, BufferUsage::Stream);
+}
+
+
+///////////////////////////////////////////////////////////
+UISystem::~UISystem()
+{
+	for (auto it = m_loadedTextures.begin(); it != m_loadedTextures.end(); ++it)
+		Pool<Texture>::free(it->second);
 }
 
 
@@ -391,6 +753,341 @@ void UISystem::setWindow(Window* window)
 	m_onMouseMoveHandle =	m_window->addListener<E_MouseMove>(std::bind(&UISystem::onMouseMove, this, std::placeholders::_1));
 	m_onMouseScrollHandle = m_window->addListener<E_MouseScroll>(std::bind(&UISystem::onMouseScroll, this, std::placeholders::_1));
 	m_onTextInputHandle = m_window->addListener<E_TextInput>(std::bind(&UISystem::onTextInput, this, std::placeholders::_1));
+}
+
+
+///////////////////////////////////////////////////////////
+bool UISystem::load(const std::string& fname)
+{
+	// Load file
+	std::ifstream f(fname.c_str(), std::ios::binary);
+	if (!f.is_open())
+	{
+		LOG_WARNING("Could not open UI XML file: %s", fname.c_str());
+		return false;
+	}
+
+	f.seekg(0, std::ios::end);
+	Uint32 size = (Uint32)f.tellg();
+	f.seekg(0);
+
+	// Allocate and read data
+	char* data = (char*)malloc(size + 1);
+	f.read(data, size);
+	data[size] = 0;
+
+	// Close file
+	f.close();
+
+	// Parse the file
+	rapidxml::xml_document<> doc;
+	doc.parse<0>(data);
+
+	// Get the main node
+	rapidxml::xml_node<>* mainNode = doc.first_node("ui");
+	if (!mainNode)
+	{
+		LOG_WARNING("Invalid UI XML file (must start with <ui>): %s", fname.c_str());
+		free(data);
+		return false;
+	}
+
+	// Keep track of parent elements
+	std::stack<UIElement*> parentStack;
+	std::stack<rapidxml::xml_node<>*> nodeStack;
+	parentStack.push(this);
+	nodeStack.push(0);
+
+	// Iterate through ui elements
+	rapidxml::xml_node<>* current = mainNode->first_node("ui_element");
+	while (current)
+	{
+		// Create an element
+		UIElement* element = 0;
+		Uint32 type = 0;
+
+		// Check the element type
+		rapidxml::xml_attribute<>* typeAttrib = current->first_attribute("type");
+		if (!typeAttrib)
+		{
+			element = Pool<UIElement>::alloc();
+			type = TypeInfo::getId<UIElement>();
+		}
+		else if (strcmp(typeAttrib->value(), "button") == 0)
+		{
+			element = Pool<Button>::alloc();
+			type = TypeInfo::getId<Button>();
+		}
+		else if (strcmp(typeAttrib->value(), "dropdown") == 0)
+		{
+			element = Pool<Dropdown>::alloc();
+			type = TypeInfo::getId<Dropdown>();
+		}
+		else if (strcmp(typeAttrib->value(), "h_list_view") == 0)
+		{
+			element = Pool<HListView>::alloc();
+			type = TypeInfo::getId<HListView>();
+		}
+		else if (strcmp(typeAttrib->value(), "v_list_view") == 0 || strcmp(typeAttrib->value(), "list_view") == 0)
+		{
+			element = Pool<VListView>::alloc();
+			type = TypeInfo::getId<VListView>();
+		}
+		else if (strcmp(typeAttrib->value(), "scroll_view") == 0)
+		{
+			element = Pool<ScrollView>::alloc();
+			type = TypeInfo::getId<ScrollView>();
+		}
+		else if (strcmp(typeAttrib->value(), "slider") == 0)
+		{
+			element = Pool<Slider>::alloc();
+			type = TypeInfo::getId<Slider>();
+		}
+		else if (strcmp(typeAttrib->value(), "text") == 0)
+		{
+			element = Pool<Text>::alloc();
+			type = TypeInfo::getId<Text>();
+		}
+		else if (strcmp(typeAttrib->value(), "text_input") == 0)
+		{
+			element = Pool<TextInput>::alloc();
+			type = TypeInfo::getId<TextInput>();
+		}
+
+		// Check if the element has an id
+		rapidxml::xml_attribute<>* idAttrib = current->first_attribute("id");
+		std::string id = idAttrib ? idAttrib->value() : "";
+
+		// Position
+		rapidxml::xml_attribute<>* posAttr = current->first_attribute("position");
+		if (posAttr)
+		{
+			Vector2f pos;
+			if (uiXmlParseVec2(posAttr->value(), pos))
+				element->setPosition(pos);
+		}
+
+		// Rotation
+		rapidxml::xml_attribute<>* rotAttr = current->first_attribute("rotation");
+		if (rotAttr)
+		{
+			float rot;
+			if (uiXmlParseFloat(rotAttr->value(), rot))
+				element->setRotation(rot);
+		}
+
+		// Size
+		rapidxml::xml_attribute<>* sizeAttr = current->first_attribute("size");
+		if (sizeAttr)
+		{
+			Vector2f size;
+			if (uiXmlParseVec2(sizeAttr->value(), size))
+				element->setSize(size);
+		}
+
+		// Rel Size
+		rapidxml::xml_attribute<>* relSizeAttr = current->first_attribute("rel_size");
+		if (relSizeAttr)
+		{
+			Vector2f size;
+			if (uiXmlParseVec2(relSizeAttr->value(), size))
+				element->setRelSize(size);
+		}
+
+		// Width
+		rapidxml::xml_attribute<>* widthAttr = current->first_attribute("width");
+		if (widthAttr)
+		{
+			float width;
+			if (uiXmlParseFloat(widthAttr->value(), width))
+				element->setWidth(width);
+		}
+
+		// Height
+		rapidxml::xml_attribute<>* heightAttr = current->first_attribute("height");
+		if (heightAttr)
+		{
+			float height;
+			if (uiXmlParseFloat(heightAttr->value(), height))
+				element->setHeight(height);
+		}
+
+		// Rel Width
+		rapidxml::xml_attribute<>* relWidthAttr = current->first_attribute("rel_width");
+		if (relWidthAttr)
+		{
+			float relWidth;
+			if (uiXmlParseFloat(relWidthAttr->value(), relWidth))
+				element->setRelWidth(relWidth);
+		}
+
+		// Rel Height
+		rapidxml::xml_attribute<>* relHeightAttr = current->first_attribute("rel_height");
+		if (relHeightAttr)
+		{
+			float relHeight;
+			if (uiXmlParseFloat(relHeightAttr->value(), relHeight))
+				element->setRelHeight(relHeight);
+		}
+
+		// Origin
+		rapidxml::xml_attribute<>* originAttr = current->first_attribute("origin");
+		if (originAttr)
+		{
+			Vector2f origin;
+			if (uiXmlParseVec2(originAttr->value(), origin))
+				element->setOrigin(origin);
+
+			else
+			{
+				if (strcmp(originAttr->value(), "top_left") == 0)
+					element->setOrigin(UIPosition::TopLeft);
+				else if (strcmp(originAttr->value(), "top_center") == 0)
+					element->setOrigin(UIPosition::TopCenter);
+				else if (strcmp(originAttr->value(), "top_right") == 0)
+					element->setOrigin(UIPosition::TopRight);
+
+				else if (strcmp(originAttr->value(), "left") == 0)
+					element->setOrigin(UIPosition::Left);
+				else if (strcmp(originAttr->value(), "center") == 0)
+					element->setOrigin(UIPosition::Center);
+				else if (strcmp(originAttr->value(), "right") == 0)
+					element->setOrigin(UIPosition::Right);
+
+				else if (strcmp(originAttr->value(), "bot_left") == 0)
+					element->setOrigin(UIPosition::BotLeft);
+				else if (strcmp(originAttr->value(), "bot_center") == 0)
+					element->setOrigin(UIPosition::BotCenter);
+				else if (strcmp(originAttr->value(), "bot_right") == 0)
+					element->setOrigin(UIPosition::BotRight);
+			}
+		}
+
+		// Anchor
+		rapidxml::xml_attribute<>* anchorAttr = current->first_attribute("anchor");
+		if (anchorAttr)
+		{
+			Vector2f anchor;
+			if (uiXmlParseVec2(anchorAttr->value(), anchor))
+				element->setAnchor(anchor);
+
+			else
+			{
+				if (strcmp(anchorAttr->value(), "top_left") == 0)
+					element->setAnchor(UIPosition::TopLeft);
+				else if (strcmp(anchorAttr->value(), "top_center") == 0)
+					element->setAnchor(UIPosition::TopCenter);
+				else if (strcmp(anchorAttr->value(), "top_right") == 0)
+					element->setAnchor(UIPosition::TopRight);
+
+				else if (strcmp(anchorAttr->value(), "left") == 0)
+					element->setAnchor(UIPosition::Left);
+				else if (strcmp(anchorAttr->value(), "center") == 0)
+					element->setAnchor(UIPosition::Center);
+				else if (strcmp(anchorAttr->value(), "right") == 0)
+					element->setAnchor(UIPosition::Right);
+
+				else if (strcmp(anchorAttr->value(), "bot_left") == 0)
+					element->setAnchor(UIPosition::BotLeft);
+				else if (strcmp(anchorAttr->value(), "bot_center") == 0)
+					element->setAnchor(UIPosition::BotCenter);
+				else if (strcmp(anchorAttr->value(), "bot_right") == 0)
+					element->setAnchor(UIPosition::BotRight);
+			}
+		}
+
+		// Color
+		rapidxml::xml_attribute<>* colorAttr = current->first_attribute("color");
+		if (colorAttr)
+		{
+			Vector4f color4;
+			Vector3f color3;
+			char* c = colorAttr->value();
+
+			if (c[0] == '#' && uiXmlParseHexColor(c, color4))
+				element->setColor(color4);
+
+			else if (uiXmlParseVec4(c, color4))
+				element->setColor(color4);
+
+			else if (uiXmlParseVec3(c, color3))
+				element->setColor(Vector4f(color3, 1.0f));
+
+			else
+				element->setColor(getNamedColor(c));
+		}
+
+		// Texture
+		rapidxml::xml_attribute<>* textureAttr = current->first_attribute("texture");
+		if (textureAttr)
+		{
+			Texture* texture = Pool<Texture>::alloc();
+			std::string fname = textureAttr->value();
+
+			// Check if it has been loaded first
+			auto it = m_loadedTextures.find(fname);
+			if (it == m_loadedTextures.end())
+			{
+				if (texture->load(fname))
+				{
+					m_loadedTextures[fname] = texture;
+					element->setTexture(texture);
+				}
+			}
+			else
+				element->setTexture(it->second);
+		}
+
+		// Texture Rect
+		rapidxml::xml_attribute<>* textureRectAttr = current->first_attribute("texture_rect");
+		if (textureRectAttr)
+		{
+			Vector4f textureRect;
+			if (uiXmlParseVec4(textureRectAttr->value(), textureRect))
+				element->setTextureRect(textureRect);
+		}
+
+
+		parentStack.top()->addChild(element);
+
+		// Add the element to the map
+		if (id.size() > 0)
+			m_elements[id] = element;
+
+		// Add child elements
+		rapidxml::xml_node<>* childrenNode = current->first_node("ui_element");
+
+		// Go to next sibling
+		current = current->next_sibling("ui_element");
+
+		if (childrenNode)
+		{
+			// Add current node to parent queue
+			parentStack.push(element);
+			nodeStack.push(current);
+
+			// Go to first child element
+			current = childrenNode;
+		}
+
+		// Go up one level if the current node is 0
+		if (!current && parentStack.size())
+		{
+			current = nodeStack.top();
+			parentStack.pop();
+			nodeStack.pop();
+		}
+	}
+
+	return true;
+}
+
+
+///////////////////////////////////////////////////////////
+UIElement* UISystem::getElement(const std::string& id) const
+{
+	auto it = m_elements.find(id);
+	return it == m_elements.end() ? 0 : it->second;
 }
 
 

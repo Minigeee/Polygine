@@ -1,0 +1,5 @@
+<ui>
+    <ui_element id="test" type="button" position="5,5" size="200,40" color="dark_slate_gray">
+        <ui_element position="10,10" size="50,50" color="steel_blue" />
+    </ui_element>
+</ui>

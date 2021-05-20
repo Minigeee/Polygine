@@ -59,6 +59,11 @@ int main()
     // Create a new window
     window.create(1280, 720, "My Game");
 
+    // Default font
+    Font font;
+    font.load("examples/fonts/segoeui/segoeui.ttf");
+    Text::setDefaultFont(&font);
+
     // Add an event listener
     HashMap<Keyboard, bool> keyMap;
     window.addListener<E_KeyEvent>(
@@ -91,6 +96,15 @@ int main()
     Camera camera;
     camera.setPosition(0.0f, 50.0f, 0.0f);
     camera.setRotation(0.0f, 0.0f);
+
+    // UI
+    UISystem ui;
+    ui.setWindow(&window);
+    ui.load("examples/ui.xml");
+
+    Button* btn = (Button*)ui.getElement("test");
+    btn->setString("Hello!");
+    btn->getText()->setCharacterSize(15);
 
     // Setup scene
     Scene scene;
@@ -420,6 +434,8 @@ int main()
         colorAdjust.render(framebuffers[0], framebuffers[1]);
         fxaa.render(framebuffers[1]);
 
+        ui.render();
+
         STOP_PROFILING(GameLoop);
 
         // Display (swap buffers)
@@ -435,4 +451,3 @@ int main()
 // TODO : Add convenience constructor loaders
 // TODO : Document Dropdown
 // TODO : Move Grass to game project and document it
-// TODO : Sun glare effect

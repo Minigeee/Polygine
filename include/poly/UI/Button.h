@@ -145,13 +145,25 @@ public:
 	/// \brief Set the function callback that gets called when the left mouse button is released inside the button
 	///
 	/// This function gets called only if the left mouse button was pressed
-	/// while the cursor is inside the button area. The cursor location
-	/// when the left mouse button is released does not matter.
+	/// while the cursor is inside the button area. The cursor must be inside
+	/// the button when it is released for the function to be called.
 	///
 	/// \param func The function callback
 	///
 	///////////////////////////////////////////////////////////
 	void onRelease(const std::function<void()>& func);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the function callback that gets called when the left mouse button is released outside the button
+	///
+	/// This function gets called only if the left mouse button was pressed
+	/// while the cursor is inside the button area. The cursor must be inside
+	/// the button when it is released for the function to be called.
+	///
+	/// \param func The function callback
+	///
+	///////////////////////////////////////////////////////////
+	void onCancel(const std::function<void()>& func);
 
 private:
 	void onMouseButton(const E_MouseButton& e) override;
@@ -173,6 +185,7 @@ private:
 	std::function<void(const E_MouseMove&)> m_onMouseLeave;
 	std::function<void()> m_onPress;
 	std::function<void()> m_onRelease;
+	std::function<void()> m_onCancel;
 };
 
 }

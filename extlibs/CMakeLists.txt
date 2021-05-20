@@ -94,3 +94,11 @@ target_include_directories(polygine PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extlibs/FastNoise/Cpp>
     $<INSTALL_INTERFACE:include>)
 install(FILES "${PROJECT_SOURCE_DIR}/extlibs/FastNoise/Cpp/FastNoiseLite.h" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+
+# RapidXml
+target_include_directories(polygine PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extlibs/rapidxml/include>
+    $<INSTALL_INTERFACE:include>)
+
+# Install headers
+install(DIRECTORY "${PROJECT_SOURCE_DIR}/extlibs/rapidxml/include" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")

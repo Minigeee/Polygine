@@ -141,6 +141,13 @@ void Button::onRelease(const std::function<void()>& func)
 
 
 ///////////////////////////////////////////////////////////
+void Button::onCancel(const std::function<void()>& func)
+{
+	m_onCancel = func;
+}
+
+
+///////////////////////////////////////////////////////////
 void Button::onMouseButton(const E_MouseButton& e)
 {
 	// Only allowed to click with left mouse button
@@ -157,8 +164,16 @@ void Button::onMouseButton(const E_MouseButton& e)
 	{
 		m_isPressed = false;
 
-		if (m_onRelease)
-			m_onRelease();
+		if (m_hasHover)
+		{
+			if (m_onRelease)
+				m_onRelease();
+		}
+		else
+		{
+			if (m_onCancel)
+				m_onCancel();
+		}
 	}
 }
 
