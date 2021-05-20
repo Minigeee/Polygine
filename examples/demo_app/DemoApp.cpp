@@ -431,7 +431,4 @@ int main()
 // TODO : Document Dropdown
 // TODO : Move Grass to game project and document it
 // TODO : Sun glare effect
-// TODO : Add normal mapping
 // TODO : Make all framebuffers resizeable (in post-processing effects too)
-// TODO : Possibly optimize GPU particles by allowing parallel updates (for transform feedback queries)
-// TODO : Improve Model

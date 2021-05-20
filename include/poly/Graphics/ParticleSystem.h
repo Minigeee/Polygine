@@ -402,6 +402,7 @@ private:
 	VertexArray m_vertexArray;			//!< The vertex array to render and update particles
 	VertexBuffer m_vertexBuffers[2];	//!< Two vertex buffers for updating particles and rendering
 	Uint32 m_currentBuffer;				//!< The current buffer index
+	bool m_queryFinished;				//!< This is true if the update stage finished and is rendered
 
 	std::function<std::vector<Vector2u>()> m_fieldsFunc;	//!< The fields info function
 };

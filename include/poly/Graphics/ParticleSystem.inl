@@ -219,7 +219,8 @@ inline GpuParticles<T>::GpuParticles() :
 	m_tfQuery		(0),
 	m_numParticles	(0),
 	m_bufferSize	(256),
-	m_currentBuffer	(0)
+	m_currentBuffer	(0),
+	m_queryFinished	(true)
 {
 	m_fieldsFunc = PARTICLE_FIELDS(T, m_position, m_rotation, m_size, m_color, m_textureRect, m_velocity, m_age, m_type);
 }
@@ -264,9 +265,23 @@ inline void GpuParticles<T>::render(Camera& camera, RenderPass pass)
 	// Only render for default pass
 	if (pass != RenderPass::Default) return;
 
-	// Check number of particles before rendering to give the update function time to finish the query
-	glCheck(glGetQueryObjectuiv(m_tfQuery, GL_QUERY_RESULT, &m_numParticles));
-	m_vertexArray.setNumVertices(m_numParticles);
+	// Check if the query is ready
+	Uint32 available = GL_FALSE;
+	glGetQueryObjectuiv(m_tfQuery, GL_QUERY_RESULT_AVAILABLE, &available);
+
+	if (available)
+	{
+		// Check number of particles before rendering to give the update function
+		// as much time as possible to finish the query
+		glCheck(glGetQueryObjectuiv(m_tfQuery, GL_QUERY_RESULT, &m_numParticles));
+		m_vertexArray.setNumVertices(m_numParticles);
+
+		// Update current buffer
+		m_currentBuffer = (m_currentBuffer + 1) % 2;
+
+		// Indicate query finished
+		m_queryFinished = true;
+	}
 
 	if (!m_numParticles) return;
 
@@ -317,7 +332,7 @@ template <typename T>
 inline void GpuParticles<T>::update(const std::function<void(Shader*)>& func)
 {
 	// Can't update without an update shader
-	if (!m_updateShader || !m_numParticles) return;
+	if (!m_updateShader || !m_numParticles || !m_queryFinished) return;
 
 	// Get elapsed time
 	float dt = m_clock.restart().toSeconds();
@@ -356,8 +371,12 @@ inline void GpuParticles<T>::update(const std::function<void(Shader*)>& func)
 	// Reenable fragment shader
 	glCheck(glDisable(GL_RASTERIZER_DISCARD));
 
-	// Update current buffer
-	m_currentBuffer = nextBuffer;
+	// Indicate that particles are still updating
+	m_queryFinished = false;
+
+	// Don't update the current buffer immediately after calling
+	// the update because it will take time to finish. Keep rendering
+	// the old buffer until the next one finishes
 }
 
 
