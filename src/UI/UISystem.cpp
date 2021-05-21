@@ -8,6 +8,7 @@
 
 #include <poly/UI/Button.h>
 #include <poly/UI/Dropdown.h>
+#include <poly/UI/Font.h>
 #include <poly/UI/ListView.h>
 #include <poly/UI/ScrollView.h>
 #include <poly/UI/Slider.h>
@@ -196,12 +197,22 @@ const Vector4f& getNamedColor(const std::string& color)
 
 
 ///////////////////////////////////////////////////////////
+bool uiXmlParseInt(char* c, Uint32& v)
+{
+	char* e;
+	v = std::strtoul(c, &e, 10);
+
+	return *e == 0;
+}
+
+
+///////////////////////////////////////////////////////////
 bool uiXmlParseFloat(char* c, float& v)
 {
 	char* e;
 	v = std::strtof(c, &e);
 
-	return *e != 0;
+	return *e == 0;
 }
 
 
@@ -366,11 +377,531 @@ bool uiXmlParseHexColor(char* c, Vector4f& out)
 
 
 ///////////////////////////////////////////////////////////
+bool uiXmlParseUiPosition(char* c, UIPosition& pos)
+{
+	if (strcmp(c, "top_left") == 0)
+		pos = UIPosition::TopLeft;
+	else if (strcmp(c, "top_center") == 0)
+		pos = UIPosition::TopCenter;
+	else if (strcmp(c, "top_right") == 0)
+		pos = UIPosition::TopRight;
+
+	else if (strcmp(c, "left") == 0)
+		pos = UIPosition::Left;
+	else if (strcmp(c, "center") == 0)
+		pos = UIPosition::Center;
+	else if (strcmp(c, "right") == 0)
+		pos = UIPosition::Right;
+
+	else if (strcmp(c, "bot_left") == 0)
+		pos = UIPosition::BotLeft;
+	else if (strcmp(c, "bot_center") == 0)
+		pos = UIPosition::BotCenter;
+	else if (strcmp(c, "bot_right") == 0)
+		pos = UIPosition::BotRight;
+
+	else
+		return false;
+
+	return true;
+}
+
+
+///////////////////////////////////////////////////////////
+void uiXmlParseElement(UIElement* element, rapidxml::xml_node<>* node, HashMap<std::string, Texture*> textureMap)
+{
+	// Position
+	rapidxml::xml_attribute<>* posAttr = node->first_attribute("position");
+	if (posAttr)
+	{
+		Vector2f pos;
+		if (uiXmlParseVec2(posAttr->value(), pos))
+			element->setPosition(pos);
+	}
+
+	// Rotation
+	rapidxml::xml_attribute<>* rotAttr = node->first_attribute("rotation");
+	if (rotAttr)
+	{
+		float rot;
+		if (uiXmlParseFloat(rotAttr->value(), rot))
+			element->setRotation(rot);
+	}
+
+	// Size
+	rapidxml::xml_attribute<>* sizeAttr = node->first_attribute("size");
+	if (sizeAttr)
+	{
+		Vector2f size;
+		if (uiXmlParseVec2(sizeAttr->value(), size))
+			element->setSize(size);
+	}
+
+	// Rel Size
+	rapidxml::xml_attribute<>* relSizeAttr = node->first_attribute("rel_size");
+	if (relSizeAttr)
+	{
+		Vector2f size;
+		if (uiXmlParseVec2(relSizeAttr->value(), size))
+			element->setRelSize(size);
+	}
+
+	// Width
+	rapidxml::xml_attribute<>* widthAttr = node->first_attribute("width");
+	if (widthAttr)
+	{
+		float width;
+		if (uiXmlParseFloat(widthAttr->value(), width))
+			element->setWidth(width);
+	}
+
+	// Height
+	rapidxml::xml_attribute<>* heightAttr = node->first_attribute("height");
+	if (heightAttr)
+	{
+		float height;
+		if (uiXmlParseFloat(heightAttr->value(), height))
+			element->setHeight(height);
+	}
+
+	// Rel Width
+	rapidxml::xml_attribute<>* relWidthAttr = node->first_attribute("rel_width");
+	if (relWidthAttr)
+	{
+		float relWidth;
+		if (uiXmlParseFloat(relWidthAttr->value(), relWidth))
+			element->setRelWidth(relWidth);
+	}
+
+	// Rel Height
+	rapidxml::xml_attribute<>* relHeightAttr = node->first_attribute("rel_height");
+	if (relHeightAttr)
+	{
+		float relHeight;
+		if (uiXmlParseFloat(relHeightAttr->value(), relHeight))
+			element->setRelHeight(relHeight);
+	}
+
+	// Origin
+	rapidxml::xml_attribute<>* originAttr = node->first_attribute("origin");
+	if (originAttr)
+	{
+		Vector2f origin;
+		UIPosition pos;
+
+		if (uiXmlParseVec2(originAttr->value(), origin))
+			element->setOrigin(origin);
+
+		else if (uiXmlParseUiPosition(originAttr->value(), pos))
+			element->setOrigin(pos);
+	}
+
+	// Anchor
+	rapidxml::xml_attribute<>* anchorAttr = node->first_attribute("anchor");
+	if (anchorAttr)
+	{
+		Vector2f anchor;
+		UIPosition pos;
+
+		if (uiXmlParseVec2(anchorAttr->value(), anchor))
+			element->setAnchor(anchor);
+
+		else if (uiXmlParseUiPosition(anchorAttr->value(), pos))
+			element->setAnchor(pos);
+	}
+
+	// Color
+	rapidxml::xml_attribute<>* colorAttr = node->first_attribute("color");
+	if (colorAttr)
+	{
+		Vector4f color4;
+		Vector3f color3;
+		char* c = colorAttr->value();
+
+		if (c[0] == '#' && uiXmlParseHexColor(c, color4))
+			element->setColor(color4);
+
+		else if (uiXmlParseVec4(c, color4))
+			element->setColor(color4);
+
+		else if (uiXmlParseVec3(c, color3))
+			element->setColor(Vector4f(color3, 1.0f));
+
+		else
+			element->setColor(getNamedColor(c));
+	}
+
+	// Texture
+	rapidxml::xml_attribute<>* textureAttr = node->first_attribute("texture");
+	if (textureAttr)
+	{
+		std::string fname = textureAttr->value();
+
+		// Check if it has been loaded first
+		auto it = textureMap.find(fname);
+		if (it == textureMap.end())
+		{
+			Texture* texture = Pool<Texture>::alloc();
+			if (texture->load(fname))
+			{
+				textureMap[fname] = texture;
+				element->setTexture(texture);
+			}
+			else
+				Pool<Texture>::free(texture);
+		}
+		else
+			element->setTexture(it->second);
+	}
+
+	// Texture Rect
+	rapidxml::xml_attribute<>* textureRectAttr = node->first_attribute("texture_rect");
+	if (textureRectAttr)
+	{
+		Vector4f textureRect;
+		if (uiXmlParseVec4(textureRectAttr->value(), textureRect))
+			element->setTextureRect(textureRect);
+	}
+}
+
+
+///////////////////////////////////////////////////////////
+void uiXmlParseText(Text* text, rapidxml::xml_node<>* node, HashMap<std::string, Font*>& fontMap)
+{
+	// Font
+	rapidxml::xml_attribute<>* fontAttr = node->first_attribute("font");
+	if (fontAttr)
+	{
+		std::string fname = fontAttr->value();
+
+		// Check if the font has been loaded
+		auto it = fontMap.find(fname);
+		if (it == fontMap.end())
+		{
+			Font* font = Pool<Font>::alloc();
+			if (font->load(fname))
+			{
+				fontMap[fname] = font;
+				text->setFont(font);
+			}
+			else
+				Pool<Font>::free(font);
+		}
+		else
+			text->setFont(it->second);
+	}
+
+	// Value
+	if (strlen(node->value()) > 0)
+		text->setString(node->value());
+
+	else
+	{
+		rapidxml::xml_attribute<>* valueAttr = node->first_attribute("value");
+		if (valueAttr)
+			text->setString(valueAttr->value());
+	}
+
+	// Character size
+	rapidxml::xml_attribute<>* charSizeAttr = node->first_attribute("character_size");
+	if (charSizeAttr)
+	{
+		Uint32 size;
+		if (uiXmlParseInt(charSizeAttr->value(), size))
+			text->setCharacterSize(size);
+	}
+
+	// Character spacing
+	rapidxml::xml_attribute<>* charSpacingAttr = node->first_attribute("character_spacing");
+	if (charSpacingAttr)
+	{
+		float spacing;
+		if (uiXmlParseFloat(charSpacingAttr->value(), spacing))
+			text->setCharacterSpacing(spacing);
+	}
+
+	// Line spacing
+	rapidxml::xml_attribute<>* lineSpacingAttr = node->first_attribute("line_spacing");
+	if (lineSpacingAttr)
+	{
+		float spacing;
+		if (uiXmlParseFloat(lineSpacingAttr->value(), spacing))
+			text->setLineSpacing(spacing);
+	}
+}
+
+
+///////////////////////////////////////////////////////////
+void uiXmlParseButton(Button* button, rapidxml::xml_node<>* node, HashMap<std::string, Texture*>& textureMap, HashMap<std::string, Font*>& fontMap)
+{
+	// Text value
+	rapidxml::xml_attribute<>* valueAttr = node->first_attribute("value");
+	if (valueAttr)
+		button->setString(valueAttr->value());
+
+	else
+	{
+		rapidxml::xml_attribute<>* textAttr = node->first_attribute("text");
+		if (textAttr)
+			button->setString(textAttr->value());
+	}
+
+	// Text align
+	rapidxml::xml_attribute<>* textAlignAttr = node->first_attribute("text_align");
+	if (textAlignAttr)
+	{
+		UIPosition align;
+		if (uiXmlParseUiPosition(textAlignAttr->value(), align))
+			button->setTextAlign(align);
+	}
+
+	// Text offset
+	rapidxml::xml_attribute<>* textOffsetAttr = node->first_attribute("text_offset");
+	if (textOffsetAttr)
+	{
+		Vector2f offset;
+		if (uiXmlParseVec2(textOffsetAttr->value(), offset))
+			button->setTextOffset(offset);
+	}
+
+	// Parse text options
+	rapidxml::xml_node<>* textNode = node->first_node("element_text");
+	if (textNode)
+	{
+		uiXmlParseElement(button->getText(), textNode, textureMap);
+		uiXmlParseText(button->getText(), textNode, fontMap);
+	}
+}
+
+
+///////////////////////////////////////////////////////////
+void uiXmlParseDropdown(Dropdown* dropdown, rapidxml::xml_node<>* node, HashMap<std::string, Texture*>& textureMap, HashMap<std::string, Font*>& fontMap)
+{
+	// Load as button because dropdown inherits from button
+	uiXmlParseButton(dropdown, node, textureMap, fontMap);
+
+	// Item height
+	rapidxml::xml_attribute<>* itemHeightAttr = node->first_attribute("item_height");
+	if (itemHeightAttr)
+	{
+		float height;
+		if (uiXmlParseFloat(itemHeightAttr->value(), height))
+			dropdown->setItemHeight(height);
+	}
+
+	// Item color
+	rapidxml::xml_attribute<>* itemColorAttr = node->first_attribute("item_color");
+	if (itemColorAttr)
+	{
+		Vector4f color4;
+		Vector3f color3;
+		char* c = itemColorAttr->value();
+
+		if (c[0] == '#' && uiXmlParseHexColor(c, color4))
+			dropdown->setItemColor(color4);
+
+		else if (uiXmlParseVec4(c, color4))
+			dropdown->setItemColor(color4);
+
+		else if (uiXmlParseVec3(c, color3))
+			dropdown->setItemColor(Vector4f(color3, 1.0f));
+
+		else
+			dropdown->setItemColor(getNamedColor(c));
+	}
+
+	// Add dropdown items
+	rapidxml::xml_node<>* itemNode = node->first_node("dropdown_item");
+	while (itemNode)
+	{
+		Uint32 itemLen = strlen(itemNode->value());
+
+		if (itemLen)
+			dropdown->addItem(itemNode->value());
+
+		else
+		{
+			Button* item = Pool<Button>::alloc();
+
+			uiXmlParseElement(item, itemNode, textureMap);
+			uiXmlParseButton(item, itemNode, textureMap, fontMap);
+
+			// Add the custom button
+			dropdown->addItem(item);
+		}
+
+		itemNode = itemNode->next_sibling("dropdown_item");
+	}
+}
+
+
+///////////////////////////////////////////////////////////
+void uiXmlParseSlider(Slider* slider, rapidxml::xml_node<>* node, HashMap<std::string, Texture*>& textureMap)
+{
+	// Slider value
+	rapidxml::xml_attribute<>* valueAttr = node->first_attribute("value");
+	if (valueAttr)
+	{
+		float value;
+		if (uiXmlParseFloat(valueAttr->value(), value))
+			slider->setValue(value);
+	}
+
+	// Slider button
+	rapidxml::xml_node<>* buttonNode = node->first_node("slider_button");
+	if (buttonNode)
+		uiXmlParseElement(slider->getSliderButton(), buttonNode, textureMap);
+}
+
+
+///////////////////////////////////////////////////////////
+void uiXmlParseScrollView(ScrollView* view, rapidxml::xml_node<>* node, HashMap<std::string, Texture*>& textureMap)
+{
+	// Clip margins
+	rapidxml::xml_attribute<>* marginsAttr = node->first_attribute("clip_margins");
+	if (marginsAttr)
+	{
+		float margins;
+		if (uiXmlParseFloat(marginsAttr->value(), margins))
+			view->setClipMargin(margins);
+	}
+
+	// Scroll speed
+	rapidxml::xml_attribute<>* speedAttr = node->first_attribute("scroll_speed");
+	if (speedAttr)
+	{
+		float speed;
+		if (uiXmlParseFloat(speedAttr->value(), speed))
+			view->setScrollSpeed(speed);
+	}
+
+	// Scroll bar width
+	rapidxml::xml_attribute<>* barWidthAttr = node->first_attribute("scroll_bar_width");
+	if (barWidthAttr)
+	{
+		float barWidth;
+		if (uiXmlParseFloat(barWidthAttr->value(), barWidth))
+			view->setScrollBarWidth(barWidth);
+	}
+
+	// Slider
+	rapidxml::xml_node<>* sliderNode = node->first_node("scroll_bar");
+	if (sliderNode)
+		uiXmlParseElement(view->getScrollBar(), sliderNode, textureMap);
+}
+
+
+///////////////////////////////////////////////////////////
+void uiXmlParseTextInput(TextInput* input, rapidxml::xml_node<>* node, HashMap<std::string, Texture*>& textureMap, HashMap<std::string, Font*>& fontMap)
+{
+	// Text value
+	rapidxml::xml_attribute<>* valueAttr = node->first_attribute("value");
+	if (valueAttr)
+		input->setValue(valueAttr->value());
+
+	else
+	{
+		rapidxml::xml_attribute<>* textAttr = node->first_attribute("text");
+		if (textAttr)
+			input->setValue(textAttr->value());
+	}
+
+	// Text cursor size
+	rapidxml::xml_attribute<>* cursorSizeAttr = node->first_attribute("cursor_size");
+	if (cursorSizeAttr)
+	{
+		Vector2f size;
+		if (uiXmlParseVec2(cursorSizeAttr->value(), size))
+			input->setTextCursorSize(size);
+	}
+
+	// Text cursor color
+	rapidxml::xml_attribute<>* cursorColorAttr = node->first_attribute("cursor_color");
+	if (cursorColorAttr)
+	{
+		Vector4f color4;
+		Vector3f color3;
+		char* c = cursorColorAttr->value();
+
+		if (c[0] == '#' && uiXmlParseHexColor(c, color4))
+			input->setTextCursorColor(color4);
+
+		else if (uiXmlParseVec4(c, color4))
+			input->setTextCursorColor(color4);
+
+		else if (uiXmlParseVec3(c, color3))
+			input->setTextCursorColor(Vector4f(color3, 1.0f));
+
+		else
+			input->setTextCursorColor(getNamedColor(c));
+	}
+
+	// Text cursor cycle
+	rapidxml::xml_attribute<>* cursorCycleAttr = node->first_attribute("cursor_cycle");
+	if (cursorCycleAttr)
+	{
+		float cycle;
+		if (uiXmlParseFloat(cursorCycleAttr->value(), cycle))
+			input->setTextCursorCycle(cycle);
+	}
+
+	// Highlight cursor color
+	rapidxml::xml_attribute<>* highlightColorAttr = node->first_attribute("highlight_color");
+	if (highlightColorAttr)
+	{
+		Vector4f color4;
+		Vector3f color3;
+		char* c = highlightColorAttr->value();
+
+		if (c[0] == '#' && uiXmlParseHexColor(c, color4))
+			input->setHighlightColor(color4);
+
+		else if (uiXmlParseVec4(c, color4))
+			input->setHighlightColor(color4);
+
+		else if (uiXmlParseVec3(c, color3))
+			input->setHighlightColor(Vector4f(color3, 1.0f));
+
+		else
+			input->setHighlightColor(getNamedColor(c));
+	}
+
+	// Text align
+	rapidxml::xml_attribute<>* textAlignAttr = node->first_attribute("text_align");
+	if (textAlignAttr)
+	{
+		UIPosition align;
+		if (uiXmlParseUiPosition(textAlignAttr->value(), align))
+			input->setTextAlign(align);
+	}
+
+	// Text offset
+	rapidxml::xml_attribute<>* textOffsetAttr = node->first_attribute("text_offset");
+	if (textOffsetAttr)
+	{
+		Vector2f offset;
+		if (uiXmlParseVec2(textOffsetAttr->value(), offset))
+			input->setTextOffset(offset);
+	}
+
+	// Parse text options
+	rapidxml::xml_node<>* textNode = node->first_node("element_text");
+	if (textNode)
+	{
+		uiXmlParseElement(input->getText(), textNode, textureMap);
+		uiXmlParseText(input->getText(), textNode, fontMap);
+	}
+}
+
+
+///////////////////////////////////////////////////////////
 UISystem::UISystem() :
 	m_window				(0),
 	m_instanceBufferOffset	(0),
 	m_hovered				(0),
-	m_focused				(0)
+	m_focused				(0),
+	m_defaultFont			(0),
+	m_loaded				(false)
 {
 	m_isVisible = false;
 
@@ -385,6 +916,8 @@ UISystem::~UISystem()
 {
 	for (auto it = m_loadedTextures.begin(); it != m_loadedTextures.end(); ++it)
 		Pool<Texture>::free(it->second);
+	for (auto it = m_loadedFonts.begin(); it != m_loadedFonts.end(); ++it)
+		Pool<Font>::free(it->second);
 }
 
 
@@ -526,6 +1059,7 @@ void UISystem::render(FrameBuffer& target, bool overlay)
 			currentTexture = group.m_texture;
 			currentShader = group.m_shader;
 			currentClipRect = group.m_clipRect;
+			currentBlendColor = group.m_blendColor;
 			renderData.push_back(UIRenderData
 				{
 					currentTexture,
@@ -759,6 +1293,10 @@ void UISystem::setWindow(Window* window)
 ///////////////////////////////////////////////////////////
 bool UISystem::load(const std::string& fname)
 {
+	// Don't load a second time
+	if (m_loaded) return true;
+
+
 	// Load file
 	std::ifstream f(fname.c_str(), std::ios::binary);
 	if (!f.is_open())
@@ -792,6 +1330,25 @@ bool UISystem::load(const std::string& fname)
 		return false;
 	}
 
+	// Font
+	rapidxml::xml_node<>* fontNode = mainNode->first_node("font");
+	if (fontNode)
+	{
+		if (m_defaultFont)
+			Pool<Font>::free(m_defaultFont);
+
+		m_defaultFont = Pool<Font>::alloc();
+		if (m_defaultFont->load(fontNode->value()))
+		{
+			// Set default font and add to loaded fonts
+			Text::setDefaultFont(m_defaultFont);
+			m_loadedFonts[fontNode->value()] = m_defaultFont;
+		}
+		else
+			Pool<Font>::free(m_defaultFont);
+	}
+
+
 	// Keep track of parent elements
 	std::stack<UIElement*> parentStack;
 	std::stack<rapidxml::xml_node<>*> nodeStack;
@@ -799,7 +1356,7 @@ bool UISystem::load(const std::string& fname)
 	nodeStack.push(0);
 
 	// Iterate through ui elements
-	rapidxml::xml_node<>* current = mainNode->first_node("ui_element");
+	rapidxml::xml_node<>* current = mainNode->first_node();
 	while (current)
 	{
 		// Create an element
@@ -807,258 +1364,125 @@ bool UISystem::load(const std::string& fname)
 		Uint32 type = 0;
 
 		// Check the element type
-		rapidxml::xml_attribute<>* typeAttrib = current->first_attribute("type");
-		if (!typeAttrib)
+		if (strcmp(current->name(), "ui_element") == 0)
 		{
 			element = Pool<UIElement>::alloc();
 			type = TypeInfo::getId<UIElement>();
+
+			uiXmlParseElement(element, current, m_loadedTextures);
 		}
-		else if (strcmp(typeAttrib->value(), "button") == 0)
+		else if (strcmp(current->name(), "button") == 0)
 		{
 			element = Pool<Button>::alloc();
 			type = TypeInfo::getId<Button>();
+
+			uiXmlParseElement(element, current, m_loadedTextures);
+			uiXmlParseButton((Button*)element, current, m_loadedTextures, m_loadedFonts);
 		}
-		else if (strcmp(typeAttrib->value(), "dropdown") == 0)
+		else if (strcmp(current->name(), "dropdown") == 0)
 		{
 			element = Pool<Dropdown>::alloc();
 			type = TypeInfo::getId<Dropdown>();
+
+			uiXmlParseElement(element, current, m_loadedTextures);
+			uiXmlParseDropdown((Dropdown*)element, current, m_loadedTextures, m_loadedFonts);
 		}
-		else if (strcmp(typeAttrib->value(), "h_list_view") == 0)
+		else if (strcmp(current->name(), "h_list_view") == 0)
 		{
 			element = Pool<HListView>::alloc();
 			type = TypeInfo::getId<HListView>();
+
+			uiXmlParseElement(element, current, m_loadedTextures);
 		}
-		else if (strcmp(typeAttrib->value(), "v_list_view") == 0 || strcmp(typeAttrib->value(), "list_view") == 0)
+		else if (strcmp(current->name(), "v_list_view") == 0 || strcmp(current->name(), "list_view") == 0)
 		{
 			element = Pool<VListView>::alloc();
 			type = TypeInfo::getId<VListView>();
+
+			uiXmlParseElement(element, current, m_loadedTextures);
 		}
-		else if (strcmp(typeAttrib->value(), "scroll_view") == 0)
+		else if (strcmp(current->name(), "scroll_view") == 0)
 		{
 			element = Pool<ScrollView>::alloc();
 			type = TypeInfo::getId<ScrollView>();
+
+			uiXmlParseElement(element, current, m_loadedTextures);
+			uiXmlParseScrollView((ScrollView*)element, current, m_loadedTextures);
 		}
-		else if (strcmp(typeAttrib->value(), "slider") == 0)
+		else if (strcmp(current->name(), "slider") == 0)
 		{
 			element = Pool<Slider>::alloc();
 			type = TypeInfo::getId<Slider>();
+
+			uiXmlParseElement(element, current, m_loadedTextures);
+			uiXmlParseSlider((Slider*)element, current, m_loadedTextures);
 		}
-		else if (strcmp(typeAttrib->value(), "text") == 0)
+		else if (strcmp(current->name(), "text") == 0)
 		{
 			element = Pool<Text>::alloc();
 			type = TypeInfo::getId<Text>();
+
+			uiXmlParseElement(element, current, m_loadedTextures);
+			uiXmlParseText((Text*)element, current, m_loadedFonts);
 		}
-		else if (strcmp(typeAttrib->value(), "text_input") == 0)
+		else if (strcmp(current->name(), "text_input") == 0)
 		{
 			element = Pool<TextInput>::alloc();
 			type = TypeInfo::getId<TextInput>();
+
+			uiXmlParseElement(element, current, m_loadedTextures);
+			uiXmlParseTextInput((TextInput*)element, current, m_loadedTextures, m_loadedFonts);
+		}
+		else
+		{
+			// Skip non UI elements
+			current = current->next_sibling();
+			continue;
 		}
 
 		// Check if the element has an id
 		rapidxml::xml_attribute<>* idAttrib = current->first_attribute("id");
 		std::string id = idAttrib ? idAttrib->value() : "";
 
-		// Position
-		rapidxml::xml_attribute<>* posAttr = current->first_attribute("position");
-		if (posAttr)
-		{
-			Vector2f pos;
-			if (uiXmlParseVec2(posAttr->value(), pos))
-				element->setPosition(pos);
-		}
 
-		// Rotation
-		rapidxml::xml_attribute<>* rotAttr = current->first_attribute("rotation");
-		if (rotAttr)
-		{
-			float rot;
-			if (uiXmlParseFloat(rotAttr->value(), rot))
-				element->setRotation(rot);
-		}
+		// Check if the node has a margin attribute
+		rapidxml::xml_attribute<>* marginsAttr = current->first_attribute("margins");
+		bool usesMargins = false;
 
-		// Size
-		rapidxml::xml_attribute<>* sizeAttr = current->first_attribute("size");
-		if (sizeAttr)
+		if (marginsAttr && parentStack.size() > 1)
 		{
-			Vector2f size;
-			if (uiXmlParseVec2(sizeAttr->value(), size))
-				element->setSize(size);
-		}
-
-		// Rel Size
-		rapidxml::xml_attribute<>* relSizeAttr = current->first_attribute("rel_size");
-		if (relSizeAttr)
-		{
-			Vector2f size;
-			if (uiXmlParseVec2(relSizeAttr->value(), size))
-				element->setRelSize(size);
-		}
-
-		// Width
-		rapidxml::xml_attribute<>* widthAttr = current->first_attribute("width");
-		if (widthAttr)
-		{
-			float width;
-			if (uiXmlParseFloat(widthAttr->value(), width))
-				element->setWidth(width);
-		}
-
-		// Height
-		rapidxml::xml_attribute<>* heightAttr = current->first_attribute("height");
-		if (heightAttr)
-		{
-			float height;
-			if (uiXmlParseFloat(heightAttr->value(), height))
-				element->setHeight(height);
-		}
-
-		// Rel Width
-		rapidxml::xml_attribute<>* relWidthAttr = current->first_attribute("rel_width");
-		if (relWidthAttr)
-		{
-			float relWidth;
-			if (uiXmlParseFloat(relWidthAttr->value(), relWidth))
-				element->setRelWidth(relWidth);
-		}
-
-		// Rel Height
-		rapidxml::xml_attribute<>* relHeightAttr = current->first_attribute("rel_height");
-		if (relHeightAttr)
-		{
-			float relHeight;
-			if (uiXmlParseFloat(relHeightAttr->value(), relHeight))
-				element->setRelHeight(relHeight);
-		}
-
-		// Origin
-		rapidxml::xml_attribute<>* originAttr = current->first_attribute("origin");
-		if (originAttr)
-		{
-			Vector2f origin;
-			if (uiXmlParseVec2(originAttr->value(), origin))
-				element->setOrigin(origin);
-
-			else
+			Vector2f margins;
+			if (uiXmlParseVec2(marginsAttr->value(), margins))
 			{
-				if (strcmp(originAttr->value(), "top_left") == 0)
-					element->setOrigin(UIPosition::TopLeft);
-				else if (strcmp(originAttr->value(), "top_center") == 0)
-					element->setOrigin(UIPosition::TopCenter);
-				else if (strcmp(originAttr->value(), "top_right") == 0)
-					element->setOrigin(UIPosition::TopRight);
+				VListView* vlist;
+				HListView* hlist;
 
-				else if (strcmp(originAttr->value(), "left") == 0)
-					element->setOrigin(UIPosition::Left);
-				else if (strcmp(originAttr->value(), "center") == 0)
-					element->setOrigin(UIPosition::Center);
-				else if (strcmp(originAttr->value(), "right") == 0)
-					element->setOrigin(UIPosition::Right);
+				usesMargins = true;
 
-				else if (strcmp(originAttr->value(), "bot_left") == 0)
-					element->setOrigin(UIPosition::BotLeft);
-				else if (strcmp(originAttr->value(), "bot_center") == 0)
-					element->setOrigin(UIPosition::BotCenter);
-				else if (strcmp(originAttr->value(), "bot_right") == 0)
-					element->setOrigin(UIPosition::BotRight);
+				if (vlist = dynamic_cast<VListView*>(parentStack.top()))
+					vlist->addChild(element, margins);
+				else if (hlist = dynamic_cast<HListView*>(parentStack.top()))
+					hlist->addChild(element, margins);
+				else
+					usesMargins = false;
 			}
 		}
 
-		// Anchor
-		rapidxml::xml_attribute<>* anchorAttr = current->first_attribute("anchor");
-		if (anchorAttr)
-		{
-			Vector2f anchor;
-			if (uiXmlParseVec2(anchorAttr->value(), anchor))
-				element->setAnchor(anchor);
-
-			else
-			{
-				if (strcmp(anchorAttr->value(), "top_left") == 0)
-					element->setAnchor(UIPosition::TopLeft);
-				else if (strcmp(anchorAttr->value(), "top_center") == 0)
-					element->setAnchor(UIPosition::TopCenter);
-				else if (strcmp(anchorAttr->value(), "top_right") == 0)
-					element->setAnchor(UIPosition::TopRight);
-
-				else if (strcmp(anchorAttr->value(), "left") == 0)
-					element->setAnchor(UIPosition::Left);
-				else if (strcmp(anchorAttr->value(), "center") == 0)
-					element->setAnchor(UIPosition::Center);
-				else if (strcmp(anchorAttr->value(), "right") == 0)
-					element->setAnchor(UIPosition::Right);
-
-				else if (strcmp(anchorAttr->value(), "bot_left") == 0)
-					element->setAnchor(UIPosition::BotLeft);
-				else if (strcmp(anchorAttr->value(), "bot_center") == 0)
-					element->setAnchor(UIPosition::BotCenter);
-				else if (strcmp(anchorAttr->value(), "bot_right") == 0)
-					element->setAnchor(UIPosition::BotRight);
-			}
-		}
-
-		// Color
-		rapidxml::xml_attribute<>* colorAttr = current->first_attribute("color");
-		if (colorAttr)
-		{
-			Vector4f color4;
-			Vector3f color3;
-			char* c = colorAttr->value();
-
-			if (c[0] == '#' && uiXmlParseHexColor(c, color4))
-				element->setColor(color4);
-
-			else if (uiXmlParseVec4(c, color4))
-				element->setColor(color4);
-
-			else if (uiXmlParseVec3(c, color3))
-				element->setColor(Vector4f(color3, 1.0f));
-
-			else
-				element->setColor(getNamedColor(c));
-		}
-
-		// Texture
-		rapidxml::xml_attribute<>* textureAttr = current->first_attribute("texture");
-		if (textureAttr)
-		{
-			Texture* texture = Pool<Texture>::alloc();
-			std::string fname = textureAttr->value();
-
-			// Check if it has been loaded first
-			auto it = m_loadedTextures.find(fname);
-			if (it == m_loadedTextures.end())
-			{
-				if (texture->load(fname))
-				{
-					m_loadedTextures[fname] = texture;
-					element->setTexture(texture);
-				}
-			}
-			else
-				element->setTexture(it->second);
-		}
-
-		// Texture Rect
-		rapidxml::xml_attribute<>* textureRectAttr = current->first_attribute("texture_rect");
-		if (textureRectAttr)
-		{
-			Vector4f textureRect;
-			if (uiXmlParseVec4(textureRectAttr->value(), textureRect))
-				element->setTextureRect(textureRect);
-		}
-
-
-		parentStack.top()->addChild(element);
+		if (!usesMargins)
+			parentStack.top()->addChild(element);
 
 		// Add the element to the map
 		if (id.size() > 0)
+		{
+			element->setId(id);
 			m_elements[id] = element;
+		}
 
 		// Add child elements
-		rapidxml::xml_node<>* childrenNode = current->first_node("ui_element");
+		rapidxml::xml_node<>* childrenNode = current->first_node();
 
 		// Go to next sibling
-		current = current->next_sibling("ui_element");
+		current = current->next_sibling();
 
 		if (childrenNode)
 		{
@@ -1079,6 +1503,8 @@ bool UISystem::load(const std::string& fname)
 		}
 	}
 
+
+	m_loaded = true;
 	return true;
 }
 

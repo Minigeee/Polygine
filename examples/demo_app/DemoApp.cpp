@@ -34,6 +34,7 @@
 #include <poly/Math/Transform.h>
 
 #include <poly/UI/Button.h>
+#include <poly/UI/Dropdown.h>
 #include <poly/UI/Font.h>
 #include <poly/UI/ListView.h>
 #include <poly/UI/ScrollView.h>
@@ -58,11 +59,6 @@ int main()
 
     // Create a new window
     window.create(1280, 720, "My Game");
-
-    // Default font
-    Font font;
-    font.load("examples/fonts/segoeui/segoeui.ttf");
-    Text::setDefaultFont(&font);
 
     // Add an event listener
     HashMap<Keyboard, bool> keyMap;
@@ -101,10 +97,6 @@ int main()
     UISystem ui;
     ui.setWindow(&window);
     ui.load("examples/ui.xml");
-
-    Button* btn = (Button*)ui.getElement("test");
-    btn->setString("Hello!");
-    btn->getText()->setCharacterSize(15);
 
     // Setup scene
     Scene scene;
@@ -418,6 +410,8 @@ int main()
 
         if (length(move) != 0.0f)
             camera.move(normalize(move) * elapsed * 3.4f);
+
+        ui.update(elapsed);
 
         // Render scene
         skeletons[0].update(elapsed);

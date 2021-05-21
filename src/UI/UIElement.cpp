@@ -46,6 +46,7 @@ Shader UIElement::s_shader;
 ///////////////////////////////////////////////////////////
 UIElement::UIElement() :
 	m_parent				(0),
+	m_id					(""),
 	m_relPosition			(0.0f),
 	m_absPosition			(0.0f),
 	m_relRotation			(0.0f),
@@ -108,6 +109,13 @@ void UIElement::removeChild(UIElement* child)
 
 	// Pop from end of the list
 	m_children.pop_back();
+}
+
+
+///////////////////////////////////////////////////////////
+void UIElement::setId(const std::string& id)
+{
+	m_id = id;
 }
 
 
@@ -477,6 +485,13 @@ void UIElement::scale(float w, float h)
 	m_pixelSize *= Vector2f(w, h);
 	m_relSize *= Vector2f(w, h);
 	markTransformDirty();
+}
+
+
+///////////////////////////////////////////////////////////
+const std::string& UIElement::getId() const
+{
+	return m_id;
 }
 
 

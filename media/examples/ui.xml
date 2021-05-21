@@ -1,5 +1,19 @@
 <ui>
-    <ui_element id="test" type="button" position="5,5" size="200,40" color="dark_slate_gray">
-        <ui_element position="10,10" size="50,50" color="steel_blue" />
-    </ui_element>
+    <font>examples/fonts/segoeui/segoeui.ttf</font>
+
+    <list_view>
+        <button id="test" text="Hello World!" position="5,5" size="200,30" color="dark_slate_gray" margins="0,5">
+            <element_text character_size="15" />
+            <ui_element position="10,10" size="50,50" color="steel_blue" />
+        </button>
+        <text_input id="input" value="Test" position="5,0" size="200,30" color="dark_slate_gray" />
+    </list_view>
+
+    <dropdown position="5 100" size="200 30" color="dark_slate_gray" item_color="slate_gray">
+        <dropdown_item value="One" color="sea_green">
+            <element_text color="turquoise" />
+        </dropdown_item>
+        <dropdown_item>Two</dropdown_item>
+        <dropdown_item>Three</dropdown_item>
+    </dropdown>
 </ui>

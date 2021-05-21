@@ -106,6 +106,19 @@ public:
 	void moveToBack();
 
 	///////////////////////////////////////////////////////////
+	/// \brief Set the element string id
+	///
+	/// The element id is an optional string identifier, that can
+	/// be used to identify certain important elements when working
+	/// with many elements. It is really only useful if the ui layout
+	/// is loaded from a ui layout file.
+	///
+	/// \param id The string id
+	///
+	///////////////////////////////////////////////////////////
+	void setId(const std::string& id);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Set the UI element's z-index
 	///
 	/// The z-index determines what order this element and its
@@ -550,6 +563,14 @@ public:
 	virtual void scale(float x, float y);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Get the element string id
+	///
+	/// \return The element string id
+	///
+	///////////////////////////////////////////////////////////
+	const std::string& getId() const;
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the position of the UI element relative to its parent's position
 	///
 	/// \return The relative position in pixels
@@ -871,6 +892,7 @@ protected:
 	virtual void getQuads(std::vector<UIQuad>& quads);
 
 protected:
+	std::string m_id;
 	UIElement* m_parent;
 	std::vector<UIElement*> m_children;
 

@@ -142,8 +142,11 @@ private:
 	UIElement* m_hovered;
 	UIElement* m_focused;
 
+	Font* m_defaultFont;
 	HashMap<std::string, UIElement*> m_elements;
 	HashMap<std::string, Texture*> m_loadedTextures;
+	HashMap<std::string, Font*> m_loadedFonts;
+	bool m_loaded;
 };
 
 }

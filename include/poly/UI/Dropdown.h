@@ -28,7 +28,7 @@ public:
 	~Dropdown();
 
 	///////////////////////////////////////////////////////////
-	/// \brief Add a dropdown menu item
+	/// \brief Add a dropdown menu item from a string
 	///
 	/// When adding an item, a new button is created and all its
 	/// handlers will automatically be connected. It is not possible
@@ -36,8 +36,26 @@ public:
 	/// and color, but onItemAdd() can be used for more customization
 	/// by giving access to the item button.
 	///
+	/// \param name The name if the menu item
+	///
 	///////////////////////////////////////////////////////////
 	void addItem(const std::string& name);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Add a dropdown menu item from an existing button
+	///
+	/// All trnasform properties, such as position, rotation, scale,
+	/// origin, and anchor will be overriden by the dropdown menu.
+	/// Color, texture, and text properties will be kept. This means
+	/// that the default item color will not be applied to this
+	/// button.
+	///
+	/// All button callbacks will be rebinded as well.
+	///
+	/// \param button The button to add as an item
+	///
+	///////////////////////////////////////////////////////////
+	void addItem(Button* button);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Remove an item from the dropdown menu

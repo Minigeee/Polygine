@@ -68,6 +68,35 @@ void Dropdown::addItem(const std::string& name)
 
 
 ///////////////////////////////////////////////////////////
+void Dropdown::addItem(Button* item)
+{
+	// If this is the first item, set value
+	if (!m_menu->getChildren().size())
+		setString(item->getString());
+
+	item->setTextAlign(UIPosition::Left);
+	item->setTextOffset(5.0f, 0.0f);
+	item->setSize(getPixelSize().x, m_itemHeight);
+	item->setVisible(false);
+
+	// Get index
+	Uint32 index = m_menu->getChildren().size();
+
+	// Set callback functions
+	if (m_onMouseEnterItem)
+		item->onMouseEnter(std::bind(m_onMouseEnterItem, item, std::placeholders::_1));
+	if (m_onMouseLeaveItem)
+		item->onMouseLeave(std::bind(m_onMouseLeaveItem, item, std::placeholders::_1));
+	item->onPress(std::bind(&Dropdown::setSelectedItem, this, index));
+
+	if (m_onItemAdd)
+		m_onItemAdd(item, index);
+
+	m_menu->addChild(item);
+}
+
+
+///////////////////////////////////////////////////////////
 void Dropdown::removeItem(Uint32 index)
 {
 	Button* item = (Button*)m_menu->getChildren()[index];
