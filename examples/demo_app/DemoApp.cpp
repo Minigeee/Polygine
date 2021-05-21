@@ -59,6 +59,7 @@ int main()
 
     // Create a new window
     window.create(1280, 720, "My Game");
+    // window.setVsyncEnabled(false);
 
     // Add an event listener
     HashMap<Keyboard, bool> keyMap;
@@ -97,6 +98,8 @@ int main()
     UISystem ui;
     ui.setWindow(&window);
     ui.load("examples/ui.xml");
+
+    Text* fpsCounter = (Text*)ui.getElement("fps_counter");
 
     // Setup scene
     Scene scene;
@@ -376,6 +379,10 @@ int main()
         }
     );
 
+    const Uint32 windowSize = 100;
+    std::vector<float> fpsWindow;
+    Uint32 windowIndex = 0;
+
     // Game loop
     while (window.isOpen())
     {
@@ -410,6 +417,26 @@ int main()
 
         if (length(move) != 0.0f)
             camera.move(normalize(move) * elapsed * 3.4f);
+
+        const ProfilerData& data = Profiler::getData("main", "GameLoop");
+
+        if (data.getAverages().size())
+        {
+            float fps = 1.0f / elapsed;
+            if (windowIndex >= fpsWindow.size())
+                fpsWindow.push_back(fps);
+            else
+                fpsWindow[windowIndex] = fps;
+
+            windowIndex = (windowIndex + 1) % windowSize;
+
+            float avg = 0.0f;
+            for (Uint32 i = 0; i < fpsWindow.size(); ++i)
+                avg += fpsWindow[i];
+
+            fpsCounter->setString(std::to_string(std::lroundf(avg / fpsWindow.size())));
+        }
+
 
         ui.update(elapsed);
 

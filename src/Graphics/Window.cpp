@@ -89,8 +89,9 @@ E_WindowResize::E_WindowResize(Uint32 w, Uint32 h) :
 
 ///////////////////////////////////////////////////////////
 Window::Window() :
-	m_window(0),
-	m_cursor(0)
+	m_window			(0),
+	m_cursor			(0),
+	m_isVsyncEnabled	(true)
 {
 
 }
@@ -98,8 +99,9 @@ Window::Window() :
 
 ///////////////////////////////////////////////////////////
 Window::Window(Uint32 w, Uint32 h, const std::string& title, bool fullscreen, int multisample) :
-	m_window(0),
-	m_cursor(0)
+	m_window			(0),
+	m_cursor			(0),
+	m_isVsyncEnabled	(true)
 {
 	create(w, h, title, fullscreen, multisample);
 }
@@ -107,14 +109,14 @@ Window::Window(Uint32 w, Uint32 h, const std::string& title, bool fullscreen, in
 
 ///////////////////////////////////////////////////////////
 Window::Window(Window&& other) :
-	m_window(other.m_window),
-	m_title(std::move(other.m_title))
+	m_window			(other.m_window),
+	m_title				(std::move(other.m_title)),
+	m_isVsyncEnabled	(other.m_isVsyncEnabled)
 {
 	other.m_window = 0;
 
 	// Update window pointer
 	glfwSetWindowUserPointer(m_window, this);
-
 }
 
 
@@ -125,11 +127,14 @@ Window& Window::operator=(Window&& other)
 	{
 		m_window = other.m_window;
 		m_title = std::move(other.m_title);
+		m_isVsyncEnabled = other.m_isVsyncEnabled;
 
 		other.m_window = 0;
 
 		// Update window pointer
 		glfwSetWindowUserPointer(m_window, this);
+
+		glfwSwapInterval(m_isVsyncEnabled ? 1 : 0);
 	}
 
 	return *this;
@@ -335,6 +340,14 @@ void Window::setClipboard(const std::string& str)
 
 
 ///////////////////////////////////////////////////////////
+void Window::setVsyncEnabled(bool enabled)
+{
+	m_isVsyncEnabled = enabled;
+	glfwSwapInterval(m_isVsyncEnabled ? 1 : 0);
+}
+
+
+///////////////////////////////////////////////////////////
 Vector2u Window::getResolution() const
 {
 	// Check if window is open
@@ -357,6 +370,13 @@ const std::string& Window::getTitle() const
 std::string Window::getClipboard() const
 {
 	return std::string(glfwGetClipboardString(m_window));
+}
+
+
+///////////////////////////////////////////////////////////
+bool Window::isVsyncEnabled() const
+{
+	return m_isVsyncEnabled;
 }
 
 

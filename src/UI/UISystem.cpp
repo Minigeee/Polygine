@@ -1437,6 +1437,15 @@ bool UISystem::load(const std::string& fname)
 		{
 			// Skip non UI elements
 			current = current->next_sibling();
+
+			// If there are no more elements in the current level, go up 1 level
+			if (!current)
+			{
+				current = nodeStack.top();
+				parentStack.pop();
+				nodeStack.pop();
+			}
+
 			continue;
 		}
 

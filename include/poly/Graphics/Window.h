@@ -230,6 +230,17 @@ public:
 	void setClipboard(const std::string& str);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Set whether vsync should be enabled or not
+	///
+	/// When vsync is enabled, swapping buffers will wait until
+	/// the next screen refresh to execute.
+	///
+	/// \param enabled Whether vsync should be enabled
+	///
+	///////////////////////////////////////////////////////////
+	void setVsyncEnabled(bool enabled);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the window resolution
 	///
 	/// \return The window resolution
@@ -254,6 +265,14 @@ public:
 	std::string getClipboard() const;
 
 	///////////////////////////////////////////////////////////
+	/// \brief Check whether vsync is enabled
+	///
+	/// \return A boolean indicating whether vsync is enabled
+	///
+	///////////////////////////////////////////////////////////
+	bool isVsyncEnabled() const;
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the cursor position in pixels
 	///
 	/// \return The cursor position in pixels
@@ -276,6 +295,8 @@ private:
 	GLFWcursor* m_cursor;						//!< The current cursor
 	std::string m_title;						//!< Window title
 	Vector2f m_cursorPos;						//!< glfwGetCursorPos() is buggy
+	Uint32 m_framerate;							//!< 
+	bool m_isVsyncEnabled;						//!< Boolean indicating if vsync is enabled
 
 	static Window* s_current;					//!< The current window
 	static Uint32 numWindows;					//!< The number of existing windows
