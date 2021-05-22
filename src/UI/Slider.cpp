@@ -3,6 +3,7 @@
 #include <poly/Graphics/Window.h>
 
 #include <poly/UI/Slider.h>
+#include <poly/UI/UIParser.h>
 
 namespace poly
 {
@@ -135,6 +136,28 @@ Slider::~Slider()
 {
 	Pool<SliderButton>::free(m_button);
 	m_button = 0;
+}
+
+
+///////////////////////////////////////////////////////////
+void Slider::parse(XmlNode node)
+{
+	// Default parse
+	UIElement::parse(node);
+
+	// Slider value
+	XmlAttribute valueAttr = node.getFirstAttribute("value");
+	if (valueAttr.exists())
+	{
+		float value;
+		if (UIParser::parse(valueAttr, value))
+			setValue(value);
+	}
+
+	// Slider button
+	XmlNode buttonNode = node.getFirstNode("slider_button");
+	if (buttonNode.exists())
+		m_button->parse(node);
 }
 
 

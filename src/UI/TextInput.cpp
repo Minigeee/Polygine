@@ -6,6 +6,7 @@
 
 #include <poly/UI/Text.h>
 #include <poly/UI/TextInput.h>
+#include <poly/UI/UIParser.h>
 
 namespace poly
 {
@@ -63,6 +64,85 @@ void TextInput::update(float dt)
 		// Set visibility
 		m_textCursor->setVisible(m_time < 0.5f * m_cursorCycle, false);
 	}
+}
+
+
+///////////////////////////////////////////////////////////
+void TextInput::parse(XmlNode node)
+{
+	// Default parse
+	UIElement::parse(node);
+
+	// Text value
+	XmlAttribute valueAttr = node.getFirstAttribute("value");
+	if (valueAttr.exists())
+		setValue(valueAttr.getValue());
+
+	else
+	{
+		XmlAttribute textAttr = node.getFirstAttribute("text");
+		if (textAttr.exists())
+			setValue(textAttr.getValue());
+	}
+
+	// Text cursor size
+	XmlAttribute cursorSizeAttr = node.getFirstAttribute("cursor_size");
+	if (cursorSizeAttr.exists())
+	{
+		Vector2f size;
+		if (UIParser::parse(cursorSizeAttr, size))
+			setTextCursorSize(size);
+	}
+
+	// Text cursor color
+	XmlAttribute cursorColorAttr = node.getFirstAttribute("cursor_color");
+	if (cursorColorAttr.exists())
+	{
+		Vector4f color;
+		if (UIParser::parseColor(cursorColorAttr, color))
+			setTextCursorColor(color);
+	}
+
+	// Text cursor cycle
+	XmlAttribute cursorCycleAttr = node.getFirstAttribute("cursor_cycle");
+	if (cursorCycleAttr.exists())
+	{
+		float cycle;
+		if (UIParser::parse(cursorCycleAttr, cycle))
+			setTextCursorCycle(cycle);
+	}
+
+	// Highlight cursor color
+	XmlAttribute highlightColorAttr = node.getFirstAttribute("highlight_color");
+	if (highlightColorAttr.exists())
+	{
+		Vector4f color;
+		if (UIParser::parseColor(cursorColorAttr, color))
+			setHighlightColor(color);
+	}
+
+	// Text align
+	XmlAttribute textAlignAttr = node.getFirstAttribute("text_align");
+	if (textAlignAttr.exists())
+	{
+		UIPosition align;
+		if (UIParser::parse(textAlignAttr, align))
+			setTextAlign(align);
+	}
+
+	// Text offset
+	XmlAttribute textOffsetAttr = node.getFirstAttribute("text_offset");
+	if (textOffsetAttr.exists())
+	{
+		Vector2f offset;
+		if (UIParser::parse(textOffsetAttr, offset))
+			setTextOffset(offset);
+	}
+
+	// Parse text options
+	XmlNode textNode = node.getFirstNode("element_text");
+	if (textNode.exists())
+		getText()->parse(textNode);
 }
 
 

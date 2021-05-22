@@ -2,6 +2,8 @@
 
 #include <poly/UI/Dropdown.h>
 #include <poly/UI/ListView.h>
+#include <poly/UI/Text.h>
+#include <poly/UI/UIParser.h>
 
 namespace poly
 {
@@ -32,6 +34,85 @@ Dropdown::~Dropdown()
 
 	Pool<VListView>::free(m_menu);
 	m_menu = 0;
+}
+
+
+///////////////////////////////////////////////////////////
+void Dropdown::parse(XmlNode node)
+{
+	// Default parse
+	UIElement::parse(node);
+
+	// Text value
+	XmlAttribute valueAttr = node.getFirstAttribute("value");
+	if (valueAttr.exists())
+		setString(valueAttr.getValue());
+	else
+	{
+		XmlAttribute textAttr = node.getFirstAttribute("text");
+		if (textAttr.exists())
+			setString(textAttr.getValue());
+	}
+
+	// Text align
+	XmlAttribute textAlignAttr = node.getFirstAttribute("text_align");
+	if (textAlignAttr.exists())
+	{
+		UIPosition align;
+		if (UIParser::parse(textAlignAttr, align))
+			setTextAlign(align);
+	}
+
+	// Text offset
+	XmlAttribute textOffsetAttr = node.getFirstAttribute("text_offset");
+	if (textOffsetAttr.exists())
+	{
+		Vector2f offset;
+		if (UIParser::parse(textOffsetAttr, offset))
+			setTextOffset(offset);
+	}
+
+	// Item height
+	XmlAttribute itemHeightAttr = node.getFirstAttribute("item_height");
+	if (itemHeightAttr.exists())
+	{
+		float height;
+		if (UIParser::parse(itemHeightAttr, height))
+			setItemHeight(height);
+	}
+
+	// Item color
+	XmlAttribute itemColorAttr = node.getFirstAttribute("item_color");
+	if (itemColorAttr.exists())
+	{
+		Vector4f color;
+		if (UIParser::parseColor(itemColorAttr, color))
+			setItemColor(color);
+	}
+
+	// Parse text options
+	XmlNode textNode = node.getFirstNode("dropdown_text");
+	if (textNode.exists())
+		getText()->parse(textNode);
+
+	// Add dropdown items
+	XmlNode itemNode = node.getFirstNode("dropdown_item");
+	while (itemNode.exists())
+	{
+		if (strlen(itemNode.getValue()))
+			addItem(itemNode.getValue());
+
+		else
+		{
+			Button* item = Pool<Button>::alloc();
+			item->parse(itemNode);
+
+			// Add the custom button
+			addItem(item);
+		}
+
+		itemNode = itemNode.getNextSibling("dropdown_item");
+	}
 }
 
 

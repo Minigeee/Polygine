@@ -2,6 +2,7 @@
 
 #include <poly/UI/Button.h>
 #include <poly/UI/Text.h>
+#include <poly/UI/UIParser.h>
 
 namespace poly
 {
@@ -31,6 +32,48 @@ void Button::createText()
 	m_text = Pool<Text>::alloc();
 	setTextAlign(m_textAlign);
 	addChild(m_text);
+}
+
+
+///////////////////////////////////////////////////////////
+void Button::parse(XmlNode node)
+{
+	// Default parse
+	UIElement::parse(node);
+
+	// Text value
+	XmlAttribute valueAttr = node.getFirstAttribute("value");
+	if (valueAttr.exists())
+		setString(valueAttr.getValue());
+	else
+	{
+		XmlAttribute textAttr = node.getFirstAttribute("text");
+		if (textAttr.exists())
+			setString(textAttr.getValue());
+	}
+
+	// Text align
+	XmlAttribute textAlignAttr = node.getFirstAttribute("text_align");
+	if (textAlignAttr.exists())
+	{
+		UIPosition align;
+		if (UIParser::parse(textAlignAttr, align))
+			setTextAlign(align);
+	}
+
+	// Text offset
+	XmlAttribute textOffsetAttr = node.getFirstAttribute("text_offset");
+	if (textOffsetAttr.exists())
+	{
+		Vector2f offset;
+		if (UIParser::parse(textOffsetAttr, offset))
+			setTextOffset(offset);
+	}
+
+	// Parse text options
+	XmlNode textNode = node.getFirstNode("button_text");
+	if (textNode.exists())
+		m_text->parse(textNode);
 }
 
 

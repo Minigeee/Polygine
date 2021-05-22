@@ -2,6 +2,7 @@
 
 #include <poly/UI/Font.h>
 #include <poly/UI/Text.h>
+#include <poly/UI/UIParser.h>
 
 namespace poly
 {
@@ -29,6 +30,61 @@ Text::Text() :
 
 	// Shader
 	m_shader = getTextShader();
+}
+
+
+///////////////////////////////////////////////////////////
+void Text::parse(XmlNode node)
+{
+	// Default parse
+	UIElement::parse(node);
+
+	// Value
+	if (strlen(node.getValue()) > 0)
+		setString(node.getValue());
+
+	else
+	{
+		XmlAttribute valueAttr = node.getFirstAttribute("value");
+		if (valueAttr.exists())
+			setString(valueAttr.getValue());
+	}
+
+	// Character size
+	XmlAttribute charSizeAttr = node.getFirstAttribute("character_size");
+	if (charSizeAttr.exists())
+	{
+		int size;
+		if (UIParser::parse(charSizeAttr, size))
+			setCharacterSize((Uint32)size);
+	}
+
+	// Character spacing
+	XmlAttribute charSpacingAttr = node.getFirstAttribute("character_spacing");
+	if (charSpacingAttr.exists())
+	{
+		float spacing;
+		if (UIParser::parse(charSpacingAttr, spacing))
+			setCharacterSpacing(spacing);
+	}
+
+	// Line spacing
+	XmlAttribute lineSpacingAttr = node.getFirstAttribute("line_spacing");
+	if (lineSpacingAttr.exists())
+	{
+		float spacing;
+		if (UIParser::parse(lineSpacingAttr, spacing))
+			setLineSpacing(spacing);
+	}
+
+	// Font
+	XmlNode fontNode = node.getFirstNode("font");
+	if (fontNode.exists())
+	{
+		Font* font;
+		if (UIParser::parse(fontNode, font))
+			setFont(font);
+	}
 }
 
 

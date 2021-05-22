@@ -1,5 +1,6 @@
 #include <poly/Core/ObjectPool.h>
 #include <poly/Core/Profiler.h>
+#include <poly/Core/XmlDocument.h>
 
 #include <poly/Graphics/GLCheck.h>
 #include <poly/Graphics/Window.h>
@@ -10,6 +11,7 @@
 #include <poly/UI/Dropdown.h>
 #include <poly/UI/Font.h>
 #include <poly/UI/ListView.h>
+#include <poly/UI/UIParser.h>
 #include <poly/UI/ScrollView.h>
 #include <poly/UI/Slider.h>
 #include <poly/UI/Text.h>
@@ -23,556 +25,16 @@
 namespace poly
 {
 
+/*
 
 ///////////////////////////////////////////////////////////
-HashMap<std::string, Vector3u> g_namedColors;
-
-
-///////////////////////////////////////////////////////////
-const Vector4f& getNamedColor(const std::string& color)
-{
-	if (!g_namedColors.size())
-	{
-
-		g_namedColors["light_salmon"]				= Vector3u(255, 160, 122);
-		g_namedColors["salmon"]						= Vector3u(250, 128, 114);
-		g_namedColors["dark_salmon"]				= Vector3u(233, 150, 122);
-		g_namedColors["light_coral"]				= Vector3u(240, 128, 128);
-		g_namedColors["indian_red"]					= Vector3u(205, 92, 92);
-		g_namedColors["crimson"]					= Vector3u(220, 20, 60);
-		g_namedColors["firebrick"]					= Vector3u(178, 34, 34);
-		g_namedColors["red"]						= Vector3u(255, 0, 0);
-		g_namedColors["dark_red"]					= Vector3u(139, 0, 0);
-
-		g_namedColors["coral"]						= Vector3u(255, 127, 80);
-		g_namedColors["tomato"]						= Vector3u(255, 99, 71);
-		g_namedColors["orange_red"]					= Vector3u(255, 69, 0);
-		g_namedColors["gold"]						= Vector3u(255, 215, 0);
-		g_namedColors["orange"]						= Vector3u(255, 165, 0);
-		g_namedColors["dark_orange"]				= Vector3u(255, 140, 0);
-
-		g_namedColors["light_yellow"]				= Vector3u(255, 255, 224);
-		g_namedColors["lemon_chiffon"]				= Vector3u(255, 250, 205);
-		g_namedColors["light_goldenrod_yellow"]		= Vector3u(250, 250, 210);
-		g_namedColors["papaya_whip"]				= Vector3u(255, 239, 213);
-		g_namedColors["moccasin"]					= Vector3u(255, 228, 181);
-		g_namedColors["peach_puff"]					= Vector3u(255, 218, 185);
-		g_namedColors["pale_goldenrod"]				= Vector3u(238, 232, 170);
-		g_namedColors["khaki"]						= Vector3u(240, 230, 140);
-		g_namedColors["dark_khaki"]					= Vector3u(189, 183, 107);
-		g_namedColors["yellow"]						= Vector3u(255, 255, 0);
-
-		g_namedColors["lawn_green"]					= Vector3u(124, 252, 0);
-		g_namedColors["chartreuse"]					= Vector3u(127, 255, 0);
-		g_namedColors["lime_green"]					= Vector3u(50, 205, 50);
-		g_namedColors["lime"]						= Vector3u(0, 255, 0);
-		g_namedColors["forest_green"]				= Vector3u(34, 139, 34);
-		g_namedColors["green"]						= Vector3u(0, 128, 0);
-		g_namedColors["dark_green"]					= Vector3u(0, 100, 0);
-		g_namedColors["green_yellow"]				= Vector3u(173, 255, 47);
-		g_namedColors["yellow_green"]				= Vector3u(154, 205, 50);
-		g_namedColors["spring_green"]				= Vector3u(0, 255, 127);
-		g_namedColors["medium_spring_green"]		= Vector3u(0, 250, 154);
-		g_namedColors["light_green"]				= Vector3u(144, 238, 144);
-		g_namedColors["pale_green"]					= Vector3u(152, 251, 152);
-		g_namedColors["dark_sea_green"]				= Vector3u(143, 188, 143);
-		g_namedColors["medium_sea_green"]			= Vector3u(60, 179, 113);
-		g_namedColors["sea_green"]					= Vector3u(46, 139, 87);
-		g_namedColors["olive"]						= Vector3u(128, 128, 0);
-		g_namedColors["dark_olive_green"]			= Vector3u(85, 107, 47);
-		g_namedColors["olive_drab"]					= Vector3u(107, 142, 35);
-
-		g_namedColors["light_cyan"]					= Vector3u(224, 255, 255);
-		g_namedColors["cyan"]						= Vector3u(0, 255, 255);
-		g_namedColors["aqua"]						= Vector3u(0, 255, 255);
-		g_namedColors["aquamarine"]					= Vector3u(127, 255, 212);
-		g_namedColors["medium_aquamarine"]			= Vector3u(102, 205, 170);
-		g_namedColors["pale_turquoise"]				= Vector3u(175, 238, 238);
-		g_namedColors["turquoise"]					= Vector3u(64, 224, 208);
-		g_namedColors["medium_turquoise"]			= Vector3u(72, 209, 204);
-		g_namedColors["dark_turquoise"]				= Vector3u(0, 206, 209);
-		g_namedColors["light_sea_green"]			= Vector3u(32, 178, 170);
-		g_namedColors["cadet_blue"]					= Vector3u(95, 158, 160);
-		g_namedColors["dark_cyan"]					= Vector3u(0, 139, 139);
-		g_namedColors["teal"]						= Vector3u(0, 128, 128);
-
-		g_namedColors["poweder_blue"]				= Vector3u(176, 224, 230);
-		g_namedColors["light_blue"]					= Vector3u(173, 216, 230);
-		g_namedColors["light_sky_blue"]				= Vector3u(135, 206, 250);
-		g_namedColors["sky_blue"]					= Vector3u(135, 206, 235);
-		g_namedColors["deep_sky_blue"]				= Vector3u(0, 191, 255);
-		g_namedColors["light_steel_blue"]			= Vector3u(176, 196, 222);
-		g_namedColors["dodger_blue"]				= Vector3u(30, 144, 255);
-		g_namedColors["cornflower_blue"]			= Vector3u(100, 149, 237);
-		g_namedColors["steel_blue"]					= Vector3u(70, 130, 180);
-		g_namedColors["royal_blue"]					= Vector3u(65, 105, 225);
-		g_namedColors["blue"]						= Vector3u(0, 0, 255);
-		g_namedColors["medium_blue"]				= Vector3u(0, 0, 205);
-		g_namedColors["dark_blue"]					= Vector3u(0, 0, 139);
-		g_namedColors["navy"]						= Vector3u(0, 0, 128);
-		g_namedColors["midnight_blue"]				= Vector3u(25, 25, 112);
-		g_namedColors["midnight_slate_blue"]		= Vector3u(123, 104, 238);
-		g_namedColors["slate_blue"]					= Vector3u(106, 90, 205);
-		g_namedColors["dark_slate_blue"]			= Vector3u(72, 61, 139);
-
-		g_namedColors["lavender"]					= Vector3u(230, 230, 250);
-		g_namedColors["thistle"]					= Vector3u(216, 191, 216);
-		g_namedColors["plum"]						= Vector3u(221, 160, 221);
-		g_namedColors["violet"]						= Vector3u(238, 130, 238);
-		g_namedColors["orchid"]						= Vector3u(218, 112, 214);
-		g_namedColors["fuchsia"]					= Vector3u(255, 0, 255);
-		g_namedColors["magenta"]					= Vector3u(255, 0, 255);
-		g_namedColors["medium_orchid"]				= Vector3u(186, 85, 211);
-		g_namedColors["medium_purple"]				= Vector3u(147, 112, 219);
-		g_namedColors["blue_violet"]				= Vector3u(138, 43, 226);
-		g_namedColors["dark_violet"]				= Vector3u(148, 0, 211);
-		g_namedColors["dark_orchid"]				= Vector3u(153, 50, 204);
-		g_namedColors["dark_magenta"]				= Vector3u(139, 0, 139);
-		g_namedColors["purple"]						= Vector3u(128, 0, 128);
-		g_namedColors["indigo"]						= Vector3u(75, 0, 130);
-
-		g_namedColors["pink"]						= Vector3u(255, 192, 203);
-		g_namedColors["light_pink"]					= Vector3u(255, 182, 193);
-		g_namedColors["hot_pink"]					= Vector3u(255, 105, 180);
-		g_namedColors["deep_pink"]					= Vector3u(255, 20, 147);
-		g_namedColors["pale_violet_red"]			= Vector3u(219, 112, 147);
-		g_namedColors["medium_violet_red"]			= Vector3u(199, 21, 133);
-
-		g_namedColors["white"]						= Vector3u(255, 255, 255);
-		g_namedColors["snow"]						= Vector3u(255, 250, 250);
-		g_namedColors["honeydew"]					= Vector3u(240, 255, 240);
-		g_namedColors["mint_cream"]					= Vector3u(245, 255, 250);
-		g_namedColors["azure"]						= Vector3u(240, 255, 255);
-		g_namedColors["alice_blue"]					= Vector3u(240, 248, 255);
-		g_namedColors["ghost_white"]				= Vector3u(248, 248, 255);
-		g_namedColors["white_smoke"]				= Vector3u(245, 245, 245);
-		g_namedColors["seashell"]					= Vector3u(255, 245, 238);
-		g_namedColors["beige"]						= Vector3u(245, 245, 220);
-		g_namedColors["old_lace"]					= Vector3u(253, 245, 230);
-		g_namedColors["floral_white"]				= Vector3u(255, 250, 240);
-		g_namedColors["ivory"]						= Vector3u(255, 255, 240);
-		g_namedColors["antique_white"]				= Vector3u(250, 235, 215);
-		g_namedColors["linen"]						= Vector3u(250, 240, 230);
-		g_namedColors["lavender_blush"]				= Vector3u(255, 240, 245);
-		g_namedColors["misty_rose"]					= Vector3u(255, 228, 225);
-
-		g_namedColors["gainsboro"]					= Vector3u(220, 220, 220);
-		g_namedColors["light_gray"]					= Vector3u(211, 211, 211);
-		g_namedColors["silver"]						= Vector3u(192, 192, 192);
-		g_namedColors["dark_gray"]					= Vector3u(169, 169, 169);
-		g_namedColors["gray"]						= Vector3u(128, 128, 128);
-		g_namedColors["dim_gray"]					= Vector3u(105, 105, 105);
-		g_namedColors["light_slate_gray"]			= Vector3u(119, 136, 153);
-		g_namedColors["slate_gray"]					= Vector3u(112, 128, 144);
-		g_namedColors["dark_slate_gray"]			= Vector3u(47, 79, 79);
-		g_namedColors["black"]						= Vector3u(0, 0, 0);
-
-		g_namedColors["cornsilk"]					= Vector3u(255, 248, 220);
-		g_namedColors["blanched_almond"]			= Vector3u(255, 235, 205);
-		g_namedColors["bisque"]						= Vector3u(255, 228, 196);
-		g_namedColors["navajo_white"]				= Vector3u(255, 222, 173);
-		g_namedColors["wheat"]						= Vector3u(245, 222, 179);
-		g_namedColors["burlywood"]					= Vector3u(222, 184, 135);
-		g_namedColors["tan"]						= Vector3u(210, 180, 140);
-		g_namedColors["rosy_brown"]					= Vector3u(188, 143, 143);
-		g_namedColors["sandy_brown"]				= Vector3u(244, 164, 96);
-		g_namedColors["goldenrod"]					= Vector3u(218, 165, 32);
-		g_namedColors["peru"]						= Vector3u(205, 133, 63);
-		g_namedColors["chocolate"]					= Vector3u(210, 105, 30);
-		g_namedColors["saddle_brown"]				= Vector3u(139, 69, 19);
-		g_namedColors["sienna"]						= Vector3u(160, 82, 45);
-		g_namedColors["brown"]						= Vector3u(165, 42, 42);
-		g_namedColors["maroon"]						= Vector3u(128, 0, 0);
-	}
-
-	auto it = g_namedColors.find(color);
-	if (it != g_namedColors.end())
-	{
-		const Vector3u& c = it->second;
-		return Vector4f(c.r / 255.0f, c.g / 255.0f, c.b / 255.0f, 1.0f);
-	}
-
-	return Vector4f(1.0f);
-}
-
-
-///////////////////////////////////////////////////////////
-bool uiXmlParseInt(char* c, Uint32& v)
-{
-	char* e;
-	v = std::strtoul(c, &e, 10);
-
-	return *e == 0;
-}
-
-
-///////////////////////////////////////////////////////////
-bool uiXmlParseFloat(char* c, float& v)
-{
-	char* e;
-	v = std::strtof(c, &e);
-
-	return *e == 0;
-}
-
-
-///////////////////////////////////////////////////////////
-bool uiXmlParseVec2(char* c, Vector2f& out)
-{
-	float* v = &out.x;
-
-	Uint32 index = 0;
-	char* start = c;
-
-	while (*c != 0)
-	{
-		if (*c == ' ' || *c == ',')
-		{
-			// Null terminator
-			*c = 0;
-
-			// Parse string
-			char* e;
-			v[index++] = std::strtof(start, &e);
-
-			// Catch errors
-			if (*e != 0)
-				return false;
-
-			while (*++c == ' ' || *c == ',');
-			start = c;
-		}
-
-		++c;
-	}
-
-	// Parse last number
-	char* e;
-	v[index] = std::strtof(start, &e);
-
-	return *e == 0;
-}
-
-
-///////////////////////////////////////////////////////////
-bool uiXmlParseVec3(char* c, Vector3f& out)
-{
-	float* v = &out.x;
-
-	Uint32 index = 0;
-	char* start = c;
-
-	while (*c != 0)
-	{
-		if (*c == ' ' || *c == ',')
-		{
-			// Null terminator
-			*c = 0;
-
-			// Parse string
-			char* e;
-			v[index++] = std::strtof(start, &e);
-
-			// Catch errors
-			if (*e != 0)
-				return false;
-
-			while (*++c == ' ' || *c == ',');
-			start = c;
-		}
-
-		++c;
-	}
-
-	// Parse last number
-	char* e;
-	v[index] = std::strtof(start, &e);
-
-	return *e == 0;
-}
-
-
-///////////////////////////////////////////////////////////
-bool uiXmlParseVec4(char* c, Vector4f& out)
-{
-	float* v = &out.x;
-
-	Uint32 index = 0;
-	char* start = c;
-
-	while (*c != 0)
-	{
-		if (*c == ' ' || *c == ',')
-		{
-			// Null terminator
-			*c = 0;
-
-			// Parse string
-			char* e;
-			v[index++] = std::strtof(start, &e);
-
-			// Catch errors
-			if (*e != 0)
-				return false;
-
-			while (*++c == ' ' || *c == ',');
-			start = c;
-		}
-
-		++c;
-	}
-
-	// Parse last number
-	char* e;
-	v[index] = std::strtof(start, &e);
-
-	return *e == 0;
-}
-
-
-///////////////////////////////////////////////////////////
-bool uiXmlParseHexColor(char* c, Vector4f& out)
-{
-	// Parse hex color
-	Uint32 r, g, b, a = 255;
-
-	Uint32 len = strlen(c);
-	char* e;
-	char temp;
-
-	if (c[0] != '#' || len < 7)
-		return false;
-
-	temp = c[3]; c[3] = 0;
-	r = std::strtoul(c + 1, &e, 16);
-	if (*e != 0) return false;
-
-	c[3] = temp; temp = c[5]; c[5] = 0;
-	g = std::strtoul(c + 3, &e, 16);
-	if (*e != 0) return false;
-
-	c[5] = temp;
-	if (len == 9)
-	{
-		temp = c[7];
-		c[7] = 0;
-	}
-	b = std::strtoul(c + 5, &e, 16);
-	if (*e != 0) return false;
-
-	if (len == 9)
-	{
-		c[7] = temp;
-		a = std::strtoul(c + 7, &e, 16);
-		if (*e != 0) return false;
-	}
-
-	out.r = r / 255.0f;
-	out.g = g / 255.0f;
-	out.b = b / 255.0f;
-	out.a = a / 255.0f;
-
-	return true;
-}
-
-
-///////////////////////////////////////////////////////////
-bool uiXmlParseUiPosition(char* c, UIPosition& pos)
-{
-	if (strcmp(c, "top_left") == 0)
-		pos = UIPosition::TopLeft;
-	else if (strcmp(c, "top_center") == 0)
-		pos = UIPosition::TopCenter;
-	else if (strcmp(c, "top_right") == 0)
-		pos = UIPosition::TopRight;
-
-	else if (strcmp(c, "left") == 0)
-		pos = UIPosition::Left;
-	else if (strcmp(c, "center") == 0)
-		pos = UIPosition::Center;
-	else if (strcmp(c, "right") == 0)
-		pos = UIPosition::Right;
-
-	else if (strcmp(c, "bot_left") == 0)
-		pos = UIPosition::BotLeft;
-	else if (strcmp(c, "bot_center") == 0)
-		pos = UIPosition::BotCenter;
-	else if (strcmp(c, "bot_right") == 0)
-		pos = UIPosition::BotRight;
-
-	else
-		return false;
-
-	return true;
-}
-
-
-///////////////////////////////////////////////////////////
-void uiXmlParseElement(UIElement* element, rapidxml::xml_node<>* node, HashMap<std::string, Texture*> textureMap)
-{
-	// Position
-	rapidxml::xml_attribute<>* posAttr = node->first_attribute("position");
-	if (posAttr)
-	{
-		Vector2f pos;
-		if (uiXmlParseVec2(posAttr->value(), pos))
-			element->setPosition(pos);
-	}
-
-	// Rotation
-	rapidxml::xml_attribute<>* rotAttr = node->first_attribute("rotation");
-	if (rotAttr)
-	{
-		float rot;
-		if (uiXmlParseFloat(rotAttr->value(), rot))
-			element->setRotation(rot);
-	}
-
-	// Size
-	rapidxml::xml_attribute<>* sizeAttr = node->first_attribute("size");
-	if (sizeAttr)
-	{
-		Vector2f size;
-		if (uiXmlParseVec2(sizeAttr->value(), size))
-			element->setSize(size);
-	}
-
-	// Rel Size
-	rapidxml::xml_attribute<>* relSizeAttr = node->first_attribute("rel_size");
-	if (relSizeAttr)
-	{
-		Vector2f size;
-		if (uiXmlParseVec2(relSizeAttr->value(), size))
-			element->setRelSize(size);
-	}
-
-	// Width
-	rapidxml::xml_attribute<>* widthAttr = node->first_attribute("width");
-	if (widthAttr)
-	{
-		float width;
-		if (uiXmlParseFloat(widthAttr->value(), width))
-			element->setWidth(width);
-	}
-
-	// Height
-	rapidxml::xml_attribute<>* heightAttr = node->first_attribute("height");
-	if (heightAttr)
-	{
-		float height;
-		if (uiXmlParseFloat(heightAttr->value(), height))
-			element->setHeight(height);
-	}
-
-	// Rel Width
-	rapidxml::xml_attribute<>* relWidthAttr = node->first_attribute("rel_width");
-	if (relWidthAttr)
-	{
-		float relWidth;
-		if (uiXmlParseFloat(relWidthAttr->value(), relWidth))
-			element->setRelWidth(relWidth);
-	}
-
-	// Rel Height
-	rapidxml::xml_attribute<>* relHeightAttr = node->first_attribute("rel_height");
-	if (relHeightAttr)
-	{
-		float relHeight;
-		if (uiXmlParseFloat(relHeightAttr->value(), relHeight))
-			element->setRelHeight(relHeight);
-	}
-
-	// Origin
-	rapidxml::xml_attribute<>* originAttr = node->first_attribute("origin");
-	if (originAttr)
-	{
-		Vector2f origin;
-		UIPosition pos;
-
-		if (uiXmlParseVec2(originAttr->value(), origin))
-			element->setOrigin(origin);
-
-		else if (uiXmlParseUiPosition(originAttr->value(), pos))
-			element->setOrigin(pos);
-	}
-
-	// Anchor
-	rapidxml::xml_attribute<>* anchorAttr = node->first_attribute("anchor");
-	if (anchorAttr)
-	{
-		Vector2f anchor;
-		UIPosition pos;
-
-		if (uiXmlParseVec2(anchorAttr->value(), anchor))
-			element->setAnchor(anchor);
-
-		else if (uiXmlParseUiPosition(anchorAttr->value(), pos))
-			element->setAnchor(pos);
-	}
-
-	// Color
-	rapidxml::xml_attribute<>* colorAttr = node->first_attribute("color");
-	if (colorAttr)
-	{
-		Vector4f color4;
-		Vector3f color3;
-		char* c = colorAttr->value();
-
-		if (c[0] == '#' && uiXmlParseHexColor(c, color4))
-			element->setColor(color4);
-
-		else if (uiXmlParseVec4(c, color4))
-			element->setColor(color4);
-
-		else if (uiXmlParseVec3(c, color3))
-			element->setColor(Vector4f(color3, 1.0f));
-
-		else
-			element->setColor(getNamedColor(c));
-	}
-
-	// Texture
-	rapidxml::xml_attribute<>* textureAttr = node->first_attribute("texture");
-	if (textureAttr)
-	{
-		std::string fname = textureAttr->value();
-
-		// Check if it has been loaded first
-		auto it = textureMap.find(fname);
-		if (it == textureMap.end())
-		{
-			Texture* texture = Pool<Texture>::alloc();
-			if (texture->load(fname))
-			{
-				textureMap[fname] = texture;
-				element->setTexture(texture);
-			}
-			else
-				Pool<Texture>::free(texture);
-		}
-		else
-			element->setTexture(it->second);
-	}
-
-	// Texture Rect
-	rapidxml::xml_attribute<>* textureRectAttr = node->first_attribute("texture_rect");
-	if (textureRectAttr)
-	{
-		Vector4f textureRect;
-		if (uiXmlParseVec4(textureRectAttr->value(), textureRect))
-			element->setTextureRect(textureRect);
-	}
-}
-
-
-///////////////////////////////////////////////////////////
-void uiXmlParseText(Text* text, rapidxml::xml_node<>* node, HashMap<std::string, Font*>& fontMap)
+void uiXmlParseText(Text* text, XmlNode node, HashMap<std::string, Font*>& fontMap)
 {
 	// Font
-	rapidxml::xml_attribute<>* fontAttr = node->first_attribute("font");
+	XmlAttribute fontAttr = node.getFirstAttribute("font");
 	if (fontAttr)
 	{
-		std::string fname = fontAttr->value();
+		std::string fname = fontAttr.getValue();
 
 		// Check if the font has been loaded
 		auto it = fontMap.find(fname);
@@ -592,80 +54,80 @@ void uiXmlParseText(Text* text, rapidxml::xml_node<>* node, HashMap<std::string,
 	}
 
 	// Value
-	if (strlen(node->value()) > 0)
-		text->setString(node->value());
+	if (strlen(node.getValue()) > 0)
+		text->setString(node.getValue());
 
 	else
 	{
-		rapidxml::xml_attribute<>* valueAttr = node->first_attribute("value");
+		XmlAttribute valueAttr = node.getFirstAttribute("value");
 		if (valueAttr)
-			text->setString(valueAttr->value());
+			text->setString(valueAttr.getValue());
 	}
 
 	// Character size
-	rapidxml::xml_attribute<>* charSizeAttr = node->first_attribute("character_size");
+	XmlAttribute charSizeAttr = node.getFirstAttribute("character_size");
 	if (charSizeAttr)
 	{
 		Uint32 size;
-		if (uiXmlParseInt(charSizeAttr->value(), size))
+		if (uiXmlParseInt(charSizeAttr.getValue(), size))
 			text->setCharacterSize(size);
 	}
 
 	// Character spacing
-	rapidxml::xml_attribute<>* charSpacingAttr = node->first_attribute("character_spacing");
+	XmlAttribute charSpacingAttr = node.getFirstAttribute("character_spacing");
 	if (charSpacingAttr)
 	{
 		float spacing;
-		if (uiXmlParseFloat(charSpacingAttr->value(), spacing))
+		if (uiXmlParseFloat(charSpacingAttr.getValue(), spacing))
 			text->setCharacterSpacing(spacing);
 	}
 
 	// Line spacing
-	rapidxml::xml_attribute<>* lineSpacingAttr = node->first_attribute("line_spacing");
+	XmlAttribute lineSpacingAttr = node.getFirstAttribute("line_spacing");
 	if (lineSpacingAttr)
 	{
 		float spacing;
-		if (uiXmlParseFloat(lineSpacingAttr->value(), spacing))
+		if (uiXmlParseFloat(lineSpacingAttr.getValue(), spacing))
 			text->setLineSpacing(spacing);
 	}
 }
 
 
 ///////////////////////////////////////////////////////////
-void uiXmlParseButton(Button* button, rapidxml::xml_node<>* node, HashMap<std::string, Texture*>& textureMap, HashMap<std::string, Font*>& fontMap)
+void uiXmlParseButton(Button* button, XmlNode node, HashMap<std::string, Texture*>& textureMap, HashMap<std::string, Font*>& fontMap)
 {
 	// Text value
-	rapidxml::xml_attribute<>* valueAttr = node->first_attribute("value");
+	XmlAttribute valueAttr = node.getFirstAttribute("value");
 	if (valueAttr)
-		button->setString(valueAttr->value());
+		button->setString(valueAttr.getValue());
 
 	else
 	{
-		rapidxml::xml_attribute<>* textAttr = node->first_attribute("text");
+		XmlAttribute textAttr = node.getFirstAttribute("text");
 		if (textAttr)
-			button->setString(textAttr->value());
+			button->setString(textAttr.getValue());
 	}
 
 	// Text align
-	rapidxml::xml_attribute<>* textAlignAttr = node->first_attribute("text_align");
+	XmlAttribute textAlignAttr = node.getFirstAttribute("text_align");
 	if (textAlignAttr)
 	{
 		UIPosition align;
-		if (uiXmlParseUiPosition(textAlignAttr->value(), align))
+		if (uiXmlParseUiPosition(textAlignAttr.getValue(), align))
 			button->setTextAlign(align);
 	}
 
 	// Text offset
-	rapidxml::xml_attribute<>* textOffsetAttr = node->first_attribute("text_offset");
+	XmlAttribute textOffsetAttr = node.getFirstAttribute("text_offset");
 	if (textOffsetAttr)
 	{
 		Vector2f offset;
-		if (uiXmlParseVec2(textOffsetAttr->value(), offset))
+		if (uiXmlParseVec2(textOffsetAttr.getValue(), offset))
 			button->setTextOffset(offset);
 	}
 
 	// Parse text options
-	rapidxml::xml_node<>* textNode = node->first_node("element_text");
+	XmlNode textNode = node.getFirstNode("element_text");
 	if (textNode)
 	{
 		uiXmlParseElement(button->getText(), textNode, textureMap);
@@ -675,27 +137,27 @@ void uiXmlParseButton(Button* button, rapidxml::xml_node<>* node, HashMap<std::s
 
 
 ///////////////////////////////////////////////////////////
-void uiXmlParseDropdown(Dropdown* dropdown, rapidxml::xml_node<>* node, HashMap<std::string, Texture*>& textureMap, HashMap<std::string, Font*>& fontMap)
+void uiXmlParseDropdown(Dropdown* dropdown, XmlNode node, HashMap<std::string, Texture*>& textureMap, HashMap<std::string, Font*>& fontMap)
 {
 	// Load as button because dropdown inherits from button
 	uiXmlParseButton(dropdown, node, textureMap, fontMap);
 
 	// Item height
-	rapidxml::xml_attribute<>* itemHeightAttr = node->first_attribute("item_height");
+	XmlAttribute itemHeightAttr = node.getFirstAttribute("item_height");
 	if (itemHeightAttr)
 	{
 		float height;
-		if (uiXmlParseFloat(itemHeightAttr->value(), height))
+		if (uiXmlParseFloat(itemHeightAttr.getValue(), height))
 			dropdown->setItemHeight(height);
 	}
 
 	// Item color
-	rapidxml::xml_attribute<>* itemColorAttr = node->first_attribute("item_color");
+	XmlAttribute itemColorAttr = node.getFirstAttribute("item_color");
 	if (itemColorAttr)
 	{
 		Vector4f color4;
 		Vector3f color3;
-		char* c = itemColorAttr->value();
+		char* c = itemColorAttr.getValue();
 
 		if (c[0] == '#' && uiXmlParseHexColor(c, color4))
 			dropdown->setItemColor(color4);
@@ -711,13 +173,13 @@ void uiXmlParseDropdown(Dropdown* dropdown, rapidxml::xml_node<>* node, HashMap<
 	}
 
 	// Add dropdown items
-	rapidxml::xml_node<>* itemNode = node->first_node("dropdown_item");
+	XmlNode itemNode = node.getFirstNode("dropdown_item");
 	while (itemNode)
 	{
-		Uint32 itemLen = strlen(itemNode->value());
+		Uint32 itemLen = strlen(itemNode.getValue());
 
 		if (itemLen)
-			dropdown->addItem(itemNode->value());
+			dropdown->addItem(itemNode.getValue());
 
 		else
 		{
@@ -730,98 +192,98 @@ void uiXmlParseDropdown(Dropdown* dropdown, rapidxml::xml_node<>* node, HashMap<
 			dropdown->addItem(item);
 		}
 
-		itemNode = itemNode->next_sibling("dropdown_item");
+		itemNode = itemNode.getNextSibling("dropdown_item");
 	}
 }
 
 
 ///////////////////////////////////////////////////////////
-void uiXmlParseSlider(Slider* slider, rapidxml::xml_node<>* node, HashMap<std::string, Texture*>& textureMap)
+void uiXmlParseSlider(Slider* slider, XmlNode node, HashMap<std::string, Texture*>& textureMap)
 {
 	// Slider value
-	rapidxml::xml_attribute<>* valueAttr = node->first_attribute("value");
+	XmlAttribute valueAttr = node.getFirstAttribute("value");
 	if (valueAttr)
 	{
 		float value;
-		if (uiXmlParseFloat(valueAttr->value(), value))
+		if (uiXmlParseFloat(valueAttr.getValue(), value))
 			slider->setValue(value);
 	}
 
 	// Slider button
-	rapidxml::xml_node<>* buttonNode = node->first_node("slider_button");
+	XmlNode buttonNode = node.getFirstNode("slider_button");
 	if (buttonNode)
 		uiXmlParseElement(slider->getSliderButton(), buttonNode, textureMap);
 }
 
 
 ///////////////////////////////////////////////////////////
-void uiXmlParseScrollView(ScrollView* view, rapidxml::xml_node<>* node, HashMap<std::string, Texture*>& textureMap)
+void uiXmlParseScrollView(ScrollView* view, XmlNode node, HashMap<std::string, Texture*>& textureMap)
 {
 	// Clip margins
-	rapidxml::xml_attribute<>* marginsAttr = node->first_attribute("clip_margins");
+	XmlAttribute marginsAttr = node.getFirstAttribute("clip_margins");
 	if (marginsAttr)
 	{
 		float margins;
-		if (uiXmlParseFloat(marginsAttr->value(), margins))
+		if (uiXmlParseFloat(marginsAttr.getValue(), margins))
 			view->setClipMargin(margins);
 	}
 
 	// Scroll speed
-	rapidxml::xml_attribute<>* speedAttr = node->first_attribute("scroll_speed");
+	XmlAttribute speedAttr = node.getFirstAttribute("scroll_speed");
 	if (speedAttr)
 	{
 		float speed;
-		if (uiXmlParseFloat(speedAttr->value(), speed))
+		if (uiXmlParseFloat(speedAttr.getValue(), speed))
 			view->setScrollSpeed(speed);
 	}
 
 	// Scroll bar width
-	rapidxml::xml_attribute<>* barWidthAttr = node->first_attribute("scroll_bar_width");
+	XmlAttribute barWidthAttr = node.getFirstAttribute("scroll_bar_width");
 	if (barWidthAttr)
 	{
 		float barWidth;
-		if (uiXmlParseFloat(barWidthAttr->value(), barWidth))
+		if (uiXmlParseFloat(barWidthAttr.getValue(), barWidth))
 			view->setScrollBarWidth(barWidth);
 	}
 
 	// Slider
-	rapidxml::xml_node<>* sliderNode = node->first_node("scroll_bar");
+	XmlNode sliderNode = node.getFirstNode("scroll_bar");
 	if (sliderNode)
 		uiXmlParseElement(view->getScrollBar(), sliderNode, textureMap);
 }
 
 
 ///////////////////////////////////////////////////////////
-void uiXmlParseTextInput(TextInput* input, rapidxml::xml_node<>* node, HashMap<std::string, Texture*>& textureMap, HashMap<std::string, Font*>& fontMap)
+void uiXmlParseTextInput(TextInput* input, XmlNode node, HashMap<std::string, Texture*>& textureMap, HashMap<std::string, Font*>& fontMap)
 {
 	// Text value
-	rapidxml::xml_attribute<>* valueAttr = node->first_attribute("value");
+	XmlAttribute valueAttr = node.getFirstAttribute("value");
 	if (valueAttr)
-		input->setValue(valueAttr->value());
+		input->setValue(valueAttr.getValue());
 
 	else
 	{
-		rapidxml::xml_attribute<>* textAttr = node->first_attribute("text");
+		XmlAttribute textAttr = node.getFirstAttribute("text");
 		if (textAttr)
-			input->setValue(textAttr->value());
+			input->setValue(textAttr.getValue());
 	}
 
 	// Text cursor size
-	rapidxml::xml_attribute<>* cursorSizeAttr = node->first_attribute("cursor_size");
+	XmlAttribute cursorSizeAttr = node.getFirstAttribute("cursor_size");
 	if (cursorSizeAttr)
 	{
 		Vector2f size;
-		if (uiXmlParseVec2(cursorSizeAttr->value(), size))
+		if (uiXmlParseVec2(cursorSizeAttr.getValue(), size))
 			input->setTextCursorSize(size);
 	}
 
 	// Text cursor color
-	rapidxml::xml_attribute<>* cursorColorAttr = node->first_attribute("cursor_color");
+	XmlAttribute cursorColorAttr = node.getFirstAttribute("cursor_color");
 	if (cursorColorAttr)
 	{
 		Vector4f color4;
 		Vector3f color3;
-		char* c = cursorColorAttr->value();
+		char* c = cursorColorAttr.getValue();
 
 		if (c[0] == '#' && uiXmlParseHexColor(c, color4))
 			input->setTextCursorColor(color4);
@@ -837,21 +299,21 @@ void uiXmlParseTextInput(TextInput* input, rapidxml::xml_node<>* node, HashMap<s
 	}
 
 	// Text cursor cycle
-	rapidxml::xml_attribute<>* cursorCycleAttr = node->first_attribute("cursor_cycle");
+	XmlAttribute cursorCycleAttr = node.getFirstAttribute("cursor_cycle");
 	if (cursorCycleAttr)
 	{
 		float cycle;
-		if (uiXmlParseFloat(cursorCycleAttr->value(), cycle))
+		if (uiXmlParseFloat(cursorCycleAttr.getValue(), cycle))
 			input->setTextCursorCycle(cycle);
 	}
 
 	// Highlight cursor color
-	rapidxml::xml_attribute<>* highlightColorAttr = node->first_attribute("highlight_color");
+	XmlAttribute highlightColorAttr = node.getFirstAttribute("highlight_color");
 	if (highlightColorAttr)
 	{
 		Vector4f color4;
 		Vector3f color3;
-		char* c = highlightColorAttr->value();
+		char* c = highlightColorAttr.getValue();
 
 		if (c[0] == '#' && uiXmlParseHexColor(c, color4))
 			input->setHighlightColor(color4);
@@ -867,31 +329,33 @@ void uiXmlParseTextInput(TextInput* input, rapidxml::xml_node<>* node, HashMap<s
 	}
 
 	// Text align
-	rapidxml::xml_attribute<>* textAlignAttr = node->first_attribute("text_align");
+	XmlAttribute textAlignAttr = node.getFirstAttribute("text_align");
 	if (textAlignAttr)
 	{
 		UIPosition align;
-		if (uiXmlParseUiPosition(textAlignAttr->value(), align))
+		if (uiXmlParseUiPosition(textAlignAttr.getValue(), align))
 			input->setTextAlign(align);
 	}
 
 	// Text offset
-	rapidxml::xml_attribute<>* textOffsetAttr = node->first_attribute("text_offset");
+	XmlAttribute textOffsetAttr = node.getFirstAttribute("text_offset");
 	if (textOffsetAttr)
 	{
 		Vector2f offset;
-		if (uiXmlParseVec2(textOffsetAttr->value(), offset))
+		if (uiXmlParseVec2(textOffsetAttr.getValue(), offset))
 			input->setTextOffset(offset);
 	}
 
 	// Parse text options
-	rapidxml::xml_node<>* textNode = node->first_node("element_text");
+	XmlNode textNode = node.getFirstNode("element_text");
 	if (textNode)
 	{
 		uiXmlParseElement(input->getText(), textNode, textureMap);
 		uiXmlParseText(input->getText(), textNode, fontMap);
 	}
 }
+
+*/
 
 
 ///////////////////////////////////////////////////////////
@@ -900,7 +364,6 @@ UISystem::UISystem() :
 	m_instanceBufferOffset	(0),
 	m_hovered				(0),
 	m_focused				(0),
-	m_defaultFont			(0),
 	m_loaded				(false)
 {
 	m_isVisible = false;
@@ -914,10 +377,7 @@ UISystem::UISystem() :
 ///////////////////////////////////////////////////////////
 UISystem::~UISystem()
 {
-	for (auto it = m_loadedTextures.begin(); it != m_loadedTextures.end(); ++it)
-		Pool<Texture>::free(it->second);
-	for (auto it = m_loadedFonts.begin(); it != m_loadedFonts.end(); ++it)
-		Pool<Font>::free(it->second);
+
 }
 
 
@@ -1297,149 +757,80 @@ bool UISystem::load(const std::string& fname)
 	if (m_loaded) return true;
 
 
-	// Load file
-	std::ifstream f(fname.c_str(), std::ios::binary);
-	if (!f.is_open())
+	// Load the xml document
+	XmlDocument doc;
+	if (!doc.load(fname))
 	{
-		LOG_WARNING("Could not open UI XML file: %s", fname.c_str());
+		LOG_WARNING("Failed to load UI XML file: %s", fname.c_str());
 		return false;
 	}
 
-	f.seekg(0, std::ios::end);
-	Uint32 size = (Uint32)f.tellg();
-	f.seekg(0);
-
-	// Allocate and read data
-	char* data = (char*)malloc(size + 1);
-	f.read(data, size);
-	data[size] = 0;
-
-	// Close file
-	f.close();
-
-	// Parse the file
-	rapidxml::xml_document<> doc;
-	doc.parse<0>(data);
-
 	// Get the main node
-	rapidxml::xml_node<>* mainNode = doc.first_node("ui");
-	if (!mainNode)
+	XmlNode mainNode = doc.getFirstNode("ui");
+	if (!mainNode.exists())
 	{
 		LOG_WARNING("Invalid UI XML file (must start with <ui>): %s", fname.c_str());
-		free(data);
 		return false;
 	}
 
 	// Font
-	rapidxml::xml_node<>* fontNode = mainNode->first_node("font");
-	if (fontNode)
+	XmlNode fontNode = mainNode.getFirstNode("font");
+	if (fontNode.exists())
 	{
-		if (m_defaultFont)
-			Pool<Font>::free(m_defaultFont);
-
-		m_defaultFont = Pool<Font>::alloc();
-		if (m_defaultFont->load(fontNode->value()))
-		{
-			// Set default font and add to loaded fonts
-			Text::setDefaultFont(m_defaultFont);
-			m_loadedFonts[fontNode->value()] = m_defaultFont;
-		}
-		else
-			Pool<Font>::free(m_defaultFont);
+		Font* font;
+		if (UIParser::parse(fontNode, font))
+			Text::setDefaultFont(font);
 	}
 
 
 	// Keep track of parent elements
 	std::stack<UIElement*> parentStack;
-	std::stack<rapidxml::xml_node<>*> nodeStack;
+	std::stack<XmlNode> nodeStack;
 	parentStack.push(this);
-	nodeStack.push(0);
+	nodeStack.push(XmlNode());
 
 	// Iterate through ui elements
-	rapidxml::xml_node<>* current = mainNode->first_node();
-	while (current)
+	XmlNode current = mainNode.getFirstNode();
+	while (current.exists())
 	{
 		// Create an element
 		UIElement* element = 0;
-		Uint32 type = 0;
 
-		// Check the element type
-		if (strcmp(current->name(), "ui_element") == 0)
-		{
+		// Create an element of the correct type
+		if (strcmp(current.getName(), "ui_element") == 0)
 			element = Pool<UIElement>::alloc();
-			type = TypeInfo::getId<UIElement>();
 
-			uiXmlParseElement(element, current, m_loadedTextures);
-		}
-		else if (strcmp(current->name(), "button") == 0)
-		{
+		else if (strcmp(current.getName(), "button") == 0)
 			element = Pool<Button>::alloc();
-			type = TypeInfo::getId<Button>();
 
-			uiXmlParseElement(element, current, m_loadedTextures);
-			uiXmlParseButton((Button*)element, current, m_loadedTextures, m_loadedFonts);
-		}
-		else if (strcmp(current->name(), "dropdown") == 0)
-		{
+		else if (strcmp(current.getName(), "dropdown") == 0)
 			element = Pool<Dropdown>::alloc();
-			type = TypeInfo::getId<Dropdown>();
 
-			uiXmlParseElement(element, current, m_loadedTextures);
-			uiXmlParseDropdown((Dropdown*)element, current, m_loadedTextures, m_loadedFonts);
-		}
-		else if (strcmp(current->name(), "h_list_view") == 0)
-		{
+		else if (strcmp(current.getName(), "h_list_view") == 0)
 			element = Pool<HListView>::alloc();
-			type = TypeInfo::getId<HListView>();
 
-			uiXmlParseElement(element, current, m_loadedTextures);
-		}
-		else if (strcmp(current->name(), "v_list_view") == 0 || strcmp(current->name(), "list_view") == 0)
-		{
+		else if (strcmp(current.getName(), "v_list_view") == 0 || strcmp(current.getName(), "list_view") == 0)
 			element = Pool<VListView>::alloc();
-			type = TypeInfo::getId<VListView>();
 
-			uiXmlParseElement(element, current, m_loadedTextures);
-		}
-		else if (strcmp(current->name(), "scroll_view") == 0)
-		{
+		else if (strcmp(current.getName(), "scroll_view") == 0)
 			element = Pool<ScrollView>::alloc();
-			type = TypeInfo::getId<ScrollView>();
 
-			uiXmlParseElement(element, current, m_loadedTextures);
-			uiXmlParseScrollView((ScrollView*)element, current, m_loadedTextures);
-		}
-		else if (strcmp(current->name(), "slider") == 0)
-		{
+		else if (strcmp(current.getName(), "slider") == 0)
 			element = Pool<Slider>::alloc();
-			type = TypeInfo::getId<Slider>();
 
-			uiXmlParseElement(element, current, m_loadedTextures);
-			uiXmlParseSlider((Slider*)element, current, m_loadedTextures);
-		}
-		else if (strcmp(current->name(), "text") == 0)
-		{
+		else if (strcmp(current.getName(), "text") == 0)
 			element = Pool<Text>::alloc();
-			type = TypeInfo::getId<Text>();
 
-			uiXmlParseElement(element, current, m_loadedTextures);
-			uiXmlParseText((Text*)element, current, m_loadedFonts);
-		}
-		else if (strcmp(current->name(), "text_input") == 0)
-		{
+		else if (strcmp(current.getName(), "text_input") == 0)
 			element = Pool<TextInput>::alloc();
-			type = TypeInfo::getId<TextInput>();
 
-			uiXmlParseElement(element, current, m_loadedTextures);
-			uiXmlParseTextInput((TextInput*)element, current, m_loadedTextures, m_loadedFonts);
-		}
 		else
 		{
 			// Skip non UI elements
-			current = current->next_sibling();
+			current = current.getNextSibling();
 
 			// If there are no more elements in the current level, go up 1 level
-			if (!current)
+			if (!current.exists())
 			{
 				current = nodeStack.top();
 				parentStack.pop();
@@ -1450,18 +841,20 @@ bool UISystem::load(const std::string& fname)
 		}
 
 		// Check if the element has an id
-		rapidxml::xml_attribute<>* idAttrib = current->first_attribute("id");
-		std::string id = idAttrib ? idAttrib->value() : "";
+		XmlAttribute idAttrib = current.getFirstAttribute("id");
+		std::string id = idAttrib.exists() ? idAttrib.getValue() : "";
 
+		// Parse the element
+		element->parse(current);
 
 		// Check if the node has a margin attribute
-		rapidxml::xml_attribute<>* marginsAttr = current->first_attribute("margins");
+		XmlAttribute marginsAttr = current.getFirstAttribute("margins");
 		bool usesMargins = false;
 
-		if (marginsAttr && parentStack.size() > 1)
+		if (marginsAttr.exists() && parentStack.size() > 1)
 		{
 			Vector2f margins;
-			if (uiXmlParseVec2(marginsAttr->value(), margins))
+			if (UIParser::parse(marginsAttr, margins))
 			{
 				VListView* vlist;
 				HListView* hlist;
@@ -1480,6 +873,7 @@ bool UISystem::load(const std::string& fname)
 		if (!usesMargins)
 			parentStack.top()->addChild(element);
 
+
 		// Add the element to the map
 		if (id.size() > 0)
 		{
@@ -1488,12 +882,12 @@ bool UISystem::load(const std::string& fname)
 		}
 
 		// Add child elements
-		rapidxml::xml_node<>* childrenNode = current->first_node();
+		XmlNode childrenNode = current.getFirstNode();
 
 		// Go to next sibling
-		current = current->next_sibling();
+		current = current.getNextSibling();
 
-		if (childrenNode)
+		if (childrenNode.exists())
 		{
 			// Add current node to parent queue
 			parentStack.push(element);
@@ -1504,7 +898,7 @@ bool UISystem::load(const std::string& fname)
 		}
 
 		// Go up one level if the current node is 0
-		if (!current && parentStack.size())
+		if (!current.exists() && parentStack.size())
 		{
 			current = nodeStack.top();
 			parentStack.pop();

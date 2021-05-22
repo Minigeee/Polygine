@@ -4,6 +4,7 @@
 
 #include <poly/UI/ScrollView.h>
 #include <poly/UI/Slider.h>
+#include <poly/UI/UIParser.h>
 
 namespace poly
 {
@@ -73,6 +74,46 @@ ScrollView::~ScrollView()
 	Pool<Slider>::free(m_scrollBar);
 	m_scrollBody = 0;
 	m_scrollBar = 0;
+}
+
+
+///////////////////////////////////////////////////////////
+void ScrollView::parse(XmlNode node)
+{
+	// Default parse
+	UIElement::parse(node);
+
+	// Clip margins
+	XmlAttribute marginsAttr = node.getFirstAttribute("clip_margins");
+	if (marginsAttr.exists())
+	{
+		float margins;
+		if (UIParser::parse(marginsAttr, margins))
+			setClipMargin(margins);
+	}
+
+	// Scroll speed
+	XmlAttribute speedAttr = node.getFirstAttribute("scroll_speed");
+	if (speedAttr.exists())
+	{
+		float speed;
+		if (UIParser::parse(speedAttr, speed))
+			setScrollSpeed(speed);
+	}
+
+	// Scroll bar width
+	XmlAttribute barWidthAttr = node.getFirstAttribute("scroll_bar_width");
+	if (barWidthAttr.exists())
+	{
+		float barWidth;
+		if (UIParser::parse(barWidthAttr, barWidth))
+			setScrollBarWidth(barWidth);
+	}
+
+	// Slider
+	XmlNode sliderNode = node.getFirstNode("scroll_bar");
+	if (sliderNode.exists())
+		m_scrollBar->parse(sliderNode);
 }
 
 

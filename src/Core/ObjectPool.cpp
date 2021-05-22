@@ -7,28 +7,32 @@
 namespace poly
 {
 
-///////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////
 ObjectPool::ObjectPool() :
 	m_firstPage		(0),
 	m_objectSize	(0),
 	m_pageSize		(512)
 { }
 
+
+///////////////////////////////////////////////////////////
 ObjectPool::ObjectPool(Uint32 objectSize, Uint32 pageSize) :
 	m_firstPage		(0),
 	m_objectSize	(objectSize),
 	m_pageSize		(pageSize)
 { }
 
+
+///////////////////////////////////////////////////////////
 ObjectPool::~ObjectPool()
 {
 	// Free all memory
 	reset();
 }
 
-///////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////
 ObjectPool::ObjectPool(ObjectPool&& other) :
 	m_firstPage		(other.m_firstPage),
 	m_objectSize	(other.m_objectSize),
@@ -39,6 +43,8 @@ ObjectPool::ObjectPool(ObjectPool&& other) :
 	other.m_pageSize = 0;
 }
 
+
+///////////////////////////////////////////////////////////
 ObjectPool& ObjectPool::operator=(ObjectPool&& other)
 {
 	if (&other != this)
@@ -55,32 +61,38 @@ ObjectPool& ObjectPool::operator=(ObjectPool&& other)
 	return *this;
 }
 
-///////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////
 void ObjectPool::setObjectSize(Uint32 size)
 {
 	if (!m_firstPage)
 		m_objectSize = size;
 }
 
+
+///////////////////////////////////////////////////////////
 void ObjectPool::setPageSize(Uint32 size)
 {
 	if (!m_firstPage)
 		m_pageSize = size;
 }
 
-///////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////
 Uint32 ObjectPool::getObjectSize() const
 {
 	return m_objectSize;
 }
 
+
+///////////////////////////////////////////////////////////
 Uint32 ObjectPool::getPageSize() const
 {
 	return m_pageSize;
 }
 
+
+///////////////////////////////////////////////////////////
 Uint32 ObjectPool::getNumObjects() const
 {
 	Uint32 numObjects = 0;
@@ -96,6 +108,8 @@ Uint32 ObjectPool::getNumObjects() const
 	return numObjects;
 }
 
+
+///////////////////////////////////////////////////////////
 Uint32 ObjectPool::getNumPages() const
 {
 	Uint32 numPages = 0;
@@ -111,8 +125,8 @@ Uint32 ObjectPool::getNumPages() const
 	return numPages;
 }
 
-///////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////
 void* ObjectPool::alloc()
 {
 	// Make sure valid settings
@@ -154,6 +168,8 @@ void* ObjectPool::alloc()
 	return obj;
 }
 
+
+///////////////////////////////////////////////////////////
 void ObjectPool::free(void* ptr)
 {
 	// Make sure there are existing pages first
@@ -182,6 +198,8 @@ void ObjectPool::free(void* ptr)
 	--header->m_numObjects;
 }
 
+
+///////////////////////////////////////////////////////////
 void ObjectPool::reset()
 {
 	PageHeader* page = (PageHeader*)m_firstPage;
@@ -205,8 +223,8 @@ void ObjectPool::reset()
 	m_firstPage = 0;
 }
 
-///////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////
 void* ObjectPool::allocPage()
 {
 	// Calculate size of page
@@ -237,6 +255,5 @@ void* ObjectPool::allocPage()
 	return header;
 }
 
-///////////////////////////////////////////////////////////
 
 }

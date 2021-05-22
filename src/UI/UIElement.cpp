@@ -1,6 +1,8 @@
 
 #include <poly/Math/Functions.h>
+
 #include <poly/UI/UIElement.h>
+#include <poly/UI/UIParser.h>
 
 namespace poly
 {
@@ -72,6 +74,138 @@ UIElement::UIElement() :
 	m_hasFocus				(false)
 {
 
+}
+
+
+///////////////////////////////////////////////////////////
+void UIElement::parse(XmlNode node)
+{
+	// Position
+	XmlAttribute posAttr = node.getFirstAttribute("position");
+	if (posAttr.exists())
+	{
+		Vector2f pos;
+		if (UIParser::parse(posAttr, pos))
+			setPosition(pos);
+	}
+
+	// Rotation
+	XmlAttribute rotAttr = node.getFirstAttribute("rotation");
+	if (rotAttr.exists())
+	{
+		float rot;
+		if (UIParser::parse(rotAttr, rot))
+			setRotation(rot);
+	}
+
+	// Size
+	XmlAttribute sizeAttr = node.getFirstAttribute("size");
+	if (sizeAttr.exists())
+	{
+		Vector2f size;
+		if (UIParser::parse(sizeAttr, size))
+			setSize(size);
+	}
+
+	// Rel Size
+	XmlAttribute relSizeAttr = node.getFirstAttribute("rel_size");
+	if (relSizeAttr.exists())
+	{
+		Vector2f size;
+		if (UIParser::parse(relSizeAttr, size))
+			setRelSize(size);
+	}
+
+	// Width
+	XmlAttribute widthAttr = node.getFirstAttribute("width");
+	if (widthAttr.exists())
+	{
+		float width;
+		if (UIParser::parse(widthAttr, width))
+			setWidth(width);
+	}
+
+	// Height
+	XmlAttribute heightAttr = node.getFirstAttribute("height");
+	if (heightAttr.exists())
+	{
+		float height;
+		if (UIParser::parse(heightAttr, height))
+			setHeight(height);
+	}
+
+	// Rel Width
+	XmlAttribute relWidthAttr = node.getFirstAttribute("rel_width");
+	if (relWidthAttr.exists())
+	{
+		float relWidth;
+		if (UIParser::parse(relWidthAttr, relWidth))
+			setRelWidth(relWidth);
+	}
+
+	// Rel Height
+	XmlAttribute relHeightAttr = node.getFirstAttribute("rel_height");
+	if (relHeightAttr.exists())
+	{
+		float relHeight;
+		if (UIParser::parse(relHeightAttr, relHeight))
+			setRelHeight(relHeight);
+	}
+
+	// Origin
+	XmlAttribute originAttr = node.getFirstAttribute("origin");
+	if (originAttr.exists())
+	{
+		Vector2f origin;
+		UIPosition pos;
+
+		if (UIParser::parse(originAttr, origin))
+			setOrigin(origin);
+
+		else if (UIParser::parse(originAttr, pos))
+			setOrigin(pos);
+	}
+
+	// Anchor
+	XmlAttribute anchorAttr = node.getFirstAttribute("anchor");
+	if (anchorAttr.exists())
+	{
+		Vector2f anchor;
+		UIPosition pos;
+
+		if (UIParser::parse(anchorAttr, anchor))
+			setAnchor(anchor);
+
+		else if (UIParser::parse(anchorAttr, pos))
+			setAnchor(pos);
+	}
+
+	// Color
+	XmlAttribute colorAttr = node.getFirstAttribute("color");
+	if (colorAttr.exists())
+	{
+		Vector4f color;
+		if (UIParser::parseColor(colorAttr, color))
+			setColor(color);
+	}
+
+	// Texture
+	XmlAttribute textureAttr = node.getFirstAttribute("texture");
+	if (textureAttr.exists())
+	{
+		Texture* texture;
+		if (UIParser::parse(textureAttr, texture))
+			setTexture(texture);
+	}
+
+	// Texture Rect
+	XmlAttribute textureRectAttr = node.getFirstAttribute("texture_rect");
+	if (textureRectAttr.exists())
+	{
+		Vector4f textureRect;
+		if (UIParser::parse(textureRectAttr, textureRect))
+			setTextureRect(textureRect);
+	}
 }
 
 
