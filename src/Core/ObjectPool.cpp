@@ -1,4 +1,3 @@
-#include <poly/Core/Logger.h>
 #include <poly/Core/ObjectPool.h>
 
 #include <stdlib.h>
@@ -173,7 +172,7 @@ void* ObjectPool::alloc()
 void ObjectPool::free(void* ptr)
 {
 	// Make sure there are existing pages first
-	if (!m_firstPage) return;
+	if (!m_firstPage || !ptr) return;
 
 	PageHeader* header = (PageHeader*)m_firstPage;
 	Uint8* page = (Uint8*)(header + 1);
@@ -233,9 +232,9 @@ void* ObjectPool::allocPage()
 	// Allocate aligned memory
 #ifdef WIN32
 	// Windows doesn't have aligned_alloc
-	PageHeader* header = (PageHeader*)_aligned_malloc(pageSize, 4);
+	PageHeader* header = (PageHeader*)_aligned_malloc(pageSize, alignof(std::max_align_t));
 #else
-	PageHeader* page = (PageHeader*)aligned_alloc(pageSize, 4);
+	PageHeader* page = (PageHeader*)aligned_alloc(pageSize, alignof(std::max_align_t));
 #endif
 
 	// Get the start location of the page

@@ -57,6 +57,9 @@ Font::~Font()
     // Close the library
     if (m_library)
         FT_Done_FreeType(static_cast<FT_Library>(m_library));
+
+    m_face = 0;
+    m_library = 0;
 }
 
 

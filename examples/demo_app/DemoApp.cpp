@@ -16,6 +16,7 @@
 #include <poly/Graphics/Lighting.h>
 #include <poly/Graphics/Model.h>
 #include <poly/Graphics/Octree.h>
+
 #include <poly/Graphics/ParticleSystem.h>
 #include <poly/Graphics/PostProcess.h>
 #include <poly/Graphics/Shader.h>
@@ -45,8 +46,6 @@
 #include <poly/UI/UIElement.h>
 
 #include <iostream>
-
-#include <freetype/freetype.h>
 
 using namespace poly;
 
@@ -472,3 +471,4 @@ int main()
 // TODO : Add convenience constructor loaders
 // TODO : Document Dropdown
 // TODO : Move Grass to game project and document it
+// TODO : Fix unsafe object pool behavior when freeing a pointer twice

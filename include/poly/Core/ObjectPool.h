@@ -6,14 +6,19 @@
 namespace poly
 {
 
+
+template <typename T> class TypePool;
+
 ///////////////////////////////////////////////////////////
 /// \brief A pool allocator
 ///
 ///////////////////////////////////////////////////////////
 class ObjectPool
 {
-public:
+    template <typename T>
+    friend class TypePool;
 
+public:
     ///////////////////////////////////////////////////////////
     /// \brief Default constructor
     ///
@@ -37,10 +42,12 @@ public:
     ///////////////////////////////////////////////////////////
     ObjectPool(Uint32 objectSize, Uint32 pageSize = 512);
 
+#ifndef DOXYGEN_SKIP
     ObjectPool(const ObjectPool&) = delete;
     ObjectPool& operator=(const ObjectPool&) = delete;
     ObjectPool(ObjectPool&& other);
     ObjectPool& operator=(ObjectPool&& other);
+#endif
 
     ///////////////////////////////////////////////////////////
     /// \brief Cleans up memory used by the object pool
@@ -154,6 +161,8 @@ public:
     /// to the pool, nothing will happen to the pool and no exceptions
     /// will be thrown.
     ///
+    /// \param ptr The pointer to free from the pool
+    ///
     ///////////////////////////////////////////////////////////
     void free(void* ptr);
 
@@ -170,16 +179,6 @@ public:
 
 private:
     ///////////////////////////////////////////////////////////
-    /// \brief Allocate a new page of memory
-    ///
-    ///////////////////////////////////////////////////////////
-    void* allocPage();
-
-    ///////////////////////////////////////////////////////////
-    // Types
-    ///////////////////////////////////////////////////////////
-
-    ///////////////////////////////////////////////////////////
     /// \brief Header structure that holds metadata for each page
     ///
     ///////////////////////////////////////////////////////////
@@ -191,11 +190,155 @@ private:
     };
 
     ///////////////////////////////////////////////////////////
-    // Variables
+    /// \brief Allocate a new page of memory
+    ///
     ///////////////////////////////////////////////////////////
+    void* allocPage();
+
+ private:
     void* m_firstPage;      //!< Pointer to the first page of objects
     Uint32 m_objectSize;    //!< Size of each object in bytes
     Uint32 m_pageSize;      //!< Size of each page in number of objects
+};
+
+
+///////////////////////////////////////////////////////////
+/// \brief An object pool that holds a single class type
+///
+///////////////////////////////////////////////////////////
+template <typename T>
+class TypePool
+{
+public:
+    ///////////////////////////////////////////////////////////
+    /// \brief Default constructor
+    /// 
+    ///////////////////////////////////////////////////////////
+    TypePool();
+
+    ///////////////////////////////////////////////////////////
+    /// \brief Construct and set the object size and page size
+    ///
+    /// \param pageSize Size of each page in number of objects
+    ///
+    /// \see setPageSize
+    ///
+    ///////////////////////////////////////////////////////////
+    TypePool(Uint32 pageSize);
+
+    ///////////////////////////////////////////////////////////
+    /// \brief Cleans up memory used by the object pool
+    ///
+    /// This invokes the destructors of every object still existing
+    /// inside the type pool, then frees the pool memory.
+    ///
+    ///////////////////////////////////////////////////////////
+    ~TypePool();
+
+    ///////////////////////////////////////////////////////////
+    /// \brief Set the size of each page in number of objects
+    ///
+    /// A page is just a static collection of object slots. A page
+    /// acts similar to an array, where there is a fixed number of
+    /// elements after creation and each element is the same size.
+    /// The difference is that there are allowed to be gaps, where
+    /// the slots that are actively being used don't have to be
+    /// next to each other. If the current page of the object
+    /// pool is filled up, the object pool will allocate a new
+    /// page of the same size next time an allocation is requested.
+    ///
+    /// For example, if the page size is set to 100 (default 512),
+    /// and there have been 99 allocations, the next allocation
+    /// will take the last available slot in the current page.
+    /// The next allocation after that won't find any space in
+    /// the current page, so the object pool will create a new
+    /// page and take space for the allocation from the new page
+    /// instead.
+    ///
+    /// Page size has to be greater than or equal to 1 for
+    /// any allocation requests to be valid.
+    ///
+    /// \param size The size of each page in number of objects
+    ///
+    ///////////////////////////////////////////////////////////
+    void setPageSize(Uint32 size);
+
+    ///////////////////////////////////////////////////////////
+    /// \brief Get the page size
+    ///
+    /// \return The size of each page in number of objects
+    ///
+    /// \see setPageSize
+    ///
+    ///////////////////////////////////////////////////////////
+    Uint32 getPageSize() const;
+
+    ///////////////////////////////////////////////////////////
+    /// \brief Get the number of object allocations that have been made
+    ///
+    /// Every time an allocation is made, the number of objects
+    /// will increase by one. This number will decrease every
+    /// time an allocated object is freed.
+    ///
+    /// \return The number of objects in the pool
+    ///
+    ///////////////////////////////////////////////////////////
+    Uint32 getNumObjects() const;
+
+    ///////////////////////////////////////////////////////////
+    /// \brief Get the number of pages in the object pool
+    ///
+    /// Every time a page is filled up, a new page is created
+    /// to store allocations in. Pages will continue to exist
+    /// after they are created, unless the object pool is reset.
+    ///
+    /// \return The number of pages that exist
+    ///
+    ///////////////////////////////////////////////////////////
+    Uint32 getNumPages() const;
+
+    ///////////////////////////////////////////////////////////
+    /// \brief Allocate a new slot in the object pool
+    ///
+    /// The amount of space allocated will be equal to the
+    /// object size that was set. This function will sometimes
+    /// faile and return NULL if invalid parameters are set.
+    /// If the object size is less than 4 or if the page size is
+    /// less than 1, allocation will fail.
+    ///
+    /// \return A pointer to the allocated space
+    ///
+    ///////////////////////////////////////////////////////////
+    T* alloc();
+
+    ///////////////////////////////////////////////////////////
+    /// \brief Free memory that was previously allocated by the pool
+    ///
+    /// If the pointer is NULL or if the pointer does not belong
+    /// to the pool, nothing will happen to the pool and no exceptions
+    /// will be thrown.
+    ///
+    /// This function will automatically call the object's destructor.
+    ///
+    /// \param ptr The pointer to free from the pool
+    ///
+    ///////////////////////////////////////////////////////////
+    void free(T* ptr);
+
+    ///////////////////////////////////////////////////////////
+    /// \brief Reset the object pool
+    ///
+    /// Does a full reset to its state right after being constructed.
+    /// This will free all the memory it is using and will reset
+    /// all of its data. This will invoke the destructors of all
+    /// remaining objects being held in the pool, as the type of
+    /// object is known.
+    ///
+    ///////////////////////////////////////////////////////////
+    void reset();
+
+private:
+    ObjectPool m_pool;
 };
 
 
@@ -232,7 +375,7 @@ public:
     static void free(T* ptr);
 
 private:
-    static ObjectPool s_pool;
+    static TypePool<T> s_pool;
 };
 
 }
@@ -287,5 +430,23 @@ private:
 /// pool.reset();
 ///
 /// \endcode
+/// 
+///////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////
+/// \class poly::TypePool
+/// \ingroup Core
+///
+/// The typed object pool is a pool allocator that can hold a collection
+/// objects of the same size. Its purpose is to increase allocation
+/// speed if many object allocations are required, and to minimize
+/// memory fragmentation. The typed object pool is the same as a
+/// normal object pool, except that it can handle object creation
+/// and destruction. This means that free() and reset() will invoke
+/// the object destructors.
+///
+/// All functionality of the typed object pool is the same as
+/// the regular object pool, so please see ObjectPool for
+/// a more in depth description and usage example.
 /// 
 ///////////////////////////////////////////////////////////
