@@ -191,7 +191,7 @@ void Font::loadGlyphs(Uint32 size)
 
         // Allocate space for glyph
         Uint32 numPixels = glyph.m_pitch * glyph.m_rect.w;
-        glyph.m_data = (Uint8*)malloc(numPixels);
+        glyph.m_data = (Uint8*)MALLOC_DBG(numPixels);
         memcpy(glyph.m_data, face->glyph->bitmap.buffer, numPixels);
 
         // Keep track of texture size
@@ -205,7 +205,7 @@ void Font::loadGlyphs(Uint32 size)
     new(page)Page();
 
     // Create a texture
-    Uint8* data = (Uint8*)malloc(textureSize.x * textureSize.y);
+    Uint8* data = (Uint8*)MALLOC_DBG(textureSize.x * textureSize.y);
     memset(data, 0, textureSize.x * textureSize.y);
     Uint32 currentX = 0;
 
@@ -222,7 +222,7 @@ void Font::loadGlyphs(Uint32 size)
         }
 
         // Free the glyph memory
-        free(ftGlyph.m_data);
+        FREE_DBG(ftGlyph.m_data);
 
         // Create an actual glyph object
         Glyph& glyph = page->m_glyphs[m_characters[i]];
@@ -247,7 +247,7 @@ void Font::loadGlyphs(Uint32 size)
     m_pages[size] = page;
 
     // Free texture data
-    free(data);
+    FREE_DBG(data);
 }
 
 

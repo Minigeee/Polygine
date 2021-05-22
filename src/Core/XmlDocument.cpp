@@ -1,3 +1,4 @@
+#include <poly/Core/Allocate.h>
 #include <poly/Core/DataTypes.h>
 #include <poly/Core/XmlDocument.h>
 
@@ -23,7 +24,7 @@ XmlDocument::XmlDocument() :
 XmlDocument::~XmlDocument()
 {
 	delete XML_CAST(m_document);
-	free(m_buffer);
+	FREE_DBG(m_buffer);
 }
 
 
@@ -37,7 +38,7 @@ bool XmlDocument::load(const std::string& fname)
 	Uint32 fsize = (Uint32)file.tellg();
 	file.seekg(0, std::ios::beg);
 
-	char* buffer = (char*)malloc(fsize + 1);
+	char* buffer = (char*)MALLOC_DBG(fsize + 1);
 	file.read(buffer, fsize);
 	buffer[fsize] = 0;
 

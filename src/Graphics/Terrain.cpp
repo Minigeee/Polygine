@@ -1,3 +1,4 @@
+#include <poly/Core/Allocate.h>
 #include <poly/Core/Profiler.h>
 
 #include <poly/Engine/Scene.h>
@@ -94,7 +95,9 @@ Terrain::Terrain() :
 Terrain::~Terrain()
 {
 	if (m_normalMapData)
-		free(m_normalMapData);
+		FREE_DBG(m_normalMapData);
+
+	m_normalMapData = 0;
 }
 
 
@@ -696,7 +699,7 @@ void Terrain::setHeightMap(const Image& map)
 	// Iterate through data and generate normals
 	Vector2u size = Vector2u(map.getWidth(), map.getHeight());
 	if (!m_normalMapData)
-	m_normalMapData = (Vector3f*)malloc(size.x * size.y * sizeof(Vector3f));
+	m_normalMapData = (Vector3f*)MALLOC_DBG(size.x * size.y * sizeof(Vector3f));
 
 	// Calculate normals
 	calcNormals(map, Vector2u(0), size);
@@ -773,7 +776,7 @@ void Terrain::updateHeightMap(const Image& map, const Vector2i& pos, const Vecto
 
 	{
 		// Copy data to a separate buffer
-		float* data = (float*)malloc(rectSize.x * rectSize.y * sizeof(float));
+		float* data = (float*)MALLOC_DBG(rectSize.x * rectSize.y * sizeof(float));
 		for (Uint32 r = 0; r < rectSize.y; ++r)
 		{
 			float* src = (float*)map.getData();
@@ -783,7 +786,7 @@ void Terrain::updateHeightMap(const Image& map, const Vector2i& pos, const Vecto
 
 		// Push data
 		m_heightMap.update(data, pos, rectSize);
-		free(data);
+		FREE_DBG(data);
 	}
 
 	{
@@ -798,7 +801,7 @@ void Terrain::updateHeightMap(const Image& map, const Vector2i& pos, const Vecto
 		calcNormals(map, rectPos, rectSize);
 
 		// Copy data to a separate buffer
-		Vector3f* data = (Vector3f*)malloc(rectSize.x * rectSize.y * sizeof(Vector3f));
+		Vector3f* data = (Vector3f*)MALLOC_DBG(rectSize.x * rectSize.y * sizeof(Vector3f));
 		for (Uint32 r = 0; r < rectSize.y; ++r)
 		{
 			Vector3f* src = m_normalMapData;
@@ -808,7 +811,7 @@ void Terrain::updateHeightMap(const Image& map, const Vector2i& pos, const Vecto
 
 		// Push data
 		m_normalMap.update(data, rectPos, rectSize);
-		free(data);
+		FREE_DBG(data);
 	}
 
 }
@@ -821,7 +824,7 @@ void Terrain::updateColorMap(const Image& map, const Vector2i& pos, const Vector
 	Vector2u rectSize = Vector2u(size.x ? size.x : map.getWidth(), size.y ? size.y : map.getHeight());
 
 	// Copy data to a separate buffer
-	Vector3<Uint8>* data = (Vector3<Uint8>*)malloc(rectSize.x * rectSize.y * 3);
+	Vector3<Uint8>* data = (Vector3<Uint8>*)MALLOC_DBG(rectSize.x * rectSize.y * 3);
 	for (Uint32 r = 0; r < rectSize.y; ++r)
 	{
 		Vector3<Uint8>* src = (Vector3<Uint8>*)map.getData();
@@ -831,7 +834,7 @@ void Terrain::updateColorMap(const Image& map, const Vector2i& pos, const Vector
 
 	// Push data
 	m_colorMap.update(data, pos, rectSize);
-	free(data);
+	FREE_DBG(data);
 }
 
 

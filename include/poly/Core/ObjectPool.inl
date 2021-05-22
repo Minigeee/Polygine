@@ -1,3 +1,4 @@
+#include <poly/Core/Allocate.h>
 #include <poly/Core/Logger.h>
 
 namespace poly
@@ -150,12 +151,7 @@ inline void TypePool<T>::reset()
 		}
 
 		// Now free the page
-#ifdef WIN32
-		// Windows doesn't have aligned_free
-		_aligned_free(page);
-#else
-		aligned_free(page);
-#endif
+		ALIGNED_FREE_DBG(page);
 
 		page = nextPage;
 	}

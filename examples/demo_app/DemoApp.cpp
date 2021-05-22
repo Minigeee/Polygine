@@ -1,3 +1,4 @@
+#include <poly/Core/Allocate.h>
 #include <poly/Core/Clock.h>
 #include <poly/Core/Logger.h>
 #include <poly/Core/Profiler.h>
@@ -11,6 +12,7 @@
 #include <poly/Graphics/Camera.h>
 #include <poly/Graphics/Components.h>
 #include <poly/Graphics/FrameBuffer.h>
+
 #include <poly/Graphics/Grass.h>
 #include <poly/Graphics/Image.h>
 #include <poly/Graphics/Lighting.h>
@@ -114,7 +116,7 @@ int main()
     noise.setGain(0.5f);
 
     Image heightMap;
-    float* heightMapData = (float*)malloc(1024 * 1024 * sizeof(float));
+    float* heightMapData = (float*)MALLOC_DBG(1024 * 1024 * sizeof(float));
     noise.generateImage(heightMapData, 1024, 1024);
     heightMap.create(heightMapData, 1024, 1024, 1, GLType::Float, true);
     terrain.setHeightMap(heightMap);
@@ -122,7 +124,7 @@ int main()
     Image colorMap;
     noise.setOctaves(1);
     noise.setFrequency(0.05f);
-    Vector3<Uint8>* colorMapData = (Vector3<Uint8>*)malloc(1024 * 1024 * sizeof(Vector3<Uint8>));
+    Vector3<Uint8>* colorMapData = (Vector3<Uint8>*)MALLOC_DBG(1024 * 1024 * sizeof(Vector3<Uint8>));
     for (Uint32 r = 0, i = 0; r < 1024; ++r)
     {
         for (Uint32 c = 0; c < 1024; ++c, ++i)

@@ -207,13 +207,7 @@ void ObjectPool::reset()
 	while (page)
 	{
 		PageHeader* nextPage = (PageHeader*)page->m_nextPage;
-
-#ifdef WIN32
-		// Windows doesn't have aligned_free
-		_aligned_free(page);
-#else
-		aligned_free(page);
-#endif
+		ALIGNED_FREE_DBG(page);
 
 		page = nextPage;
 	}
@@ -230,12 +224,7 @@ void* ObjectPool::allocPage()
 	Uint32 pageSize = m_pageSize * m_objectSize + sizeof(PageHeader);
 
 	// Allocate aligned memory
-#ifdef WIN32
-	// Windows doesn't have aligned_alloc
-	PageHeader* header = (PageHeader*)_aligned_malloc(pageSize, alignof(std::max_align_t));
-#else
-	PageHeader* page = (PageHeader*)aligned_alloc(pageSize, alignof(std::max_align_t));
-#endif
+	PageHeader* header = (PageHeader*)ALIGNED_MALLOC_DBG(pageSize, alignof(std::max_align_t));
 
 	// Get the start location of the page
 	Uint8* page = (Uint8*)(header + 1);

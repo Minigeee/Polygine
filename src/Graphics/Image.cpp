@@ -1,3 +1,4 @@
+#include <poly/Core/Allocate.h>
 #include <poly/Core/Logger.h>
 
 #include <poly/Graphics/Image.h>
@@ -71,7 +72,7 @@ bool Image::load(const std::string& fname, GLType dtype)
 void Image::free()
 {
 	if (m_ownsData && m_data)
-		stbi_image_free(m_data);
+		FREE_DBG(m_data);
 
 	m_data = 0;
 }
@@ -110,7 +111,7 @@ void Image::create(void* data, Uint32 w, Uint32 h, Uint32 c, GLType dtype, bool 
 
 		// Allocate data
 		Uint32 size = m_width * m_height * m_numChannels * typeSize;
-		m_data = malloc(size);
+		m_data = MALLOC_DBG(size);
 		memset(m_data, 0, size);
 
 		// Image owns data
