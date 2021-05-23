@@ -1,5 +1,3 @@
-#include <poly/Core/ObjectPool.h>
-
 #include <poly/Graphics/Texture.h>
 
 #include <poly/UI/Button.h>
@@ -24,6 +22,9 @@ HashMap<std::string, Font*> UIParser::s_fonts;
 
 ///////////////////////////////////////////////////////////
 HashMap<std::string, Texture*> UIParser::s_textures;
+
+///////////////////////////////////////////////////////////
+HashMap<std::string, UIParser::CallbackData> UIParser::s_funcs;
 
 ///////////////////////////////////////////////////////////
 HashMap<std::string, Vector3u> g_namedColors;

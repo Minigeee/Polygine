@@ -90,6 +90,42 @@ void Dropdown::parse(XmlNode node, const UITemplateMap& templates)
 			setItemColor(color);
 	}
 
+	// On item add
+	XmlAttribute onItemAddAttr = node.getFirstAttribute("on_item_add");
+	if (onItemAddAttr.exists())
+	{
+		std::function<void(Button*, Uint32)> func;
+		if (UIParser::parse(onItemAddAttr, this, func))
+			onItemAdd(func);
+	};
+
+	// On item add
+	XmlAttribute onItemChangeAttr = node.getFirstAttribute("on_item_change");
+	if (onItemChangeAttr.exists())
+	{
+		std::function<void(Uint32)> func;
+		if (UIParser::parse(onItemChangeAttr, this, func))
+			onItemChange(func);
+	};
+
+	// On item add
+	XmlAttribute onMouseEnterItemAttr = node.getFirstAttribute("on_mouse_enter_item");
+	if (onMouseEnterItemAttr.exists())
+	{
+		std::function<void(Button*, const E_MouseMove&)> func;
+		if (UIParser::parse(onMouseEnterItemAttr, this, func))
+			onMouseEnterItem(func);
+	};
+
+	// On item add
+	XmlAttribute onMouseLeaveItemAttr = node.getFirstAttribute("on_mouse_leave_item");
+	if (onMouseLeaveItemAttr.exists())
+	{
+		std::function<void(Button*, const E_MouseMove&)> func;
+		if (UIParser::parse(onMouseLeaveItemAttr, this, func))
+			onMouseLeaveItem(func);
+	};
+
 	// Parse text options
 	XmlNode textNode = node.getFirstNode("dropdown_text");
 	if (textNode.exists())

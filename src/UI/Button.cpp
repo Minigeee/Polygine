@@ -70,6 +70,51 @@ void Button::parse(XmlNode node, const UITemplateMap& templates)
 			setTextOffset(offset);
 	}
 
+	// On mouse enter
+	XmlAttribute onMouseEnterAttr = node.getFirstAttribute("on_mouse_enter");
+	if (onMouseEnterAttr.exists())
+	{
+		std::function<void(const E_MouseMove&)> func;
+		if (UIParser::parse(onMouseEnterAttr, this, func))
+			onMouseEnter(func);
+	}
+
+	// On mouse leave
+	XmlAttribute onMouseLeaveAttr = node.getFirstAttribute("on_mouse_leave");
+	if (onMouseLeaveAttr.exists())
+	{
+		std::function<void(const E_MouseMove&)> func;
+		if (UIParser::parse(onMouseLeaveAttr, this, func))
+			onMouseLeave(func);
+	}
+
+	// On press
+	XmlAttribute onPressAttr = node.getFirstAttribute("on_press");
+	if (onPressAttr.exists())
+	{
+		std::function<void()> func;
+		if (UIParser::parse(onPressAttr, this, func))
+			onPress(func);
+	}
+
+	// On release
+	XmlAttribute onReleaseAttr = node.getFirstAttribute("on_release");
+	if (onReleaseAttr.exists())
+	{
+		std::function<void()> func;
+		if (UIParser::parse(onReleaseAttr, this, func))
+			onRelease(func);
+	}
+
+	// On cancel
+	XmlAttribute onCancelAttr = node.getFirstAttribute("on_cancel");
+	if (onCancelAttr.exists())
+	{
+		std::function<void()> func;
+		if (UIParser::parse(onCancelAttr, this, func))
+			onCancel(func);
+	}
+
 	// Parse text options
 	XmlNode textNode = node.getFirstNode("button_text");
 	if (textNode.exists())

@@ -44,12 +44,25 @@
 #include <poly/UI/Slider.h>
 #include <poly/UI/Text.h>
 #include <poly/UI/TextInput.h>
-#include <poly/UI/UISystem.h>
 #include <poly/UI/UIElement.h>
+#include <poly/UI/UIParser.h>
+#include <poly/UI/UISystem.h>
 
 #include <iostream>
 
 using namespace poly;
+
+
+void onTestPress(UIElement* elem)
+{
+    Button* btn = (Button*)elem;
+    std::cout << btn->getString().c_str() << '\n';
+}
+
+void onSubmit(const std::string& text)
+{
+    std::cout << text.c_str() << '\n';
+}
 
 int main()
 {
@@ -96,6 +109,9 @@ int main()
     camera.setRotation(0.0f, 0.0f);
 
     // UI
+    UI_XML_CALLBACK(onTestPress);
+    UI_XML_CALLBACK(onSubmit);
+
     UISystem ui;
     ui.setWindow(&window);
     ui.load("examples/ui.xml");

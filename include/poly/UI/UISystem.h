@@ -101,8 +101,6 @@ public:
 	UIElement* getElement(const std::string& id) const;
 
 private:
-	UIElement* createElementFromXml(void* node);
-
 	void getRenderQuads(
 		UIElement* element,
 		std::vector<std::vector<UIQuad>>& quads,

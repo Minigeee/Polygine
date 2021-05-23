@@ -154,6 +154,15 @@ void Slider::parse(XmlNode node, const UITemplateMap& templates)
 			setValue(value);
 	}
 
+	// On value change
+	XmlAttribute onValueChangeAttr = node.getFirstAttribute("on_value_change");
+	if (onValueChangeAttr.exists())
+	{
+		std::function<void(float)> func;
+		if (UIParser::parse(onValueChangeAttr, this, func))
+			onValueChange(func);
+	}
+
 	// Slider button
 	XmlNode buttonNode = node.getFirstNode("slider_button");
 	if (buttonNode.exists())

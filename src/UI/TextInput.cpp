@@ -139,6 +139,42 @@ void TextInput::parse(XmlNode node, const UITemplateMap& templates)
 			setTextOffset(offset);
 	}
 
+	// On value change
+	XmlAttribute onValueChangeAttr = node.getFirstAttribute("on_value_change");
+	if (onValueChangeAttr.exists())
+	{
+		std::function<void(const std::string&)> func;
+		if (UIParser::parse(onValueChangeAttr, this, func))
+			onValueChange(func);
+	}
+
+	// On gain focus
+	XmlAttribute onGainFocusAttr = node.getFirstAttribute("on_gain_focus");
+	if (onGainFocusAttr.exists())
+	{
+		std::function<void()> func;
+		if (UIParser::parse(onGainFocusAttr, this, func))
+			onGainFocus(func);
+	}
+
+	// On lose focus
+	XmlAttribute onLoseFocusAttr = node.getFirstAttribute("on_lose_focus");
+	if (onLoseFocusAttr.exists())
+	{
+		std::function<void()> func;
+		if (UIParser::parse(onLoseFocusAttr, this, func))
+			onLoseFocus(func);
+	}
+
+	// On submit
+	XmlAttribute onSubmitAttr = node.getFirstAttribute("on_submit");
+	if (onSubmitAttr.exists())
+	{
+		std::function<void(const std::string&)> func;
+		if (UIParser::parse(onSubmitAttr, this, func))
+			onSubmit(func);
+	}
+
 	// Parse text options
 	XmlNode textNode = node.getFirstNode("element_text");
 	if (textNode.exists())
