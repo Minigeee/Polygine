@@ -490,3 +490,4 @@ int main()
 // TODO : Document Dropdown
 // TODO : Move Grass to game project and document it
 // TODO : Fix unsafe object pool behavior when freeing a pointer twice
+// TODO : Make everything UTF-encoded compatible (UI XML parsing, etc...)

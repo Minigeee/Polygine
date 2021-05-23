@@ -22,6 +22,8 @@ class UIParser
 public:
 	static bool parse(XmlNode node, UIElement*& out);
 
+	static bool parse(XmlAttribute attr, bool& out);
+
 	static bool parse(XmlAttribute attr, int& out);
 
 	static bool parse(XmlAttribute attr, float& out);
@@ -35,6 +37,8 @@ public:
 	static bool parse(XmlNode node, Font*& out);
 
 	static bool parse(XmlAttribute attr, Texture*& out);
+
+	static bool parse(XmlNode node, Shader*& out);
 
 	static bool parse(XmlAttribute attr, UIPosition& out);
 
@@ -64,6 +68,7 @@ private:
 	static HashMap<std::string, std::function<UIElement*()>> s_elements;
 	static HashMap<std::string, Font*> s_fonts;
 	static HashMap<std::string, Texture*> s_textures;
+	static HashMap<std::string, Shader*> s_shaders;
 	static HashMap<std::string, CallbackData> s_funcs;
 };
 

@@ -248,6 +248,42 @@ void UIElement::parse(XmlNode node, const UITemplateMap& templates)
 		if (UIParser::parse(textureRectAttr, textureRect))
 			setTextureRect(textureRect);
 	}
+
+	// Shader
+	XmlNode shaderNode = node.getFirstNode("shader");
+	if (shaderNode.exists())
+	{
+		Shader* shader;
+		if (UIParser::parse(shaderNode, shader))
+			setShader(shader);
+	}
+
+	// Visibility
+	XmlAttribute visibleAttr = node.getFirstAttribute("visible");
+	if (visibleAttr.exists())
+	{
+		bool visible;
+		if (UIParser::parse(visibleAttr, visible))
+			setVisible(visible);
+	}
+
+	// Flip UV coords
+	XmlAttribute flipUvAttr = node.getFirstAttribute("flipped_uv");
+	if (flipUvAttr.exists())
+	{
+		bool flip;
+		if (UIParser::parse(flipUvAttr, flip))
+			setFlippedUv(flip);
+	}
+
+	// Transparent texture
+	XmlAttribute transparentAttr = node.getFirstAttribute("transparent");
+	if (transparentAttr.exists())
+	{
+		bool transparent;
+		if (UIParser::parse(transparentAttr, transparent))
+			setTransparent(transparent);
+	}
 }
 
 

@@ -24,6 +24,9 @@ HashMap<std::string, Font*> UIParser::s_fonts;
 HashMap<std::string, Texture*> UIParser::s_textures;
 
 ///////////////////////////////////////////////////////////
+HashMap<std::string, Shader*> UIParser::s_shaders;
+
+///////////////////////////////////////////////////////////
 HashMap<std::string, UIParser::CallbackData> UIParser::s_funcs;
 
 ///////////////////////////////////////////////////////////
@@ -246,6 +249,28 @@ bool UIParser::parse(XmlNode node, UIElement*& out)
 
 
 ///////////////////////////////////////////////////////////
+bool UIParser::parse(XmlAttribute attr, bool& out)
+{
+	std::string value = attr.getValue();
+	std::transform(value.begin(), value.end(), value.begin(),
+		[](unsigned char c) { return std::tolower(c); });
+
+	if (value == "true")
+	{
+		out = true;
+		return true;
+	}
+	else if (value == "false")
+	{
+		out = false;
+		return true;
+	}
+	else
+		return false;
+}
+
+
+///////////////////////////////////////////////////////////
 bool UIParser::parse(XmlAttribute attr, int& v)
 {
 	char* c = attr.getValue();
@@ -443,12 +468,6 @@ bool UIParser::parse(XmlNode node, Font*& out)
 	else
 		out = it->second;
 
-	for (auto it = s_fonts.begin(); it != s_fonts.end(); ++it)
-	{
-		Font* font = it->second;
-		Uint32 a = 0;
-	}
-
 	return true;
 }
 
@@ -474,6 +493,65 @@ bool UIParser::parse(XmlAttribute attr, Texture*& out)
 			Pool<Texture>::free(texture);
 			return false;
 		}
+	}
+	else
+		out = it->second;
+
+	return true;
+}
+
+
+///////////////////////////////////////////////////////////
+bool UIParser::parse(XmlNode node, Shader*& out)
+{
+	std::string vert, geom, frag;
+
+	XmlAttribute vertAttr = node.getFirstAttribute("vert");
+	if (vertAttr.exists())
+		vert = vertAttr.getValue();
+	else
+		// The vertex shader is the one required file
+		return false;
+
+	XmlAttribute geomAttr = node.getFirstAttribute("geom");
+	if (geomAttr.exists())
+		geom = geomAttr.getValue();
+
+	XmlAttribute fragAttr = node.getFirstAttribute("frag");
+	if (fragAttr.exists())
+		frag = fragAttr.getValue();
+
+	std::string combined = vert + ';' + geom + ';' + frag;
+
+	// Check if the font has been loaded yet
+	auto it = s_shaders.find(combined);
+	if (it == s_shaders.end())
+	{
+		Shader* shader = Pool<Shader>::alloc();
+
+		if (vert.size() && !shader->load(vert, Shader::Vertex))
+		{
+			Pool<Shader>::free(shader);
+			return false;
+		}
+
+		if (geom.size() && !shader->load(geom, Shader::Geometry))
+		{
+			Pool<Shader>::free(shader);
+			return false;
+		}
+
+		if (frag.size() && !shader->load(frag, Shader::Fragment))
+		{
+			Pool<Shader>::free(shader);
+			return false;
+		}
+
+		shader->compile();
+
+		// Set output and add to map
+		out = shader;
+		s_shaders[combined] = shader;
 	}
 	else
 		out = it->second;
