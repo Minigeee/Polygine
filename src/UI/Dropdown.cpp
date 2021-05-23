@@ -38,10 +38,10 @@ Dropdown::~Dropdown()
 
 
 ///////////////////////////////////////////////////////////
-void Dropdown::parse(XmlNode node)
+void Dropdown::parse(XmlNode node, const UITemplateMap& templates)
 {
 	// Default parse
-	UIElement::parse(node);
+	UIElement::parse(node, templates);
 
 	// Text value
 	XmlAttribute valueAttr = node.getFirstAttribute("value");
@@ -93,7 +93,7 @@ void Dropdown::parse(XmlNode node)
 	// Parse text options
 	XmlNode textNode = node.getFirstNode("dropdown_text");
 	if (textNode.exists())
-		getText()->parse(textNode);
+		getText()->parse(textNode, templates);
 
 	// Add dropdown items
 	XmlNode itemNode = node.getFirstNode("dropdown_item");
@@ -105,7 +105,7 @@ void Dropdown::parse(XmlNode node)
 		else
 		{
 			Button* item = Pool<Button>::alloc();
-			item->parse(itemNode);
+			item->parse(itemNode, templates);
 
 			// Add the custom button
 			addItem(item);

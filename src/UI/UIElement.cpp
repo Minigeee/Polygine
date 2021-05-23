@@ -78,8 +78,50 @@ UIElement::UIElement() :
 
 
 ///////////////////////////////////////////////////////////
-void UIElement::parse(XmlNode node)
+void UIElement::parse(XmlNode node, const UITemplateMap& templates)
 {
+	// Parse children nodes first (order shouldn't matter because all transforms should be updated at the end)
+	XmlNode childNode = node.getFirstNode();
+	while (childNode.exists())
+	{
+		// Create an element based on the node name
+		UIElement* element = 0;
+		if (!UIParser::parse(childNode, element) || !element)
+		{
+			childNode = childNode.getNextSibling();
+			continue;
+		}
+
+		// Parse the element
+		element->parse(childNode, templates);
+
+		// Add the element as a child
+		addChild(element);
+
+		childNode = childNode.getNextSibling();
+	}
+
+	// Parse as a template first, so that the current node can override the
+	// template properties
+	XmlAttribute templateAttr = node.getFirstAttribute("template");
+	if (templateAttr.exists())
+	{
+		auto it = templates.find(templateAttr.getValue());
+		if (it != templates.end())
+		{
+			XmlNode templateNode = it->second;
+			if (templateNode.exists())
+				parse(templateNode, templates);
+		}
+	}
+
+	// Id
+	XmlAttribute idAttr = node.getFirstAttribute("id");
+	if (idAttr.exists())
+		m_id = idAttr.getValue();
+	else
+		m_id = "";
+
 	// Position
 	XmlAttribute posAttr = node.getFirstAttribute("position");
 	if (posAttr.exists())

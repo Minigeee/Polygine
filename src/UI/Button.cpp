@@ -36,10 +36,10 @@ void Button::createText()
 
 
 ///////////////////////////////////////////////////////////
-void Button::parse(XmlNode node)
+void Button::parse(XmlNode node, const UITemplateMap& templates)
 {
 	// Default parse
-	UIElement::parse(node);
+	UIElement::parse(node, templates);
 
 	// Text value
 	XmlAttribute valueAttr = node.getFirstAttribute("value");
@@ -73,7 +73,10 @@ void Button::parse(XmlNode node)
 	// Parse text options
 	XmlNode textNode = node.getFirstNode("button_text");
 	if (textNode.exists())
-		m_text->parse(textNode);
+	{
+		if (!m_text) createText();
+		m_text->parse(textNode, templates);
+	}
 }
 
 

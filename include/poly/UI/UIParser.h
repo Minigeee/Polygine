@@ -6,6 +6,8 @@
 
 #include <poly/UI/UIElement.h>
 
+#include <functional>
+
 namespace poly
 {
 
@@ -13,9 +15,13 @@ namespace poly
 class Font;
 class Texture;
 
+///////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////
 class UIParser
 {
 public:
+	static bool parse(XmlNode node, UIElement*& out);
+
 	static bool parse(XmlAttribute attr, int& out);
 
 	static bool parse(XmlAttribute attr, float& out);
@@ -34,16 +40,13 @@ public:
 
 	static bool parseColor(XmlAttribute attr, Vector4f& out);
 
+	template <typename T>
+	static void addElementType(const std::string& nodeName);
+
 private:
-	struct UIParserResources
-	{
-		~UIParserResources();
-
-		HashMap<std::string, Texture*> m_textures;
-		HashMap<std::string, Font*> m_fonts;
-	};
-
-	static UIParserResources s_resources;
+	static HashMap<std::string, std::function<UIElement*()>> s_elements;
+	static HashMap<std::string, Font*> s_fonts;
+	static HashMap<std::string, Texture*> s_textures;
 };
 
 

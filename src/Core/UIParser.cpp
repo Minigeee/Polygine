@@ -2,7 +2,14 @@
 
 #include <poly/Graphics/Texture.h>
 
+#include <poly/UI/Button.h>
+#include <poly/UI/Dropdown.h>
 #include <poly/UI/Font.h>
+#include <poly/UI/ListView.h>
+#include <poly/UI/ScrollView.h>
+#include <poly/UI/Slider.h>
+#include <poly/UI/Text.h>
+#include <poly/UI/TextInput.h>
 #include <poly/UI/UIParser.h>
 
 namespace poly
@@ -10,7 +17,13 @@ namespace poly
 
 
 ///////////////////////////////////////////////////////////
-UIParser::UIParserResources UIParser::s_resources;
+HashMap<std::string, std::function<UIElement* ()>> UIParser::s_elements;
+
+///////////////////////////////////////////////////////////
+HashMap<std::string, Font*> UIParser::s_fonts;
+
+///////////////////////////////////////////////////////////
+HashMap<std::string, Texture*> UIParser::s_textures;
 
 ///////////////////////////////////////////////////////////
 HashMap<std::string, Vector3u> g_namedColors;
@@ -187,9 +200,47 @@ bool getNamedColor(const std::string& color, Vector4f& out)
 
 
 ///////////////////////////////////////////////////////////
-UIParser::UIParserResources::~UIParserResources()
+bool UIParser::parse(XmlNode node, UIElement*& out)
 {
+	if (strcmp(node.getName(), "ui_element") == 0)
+		out = Pool<UIElement>::alloc();
 
+	else if (strcmp(node.getName(), "button") == 0)
+		out = Pool<Button>::alloc();
+
+	else if (strcmp(node.getName(), "dropdown") == 0)
+		out = Pool<Dropdown>::alloc();
+
+	else if (strcmp(node.getName(), "h_list_view") == 0)
+		out = Pool<HListView>::alloc();
+
+	else if (strcmp(node.getName(), "v_list_view") == 0 || strcmp(node.getName(), "list_view") == 0)
+		out = Pool<VListView>::alloc();
+
+	else if (strcmp(node.getName(), "scroll_view") == 0)
+		out = Pool<ScrollView>::alloc();
+
+	else if (strcmp(node.getName(), "slider") == 0)
+		out = Pool<Slider>::alloc();
+
+	else if (strcmp(node.getName(), "text") == 0)
+		out = Pool<Text>::alloc();
+
+	else if (strcmp(node.getName(), "text_input") == 0)
+		out = Pool<TextInput>::alloc();
+
+	else
+	{
+		// Check if the element is a user added type
+		auto it = s_elements.find(node.getName());
+		if (it != s_elements.end())
+			out = (it.value())();
+
+		else
+			return false;
+	}
+
+	return true;
 }
 
 
@@ -238,8 +289,11 @@ bool UIParser::parse(XmlAttribute attr, Vector2f& out)
 			char* e;
 			v[index++] = std::strtof(start, &e);
 
+			// Reset separator
+			*c = ' ';
+
 			// Catch errors
-			if (*e != 0)
+			if (*e != ' ')
 				return false;
 
 			while (*++c == ' ' || *c == ',');
@@ -278,8 +332,11 @@ bool UIParser::parse(XmlAttribute attr, Vector3f& out)
 			char* e;
 			v[index++] = std::strtof(start, &e);
 
+			// Reset separator
+			*c = ' ';
+
 			// Catch errors
-			if (*e != 0)
+			if (*e != ' ')
 				return false;
 
 			while (*++c == ' ' || *c == ',');
@@ -318,8 +375,11 @@ bool UIParser::parse(XmlAttribute attr, Vector4f& out)
 			char* e;
 			v[index++] = std::strtof(start, &e);
 
+			// Reset separator
+			*c = ' ';
+
 			// Catch errors
-			if (*e != 0)
+			if (*e != ' ')
 				return false;
 
 			while (*++c == ' ' || *c == ',');
@@ -362,8 +422,8 @@ bool UIParser::parse(XmlNode node, Font*& out)
 		return false;
 
 	// Check if the font has been loaded yet
-	auto it = s_resources.m_fonts.find(fname);
-	if (it == s_resources.m_fonts.end())
+	auto it = s_fonts.find(fname);
+	if (it == s_fonts.end())
 	{
 		Font* font = Pool<Font>::alloc();
 		if (font->load(fname, charSet))
@@ -371,7 +431,7 @@ bool UIParser::parse(XmlNode node, Font*& out)
 			out = font;
 
 			// Add to loaded fonts
-			s_resources.m_fonts[fname] = font;
+			s_fonts[fname] = font;
 		}
 		else
 		{
@@ -382,7 +442,7 @@ bool UIParser::parse(XmlNode node, Font*& out)
 	else
 		out = it->second;
 
-	for (auto it = s_resources.m_fonts.begin(); it != s_resources.m_fonts.end(); ++it)
+	for (auto it = s_fonts.begin(); it != s_fonts.end(); ++it)
 	{
 		Font* font = it->second;
 		Uint32 a = 0;
@@ -397,8 +457,8 @@ bool UIParser::parse(XmlAttribute attr, Texture*& out)
 {
 	std::string fname = attr.getValue();
 
-	auto it = s_resources.m_textures.find(fname);
-	if (it == s_resources.m_textures.end())
+	auto it = s_textures.find(fname);
+	if (it == s_textures.end())
 	{
 		Texture* texture = Pool<Texture>::alloc();
 		if (texture->load(fname))
@@ -406,7 +466,7 @@ bool UIParser::parse(XmlAttribute attr, Texture*& out)
 			out = texture;
 
 			// Add to loaded textures
-			s_resources.m_textures[fname] = texture;
+			s_textures[fname] = texture;
 		}
 		else
 		{

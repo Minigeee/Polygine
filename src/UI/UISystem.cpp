@@ -11,11 +11,11 @@
 #include <poly/UI/Dropdown.h>
 #include <poly/UI/Font.h>
 #include <poly/UI/ListView.h>
-#include <poly/UI/UIParser.h>
 #include <poly/UI/ScrollView.h>
 #include <poly/UI/Slider.h>
 #include <poly/UI/Text.h>
 #include <poly/UI/TextInput.h>
+#include <poly/UI/UIParser.h>
 #include <poly/UI/UISystem.h>
 
 #include <rapidxml.hpp>
@@ -24,338 +24,6 @@
 
 namespace poly
 {
-
-/*
-
-///////////////////////////////////////////////////////////
-void uiXmlParseText(Text* text, XmlNode node, HashMap<std::string, Font*>& fontMap)
-{
-	// Font
-	XmlAttribute fontAttr = node.getFirstAttribute("font");
-	if (fontAttr)
-	{
-		std::string fname = fontAttr.getValue();
-
-		// Check if the font has been loaded
-		auto it = fontMap.find(fname);
-		if (it == fontMap.end())
-		{
-			Font* font = Pool<Font>::alloc();
-			if (font->load(fname))
-			{
-				fontMap[fname] = font;
-				text->setFont(font);
-			}
-			else
-				Pool<Font>::free(font);
-		}
-		else
-			text->setFont(it->second);
-	}
-
-	// Value
-	if (strlen(node.getValue()) > 0)
-		text->setString(node.getValue());
-
-	else
-	{
-		XmlAttribute valueAttr = node.getFirstAttribute("value");
-		if (valueAttr)
-			text->setString(valueAttr.getValue());
-	}
-
-	// Character size
-	XmlAttribute charSizeAttr = node.getFirstAttribute("character_size");
-	if (charSizeAttr)
-	{
-		Uint32 size;
-		if (uiXmlParseInt(charSizeAttr.getValue(), size))
-			text->setCharacterSize(size);
-	}
-
-	// Character spacing
-	XmlAttribute charSpacingAttr = node.getFirstAttribute("character_spacing");
-	if (charSpacingAttr)
-	{
-		float spacing;
-		if (uiXmlParseFloat(charSpacingAttr.getValue(), spacing))
-			text->setCharacterSpacing(spacing);
-	}
-
-	// Line spacing
-	XmlAttribute lineSpacingAttr = node.getFirstAttribute("line_spacing");
-	if (lineSpacingAttr)
-	{
-		float spacing;
-		if (uiXmlParseFloat(lineSpacingAttr.getValue(), spacing))
-			text->setLineSpacing(spacing);
-	}
-}
-
-
-///////////////////////////////////////////////////////////
-void uiXmlParseButton(Button* button, XmlNode node, HashMap<std::string, Texture*>& textureMap, HashMap<std::string, Font*>& fontMap)
-{
-	// Text value
-	XmlAttribute valueAttr = node.getFirstAttribute("value");
-	if (valueAttr)
-		button->setString(valueAttr.getValue());
-
-	else
-	{
-		XmlAttribute textAttr = node.getFirstAttribute("text");
-		if (textAttr)
-			button->setString(textAttr.getValue());
-	}
-
-	// Text align
-	XmlAttribute textAlignAttr = node.getFirstAttribute("text_align");
-	if (textAlignAttr)
-	{
-		UIPosition align;
-		if (uiXmlParseUiPosition(textAlignAttr.getValue(), align))
-			button->setTextAlign(align);
-	}
-
-	// Text offset
-	XmlAttribute textOffsetAttr = node.getFirstAttribute("text_offset");
-	if (textOffsetAttr)
-	{
-		Vector2f offset;
-		if (uiXmlParseVec2(textOffsetAttr.getValue(), offset))
-			button->setTextOffset(offset);
-	}
-
-	// Parse text options
-	XmlNode textNode = node.getFirstNode("element_text");
-	if (textNode)
-	{
-		uiXmlParseElement(button->getText(), textNode, textureMap);
-		uiXmlParseText(button->getText(), textNode, fontMap);
-	}
-}
-
-
-///////////////////////////////////////////////////////////
-void uiXmlParseDropdown(Dropdown* dropdown, XmlNode node, HashMap<std::string, Texture*>& textureMap, HashMap<std::string, Font*>& fontMap)
-{
-	// Load as button because dropdown inherits from button
-	uiXmlParseButton(dropdown, node, textureMap, fontMap);
-
-	// Item height
-	XmlAttribute itemHeightAttr = node.getFirstAttribute("item_height");
-	if (itemHeightAttr)
-	{
-		float height;
-		if (uiXmlParseFloat(itemHeightAttr.getValue(), height))
-			dropdown->setItemHeight(height);
-	}
-
-	// Item color
-	XmlAttribute itemColorAttr = node.getFirstAttribute("item_color");
-	if (itemColorAttr)
-	{
-		Vector4f color4;
-		Vector3f color3;
-		char* c = itemColorAttr.getValue();
-
-		if (c[0] == '#' && uiXmlParseHexColor(c, color4))
-			dropdown->setItemColor(color4);
-
-		else if (uiXmlParseVec4(c, color4))
-			dropdown->setItemColor(color4);
-
-		else if (uiXmlParseVec3(c, color3))
-			dropdown->setItemColor(Vector4f(color3, 1.0f));
-
-		else
-			dropdown->setItemColor(getNamedColor(c));
-	}
-
-	// Add dropdown items
-	XmlNode itemNode = node.getFirstNode("dropdown_item");
-	while (itemNode)
-	{
-		Uint32 itemLen = strlen(itemNode.getValue());
-
-		if (itemLen)
-			dropdown->addItem(itemNode.getValue());
-
-		else
-		{
-			Button* item = Pool<Button>::alloc();
-
-			uiXmlParseElement(item, itemNode, textureMap);
-			uiXmlParseButton(item, itemNode, textureMap, fontMap);
-
-			// Add the custom button
-			dropdown->addItem(item);
-		}
-
-		itemNode = itemNode.getNextSibling("dropdown_item");
-	}
-}
-
-
-///////////////////////////////////////////////////////////
-void uiXmlParseSlider(Slider* slider, XmlNode node, HashMap<std::string, Texture*>& textureMap)
-{
-	// Slider value
-	XmlAttribute valueAttr = node.getFirstAttribute("value");
-	if (valueAttr)
-	{
-		float value;
-		if (uiXmlParseFloat(valueAttr.getValue(), value))
-			slider->setValue(value);
-	}
-
-	// Slider button
-	XmlNode buttonNode = node.getFirstNode("slider_button");
-	if (buttonNode)
-		uiXmlParseElement(slider->getSliderButton(), buttonNode, textureMap);
-}
-
-
-///////////////////////////////////////////////////////////
-void uiXmlParseScrollView(ScrollView* view, XmlNode node, HashMap<std::string, Texture*>& textureMap)
-{
-	// Clip margins
-	XmlAttribute marginsAttr = node.getFirstAttribute("clip_margins");
-	if (marginsAttr)
-	{
-		float margins;
-		if (uiXmlParseFloat(marginsAttr.getValue(), margins))
-			view->setClipMargin(margins);
-	}
-
-	// Scroll speed
-	XmlAttribute speedAttr = node.getFirstAttribute("scroll_speed");
-	if (speedAttr)
-	{
-		float speed;
-		if (uiXmlParseFloat(speedAttr.getValue(), speed))
-			view->setScrollSpeed(speed);
-	}
-
-	// Scroll bar width
-	XmlAttribute barWidthAttr = node.getFirstAttribute("scroll_bar_width");
-	if (barWidthAttr)
-	{
-		float barWidth;
-		if (uiXmlParseFloat(barWidthAttr.getValue(), barWidth))
-			view->setScrollBarWidth(barWidth);
-	}
-
-	// Slider
-	XmlNode sliderNode = node.getFirstNode("scroll_bar");
-	if (sliderNode)
-		uiXmlParseElement(view->getScrollBar(), sliderNode, textureMap);
-}
-
-
-///////////////////////////////////////////////////////////
-void uiXmlParseTextInput(TextInput* input, XmlNode node, HashMap<std::string, Texture*>& textureMap, HashMap<std::string, Font*>& fontMap)
-{
-	// Text value
-	XmlAttribute valueAttr = node.getFirstAttribute("value");
-	if (valueAttr)
-		input->setValue(valueAttr.getValue());
-
-	else
-	{
-		XmlAttribute textAttr = node.getFirstAttribute("text");
-		if (textAttr)
-			input->setValue(textAttr.getValue());
-	}
-
-	// Text cursor size
-	XmlAttribute cursorSizeAttr = node.getFirstAttribute("cursor_size");
-	if (cursorSizeAttr)
-	{
-		Vector2f size;
-		if (uiXmlParseVec2(cursorSizeAttr.getValue(), size))
-			input->setTextCursorSize(size);
-	}
-
-	// Text cursor color
-	XmlAttribute cursorColorAttr = node.getFirstAttribute("cursor_color");
-	if (cursorColorAttr)
-	{
-		Vector4f color4;
-		Vector3f color3;
-		char* c = cursorColorAttr.getValue();
-
-		if (c[0] == '#' && uiXmlParseHexColor(c, color4))
-			input->setTextCursorColor(color4);
-
-		else if (uiXmlParseVec4(c, color4))
-			input->setTextCursorColor(color4);
-
-		else if (uiXmlParseVec3(c, color3))
-			input->setTextCursorColor(Vector4f(color3, 1.0f));
-
-		else
-			input->setTextCursorColor(getNamedColor(c));
-	}
-
-	// Text cursor cycle
-	XmlAttribute cursorCycleAttr = node.getFirstAttribute("cursor_cycle");
-	if (cursorCycleAttr)
-	{
-		float cycle;
-		if (uiXmlParseFloat(cursorCycleAttr.getValue(), cycle))
-			input->setTextCursorCycle(cycle);
-	}
-
-	// Highlight cursor color
-	XmlAttribute highlightColorAttr = node.getFirstAttribute("highlight_color");
-	if (highlightColorAttr)
-	{
-		Vector4f color4;
-		Vector3f color3;
-		char* c = highlightColorAttr.getValue();
-
-		if (c[0] == '#' && uiXmlParseHexColor(c, color4))
-			input->setHighlightColor(color4);
-
-		else if (uiXmlParseVec4(c, color4))
-			input->setHighlightColor(color4);
-
-		else if (uiXmlParseVec3(c, color3))
-			input->setHighlightColor(Vector4f(color3, 1.0f));
-
-		else
-			input->setHighlightColor(getNamedColor(c));
-	}
-
-	// Text align
-	XmlAttribute textAlignAttr = node.getFirstAttribute("text_align");
-	if (textAlignAttr)
-	{
-		UIPosition align;
-		if (uiXmlParseUiPosition(textAlignAttr.getValue(), align))
-			input->setTextAlign(align);
-	}
-
-	// Text offset
-	XmlAttribute textOffsetAttr = node.getFirstAttribute("text_offset");
-	if (textOffsetAttr)
-	{
-		Vector2f offset;
-		if (uiXmlParseVec2(textOffsetAttr.getValue(), offset))
-			input->setTextOffset(offset);
-	}
-
-	// Parse text options
-	XmlNode textNode = node.getFirstNode("element_text");
-	if (textNode)
-	{
-		uiXmlParseElement(input->getText(), textNode, textureMap);
-		uiXmlParseText(input->getText(), textNode, fontMap);
-	}
-}
-
-*/
 
 
 ///////////////////////////////////////////////////////////
@@ -782,130 +450,46 @@ bool UISystem::load(const std::string& fname)
 			Text::setDefaultFont(font);
 	}
 
+	// Check if there is a templates section
+	UITemplateMap templates;
+	XmlNode templatesNode = mainNode.getFirstNode("templates");
 
-	// Keep track of parent elements
-	std::stack<UIElement*> parentStack;
-	std::stack<XmlNode> nodeStack;
-	parentStack.push(this);
-	nodeStack.push(XmlNode());
-
-	// Iterate through ui elements
-	XmlNode current = mainNode.getFirstNode();
-	while (current.exists())
+	if (templatesNode.exists())
 	{
-		// Create an element
-		UIElement* element = 0;
+		XmlNode current = templatesNode.getFirstNode();
 
-		// Create an element of the correct type
-		if (strcmp(current.getName(), "ui_element") == 0)
-			element = Pool<UIElement>::alloc();
-
-		else if (strcmp(current.getName(), "button") == 0)
-			element = Pool<Button>::alloc();
-
-		else if (strcmp(current.getName(), "dropdown") == 0)
-			element = Pool<Dropdown>::alloc();
-
-		else if (strcmp(current.getName(), "h_list_view") == 0)
-			element = Pool<HListView>::alloc();
-
-		else if (strcmp(current.getName(), "v_list_view") == 0 || strcmp(current.getName(), "list_view") == 0)
-			element = Pool<VListView>::alloc();
-
-		else if (strcmp(current.getName(), "scroll_view") == 0)
-			element = Pool<ScrollView>::alloc();
-
-		else if (strcmp(current.getName(), "slider") == 0)
-			element = Pool<Slider>::alloc();
-
-		else if (strcmp(current.getName(), "text") == 0)
-			element = Pool<Text>::alloc();
-
-		else if (strcmp(current.getName(), "text_input") == 0)
-			element = Pool<TextInput>::alloc();
-
-		else
+		// Loop through and get all elements with an id
+		while (current.exists())
 		{
-			// Skip non UI elements
+			// Find an id attribute
+			XmlAttribute idAttr = current.getFirstAttribute("id");
+			if (idAttr.exists())
+				templates[idAttr.getValue()] = current;
+
 			current = current.getNextSibling();
-
-			// If there are no more elements in the current level, go up 1 level
-			if (!current.exists())
-			{
-				current = nodeStack.top();
-				parentStack.pop();
-				nodeStack.pop();
-			}
-
-			continue;
-		}
-
-		// Check if the element has an id
-		XmlAttribute idAttrib = current.getFirstAttribute("id");
-		std::string id = idAttrib.exists() ? idAttrib.getValue() : "";
-
-		// Parse the element
-		element->parse(current);
-
-		// Check if the node has a margin attribute
-		XmlAttribute marginsAttr = current.getFirstAttribute("margins");
-		bool usesMargins = false;
-
-		if (marginsAttr.exists() && parentStack.size() > 1)
-		{
-			Vector2f margins;
-			if (UIParser::parse(marginsAttr, margins))
-			{
-				VListView* vlist;
-				HListView* hlist;
-
-				usesMargins = true;
-
-				if (vlist = dynamic_cast<VListView*>(parentStack.top()))
-					vlist->addChild(element, margins);
-				else if (hlist = dynamic_cast<HListView*>(parentStack.top()))
-					hlist->addChild(element, margins);
-				else
-					usesMargins = false;
-			}
-		}
-
-		if (!usesMargins)
-			parentStack.top()->addChild(element);
-
-
-		// Add the element to the map
-		if (id.size() > 0)
-		{
-			element->setId(id);
-			m_elements[id] = element;
-		}
-
-		// Add child elements
-		XmlNode childrenNode = current.getFirstNode();
-
-		// Go to next sibling
-		current = current.getNextSibling();
-
-		if (childrenNode.exists())
-		{
-			// Add current node to parent queue
-			parentStack.push(element);
-			nodeStack.push(current);
-
-			// Go to first child element
-			current = childrenNode;
-		}
-
-		// Go up one level if the current node is 0
-		if (!current.exists() && parentStack.size())
-		{
-			current = nodeStack.top();
-			parentStack.pop();
-			nodeStack.pop();
 		}
 	}
 
+	// Parse the ui system using the root element
+	parse(mainNode, templates);
+
+	// Add all elements with an id to the list
+	std::queue<UIElement*> elementQueue;
+	elementQueue.push(this);
+
+	while (elementQueue.size())
+	{
+		UIElement* element = elementQueue.front();
+		elementQueue.pop();
+
+		// Add the current element to id map if it has an id
+		if (element->getId().size())
+			m_elements[element->getId()] = element;
+
+		const std::vector<UIElement*>& children = element->getChildren();
+		for (Uint32 i = 0; i < children.size(); ++i)
+			elementQueue.push(children[i]);
+	}
 
 	m_loaded = true;
 	return true;

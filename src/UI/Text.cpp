@@ -34,10 +34,10 @@ Text::Text() :
 
 
 ///////////////////////////////////////////////////////////
-void Text::parse(XmlNode node)
+void Text::parse(XmlNode node, const UITemplateMap& templates)
 {
 	// Default parse
-	UIElement::parse(node);
+	UIElement::parse(node, templates);
 
 	// Value
 	if (strlen(node.getValue()) > 0)

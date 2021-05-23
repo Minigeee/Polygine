@@ -140,10 +140,10 @@ Slider::~Slider()
 
 
 ///////////////////////////////////////////////////////////
-void Slider::parse(XmlNode node)
+void Slider::parse(XmlNode node, const UITemplateMap& templates)
 {
 	// Default parse
-	UIElement::parse(node);
+	UIElement::parse(node, templates);
 
 	// Slider value
 	XmlAttribute valueAttr = node.getFirstAttribute("value");
@@ -157,7 +157,7 @@ void Slider::parse(XmlNode node)
 	// Slider button
 	XmlNode buttonNode = node.getFirstNode("slider_button");
 	if (buttonNode.exists())
-		m_button->parse(node);
+		m_button->parse(node, templates);
 }
 
 

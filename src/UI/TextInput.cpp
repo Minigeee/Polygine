@@ -68,10 +68,10 @@ void TextInput::update(float dt)
 
 
 ///////////////////////////////////////////////////////////
-void TextInput::parse(XmlNode node)
+void TextInput::parse(XmlNode node, const UITemplateMap& templates)
 {
 	// Default parse
-	UIElement::parse(node);
+	UIElement::parse(node, templates);
 
 	// Text value
 	XmlAttribute valueAttr = node.getFirstAttribute("value");
@@ -142,7 +142,7 @@ void TextInput::parse(XmlNode node)
 	// Parse text options
 	XmlNode textNode = node.getFirstNode("element_text");
 	if (textNode.exists())
-		getText()->parse(textNode);
+		getText()->parse(textNode, templates);
 }
 
 

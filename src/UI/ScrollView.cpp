@@ -78,10 +78,10 @@ ScrollView::~ScrollView()
 
 
 ///////////////////////////////////////////////////////////
-void ScrollView::parse(XmlNode node)
+void ScrollView::parse(XmlNode node, const UITemplateMap& templates)
 {
 	// Default parse
-	UIElement::parse(node);
+	UIElement::parse(node, templates);
 
 	// Clip margins
 	XmlAttribute marginsAttr = node.getFirstAttribute("clip_margins");
@@ -113,7 +113,7 @@ void ScrollView::parse(XmlNode node)
 	// Slider
 	XmlNode sliderNode = node.getFirstNode("scroll_bar");
 	if (sliderNode.exists())
-		m_scrollBar->parse(sliderNode);
+		m_scrollBar->parse(sliderNode, templates);
 }
 
 
