@@ -14,8 +14,10 @@ Dropdown::Dropdown() :
 	m_menu			(Pool<VListView>::alloc()),
 	m_selectedItem	(0),
 	m_itemHeight	(25.0f),
-	m_itemColor		(1.0f)
+	m_itemColors	()
 {
+	m_itemColors.push_back(Vector4f(1.0f));
+
 	m_menu->setVisible(false);
 	m_menu->setAnchor(UIPosition::BotLeft);
 	addChild(m_menu);
@@ -159,16 +161,18 @@ void Dropdown::addItem(const std::string& name)
 	if (!m_menu->getChildren().size())
 		setString(name);
 
+	// Get index
+	Uint32 index = m_menu->getChildren().size();
+
+	Uint32 numColors = m_itemColors.size();
+
 	Button* item = Pool<Button>::alloc();
 	item->setString(name);
 	item->setTextAlign(UIPosition::Left);
 	item->setTextOffset(5.0f, 0.0f);
 	item->setSize(getPixelSize().x, m_itemHeight);
-	item->setColor(m_itemColor);
+	item->setColor(m_itemColors[index % numColors]);
 	item->setVisible(false);
-
-	// Get index
-	Uint32 index = m_menu->getChildren().size();
 
 	// Set callback functions
 	if (m_onMouseEnterItem)
@@ -244,6 +248,18 @@ void Dropdown::clearItems()
 
 
 ///////////////////////////////////////////////////////////
+void Dropdown::setItems(const std::vector<std::string>& items)
+{
+	// Clear items
+	clearItems();
+
+	// Add each item in the list
+	for (Uint32 i = 0; i < items.size(); ++i)
+		addItem(items[i]);
+}
+
+
+///////////////////////////////////////////////////////////
 void Dropdown::setSelectedItem(Uint32 index)
 {
 	if (index == m_selectedItem) return;
@@ -273,14 +289,27 @@ void Dropdown::setItemHeight(float height)
 ///////////////////////////////////////////////////////////
 void Dropdown::setItemColor(const Vector4f& color)
 {
-	m_itemColor = color;
+	m_itemColors[0] = color;
 }
 
 
 ///////////////////////////////////////////////////////////
 void Dropdown::setItemColor(float r, float g, float b, float a)
 {
-	m_itemColor = Vector4f(r, g, b, a);
+	m_itemColors[0] = Vector4f(r, g, b, a);
+}
+
+
+///////////////////////////////////////////////////////////
+void Dropdown::setItemColorPattern(const std::vector<Vector4f>& colors)
+{
+	m_itemColors = colors;
+
+	Uint32 numColors = m_itemColors.size();
+
+	// Apply the pattern to current items
+	for (Uint32 i = 0; i < m_children.size(); ++i)
+		m_children[i]->setColor(m_itemColors[i % numColors]);
 }
 
 

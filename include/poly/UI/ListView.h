@@ -1,7 +1,7 @@
 #ifndef POLY_LIST_VIEW
 #define POLY_LIST_VIEW
 
-#include <poly/UI/UIElement.h>
+#include <poly/UI/UIContainer.h>
 
 namespace poly
 {
@@ -10,7 +10,7 @@ namespace poly
 /// \brief A vertical list view
 ///
 ///////////////////////////////////////////////////////////
-class VListView : public UIElement
+class VListView : public UIContainer
 {
 public:
 	///////////////////////////////////////////////////////////
@@ -42,8 +42,48 @@ public:
 	///////////////////////////////////////////////////////////
 	void removeChild(UIElement* child);
 
+	///////////////////////////////////////////////////////////
+	/// \brief Recalculate the list view's bounds (and update the transforms of children element)
+	///
+	/// This function updates the transforms of all chidlren element,
+	/// so that all elements will be in the right position, if
+	/// the scale of any children element changed. Then the new
+	/// container bounds are calculated (size and position).
+	///
+	///////////////////////////////////////////////////////////
+	void updateBounds() override;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the margins of a specific child element
+	///
+	/// This function sets the margins of a child element, and does
+	/// nothing it the given element is not a child element. updateBounds()
+	/// is automatically called so that all children elements have
+	/// the correct positiona and the container size is correct.
+	///
+	/// \param element The element to set margins for
+	/// \param margins The new element margins
+	///
+	///////////////////////////////////////////////////////////
+	void setMargins(UIElement* element, const Vector2f& margins);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get a child element's margins
+	///
+	/// A zero vector is returned if the given element is not a
+	/// child element.
+	///
+	/// \param element The child element to get margins for
+	///
+	/// \return The child element's margins
+	///
+	///////////////////////////////////////////////////////////
+	const Vector2f& getMargins(UIElement* element) const;
+
 private:
 	void getQuads(std::vector<UIQuad>& quads) override;
+
+	virtual void updateTransforms() override;
 
 private:
 	std::vector<Vector2f> m_margins;
@@ -54,7 +94,7 @@ private:
 /// \brief A horizontal list view
 ///
 ///////////////////////////////////////////////////////////
-class HListView : public UIElement
+class HListView : public UIContainer
 {
 public:
 	///////////////////////////////////////////////////////////
@@ -86,8 +126,48 @@ public:
 	///////////////////////////////////////////////////////////
 	void removeChild(UIElement* child);
 
+	///////////////////////////////////////////////////////////
+	/// \brief Recalculate the list view's bounds (and update the transforms of children element)
+	///
+	/// This function updates the transforms of all chidlren element,
+	/// so that all elements will be in the right position, if
+	/// the scale of any children element changed. Then the new
+	/// container bounds are calculated (size and position).
+	///
+	///////////////////////////////////////////////////////////
+	void updateBounds() override;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the margins of a specific child element
+	///
+	/// This function sets the margins of a child element, and does
+	/// nothing it the given element is not a child element. updateBounds()
+	/// is automatically called so that all children elements have
+	/// the correct positiona and the container size is correct.
+	///
+	/// \param element The element to set margins for
+	/// \param margins The new element margins
+	///
+	///////////////////////////////////////////////////////////
+	void setMargins(UIElement* element, const Vector2f& margins);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get a child element's margins
+	///
+	/// A zero vector is returned if the given element is not a
+	/// child element.
+	///
+	/// \param element The child element to get margins for
+	///
+	/// \return The child element's margins
+	///
+	///////////////////////////////////////////////////////////
+	const Vector2f& getMargins(UIElement* element) const;
+
 private:
 	void getQuads(std::vector<UIQuad>& quads) override;
+
+	virtual void updateTransforms() override;
 
 private:
 	std::vector<Vector2f> m_margins;

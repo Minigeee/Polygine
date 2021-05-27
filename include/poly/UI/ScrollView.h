@@ -1,7 +1,7 @@
 #ifndef POLY_SCROLL_VIEW_H
 #define POLY_SCROLL_VIEW_H
 
-#include <poly/UI/UIElement.h>
+#include <poly/UI/UIContainer.h>
 
 namespace poly
 {
@@ -54,7 +54,7 @@ private:
 /// \brief A vertical scroll box
 ///
 ///////////////////////////////////////////////////////////
-class ScrollView : public UIElement
+class ScrollView : public UIContainer
 {
 public:
 	///////////////////////////////////////////////////////////
@@ -101,7 +101,7 @@ public:
 	/// on the axis-aligned bounding boxes of the children elements.
 	///
 	///////////////////////////////////////////////////////////
-	void updateViewBounds();
+	void updateBounds() override;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the margin of the clipping region

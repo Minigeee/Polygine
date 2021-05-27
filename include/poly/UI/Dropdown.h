@@ -76,6 +76,14 @@ public:
 	void clearItems();
 
 	///////////////////////////////////////////////////////////
+	/// \brief Set the list of items
+	///
+	/// \param items The list of string dropdown items
+	///
+	///////////////////////////////////////////////////////////
+	void setItems(const std::vector<std::string>& items);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Set the selected item in the dropdown menu
 	///
 	/// \param index The index of the selected item
@@ -112,6 +120,17 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	void setItemColor(float r, float g, float b, float a);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set a repeating item color pattern
+	///
+	/// This can be used for alternating color dropdown lists,
+	/// or dropdown lists with multiple repeating colors.
+	///
+	/// \param colors The list of repeating colors
+	///
+	///////////////////////////////////////////////////////////
+	void setItemColorPattern(const std::vector<Vector4f>& colors);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Overrided version of set visibility
@@ -184,10 +203,10 @@ private:
 	void onLoseFocus() override;
 
 private:
-	VListView* m_menu;			//!< The menu element
-	Uint32 m_selectedItem;		//!< The current selected item index
-	float m_itemHeight;			//!< The default item height
-	Vector4f m_itemColor;		//!< The default item color
+	VListView* m_menu;						//!< The menu element
+	Uint32 m_selectedItem;					//!< The current selected item index
+	float m_itemHeight;						//!< The default item height
+	std::vector<Vector4f> m_itemColors;		//!< The default item color
 
 	std::function<void(Button*, Uint32)> m_onItemAdd;
 	std::function<void(Uint32)> m_onItemChange;

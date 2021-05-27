@@ -78,6 +78,13 @@ UIElement::UIElement() :
 
 
 ///////////////////////////////////////////////////////////
+UIElement::~UIElement()
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
 void UIElement::parse(XmlNode node, const UITemplateMap& templates)
 {
 	// Parse children nodes first (order shouldn't matter because all transforms should be updated at the end)

@@ -257,16 +257,18 @@ void VListView::addChild(UIElement* child, const Vector2f& margins)
 	UIElement::addChild(child);
 
 	const Vector2f& size = child->getPixelSize();
-	m_useRelSize = Vector2b(false);
 
 	// Calculate position
 	child->setPosition(child->getRelPosition().x, m_pixelSize.y + child->getOrigin().y * size.y + margins.x);
 
 	// Calculate size
-	float minX = child->getRelPosition().x - child->getOrigin().x * size.x;
-	float maxX = child->getRelPosition().x + (1.0f - child->getOrigin().x) * size.x;
-	if (maxX - minX > m_pixelSize.x)
-		m_pixelSize.x = maxX - minX;
+	if (!m_useRelSize.x)
+	{
+		float minX = child->getRelPosition().x - child->getOrigin().x * size.x;
+		float maxX = child->getRelPosition().x + (1.0f - child->getOrigin().x) * size.x;
+		if (maxX - minX > m_pixelSize.x)
+			m_pixelSize.x = maxX - minX;
+	}
 
 	m_pixelSize.y += size.y + margins.x + margins.y;
 
@@ -297,6 +299,66 @@ void VListView::removeChild(UIElement* child)
 void VListView::getQuads(std::vector<UIQuad>& quads)
 {
 	// Do nothing
+}
+
+
+///////////////////////////////////////////////////////////
+void VListView::updateTransforms()
+{
+	m_useRelSize.y = false;
+	UIElement::updateTransforms();
+}
+
+
+///////////////////////////////////////////////////////////
+void VListView::updateBounds()
+{
+	Vector2f containerSize(0.0f);
+
+	for (Uint32 i = 0; i < m_children.size(); ++i)
+	{
+		UIElement* child = m_children[i];
+		const Vector2f& margins = m_margins[i];
+		const Vector2f& size = child->getPixelSize();
+
+		// Calculate position
+		child->setPosition(child->getRelPosition().x, m_pixelSize.y + child->getOrigin().y * size.y + margins.x);
+
+		// Calculate size
+		float minX = child->getRelPosition().x - child->getOrigin().x * size.x;
+		float maxX = child->getRelPosition().x + (1.0f - child->getOrigin().x) * size.x;
+		if (maxX - minX > m_pixelSize.x)
+			containerSize.x = maxX - minX;
+
+		containerSize.y += size.y + margins.x + margins.y;
+	}
+
+	// Update size
+	m_transformChanged = true;
+	m_pixelSize.y = containerSize.y;
+	if (!m_useRelSize.x)
+		m_pixelSize.x = containerSize.x;
+}
+
+
+///////////////////////////////////////////////////////////
+void VListView::setMargins(UIElement* element, const Vector2f& margins)
+{
+	Uint32 index = element->getIndex();
+	if (m_children[index] != element)
+		return;
+
+	m_margins[index] = margins;
+
+	updateBounds();
+}
+
+
+///////////////////////////////////////////////////////////
+const Vector2f& VListView::getMargins(UIElement* element) const
+{
+	Uint32 index = element->getIndex();
+	return m_children[index] != element ? Vector2f(0.0f) : m_margins[index];
 }
 
 
@@ -552,16 +614,18 @@ void HListView::addChild(UIElement* child, const Vector2f& margins)
 	UIElement::addChild(child);
 
 	const Vector2f& size = child->getPixelSize();
-	m_useRelSize = Vector2b(false);
 
 	// Calculate position
 	child->setPosition(m_pixelSize.x + child->getOrigin().x * size.x + margins.x, child->getRelPosition().y);
 
 	// Calculate size
-	float minY = child->getRelPosition().y - child->getOrigin().y * size.y;
-	float maxY = child->getRelPosition().y + (1.0f - child->getOrigin().y) * size.y;
-	if (maxY - minY > m_pixelSize.y)
-		m_pixelSize.y = maxY - minY;
+	if (!m_useRelSize.y)
+	{
+		float minY = child->getRelPosition().y - child->getOrigin().y * size.y;
+		float maxY = child->getRelPosition().y + (1.0f - child->getOrigin().y) * size.y;
+		if (maxY - minY > m_pixelSize.y)
+			m_pixelSize.y = maxY - minY;
+	}
 
 	m_pixelSize.x += size.x + margins.x + margins.y;
 
@@ -592,6 +656,66 @@ void HListView::removeChild(UIElement* child)
 void HListView::getQuads(std::vector<UIQuad>& quads)
 {
 	// Do nothing
+}
+
+
+///////////////////////////////////////////////////////////
+void HListView::updateTransforms()
+{
+	m_useRelSize.x = false;
+	UIElement::updateTransforms();
+}
+
+
+///////////////////////////////////////////////////////////
+void HListView::updateBounds()
+{
+	Vector2f containerSize(0.0f);
+
+	for (Uint32 i = 0; i < m_children.size(); ++i)
+	{
+		UIElement* child = m_children[i];
+		const Vector2f& margins = m_margins[i];
+		const Vector2f& size = child->getPixelSize();
+
+		// Calculate position
+		child->setPosition(containerSize.x + child->getOrigin().x * size.x + margins.x, child->getRelPosition().y);
+
+		// Calculate size
+		float minY = child->getRelPosition().y - child->getOrigin().y * size.y;
+		float maxY = child->getRelPosition().y + (1.0f - child->getOrigin().y) * size.y;
+		if (maxY - minY > containerSize.y)
+			containerSize.y = maxY - minY;
+
+		containerSize.x += size.x + margins.x + margins.y;
+	}
+
+	// Update size
+	m_transformChanged = true;
+	m_pixelSize.x = containerSize.x;
+	if (!m_useRelSize.y)
+		m_pixelSize.y = containerSize.y;
+}
+
+
+///////////////////////////////////////////////////////////
+void HListView::setMargins(UIElement* element, const Vector2f& margins)
+{
+	Uint32 index = element->getIndex();
+	if (m_children[index] != element)
+		return;
+
+	m_margins[index] = margins;
+
+	updateBounds();
+}
+
+
+///////////////////////////////////////////////////////////
+const Vector2f& HListView::getMargins(UIElement* element) const
+{
+	Uint32 index = element->getIndex();
+	return m_children[index] != element ? Vector2f(0.0f) : m_margins[index];
 }
 
 

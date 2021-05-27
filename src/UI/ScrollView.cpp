@@ -185,7 +185,7 @@ void ScrollView::removeChild(UIElement* child)
 
 
 ///////////////////////////////////////////////////////////
-void ScrollView::updateViewBounds()
+void ScrollView::updateBounds()
 {
 	const std::vector<UIElement*>& children = m_scrollBody->getChildren();
 
