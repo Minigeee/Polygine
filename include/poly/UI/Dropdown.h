@@ -28,6 +28,10 @@ public:
 	~Dropdown();
 
 	///////////////////////////////////////////////////////////
+	/// \brief Parse properties for this UI element from an XML node
+	///
+	/// \see UIElement::parse
+	///
 	///////////////////////////////////////////////////////////
 	virtual void parse(XmlNode node, const UITemplateMap& templates = UITemplateMap()) override;
 
@@ -207,6 +211,7 @@ private:
 	Uint32 m_selectedItem;					//!< The current selected item index
 	float m_itemHeight;						//!< The default item height
 	std::vector<Vector4f> m_itemColors;		//!< The default item color
+	std::vector<bool> m_customItem;			//!< A list that determines if each is a custom button or not
 
 	std::function<void(Button*, Uint32)> m_onItemAdd;
 	std::function<void(Uint32)> m_onItemChange;
@@ -217,3 +222,54 @@ private:
 }
 
 #endif
+
+
+///////////////////////////////////////////////////////////
+/// \class poly::Dropdown
+/// \ingroup UI
+///
+/// A dropdown UI element creates a dropdown menu, where each
+/// item is a button with different string values. The dropdown
+/// menu inherits from button, so it contains all the functionality
+/// a standard button has, but the dropdown text is aligned to
+/// the left side by default, with a small offset.
+///
+/// To add items to the dropdown menu, use addItem(). This function
+/// takes either a string or a pointer to a button. Adding a button
+/// with this function allows for more flexibilty in controlling the
+/// button appearance, but most of the time, adding an item in the
+/// form of a string will be enough. All item buttons will have a
+/// height defined by the user, and the width of each item will be
+/// equal to the width of the menu. The item height can be set with
+/// setItemHeight(). To set the color of each item, use setItemColor(),
+/// or if an alternating color pattern is desired, use setItemColorPattern().
+///
+/// Custom callback functions can be set for every time a new item is added
+/// (another option for customizing the appearance of each item button), when
+/// the current selected item is changed, and when the mouse cursor enters
+/// and leaves the bounds of an item button.
+///
+/// Usage example:
+/// \code
+///
+/// using namespace poly;
+///
+/// // Make sure to set a default font with Text::setDefaultFont()
+///
+/// Dropdown dropdown;
+/// dropdown.setPosition(50.0f, 50.0f);
+/// dropdown.setSize(200.0f, 30.0f);
+/// dropdown.setColor(0.2f, 0.2f, 0.25f, 1.0f);
+/// dropdown.setItemHeight(28.0f);
+/// dropdown.setItemColor(0.18f, 0.18f, 0.22f, 1.0f);
+///
+/// dropdown.addItem("One");
+/// dropdown.addItem("Two");
+/// dropdown.addItem("Three");
+///
+/// // Add it to the UI system
+/// ...
+///
+/// \endcode
+///
+///////////////////////////////////////////////////////////

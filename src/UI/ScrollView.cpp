@@ -113,7 +113,12 @@ void ScrollView::parse(XmlNode node, const UITemplateMap& templates)
 	// Slider
 	XmlNode sliderNode = node.getFirstNode("scroll_bar");
 	if (sliderNode.exists())
+	{
 		m_scrollBar->parse(sliderNode, templates);
+
+		// Reset the scroll bar id because it shouldn't have an id
+		m_scrollBar->setId("");
+	}
 }
 
 

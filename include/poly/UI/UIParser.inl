@@ -88,14 +88,6 @@ inline bool UIParser::parse(XmlAttribute attr, UIElement* element, std::function
 
 
 ///////////////////////////////////////////////////////////
-template <typename T>
-inline void UIParser::addElementType(const std::string& nodeName)
-{
-	s_elements[nodeName] = [&]() -> UIElement* { return (UIElement*)Pool<T>::alloc(); };
-}
-
-
-///////////////////////////////////////////////////////////
 template <typename... T>
 inline bool UIParser::addCallback(const std::string& funcName, const std::function<void(T...)>& func)
 {

@@ -83,6 +83,10 @@ public:
 	~Slider();
 
 	///////////////////////////////////////////////////////////
+	/// \brief Parse properties for this UI element from an XML node
+	///
+	/// \see UIElement::parse
+	///
 	///////////////////////////////////////////////////////////
 	virtual void parse(XmlNode node, const UITemplateMap& templates = UITemplateMap()) override;
 

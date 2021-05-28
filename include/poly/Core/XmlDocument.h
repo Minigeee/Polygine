@@ -45,7 +45,6 @@ public:
 	bool load(const std::string& fname);
 
 private:
-	void* m_document;		//!< The internal RapidXML document object
 	char* m_buffer;			//!< The buffer used to store loaded data
 };
 

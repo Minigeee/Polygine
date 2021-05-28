@@ -14,7 +14,7 @@ namespace poly
 
 ///////////////////////////////////////////////////////////
 XmlDocument::XmlDocument() :
-	XmlNode		(0)
+	XmlNode		(0, 0)
 {
 	m_document = new rapidxml::xml_document<>;
 }

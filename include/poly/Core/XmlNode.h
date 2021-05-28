@@ -27,6 +27,77 @@ public:
 	virtual ~XmlNode();
 
 	///////////////////////////////////////////////////////////
+	/// \brief Set the name of the node
+	///
+	/// \note Memory allocated by this function will not be freed until the XML document is destroyed
+	///
+	/// \param name The new name of the node
+	///
+	///////////////////////////////////////////////////////////
+	void setName(const char* name);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the value of the node
+	///
+	/// \note Memory allocated by this function will not be freed until the XML document is destroyed
+	///
+	/// \param name The new value of the node
+	///
+	///////////////////////////////////////////////////////////
+	void setValue(const char* name);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Create a child XML node with the given name and value and return a node object
+	///
+	/// This function will allocate space for a new node, and append
+	/// the new node as a child of the current node. The new node
+	/// will have the given name and value, or be left empty if
+	/// the name or value is not specified.
+	///
+	/// \note Memory allocated by this function will not be freed until the XML document is destroyed
+	///
+	/// \param name The name of the new node
+	/// \param value The value of the new node
+	///
+	/// \return The new node
+	///
+	///////////////////////////////////////////////////////////
+	XmlNode addNode(const char* name = 0, const char* value = 0);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Create an XML attribute with the given name and value and return an attribute object
+	///
+	/// This function will allocate space for a new attribute, and append
+	/// it to the node's list of attributes. The new attribute will have
+	/// the given name and value, or left empty if none are provided.
+	///
+	/// \note Memory allocated by this function will not be freed until the XML document is destroyed
+	///
+	/// \param name The name of the new attribute
+	/// \param value The value of the new attribute
+	///
+	/// \return The new attribute
+	///
+	///////////////////////////////////////////////////////////
+	XmlAttribute addAttribute(const char* name = 0, const char* value = 0);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Remove the specified child node from the current node
+	///
+	/// \param child The child node to remove
+	///
+	///////////////////////////////////////////////////////////
+	void removeNode(const XmlNode& child);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Remove the specified attribute from the current node
+	///
+	/// \param attribute The attribute to remove
+	///
+	///////////////////////////////////////////////////////////
+	void removeAttribute(const XmlAttribute& attribute);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the name of the node
 	///
 	/// \return The name string
@@ -146,10 +217,11 @@ public:
 	bool exists() const;
 
 protected:
-	XmlNode(void* node);
+	XmlNode(void* node, void* m_document);
 
 protected:
-	void* m_node;		//!< The internal 
+	void* m_node;		//!< The internal RapidXML node
+	void* m_document;	//!< The internal RapidXML document
 };
 
 

@@ -29,6 +29,26 @@ public:
 	~XmlAttribute();
 
 	///////////////////////////////////////////////////////////
+	/// \brief Set the name of the attribute
+	///
+	/// \note Memory allocated by this function will not be freed until the XML document is destroyed
+	///
+	/// \param name The new name of the attribute
+	///
+	///////////////////////////////////////////////////////////
+	void setName(const char* name);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the value of the attribute
+	///
+	/// \note Memory allocated by this function will not be freed until the XML document is destroyed
+	///
+	/// \param name The new value of the attribute
+	///
+	///////////////////////////////////////////////////////////
+	void setValue(const char* name);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the name of the attribute
 	///
 	/// \return The name string
@@ -84,10 +104,11 @@ public:
 	bool exists() const;
 
 private:
-	XmlAttribute(void* attr);
+	XmlAttribute(void* attr, void* document);
 
 private:
 	void* m_attribute;		//!< The internal XML attribute pointer
+	void* m_document;		//!< The internal RapidXML document
 };
 
 

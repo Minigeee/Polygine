@@ -15,9 +15,6 @@ namespace poly
 
 
 ///////////////////////////////////////////////////////////
-HashMap<std::string, std::function<UIElement* ()>> UIParser::s_elements;
-
-///////////////////////////////////////////////////////////
 HashMap<std::string, Font*> UIParser::s_fonts;
 
 ///////////////////////////////////////////////////////////
@@ -188,6 +185,8 @@ bool getNamedColor(const std::string& color, Vector4f& out)
 		g_namedColors["sienna"]						= Vector3u(160, 82, 45);
 		g_namedColors["brown"]						= Vector3u(165, 42, 42);
 		g_namedColors["maroon"]						= Vector3u(128, 0, 0);
+
+		LOG("%d", g_namedColors.size());
 	}
 
 	auto it = g_namedColors.find(color);
@@ -234,15 +233,7 @@ bool UIParser::parse(XmlNode node, UIElement*& out)
 		out = Pool<TextInput>::alloc();
 
 	else
-	{
-		// Check if the element is a user added type
-		auto it = s_elements.find(node.getName());
-		if (it != s_elements.end())
-			out = (it.value())();
-
-		else
-			return false;
-	}
+		return false;
 
 	return true;
 }

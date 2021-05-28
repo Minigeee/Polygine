@@ -375,7 +375,18 @@ public:
     static void free(T* ptr);
 
 private:
-    static TypePool<T> s_pool;
+    struct PoolWrapper
+    {
+        PoolWrapper();
+
+        ~PoolWrapper();
+
+        TypePool<T> m_pool;
+    };
+
+private:
+    static bool s_isInitialized;
+    static PoolWrapper s_wrapper;
 };
 
 }

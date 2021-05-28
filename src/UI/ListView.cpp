@@ -8,6 +8,27 @@ namespace poly
 ///////////////////////////////////////////////////////////
 void VListView::parse(XmlNode node, const UITemplateMap& templates)
 {
+	// Id
+	XmlAttribute idAttr = node.getFirstAttribute("id");
+	if (idAttr.exists())
+		m_id = idAttr.getValue();
+
+	else
+	{
+		// Create an id for the element
+		XmlNode parent = node.getParent();
+		if (parent.exists())
+		{
+			idAttr = parent.getFirstAttribute("id");
+			m_id = std::string(idAttr.getValue()) + ".v_list_view";
+		}
+		else
+			m_id = "ui";
+
+		// Add the id attribute so that children element can use it
+		node.addAttribute("id", m_id.c_str());
+	}
+
 	// Parse children nodes first (order shouldn't matter because all transforms should be updated at the end)
 	XmlNode childNode = node.getFirstNode();
 	while (childNode.exists())
@@ -52,13 +73,6 @@ void VListView::parse(XmlNode node, const UITemplateMap& templates)
 				parse(templateNode, templates);
 		}
 	}
-
-	// Id
-	XmlAttribute idAttr = node.getFirstAttribute("id");
-	if (idAttr.exists())
-		m_id = idAttr.getValue();
-	else
-		m_id = "";
 
 	// Position
 	XmlAttribute posAttr = node.getFirstAttribute("position");
@@ -358,13 +372,34 @@ void VListView::setMargins(UIElement* element, const Vector2f& margins)
 const Vector2f& VListView::getMargins(UIElement* element) const
 {
 	Uint32 index = element->getIndex();
-	return m_children[index] != element ? Vector2f(0.0f) : m_margins[index];
+	return m_margins[index];
 }
 
 
 ///////////////////////////////////////////////////////////
 void HListView::parse(XmlNode node, const UITemplateMap& templates)
 {
+	// Id
+	XmlAttribute idAttr = node.getFirstAttribute("id");
+	if (idAttr.exists())
+		m_id = idAttr.getValue();
+
+	else
+	{
+		// Create an id for the element
+		XmlNode parent = node.getParent();
+		if (parent.exists())
+		{
+			idAttr = parent.getFirstAttribute("id");
+			m_id = std::string(idAttr.getValue()) + ".h_list_view";
+		}
+		else
+			m_id = "ui";
+
+		// Add the id attribute so that children element can use it
+		node.addAttribute("id", m_id.c_str());
+	}
+
 	// Parse children nodes first (order shouldn't matter because all transforms should be updated at the end)
 	XmlNode childNode = node.getFirstNode();
 	while (childNode.exists())
@@ -409,13 +444,6 @@ void HListView::parse(XmlNode node, const UITemplateMap& templates)
 				parse(templateNode, templates);
 		}
 	}
-
-	// Id
-	XmlAttribute idAttr = node.getFirstAttribute("id");
-	if (idAttr.exists())
-		m_id = idAttr.getValue();
-	else
-		m_id = "";
 
 	// Position
 	XmlAttribute posAttr = node.getFirstAttribute("position");
@@ -715,7 +743,7 @@ void HListView::setMargins(UIElement* element, const Vector2f& margins)
 const Vector2f& HListView::getMargins(UIElement* element) const
 {
 	Uint32 index = element->getIndex();
-	return m_children[index] != element ? Vector2f(0.0f) : m_margins[index];
+	return m_margins[index];
 }
 
 

@@ -131,7 +131,12 @@ void Dropdown::parse(XmlNode node, const UITemplateMap& templates)
 	// Parse text options
 	XmlNode textNode = node.getFirstNode("dropdown_text");
 	if (textNode.exists())
+	{
 		getText()->parse(textNode, templates);
+
+		// Reset the text id because it shouldn't have an id
+		getText()->setId("");
+	}
 
 	// Add dropdown items
 	XmlNode itemNode = node.getFirstNode("dropdown_item");
@@ -144,6 +149,9 @@ void Dropdown::parse(XmlNode node, const UITemplateMap& templates)
 		{
 			Button* item = Pool<Button>::alloc();
 			item->parse(itemNode, templates);
+
+			// Reset the item id because it shouldn't have an id
+			item->setId("");
 
 			// Add the custom button
 			addItem(item);
@@ -185,6 +193,7 @@ void Dropdown::addItem(const std::string& name)
 		m_onItemAdd(item, index);
 
 	m_menu->addChild(item);
+	m_customItem.push_back(false);
 }
 
 
@@ -214,6 +223,7 @@ void Dropdown::addItem(Button* item)
 		m_onItemAdd(item, index);
 
 	m_menu->addChild(item);
+	m_customItem.push_back(true);
 }
 
 
@@ -241,9 +251,12 @@ void Dropdown::clearItems()
 		// Remove from list
 		m_menu->removeChild(item);
 
-		// Free item
-		Pool<Button>::free(item);
+		// Free item if it is not a custom item
+		if (!m_customItem[i])
+			Pool<Button>::free(item);
 	}
+
+	m_customItem.clear();
 }
 
 

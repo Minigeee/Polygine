@@ -166,7 +166,12 @@ void Slider::parse(XmlNode node, const UITemplateMap& templates)
 	// Slider button
 	XmlNode buttonNode = node.getFirstNode("slider_button");
 	if (buttonNode.exists())
+	{
 		m_button->parse(node, templates);
+
+		// Reset the button id because it shouldn't have an id
+		m_button->setId("");
+	}
 }
 
 

@@ -7,6 +7,10 @@ namespace poly
 {
 
 
+///////////////////////////////////////////////////////////
+/// \brief The base class for container type UI elements
+///
+///////////////////////////////////////////////////////////
 class UIContainer : public UIElement
 {
 public:
@@ -41,3 +45,14 @@ public:
 }
 
 #endif
+
+
+///////////////////////////////////////////////////////////
+/// \class poly::UIContainer
+/// \ingroup UI
+///
+/// This class only provides the updateBounds() function which
+/// is meant to be used to recalculate the bounds of a container
+/// based on the elements inside it.
+///
+///////////////////////////////////////////////////////////

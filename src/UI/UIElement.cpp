@@ -87,6 +87,29 @@ UIElement::~UIElement()
 ///////////////////////////////////////////////////////////
 void UIElement::parse(XmlNode node, const UITemplateMap& templates)
 {
+	// Id
+	XmlAttribute idAttr = node.getFirstAttribute("id");
+	if (idAttr.exists())
+		m_id = idAttr.getValue();
+
+	else
+	{
+		// Don't create a new id if one already exists
+		if (!m_id.size())
+		{
+			// Create an id for the element
+			XmlNode parent = node.getParent();
+			idAttr = parent.getFirstAttribute("id");
+			if (idAttr.exists())
+				m_id = std::string(idAttr.getValue()) + '.' + node.getName();
+			else
+				m_id = "ui";
+		}
+
+		// Add the id attribute so that children element can use it
+		node.addAttribute("id", m_id.c_str());
+	}
+
 	// Parse children nodes first (order shouldn't matter because all transforms should be updated at the end)
 	XmlNode childNode = node.getFirstNode();
 	while (childNode.exists())
@@ -121,13 +144,6 @@ void UIElement::parse(XmlNode node, const UITemplateMap& templates)
 				parse(templateNode, templates);
 		}
 	}
-
-	// Id
-	XmlAttribute idAttr = node.getFirstAttribute("id");
-	if (idAttr.exists())
-		m_id = idAttr.getValue();
-	else
-		m_id = "";
 
 	// Position
 	XmlAttribute posAttr = node.getFirstAttribute("position");

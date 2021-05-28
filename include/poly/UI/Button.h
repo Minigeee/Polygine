@@ -32,6 +32,10 @@ public:
 	~Button();
 
 	///////////////////////////////////////////////////////////
+	/// \brief Parse properties for this UI element from an XML node
+	///
+	/// \see UIElement::parse
+	///
 	///////////////////////////////////////////////////////////
 	virtual void parse(XmlNode node, const UITemplateMap& templates = UITemplateMap()) override;
 
@@ -202,7 +206,7 @@ private:
 ///
 /// A standard button with an optional text label. If none
 /// of the text parameters are changed, then the button will
-/// not have a text element. Fi the button has a text element,
+/// not have a text element. If the button has a text element,
 /// the text will be center aligned by default.
 ///
 /// To set button callbacks, use onMouseEnter(), onMouseLeave(),
@@ -216,6 +220,8 @@ private:
 /// \code
 ///
 /// using namespace poly;
+///
+/// // Make sure to set a default font with Text::setDefaultFont()
 ///
 /// Button btn;
 /// btn.setPosition(30.0f, 30.0f);

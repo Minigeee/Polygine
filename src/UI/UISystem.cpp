@@ -421,8 +421,57 @@ void UISystem::setWindow(Window* window)
 ///////////////////////////////////////////////////////////
 bool UISystem::load(const std::string& fname)
 {
-	// Don't load a second time
-	if (m_loaded) return true;
+	// Attempt to unload if the system already has elements in it
+	if (m_children.size())
+	{
+		// If the system was loaded, then free all current elements
+		if (m_loaded)
+		{
+			// Loop through elements with ids and unload them
+			for (auto it = m_elements.begin(); it != m_elements.end(); ++it)
+			{
+				UIElement* element = it->second;
+				if (element == this) continue;
+
+				if (dynamic_cast<Dropdown*>(element))
+					Pool<Dropdown>::free(dynamic_cast<Dropdown*>(element));
+
+				else if (dynamic_cast<Button*>(element))
+					Pool<Button>::free(dynamic_cast<Button*>(element));
+
+				else if (dynamic_cast<HListView*>(element))
+					Pool<HListView>::free(dynamic_cast<HListView*>(element));
+
+				else if (dynamic_cast<VListView*>(element))
+					Pool<VListView>::free(dynamic_cast<VListView*>(element));
+
+				else if (dynamic_cast<ScrollView*>(element))
+					Pool<ScrollView>::free(dynamic_cast<ScrollView*>(element));
+
+				else if (dynamic_cast<Slider*>(element))
+					Pool<Slider>::free(dynamic_cast<Slider*>(element));
+
+				else if (dynamic_cast<Text*>(element))
+					Pool<Text>::free(dynamic_cast<Text*>(element));
+
+				else if (dynamic_cast<TextInput*>(element))
+					Pool<TextInput>::free(dynamic_cast<TextInput*>(element));
+
+				else
+					Pool<UIElement>::free(element);
+			}
+
+			// Clear children
+			m_children.clear();
+
+			// Clear elements
+			m_elements.clear();
+		}
+
+		// Otherwise, can't load over the current elements
+		else
+			return false;
+	}
 
 
 	// Load the xml document
@@ -490,6 +539,8 @@ bool UISystem::load(const std::string& fname)
 		for (Uint32 i = 0; i < children.size(); ++i)
 			elementQueue.push(children[i]);
 	}
+
+	LOG("Loaded UI XML file: %s", fname.c_str());
 
 	m_loaded = true;
 	return true;

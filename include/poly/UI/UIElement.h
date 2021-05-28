@@ -78,6 +78,37 @@ public:
 	virtual ~UIElement();
 
 	///////////////////////////////////////////////////////////
+	/// \brief Parse properties for this UI element from an XML node
+	///
+	/// This function will parse and apply properties found in the
+	/// given XML node. This applies to most of the properties that
+	/// are modifiable, and it is even possible to parse callback
+	/// functions. Before parsing and applying element properties,
+	/// any child XML nodes are checked to see if they represent
+	/// a UI element. If any child nodes of the given XML node represent
+	/// a UI element, a new element is created, based on the name of
+	/// the XML node, and that new element is parsed. Any children
+	/// elements found in the XML node will be allocated and parsed
+	/// recursively, using this parse() function.
+	///
+	/// The \a templates parameter should contain a map of template
+	/// names (string) to their respective XML node. The templates map
+	/// is needed to apply any template elements that have been defiend
+	/// and are being used.
+	///
+	/// To parse callback functions, each callback function must be
+	/// added to the UI parser using UIParser::addCallback().
+	///
+	/// In most cases, the user won't need to call this function, as
+	/// it is automatically called from UISystem::load(), where it is
+	/// used to parse an already loaded XML file.
+	///
+	/// For an example of how to structure UI XML files, please see
+	/// UISystem::load().
+	///
+	/// \param node The XML node to parse properties and children elements from
+	/// \param templates The map of template names to XML nodes
+	///
 	///////////////////////////////////////////////////////////
 	virtual void parse(XmlNode node, const UITemplateMap& templates = UITemplateMap());
 

@@ -6,7 +6,11 @@ namespace poly
 
 ///////////////////////////////////////////////////////////
 template <typename T>
-TypePool<T> Pool<T>::s_pool(32);
+bool Pool<T>::s_isInitialized = false;
+
+///////////////////////////////////////////////////////////
+template <typename T>
+typename Pool<T>::PoolWrapper Pool<T>::s_wrapper;
 
 
 ///////////////////////////////////////////////////////////
@@ -163,10 +167,27 @@ inline void TypePool<T>::reset()
 
 ///////////////////////////////////////////////////////////
 template <typename T>
+inline Pool<T>::PoolWrapper::PoolWrapper() :
+	m_pool		(32)
+{
+	s_isInitialized = true;
+}
+
+
+///////////////////////////////////////////////////////////
+template <typename T>
+inline Pool<T>::PoolWrapper::~PoolWrapper()
+{
+	s_isInitialized = false;
+}
+
+
+///////////////////////////////////////////////////////////
+template <typename T>
 inline T* Pool<T>::alloc()
 {
 	// Allocate the object
-	return s_pool.alloc();
+	return s_isInitialized ? s_wrapper.m_pool.alloc() : 0;
 }
 
 
@@ -175,7 +196,8 @@ template <typename T>
 inline void Pool<T>::free(T* ptr)
 {
 	// Free from pool
-	s_pool.free(ptr);
+	if (s_isInitialized)
+		s_wrapper.m_pool.free(ptr);
 }
 
 }

@@ -14,6 +14,10 @@ class VListView : public UIContainer
 {
 public:
 	///////////////////////////////////////////////////////////
+	/// \brief Parse properties for this UI element from an XML node
+	///
+	/// \see UIElement::parse
+	///
 	///////////////////////////////////////////////////////////
 	virtual void parse(XmlNode node, const UITemplateMap& templates = UITemplateMap());
 
@@ -70,9 +74,6 @@ public:
 	///////////////////////////////////////////////////////////
 	/// \brief Get a child element's margins
 	///
-	/// A zero vector is returned if the given element is not a
-	/// child element.
-	///
 	/// \param element The child element to get margins for
 	///
 	/// \return The child element's margins
@@ -98,6 +99,10 @@ class HListView : public UIContainer
 {
 public:
 	///////////////////////////////////////////////////////////
+	/// \brief Parse properties for this UI element from an XML node
+	///
+	/// \see UIElement::parse
+	///
 	///////////////////////////////////////////////////////////
 	virtual void parse(XmlNode node, const UITemplateMap& templates = UITemplateMap());
 
@@ -153,9 +158,6 @@ public:
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get a child element's margins
-	///
-	/// A zero vector is returned if the given element is not a
-	/// child element.
 	///
 	/// \param element The child element to get margins for
 	///

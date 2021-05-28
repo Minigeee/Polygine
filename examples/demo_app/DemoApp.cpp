@@ -75,22 +75,6 @@ int main()
     window.create(1280, 720, "My Game");
     // window.setVsyncEnabled(false);
 
-    // Add an event listener
-    HashMap<Keyboard, bool> keyMap;
-    window.addListener<E_KeyEvent>(
-        [&](const E_KeyEvent& e)
-        {
-            // This will be run every time a key event occurs
-            if (e.m_action == InputAction::Press)
-            {
-                std::cout << "Key pressed: " << (int)e.m_key << '\n';
-                keyMap[e.m_key] = true;
-            }
-            else if (e.m_action == InputAction::Release)
-                keyMap[e.m_key] = false;
-        }
-    );
-
     Model model;
     model.load("examples/models/character/character_flat.dae");
 
@@ -277,6 +261,31 @@ int main()
         Vector3f(0.02f, 0.06f, 0.12f)
     };
 
+
+    // Add an event listener
+    HashMap<Keyboard, bool> keyMap;
+    window.addListener<E_KeyEvent>(
+        [&](const E_KeyEvent& e)
+        {
+            // This will be run every time a key event occurs
+            if (e.m_action == InputAction::Press)
+            {
+                std::cout << "Key pressed: " << (int)e.m_key << '\n';
+                keyMap[e.m_key] = true;
+
+                if (keyMap[Keyboard::LeftControl])
+                {
+                    if (e.m_key == Keyboard::R)
+                    {
+                        ui.load("examples/ui.xml");
+                        fpsCounter = (Text*)ui.getElement("fps_counter");
+                    }
+                }
+            }
+            else if (e.m_action == InputAction::Release)
+                keyMap[e.m_key] = false;
+        }
+    );
 
     window.addListener<E_WindowResize>(
         [&](const E_WindowResize& e)

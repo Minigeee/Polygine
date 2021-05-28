@@ -121,6 +121,9 @@ void Button::parse(XmlNode node, const UITemplateMap& templates)
 	{
 		if (!m_text) createText();
 		m_text->parse(textNode, templates);
+
+		// Reset the text id because it shouldn't have an id
+		m_text->setId("");
 	}
 }
 

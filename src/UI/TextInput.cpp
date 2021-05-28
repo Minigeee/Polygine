@@ -176,9 +176,14 @@ void TextInput::parse(XmlNode node, const UITemplateMap& templates)
 	}
 
 	// Parse text options
-	XmlNode textNode = node.getFirstNode("element_text");
+	XmlNode textNode = node.getFirstNode("input_text");
 	if (textNode.exists())
+	{
 		getText()->parse(textNode, templates);
+
+		// Reset the text id because it shouldn't have an id
+		getText()->setId("");
+	}
 }
 
 
