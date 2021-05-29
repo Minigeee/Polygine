@@ -187,6 +187,10 @@ private:
         void* m_nextPage;       //!< A pointer to the next page
         void* m_nextFree;       //!< A pointer to the next free object slot
         Uint32 m_numObjects;    //!< The number of objects currently in the page
+
+#ifndef NDEBUG
+        std::vector<bool> m_used;   //!< This keeps track of which slots are being used
+#endif
     };
 
     ///////////////////////////////////////////////////////////

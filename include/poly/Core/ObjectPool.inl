@@ -104,12 +104,16 @@ inline void TypePool<T>::free(T* ptr)
 		page = (T*)(header + 1);
 	}
 
-	// If couldn't find the page that contains the pointer, quit
-	if (!header)
-	{
-		LOG_WARNING("Tried to free memory that doesn't belong to the object pool");
-		return;
-	}
+	// Error if the object pool doesn't contain the pointer (this shouldn't be allowed to happen)
+	ASSERT(header, "Tried to free memory that doesn't belong to the object pool");
+
+#ifndef NDEBUG
+	// In debug mode, keep track of which slots are being used to prevent double freeing
+	Uint32 index = ((Uint8*)ptr - (Uint8*)(header + 1)) / m_pool.m_objectSize;
+	ASSERT(header->m_used[index], "The pointer 0x%08X is being freed from the object pool more than once, this will cause undefined behavior in release builds", (int)ptr);
+
+	header->m_used[index] = false;
+#endif
 
 	// Invoke destructor
 	ptr->~T();
@@ -155,6 +159,9 @@ inline void TypePool<T>::reset()
 		}
 
 		// Now free the page
+#ifndef NDEBUG
+		page->~PageHeader();
+#endif
 		ALIGNED_FREE_DBG(page);
 
 		page = nextPage;

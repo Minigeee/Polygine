@@ -64,6 +64,8 @@ ObjectPool& ObjectPool::operator=(ObjectPool&& other)
 ///////////////////////////////////////////////////////////
 void ObjectPool::setObjectSize(Uint32 size)
 {
+	ASSERT(size >= sizeof(void*), "The size of the object must be at least the size of a pointer");
+
 	if (!m_firstPage)
 		m_objectSize = size;
 }
@@ -72,6 +74,8 @@ void ObjectPool::setObjectSize(Uint32 size)
 ///////////////////////////////////////////////////////////
 void ObjectPool::setPageSize(Uint32 size)
 {
+	ASSERT(size >= 1, "The size of a page must be at least 1");
+
 	if (!m_firstPage)
 		m_pageSize = size;
 }
@@ -128,9 +132,6 @@ Uint32 ObjectPool::getNumPages() const
 ///////////////////////////////////////////////////////////
 void* ObjectPool::alloc()
 {
-	// Make sure valid settings
-	if (m_objectSize < 4 || m_pageSize < 1) return 0;
-
 	// First check if any pages have been allocated yet
 	if (!m_firstPage)
 		m_firstPage = allocPage();
@@ -162,6 +163,12 @@ void* ObjectPool::alloc()
 	header->m_nextFree = *(void**)header->m_nextFree;
 	++header->m_numObjects;
 
+#ifndef NDEBUG
+	// In debug mode, keep track of which slots are being used to prevent double freeing
+	Uint32 index = ((Uint8*)obj - (Uint8*)(header + 1)) / m_objectSize;
+	header->m_used[index] = true;
+#endif
+
 	// Set requested memory to 0 and return
 	memset(obj, 0, m_objectSize);
 	return obj;
@@ -184,12 +191,16 @@ void ObjectPool::free(void* ptr)
 		page = (Uint8*)(header + 1);
 	}
 
-	// If couldn't find the page that contains the pointer, quit
-	if (!header)
-	{
-		LOG_WARNING("Tried to free memory that doesn't belong to the object pool");
-		return;
-	}
+	// Error if the object pool doesn't contain the pointer (this shouldn't be allowed to happen)
+	ASSERT(header, "Tried to free memory that doesn't belong to the object pool");
+
+#ifndef NDEBUG
+	// In debug mode, keep track of which slots are being used to prevent double freeing
+	Uint32 index = ((Uint8*)ptr - (Uint8*)(header + 1)) / m_objectSize;
+	ASSERT(header->m_used[index], "The pointer 0x%08X is being freed from the object pool more than once, this will cause undefined behavior in release builds", (int)ptr);
+
+	header->m_used[index] = false;
+#endif
 
 	// Update free list and number of objects
 	*(void**)ptr = header->m_nextFree;
@@ -207,6 +218,10 @@ void ObjectPool::reset()
 	while (page)
 	{
 		PageHeader* nextPage = (PageHeader*)page->m_nextPage;
+
+#ifndef NDEBUG
+		page->~PageHeader();
+#endif
 		ALIGNED_FREE_DBG(page);
 
 		page = nextPage;
@@ -230,6 +245,10 @@ void* ObjectPool::allocPage()
 	Uint8* page = (Uint8*)(header + 1);
 
 	// Initialize metadata
+#ifndef NDEBUG
+	new(header)PageHeader();
+	header->m_used.resize(m_pageSize);
+#endif
 	header->m_nextPage = 0;
 	header->m_nextFree = page;
 	header->m_numObjects = 0;
