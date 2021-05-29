@@ -3,6 +3,8 @@
 #include <poly/Engine/Components.h>
 #include <poly/Engine/Scene.h>
 
+#include <poly/Graphics/GLCheck.h>
+#include <poly/Graphics/Lighting.h>
 #include <poly/Graphics/RenderSystem.h>
 
 namespace poly
@@ -10,7 +12,7 @@ namespace poly
 
 
 ///////////////////////////////////////////////////////////
-HandleArray<bool> Scene::idArray;
+HandleArray<bool> Scene::s_idArray;
 
 
 ///////////////////////////////////////////////////////////
@@ -33,9 +35,10 @@ E_EntitiesCreated::E_EntitiesCreated(std::vector<Entity>& entities) :
 
 ///////////////////////////////////////////////////////////
 Scene::Scene() :
-	m_handle				(idArray.add(true))
+	m_handle				(s_idArray.add(true))
 {
-
+	// Default extensions
+	getExtension<Lighting>();
 }
 
 
@@ -51,8 +54,12 @@ Scene::~Scene()
 	// Clean up event systems
 	priv::SceneEventsCleanup::cleanup(m_handle.m_index);
 
+	// Clean up extensions
+	for (auto it = m_extensions.begin(); it != m_extensions.end(); ++it)
+		delete it.value();
+
 	// Remove from list to free up id
-	idArray.remove(m_handle);
+	s_idArray.remove(m_handle);
 }
 
 
@@ -103,17 +110,21 @@ void Scene::addRenderSystem(RenderSystem* system)
 
 
 ///////////////////////////////////////////////////////////
-void Scene::render(Camera& camera, FrameBuffer& target)
+void Scene::render(Camera& camera, FrameBuffer& target, RenderPass pass)
 {
+	// Update lighting system
+	if (pass != RenderPass::Shadow)
+		getExtension<Lighting>()->update(camera);
+
 	// Bind framebuffer
 	target.bind();
 
-	// Render state
-	RenderState::Default.apply();
+	// Clear framebuffer
+	glCheck(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
 
 	// Render all render systems
 	for (Uint32 i = 0; i < m_renderSystems.size(); ++i)
-		m_renderSystems[i]->render(camera);
+		m_renderSystems[i]->render(camera, pass);
 }
 
 }

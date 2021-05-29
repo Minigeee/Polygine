@@ -35,7 +35,18 @@ public:
 	~Image();
 
 	///////////////////////////////////////////////////////////
-	/// \brief Load 2D image data from a file
+	/// \brief Load 2D image data from an image file
+	///
+	/// \param fname The file path to load
+	/// \param dtype The data type to store the pixels in
+	///
+	/// \see load
+	///
+	///////////////////////////////////////////////////////////
+	Image(const std::string& fname, GLType dtype = GLType::Uint8);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Load 2D image data from an image file
 	///
 	/// When an image is loaded from a file, memeory is allocated
 	/// and freed automatically by the image class. Supported image

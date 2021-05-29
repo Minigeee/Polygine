@@ -57,18 +57,7 @@ FrameBuffer::FrameBuffer() :
 ///////////////////////////////////////////////////////////
 FrameBuffer::~FrameBuffer()
 {
-	if (m_id)
-		glCheck(glDeleteFramebuffers(1, &m_id));
-
-	if (m_colorIds.size())
-		glCheck(glDeleteRenderbuffers(m_colorIds.size(), &m_colorIds[0]));
-
-	if (m_depthId)
-		glCheck(glDeleteRenderbuffers(1, &m_depthId));
-
-	m_id = 0;
-	m_depthTexture = 0;
-	m_depthId = 0;
+	reset();
 }
 
 
@@ -113,6 +102,10 @@ void FrameBuffer::create(Uint32 w, Uint32 h, Uint32 d, bool multisampled)
 	{
 		glCheck(glGenFramebuffers(1, &m_id));
 
+		bind();
+		glCheck(glDrawBuffer(GL_NONE));
+		glCheck(glReadBuffer(GL_NONE));
+
 		m_size = Vector3u(w, h, d);
 		m_multisampled = multisampled;
 	}
@@ -120,11 +113,34 @@ void FrameBuffer::create(Uint32 w, Uint32 h, Uint32 d, bool multisampled)
 
 
 ///////////////////////////////////////////////////////////
+void FrameBuffer::reset()
+{
+	if (m_id)
+		glCheck(glDeleteFramebuffers(1, &m_id));
+
+	if (m_colorIds.size())
+		glCheck(glDeleteRenderbuffers(m_colorIds.size(), &m_colorIds[0]));
+
+	if (m_depthId)
+		glCheck(glDeleteRenderbuffers(1, &m_depthId));
+
+	m_id = 0;
+	m_depthTexture = 0;
+	m_depthId = 0;
+
+	// Reset color buffers
+	m_colorTextures.clear();
+	m_colorIds.clear();
+}
+
+
+///////////////////////////////////////////////////////////
 void FrameBuffer::attachColor(Texture* texture, PixelFormat fmt, GLType dtype, TextureFilter filter, TextureWrap wrap)
 {
+	if (!m_id) return;
+
 	// Bind the framebuffer
-	if (m_id && currentBound == m_id)
-		bind();
+	bind();
 
 	// Get the color attachment index
 	Uint32 index = m_colorTextures.size() + m_colorIds.size();
@@ -133,7 +149,7 @@ void FrameBuffer::attachColor(Texture* texture, PixelFormat fmt, GLType dtype, T
 	if (texture)
 	{
 		// Create an empty texture
-		texture->create(0, fmt, m_size.x, m_size.y, m_size.z, dtype, filter, wrap, m_multisampled);
+		texture->create(0, fmt, m_size.x, m_size.y, m_size.z, dtype, filter, wrap, false, m_multisampled);
 
 		// Attach to color attachment target using correct number of dimensions
 		if (m_size.z == 0)
@@ -166,22 +182,23 @@ void FrameBuffer::attachColor(Texture* texture, PixelFormat fmt, GLType dtype, T
 	}
 
 	// Specify color attachments to draw
-	glDrawBuffers(m_colorTextures.size() + m_colorIds.size(), priv::drawBuffers);
+	glCheck(glDrawBuffers(m_colorTextures.size() + m_colorIds.size(), priv::drawBuffers));
 }
 
 
 ///////////////////////////////////////////////////////////
 void FrameBuffer::attachDepth(Texture* texture, GLType dtype, TextureFilter filter, TextureWrap wrap)
 {
+	if (!m_id) return;
+
 	// Bind the framebuffer
-	if (m_id && currentBound == m_id)
-		bind();
+	bind();
 
 	// Decide to use texture or renderbuffer attachment
 	if (texture)
 	{
 		// Create an empty texture
-		texture->create(0, PixelFormat::Depth, m_size.x, m_size.y, m_size.z, dtype, filter, wrap, m_multisampled);
+		texture->create(0, PixelFormat::Depth, m_size.x, m_size.y, m_size.z, dtype, filter, wrap, false, m_multisampled);
 
 		// Attach to depth attachment target using correct number of dimensions
 		if (m_size.z == 0)
@@ -224,6 +241,7 @@ void FrameBuffer::blitTo(FrameBuffer& target)
 	// Bind the framebuffers
 	glCheck(glBindFramebuffer(GL_READ_FRAMEBUFFER, m_id));
 	glCheck(glBindFramebuffer(GL_DRAW_FRAMEBUFFER, target.m_id));
+	currentBound = target.m_id;
 
 	// Get buffer bits
 	Uint32 flags = 0;
@@ -234,6 +252,17 @@ void FrameBuffer::blitTo(FrameBuffer& target)
 
 	// Blit the framebuffer
 	glCheck(glBlitFramebuffer(0, 0, m_size.x, m_size.y, 0, 0, target.m_size.x, target.m_size.y, flags, GL_NEAREST));
+}
+
+
+///////////////////////////////////////////////////////////
+void FrameBuffer::readPixels(void* buffer, Uint32 x, Uint32 y, Uint32 w, Uint32 h, PixelFormat fmt, GLType dtype)
+{
+	// Bind the framebuffer
+	bind();
+
+	// Read pixels
+	glCheck(glReadPixels(x, y, w, h, (GLenum)fmt, (GLenum)dtype, buffer));
 }
 
 

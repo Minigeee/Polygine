@@ -6,7 +6,7 @@ namespace poly
 
 
 ///////////////////////////////////////////////////////////
-Uint32 VertexBuffer::currentBound[4] = { 0, 0, 0, 0 };
+Uint32 VertexBuffer::s_currentBound[4] = { 0, 0, 0, 0 };
 
 
 ///////////////////////////////////////////////////////////
@@ -25,6 +25,41 @@ GLenum targetToGLEnum(BufferTarget target)
 	default:
 		return 0;
 	}
+}
+
+
+///////////////////////////////////////////////////////////
+MapBufferFlags operator&(MapBufferFlags a, MapBufferFlags b)
+{
+	return (MapBufferFlags)((Uint32)a & (Uint32)b);
+}
+
+
+///////////////////////////////////////////////////////////
+MapBufferFlags operator|(MapBufferFlags a, MapBufferFlags b)
+{
+	return (MapBufferFlags)((Uint32)a | (Uint32)b);
+}
+
+
+///////////////////////////////////////////////////////////
+MapBufferFlags operator~(MapBufferFlags a)
+{
+	return (MapBufferFlags)(~(Uint32)a);
+}
+
+
+///////////////////////////////////////////////////////////
+MapBufferFlags& operator&=(MapBufferFlags& a, MapBufferFlags b)
+{
+	return a = a & b;
+}
+
+
+///////////////////////////////////////////////////////////
+MapBufferFlags& operator|=(MapBufferFlags& a, MapBufferFlags b)
+{
+	return a = a | b;
 }
 
 
@@ -66,24 +101,24 @@ void VertexBuffer::bind(BufferTarget target)
 		glCheck(glGenBuffers(1, &m_id));
 
 	// Only bind if id exists and is not already bound to the target
-	if (currentBound[(Uint32)target] != m_id)
+	if (s_currentBound[(Uint32)target] != m_id)
 	{
 		// Unbind previous
-		if (currentBound[(Uint32)m_target] == m_id)
-			currentBound[(Uint32)m_target] = 0;
+		if (s_currentBound[(Uint32)m_target] == m_id)
+			s_currentBound[(Uint32)m_target] = 0;
 
 		// Bind buffer
 		glCheck(glBindBuffer(targetToGLEnum(target), m_id));
 
 		// Update the current bound buffer
 		m_target = target;
-		currentBound[(Uint32)m_target] = m_id;
+		s_currentBound[(Uint32)m_target] = m_id;
 	}
 }
 
 
 ///////////////////////////////////////////////////////////
-void VertexBuffer::bind(BufferTarget target, Uint32 index)
+void VertexBuffer::bind(BufferTarget target, Uint32 index, Uint32 offset, Uint32 size)
 {
 	// Create a buffer if needed
 	if (!m_id)
@@ -92,19 +127,33 @@ void VertexBuffer::bind(BufferTarget target, Uint32 index)
 	// Only certain targets work with bindBufferBase
 	bool targetValid = target == BufferTarget::TransformFeedback || target == BufferTarget::Uniform;
 
-	// Only bind if id exists and is not already bound to the target
-	if (m_id && targetValid && currentBound[(Uint32)target] != m_id)
+	// Only bind if id exists
+	if (m_id && targetValid)
 	{
 		// Unbind previous
-		if (currentBound[(Uint32)m_target] == m_id)
-			currentBound[(Uint32)m_target] = 0;
+		if (s_currentBound[(Uint32)m_target] == m_id)
+			s_currentBound[(Uint32)m_target] = 0;
 
 		// Bind buffer
-		glCheck(glBindBufferBase(targetToGLEnum(target), index, m_id));
+		if (offset == 0 && size == 0)
+			glCheck(glBindBufferBase(targetToGLEnum(target), index, m_id));
+		else
+			glCheck(glBindBufferRange(targetToGLEnum(target), index, m_id, offset, size));
 
 		// Update the current bound buffer
 		m_target = target;
-		currentBound[(Uint32)m_target] = m_id;
+		s_currentBound[(Uint32)m_target] = m_id;
+	}
+}
+
+
+///////////////////////////////////////////////////////////
+void VertexBuffer::unbind()
+{
+	if (s_currentBound[(Uint32)m_target] == m_id)
+	{
+		glCheck(glBindBuffer(targetToGLEnum(m_target), 0));
+		s_currentBound[(Uint32)m_target] = 0;
 	}
 }
 
@@ -122,7 +171,6 @@ void VertexBuffer::update(const VertexBuffer& buffer, Uint32 offset)
 		}
 
 		// Bind buffers
-		glCheck(glBindBuffer(GL_COPY_READ_BUFFER, buffer.m_id));
 		glCheck(glBindBuffer(GL_COPY_WRITE_BUFFER, m_id));
 
 		// Buffer data
@@ -158,14 +206,14 @@ void VertexBuffer::bufferSubData(const void* data, Uint32 size, Uint32 offset)
 
 
 ///////////////////////////////////////////////////////////
-void* VertexBuffer::map(Uint32 offset, Uint32 size, int flags)
+void* VertexBuffer::map(Uint32 offset, Uint32 size, MapBufferFlags flags)
 {
 	// Ensure buffer is bound
 	bind();
 
 	// Map data
 	void* map = 0;
-	glCheck(map = glMapBufferRange(targetToGLEnum(m_target), offset, size, flags));
+	glCheck(map = glMapBufferRange(targetToGLEnum(m_target), offset, size, (GLbitfield)flags));
 
 	return map;
 }

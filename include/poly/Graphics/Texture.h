@@ -54,6 +54,18 @@ public:
 	Texture();
 
 	///////////////////////////////////////////////////////////
+	/// \brief Create the texture by loading data from an image file
+	///
+	/// \param fname The relative path to the image file
+	/// \param dtype The data type to use when loading the image
+	/// \param mipmap Determines if mipmaps should be generated for the texture
+	///
+	/// \see load
+	///
+	///////////////////////////////////////////////////////////
+	Texture(const std::string& fname, GLType dtype = GLType::Uint8, bool mipmap = false);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Destructor
 	///
 	/// This will destroy the internal texture object, if it exists
@@ -70,6 +82,26 @@ public:
 	void bind(Uint32 slot = 0);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Load a texture from an image file
+	///
+	/// This creates a temporary image object and loads the file
+	/// using Image::load(). The function returns \a true if the image
+	/// was successfully loaded, and \a false if an error occured.
+	/// As with the create() functions, it is possible to generate
+	/// mipmaps for the texture.
+	///
+	/// \see Image::load
+	///
+	/// \param fname The relative path to the image file
+	/// \param dtype The data type to use when loading the image
+	/// \param mipmap Determines if mipmaps should be generated for the texture
+	///
+	/// \return True if the file was successfully loaded
+	///
+	///////////////////////////////////////////////////////////
+	bool load(const std::string& fname, GLType dtype = GLType::Uint8, bool mipmap = false);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Create a new texture from pixel data
 	///
 	/// This will create a new 1D, 2D, or 3D texture, depending on
@@ -77,6 +109,8 @@ public:
 	/// is created and it is given the specified sampling parameters,
 	/// pixel format, and data type. If the pointer to the pixel data
 	/// is NULL, then an empty texture will be created.
+	///
+	/// To generate mipmaps, set the \a mipmap parameter to true.
 	///
 	/// \param data A pointer to the pixel data to create the texture with
 	/// \param fmt The pixel format to use
@@ -86,6 +120,7 @@ public:
 	/// \param dtype The texture data type
 	/// \param filter The sampling filter type for choosing a pixel when in between pixels
 	/// \param wrap The sampling wrap type for when sampling outside the texture bounds
+	/// \param mipmap Determines if mipmaps should be generated for the texture
 	/// \param multisampled Set to true to create a multisampled texture (only works for 2D)
 	///
 	///////////////////////////////////////////////////////////
@@ -98,6 +133,7 @@ public:
 		GLType dtype = GLType::Uint8,
 		TextureFilter filter = TextureFilter::Linear,
 		TextureWrap wrap = TextureWrap::ClampToEdge,
+		bool mipmap = false,
 		bool multisampled = false
 	);
 
@@ -111,12 +147,14 @@ public:
 	/// \param image An image containing pixel data to create the texture
 	/// \param filter The sampling filter type for choosing a pixel when in between pixels
 	/// \param wrap The sampling wrap type for when sampling outside the texture bounds
+	/// \param mipmap Determines if mipmaps should be generated for the texture
 	///
 	///////////////////////////////////////////////////////////
 	void create(
 		const Image& image,
 		TextureFilter filter = TextureFilter::Linear,
-		TextureWrap wrap = TextureWrap::ClampToEdge
+		TextureWrap wrap = TextureWrap::ClampToEdge,
+		bool mipmap = false
 	);
 
 	///////////////////////////////////////////////////////////

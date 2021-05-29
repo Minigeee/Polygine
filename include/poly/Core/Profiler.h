@@ -51,6 +51,17 @@ struct ProfilerData
 	///////////////////////////////////////////////////////////
 	Time stdDev() const;
 
+	///////////////////////////////////////////////////////////
+	/// \brief Get the list of time interval averages
+	///
+	/// The time intervals recorded by the profiler are averaged
+	/// to save a little memory space.
+	///
+	/// \return The list of time interval averages
+	///
+	///////////////////////////////////////////////////////////
+	const std::vector<Time>& getAverages() const;
+
 	std::string m_label;			//!< The label of the profiler marker this data was retrieved from
 	std::string m_func;				//!< The function name that the profiler marker was activated from
 	std::vector<Time> m_interval;	//!< The current interval, used to calculate the interval average. It contains the latest 10 iterations the profiler marker has recorded.

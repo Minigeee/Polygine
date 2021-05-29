@@ -1,6 +1,8 @@
 #ifndef POLY_INPUT_H
 #define POLY_INPUT_H
 
+#include <poly/Core/DataTypes.h>
+
 namespace poly
 {
 
@@ -157,14 +159,6 @@ enum class InputAction
 };
 
 
-enum class CursorMode
-{
-	Normal		= 0x00034001,
-	Hidden		= 0x00034002,
-	Disabled	= 0x00034003
-};
-
-///////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////
 /// \brief Keyboard event
@@ -192,6 +186,7 @@ struct E_KeyEvent
 	InputAction m_action;	//!< The action the occured (pressed/released/held)
 };
 
+
 ///////////////////////////////////////////////////////////
 /// \brief Mouse button event
 /// \ingroup Events
@@ -217,6 +212,7 @@ struct E_MouseButton
 	Mouse m_button;			//!< The mouse button that was pressed/released
 	InputAction m_action;	//!< The action the occured pressed/released
 };
+
 
 ///////////////////////////////////////////////////////////
 /// \brief Mouse move event
@@ -244,6 +240,7 @@ struct E_MouseMove
 	float m_y;	//!< The y-coordinate of the mouse relative to the top-left of the window
 };
 
+
 ///////////////////////////////////////////////////////////
 /// \brief Mouse scroll event
 /// \ingroup Events
@@ -270,7 +267,30 @@ struct E_MouseScroll
 	float m_dy;	//!< The amount scrolled on the y-axis
 };
 
+
 ///////////////////////////////////////////////////////////
+/// \brief A character input event
+/// \ingroup Events
+///
+///////////////////////////////////////////////////////////
+struct E_TextInput
+{
+	///////////////////////////////////////////////////////////
+	/// \brief Default constructor
+	///
+	///////////////////////////////////////////////////////////
+	E_TextInput() = default;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Construct the event from a UTF8 character code
+	///
+	/// \param c The UTF8 character code
+	///
+	///////////////////////////////////////////////////////////
+	E_TextInput(Uint32 c);
+
+	Uint32 m_char; //!< The UTF8 character code
+};
 
 }
 

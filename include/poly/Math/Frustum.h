@@ -55,6 +55,25 @@ public:
 	void setPlane(const Plane& plane, Side side);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Get the value of the specified plane
+	///
+	/// The 6 possible planes to retrieve are:
+	///
+	/// \li Left
+	/// \li Right
+	/// \li Bottom
+	/// \li Top
+	/// \li Near
+	/// \li Far
+	///
+	/// \param side The side to change
+	///
+	/// \return A plane in the frustum
+	///
+	///////////////////////////////////////////////////////////
+	const Plane& getPlane(Side side) const;
+
+	///////////////////////////////////////////////////////////
 	/// \brief Check if a bounding box intersects or is inside the frustum
 	///
 	/// \param box The bounding box to test
@@ -75,7 +94,7 @@ public:
 	bool contains(const Sphere& sphere) const;
 
 private:
-	Plane mPlanes[6]; //!< The planes array
+	Plane m_planes[6]; //!< The planes array
 };
 
 }

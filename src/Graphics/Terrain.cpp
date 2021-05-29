@@ -1,9 +1,12 @@
+#include <poly/Core/Allocate.h>
 #include <poly/Core/Profiler.h>
 
 #include <poly/Engine/Scene.h>
 
 #include <poly/Graphics/Components.h>
 #include <poly/Graphics/GLCheck.h>
+#include <poly/Graphics/Lighting.h>
+#include <poly/Graphics/Shadows.h>
 #include <poly/Graphics/Terrain.h>
 
 #include <poly/Math/Transform.h>
@@ -78,11 +81,13 @@ Terrain::Terrain() :
 	m_tileScale				(0.0f),
 	m_lodScale				(0.0f),
 	m_maxDist				(0.0f),
+	m_useFlatShading		(true),
 	m_normalMapData			(0),
 	m_instanceBufferOffset	(0),
-	m_ambientColor			(0.02f)
+	m_ambientColor			(0.02f),
+	m_isUniformDirty		(true)
 {
-
+	m_uniformBuffer.create(sizeof(UniformBlock_Terrain), BufferUsage::Static);
 }
 
 
@@ -90,7 +95,9 @@ Terrain::Terrain() :
 Terrain::~Terrain()
 {
 	if (m_normalMapData)
-		free(m_normalMapData);
+		FREE_DBG(m_normalMapData);
+
+	m_normalMapData = 0;
 }
 
 
@@ -423,8 +430,10 @@ void Terrain::createTileLayout()
 
 
 ///////////////////////////////////////////////////////////
-void Terrain::render(Camera& camera)
+void Terrain::render(Camera& camera, RenderPass pass)
 {
+	// The terrain should be rendered regardless of render pass
+
 	ASSERT(m_scene, "The terrain must be initialized before using, by calling the init() function");
 
 	START_PROFILING_FUNC;
@@ -488,12 +497,12 @@ void Terrain::render(Camera& camera)
 
 	// Stream instance data
 	Uint32 size = (normalTiles.size() + edgeTiles.size()) * sizeof(InstanceData);
-	int flags = (int)MapBufferFlags::Write | (int)MapBufferFlags::Unsynchronized;
+	MapBufferFlags flags = MapBufferFlags::Write | MapBufferFlags::Unsynchronized;
 
 	// Choose different flags based on how much space is left
 	if (m_instanceBufferOffset + size > m_instanceBuffer.getSize())
 	{
-		flags |= (int)MapBufferFlags::InvalidateBuffer;
+		flags |= MapBufferFlags::InvalidateBuffer;
 		m_instanceBufferOffset = 0;
 	}
 
@@ -524,47 +533,56 @@ void Terrain::render(Camera& camera)
 	m_instanceBuffer.unmap();
 
 
+	// Update uniform buffer
+	if (m_isUniformDirty)
+	{
+		UniformBlock_Terrain block;
+		block.m_clipPlanes[0] = Vector4f(-1.0f, 0.0f, 0.0f, m_size * 0.5f);
+		block.m_clipPlanes[1] = Vector4f(1.0f, 0.0f, 0.0f, m_size * 0.5f);
+		block.m_clipPlanes[2] = Vector4f(0.0f, 0.0f, -1.0f, m_size * 0.5f);
+		block.m_clipPlanes[3] = Vector4f(0.0f, 0.0f, 1.0f, m_size * 0.5f);
+
+		block.m_size = m_size;
+		block.m_height = m_height;
+		block.m_tileScale = m_tileScale;
+		block.m_blendLodDist = m_lodDists[m_lodDists.size() - 2];
+		block.m_useFlatShading = m_useFlatShading;
+
+		// Push data
+		m_uniformBuffer.pushData(block);
+
+		m_isUniformDirty = false;
+	}
+
+
 	// Bind shader and set uniforms
 	Shader& shader = getShader();
-
 	shader.bind();
-	shader.setUniform("u_projView", camera.getProjMatrix() * camera.getViewMatrix());
-	shader.setUniform("u_cameraPos", camera.getPosition());
-	shader.setUniform("u_ambient", m_ambientColor);
 
-	// Set the clip planes
-	shader.setUniform("u_clipPlanes[0]", Vector4f(-1.0f, 0.0f, 0.0f, m_size * 0.5f));
-	shader.setUniform("u_clipPlanes[1]", Vector4f(1.0f, 0.0f, 0.0f, m_size * 0.5f));
-	shader.setUniform("u_clipPlanes[2]", Vector4f(0.0f, 0.0f, -1.0f, m_size * 0.5f));
-	shader.setUniform("u_clipPlanes[3]", Vector4f(0.0f, 0.0f, 1.0f, m_size * 0.5f));
+	// Terrain
+	shader.bindUniformBlock("Terrain", m_uniformBuffer);
 
-	// Apply directional lights
-	int i = 0;
-	m_scene->system<DirLightComponent>(
-		[&](const Entity::Id id, DirLightComponent& light)
-		{
-			std::string prefix = "u_dirLights[" + std::to_string(i++) + "].";
+	// Camera
+	camera.apply(&shader);
 
-			shader.setUniform(prefix + "diffuse", light.m_diffuse);
-			shader.setUniform(prefix + "specular", light.m_specular);
-			shader.setUniform(prefix + "direction", normalize(light.m_direction));
-		}
-	);
-	shader.setUniform("u_numDirLights", i);
+	// Lighting
+	m_scene->getExtension<Lighting>()->apply(&shader);
+	m_scene->getExtension<Shadows>()->apply(&shader);
 
 	// Terrain maps
-	shader.setUniform("u_heightMap", 0);
-	shader.setUniform("u_normalMap", 1);
-	shader.setUniform("u_colorMap", 2);
-	m_heightMap.bind(0);
-	m_normalMap.bind(1);
-	m_colorMap.bind(2);
+	if (m_heightMap.getId())
+		shader.setUniform("u_heightMap", m_heightMap);
+	if (m_normalMap.getId())
+		shader.setUniform("u_normalMap", m_normalMap);
+	if (m_colorMap.getId())
+		shader.setUniform("u_colorMap", m_colorMap);
 
-	// Terrain parameters
-	shader.setUniform("u_size", m_size);
-	shader.setUniform("u_height", m_height);
-	shader.setUniform("u_tileScale", m_tileScale);
-	shader.setUniform("u_blendLodDist", m_lodDists[m_lodDists.size() - 2]);
+	// Enable depth testing
+	glCheck(glEnable(GL_DEPTH_TEST));
+
+	// Single side render
+	glCheck(glEnable(GL_CULL_FACE));
+	glCheck(glCullFace(pass == RenderPass::Shadow ? GL_FRONT : GL_BACK));
 
 	// Enable clip planes
 	for (Uint32 i = 0; i < 4; ++i)
@@ -609,6 +627,7 @@ void Terrain::setSize(float size)
 
 	// Update normal map
 	updateNormalMap(scale);
+	m_isUniformDirty = true;
 }
 
 
@@ -624,6 +643,7 @@ void Terrain::setHeight(float height)
 
 	// Update normal map
 	updateNormalMap(scale);
+	m_isUniformDirty = true;
 }
 
 
@@ -634,6 +654,7 @@ void Terrain::setTileScale(float scale)
 
 	// Update tile layout
 	createTileLayout();
+	m_isUniformDirty = true;
 }
 
 
@@ -644,6 +665,7 @@ void Terrain::setLodScale(float scale)
 
 	// Update tile layout
 	createTileLayout();
+	m_isUniformDirty = true;
 }
 
 
@@ -654,6 +676,14 @@ void Terrain::setMaxDist(float dist)
 
 	// Update tile layout
 	createTileLayout();
+}
+
+
+///////////////////////////////////////////////////////////
+void Terrain::setUseFlatShading(bool use)
+{
+	m_useFlatShading = use;
+	m_isUniformDirty = true;
 }
 
 
@@ -669,30 +699,39 @@ void Terrain::setHeightMap(const Image& map)
 	// Iterate through data and generate normals
 	Vector2u size = Vector2u(map.getWidth(), map.getHeight());
 	if (!m_normalMapData)
-	m_normalMapData = (Vector3f*)malloc(size.x * size.y * sizeof(Vector3f));
+	m_normalMapData = (Vector3f*)MALLOC_DBG(size.x * size.y * sizeof(Vector3f));
 
-	Vector2f sizeFactor = m_size / Vector2f(size);
+	// Calculate normals
+	calcNormals(map, Vector2u(0), size);
 
-	for (Uint32 r = 0, i = 0; r < size.y; ++r)
+	// Upload normal data
+	m_normalMap.create(m_normalMapData, PixelFormat::Rgb, size.x, size.y, 0, GLType::Float);
+}
+
+
+///////////////////////////////////////////////////////////
+void Terrain::calcNormals(const Image& hmap, const Vector2i& pos, const Vector2u& size)
+{
+	Vector2u mapSize = Vector2u(hmap.getWidth(), hmap.getHeight());
+	Vector2f sizeFactor = m_size / Vector2f(mapSize);
+
+	for (Uint32 r = pos.y; r < mapSize.y && r < pos.y + size.y; ++r)
 	{
-		for (Uint32 c = 0; c < size.x; ++c, ++i)
+		for (Uint32 c = pos.x; c < mapSize.x && c < pos.x + size.x; ++c)
 		{
 			// Calculate normal
-			float h01 = *(float*)map.getPixel(r, c - (c == 0 ? 0 : 1)) * m_height;
-			float h21 = *(float*)map.getPixel(r, c + (c == size.x - 1 ? 0 : 1)) * m_height;
-			float h10 = *(float*)map.getPixel(r + (r == size.y - 1 ? 0 : 1), c) * m_height;
-			float h12 = *(float*)map.getPixel(r - (r == 0 ? 0 : 1), c) * m_height;
+			float h01 = *(float*)hmap.getPixel(r, c - (c == 0 ? 0 : 1)) * m_height;
+			float h21 = *(float*)hmap.getPixel(r, c + (c == mapSize.x - 1 ? 0 : 1)) * m_height;
+			float h10 = *(float*)hmap.getPixel(r + (r == mapSize.y - 1 ? 0 : 1), c) * m_height;
+			float h12 = *(float*)hmap.getPixel(r - (r == 0 ? 0 : 1), c) * m_height;
 
 			Vector3f v1(sizeFactor.x, h21 - h01, 0.0f);
 			Vector3f v2(0.0f, h12 - h10, -sizeFactor.y);
 			Vector3f normal = normalize(cross(v1, v2));
 
-			m_normalMapData[i] = normal;
+			m_normalMapData[r * hmap.getWidth() + c] = normal;
 		}
 	}
-
-	// Upload normal data
-	m_normalMap.create(m_normalMapData, PixelFormat::Rgb, size.x, size.y, 0, GLType::Float);
 }
 
 
@@ -726,6 +765,76 @@ void Terrain::setColorMap(const Image& map)
 void Terrain::setAmbientColor(const Vector3f& color)
 {
 	m_ambientColor = color;
+}
+
+
+///////////////////////////////////////////////////////////
+void Terrain::updateHeightMap(const Image& map, const Vector2i& pos, const Vector2u& size)
+{
+	// Get rectangle size
+	Vector2u rectSize = Vector2u(size.x ? size.x : map.getWidth(), size.y ? size.y : map.getHeight());
+
+	{
+		// Copy data to a separate buffer
+		float* data = (float*)MALLOC_DBG(rectSize.x * rectSize.y * sizeof(float));
+		for (Uint32 r = 0; r < rectSize.y; ++r)
+		{
+			float* src = (float*)map.getData();
+			src += (pos.y + r) * map.getWidth() + pos.x;
+			memcpy(data + r * rectSize.x, src, rectSize.x * sizeof(float));
+		}
+
+		// Push data
+		m_heightMap.update(data, pos, rectSize);
+		FREE_DBG(data);
+	}
+
+	{
+		Vector2i rectPos = pos - 1;
+		if (rectPos.x < 0)
+			rectPos.x = 0;
+		if (rectPos.y < 0)
+			rectPos.y = 0;
+		rectSize += 2u;
+
+		// Update normals
+		calcNormals(map, rectPos, rectSize);
+
+		// Copy data to a separate buffer
+		Vector3f* data = (Vector3f*)MALLOC_DBG(rectSize.x * rectSize.y * sizeof(Vector3f));
+		for (Uint32 r = 0; r < rectSize.y; ++r)
+		{
+			Vector3f* src = m_normalMapData;
+			src += (rectPos.y + r) * map.getWidth() + rectPos.x;
+			memcpy(data + r * rectSize.x, src, rectSize.x * sizeof(Vector3f));
+		}
+
+		// Push data
+		m_normalMap.update(data, rectPos, rectSize);
+		FREE_DBG(data);
+	}
+
+}
+
+
+///////////////////////////////////////////////////////////
+void Terrain::updateColorMap(const Image& map, const Vector2i& pos, const Vector2u& size)
+{
+	// Get rectangle size
+	Vector2u rectSize = Vector2u(size.x ? size.x : map.getWidth(), size.y ? size.y : map.getHeight());
+
+	// Copy data to a separate buffer
+	Vector3<Uint8>* data = (Vector3<Uint8>*)MALLOC_DBG(rectSize.x * rectSize.y * 3);
+	for (Uint32 r = 0; r < rectSize.y; ++r)
+	{
+		Vector3<Uint8>* src = (Vector3<Uint8>*)map.getData();
+		src += (pos.y + r) * map.getWidth() + pos.x;
+		memcpy(data + r * rectSize.x, src, rectSize.x * sizeof(Vector3<Uint8>));
+	}
+
+	// Push data
+	m_colorMap.update(data, pos, rectSize);
+	FREE_DBG(data);
 }
 
 
@@ -765,21 +874,28 @@ float Terrain::getMaxDist() const
 
 
 ///////////////////////////////////////////////////////////
-const Texture& Terrain::getHeightMap() const
+bool Terrain::usesFlatShading() const
+{
+	return m_useFlatShading;
+}
+
+
+///////////////////////////////////////////////////////////
+Texture& Terrain::getHeightMap()
 {
 	return m_heightMap;
 }
 
 
 ///////////////////////////////////////////////////////////
-const Texture& Terrain::getColorMap() const
+Texture& Terrain::getColorMap()
 {
 	return m_colorMap;
 }
 
 
 ///////////////////////////////////////////////////////////
-const Texture& Terrain::getNormalMap() const
+Texture& Terrain::getNormalMap()
 {
 	return m_normalMap;
 }

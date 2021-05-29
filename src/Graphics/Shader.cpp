@@ -5,6 +5,109 @@
 namespace poly
 {
 
+namespace priv
+{
+
+
+///////////////////////////////////////////////////////////
+std::string readShaderFile(const std::string& fname, HashSet<std::string>& loadedFiles)
+{
+	// Return if the file has already been loaded
+	if (loadedFiles.contains(fname)) return "";
+
+	// Open file
+	std::ifstream f(fname);
+	if (!f.is_open())
+	{
+		LOG_ERROR("Could not open shader file: %s", fname.c_str());
+		return "";
+	}
+
+	// Read shader code
+	std::string code;
+
+	f.seekg(0, std::ios::end);
+	code.reserve((Uint32)f.tellg());
+	f.seekg(0, std::ios::beg);
+
+	code.assign(std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>());
+
+	// Close file
+	f.close();
+
+	// Add the file to the set of loaded files
+	loadedFiles.insert(fname);
+
+
+	// Process string
+	const std::string verKeyword = "#version";
+	const std::string inclKeyword = "#include";
+
+	for (Uint32 i = 0; i < code.size() - inclKeyword.size(); ++i)
+	{
+		// Only handle lines with '#'
+		if (code[i] != '#') continue;
+
+		// Version
+		if (i > 0 && loadedFiles.size() > 0 && code.substr(i, verKeyword.size()) == verKeyword)
+		{
+			// Remove the line
+			Uint32 keywordEnd = i;
+			for (; keywordEnd < code.size(); ++keywordEnd)
+			{
+				if (code[keywordEnd] == '\n')
+					break;
+			}
+
+			code = code.substr(0, i) + code.substr(keywordEnd + 1);
+		}
+
+		// Includes
+		else if (code.substr(i, inclKeyword.size()) == inclKeyword)
+		{
+			Uint32 fnameStart = i + inclKeyword.size() + 2;
+			Uint32 fnameEnd = fnameStart;
+			for (; fnameEnd < code.size(); ++fnameEnd)
+			{
+				if (code[fnameEnd] == '"')
+					break;
+			}
+
+			std::string inclFname = code.substr(fnameStart, fnameEnd - fnameStart);
+			std::string dirPath = fname.substr(0, fname.find_last_of("/\\"));
+			if (dirPath.size() == fname.size())
+				dirPath = "";
+
+			// Get absolute path (relative to working directory) of new file
+			Uint32 pathSeparatorPos = (Uint32)inclFname.find_first_of("/\\");
+			while (pathSeparatorPos != std::string::npos)
+			{
+				std::string dir = inclFname.substr(0, pathSeparatorPos);
+				inclFname = inclFname.substr(pathSeparatorPos + 1);
+
+				if (dir == "..")
+				{
+					Uint32 index = (Uint32)dirPath.find_last_of("/\\");
+					dirPath = (index == std::string::npos ? "" : dirPath.substr(0, index));
+				}
+				else
+					dirPath += '/' + dir;
+
+				pathSeparatorPos = (Uint32)inclFname.find_first_of("/\\");
+			}
+			inclFname = dirPath + '/' + inclFname;
+
+			// Concatenate include data
+			code = code.substr(0, i) + '\n' + readShaderFile(inclFname, loadedFiles) + '\n' + code.substr(fnameEnd + 1);
+		}
+	}
+
+	return code;
+}
+
+
+}
+
 
 ///////////////////////////////////////////////////////////
 Uint32 Shader::currentBound = 0;
@@ -25,6 +128,39 @@ Shader::Shader() :
 	m_id		(0)
 {
 
+}
+
+
+///////////////////////////////////////////////////////////
+Shader::Shader(const std::string& vert) :
+	m_id		(0)
+{
+	if (!load(vert, Vertex)) return;
+
+	compile();
+}
+
+
+///////////////////////////////////////////////////////////
+Shader::Shader(const std::string& vert, const std::string& frag) :
+	m_id		(0)
+{
+	if (!load(vert, Vertex)) return;
+	if (!load(frag, Fragment)) return;
+
+	compile();
+}
+
+
+///////////////////////////////////////////////////////////
+Shader::Shader(const std::string& vert, const std::string& geom, const std::string& frag) :
+	m_id		(0)
+{
+	if (!load(vert, Vertex)) return;
+	if (!load(geom, Geometry)) return;
+	if (!load(frag, Fragment)) return;
+
+	compile();
 }
 
 
@@ -67,25 +203,10 @@ bool Shader::load(const std::string& fname, Shader::Type type)
 		}
 	}
 
-	// Open file
-	std::ifstream f(fname);
-	if (!f.is_open())
-	{
-		LOG_ERROR("Could not open shader file: %s", fname.c_str());
-		return false;
-	}
+	// Load file (with includes)
+	HashSet<std::string> loadedFiles;
+	std::string code = priv::readShaderFile(fname, loadedFiles);
 
-	// Read shader code
-	std::string code;
-
-	f.seekg(0, std::ios::end);
-	code.reserve((Uint32)f.tellg());
-	f.seekg(0, std::ios::beg);
-
-	code.assign(std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>());
-
-	// Close file
-	f.close();
 
 	// Create shader
 	Uint32 shader = 0;
@@ -154,14 +275,14 @@ bool Shader::compile(const std::vector<const char*>& feedback)
 
 
 ///////////////////////////////////////////////////////////
-int Shader::getUniformLocation(const std::string& name)
+Shader::UniformData& Shader::getUniformData(const std::string& name)
 {
 	// First check if the uniform has been found
 	auto it = m_uniforms.find(name);
 
 	if (it != m_uniforms.end())
 		// Return the location
-		return it->second;
+		return it.value();
 
 	else
 	{
@@ -174,7 +295,38 @@ int Shader::getUniformLocation(const std::string& name)
 			LOG_WARNING("Could not find shader uniform: %s", name.c_str());
 
 		// Add it to the map
-		return (m_uniforms[name] = location);
+		UniformData data;
+		data.m_location = location;
+
+		return (m_uniforms[name] = data);
+	}
+}
+
+
+///////////////////////////////////////////////////////////
+Uint32 Shader::getUniformBlockIndex(const std::string& name)
+{
+	// First check if the uniform has been found
+	auto it = m_uniformBlocks.find(name);
+
+	if (it != m_uniformBlocks.end())
+		// Return the location
+		return it->second;
+
+	else
+	{
+		// Find the location
+		Uint32 location = GL_INVALID_INDEX, index = GL_INVALID_INDEX;
+		glCheck(location = glGetUniformBlockIndex(m_id, name.c_str()));
+
+		// Check if it was found
+		if (location == GL_INVALID_INDEX)
+			LOG_WARNING("Could not find shader uniform block: %s", name.c_str());
+		else
+			glCheck(glUniformBlockBinding(m_id, location, index = m_uniformBlocks.size()));
+
+		// Add it to the map
+		return (m_uniformBlocks[name] = index);
 	}
 }
 
@@ -182,72 +334,96 @@ int Shader::getUniformLocation(const std::string& name)
 ///////////////////////////////////////////////////////////
 void Shader::setUniform(const std::string& name, int value)
 {
-	int location = getUniformLocation(name);
-	if (location != -1)
-		glCheck(glUniform1iv(location, 1, &value));
+	UniformData& data = getUniformData(name);
+	if (data.m_location != -1 && *(int*)data.m_data != value)
+	{
+		glCheck(glUniform1iv(data.m_location, 1, &value));
+		*(int*)data.m_data = value;
+	}
 }
 
 
 ///////////////////////////////////////////////////////////
 void Shader::setUniform(const std::string& name, float value)
 {
-	int location = getUniformLocation(name);
-	if (location != -1)
-		glCheck(glUniform1fv(location, 1, &value));
+	UniformData& data = getUniformData(name);
+	if (data.m_location != -1 && *(float*)data.m_data != value)
+	{
+		glCheck(glUniform1fv(data.m_location, 1, &value));
+		*(float*)data.m_data = value;
+	}
 }
 
 
 ///////////////////////////////////////////////////////////
 void Shader::setUniform(const std::string& name, const Vector2f& value)
 {
-	int location = getUniformLocation(name);
-	if (location != -1)
-		glCheck(glUniform2fv(location, 1, &value.x));
+	UniformData& data = getUniformData(name);
+	if (data.m_location != -1 && *(Vector2f*)data.m_data != value)
+	{
+		glCheck(glUniform2fv(data.m_location, 1, &value.x));
+		*(Vector2f*)data.m_data = value;
+	}
 }
 
 
 ///////////////////////////////////////////////////////////
 void Shader::setUniform(const std::string& name, const Vector3f& value)
 {
-	int location = getUniformLocation(name);
-	if (location != -1)
-		glCheck(glUniform3fv(location, 1, &value.x));
+	UniformData& data = getUniformData(name);
+	if (data.m_location != -1 && *(Vector3f*)data.m_data != value)
+	{
+		glCheck(glUniform3fv(data.m_location, 1, &value.x));
+		*(Vector3f*)data.m_data = value;
+	}
 }
 
 
 ///////////////////////////////////////////////////////////
 void Shader::setUniform(const std::string& name, const Vector4f& value)
 {
-	int location = getUniformLocation(name);
-	if (location != -1)
-		glCheck(glUniform4fv(location, 1, &value.x));
+	UniformData& data = getUniformData(name);
+	if (data.m_location != -1 && *(Vector4f*)data.m_data != value)
+	{
+		glCheck(glUniform4fv(data.m_location, 1, &value.x));
+		*(Vector4f*)data.m_data = value;
+	}
 }
 
 
 ///////////////////////////////////////////////////////////
 void Shader::setUniform(const std::string& name, const Matrix2f& value)
 {
-	int location = getUniformLocation(name);
-	if (location != -1)
-		glCheck(glUniformMatrix2fv(location, 1, shouldTranspose, &value.x.x));
+	UniformData& data = getUniformData(name);
+	if (data.m_location != -1 && *(Matrix2f*)data.m_data != value)
+	{
+		glCheck(glUniformMatrix2fv(data.m_location, 1, shouldTranspose, &value.x.x));
+		*(Matrix2f*)data.m_data = value;
+	}
 }
 
 
 ///////////////////////////////////////////////////////////
 void Shader::setUniform(const std::string& name, const Matrix3f& value)
 {
-	int location = getUniformLocation(name);
-	if (location != -1)
-		glCheck(glUniformMatrix3fv(location, 1, shouldTranspose, &value.x.x));
+	UniformData& data = getUniformData(name);
+	if (data.m_location != -1 && *(Matrix3f*)data.m_data != value)
+	{
+		glCheck(glUniformMatrix3fv(data.m_location, 1, shouldTranspose, &value.x.x));
+		*(Matrix3f*)data.m_data = value;
+	}
 }
 
 
 ///////////////////////////////////////////////////////////
 void Shader::setUniform(const std::string& name, const Matrix4f& value)
 {
-	int location = getUniformLocation(name);
-	if (location != -1)
-		glCheck(glUniformMatrix4fv(location, 1, shouldTranspose, &value.x.x));
+	UniformData& data = getUniformData(name);
+	if (data.m_location != -1 && *(Matrix4f*)data.m_data != value)
+	{
+		glCheck(glUniformMatrix4fv(data.m_location, 1, shouldTranspose, &value.x.x));
+		*(Matrix4f*)data.m_data = value;
+	}
 }
 
 
@@ -256,9 +432,9 @@ void Shader::setUniform(const std::string& name, const std::vector<int>& values)
 {
 	if (values.size())
 	{
-		int location = getUniformLocation(name);
-		if (location != -1)
-			glCheck(glUniform1iv(location, values.size(), &values[0]));
+		UniformData& data = getUniformData(name);
+		if (data.m_location != -1)
+			glCheck(glUniform1iv(data.m_location, values.size(), &values[0]));
 	}
 }
 
@@ -268,9 +444,9 @@ void Shader::setUniform(const std::string& name, const std::vector<float>& value
 {
 	if (values.size())
 	{
-		int location = getUniformLocation(name);
-		if (location != -1)
-			glCheck(glUniform1fv(location, values.size(), &values[0]));
+		UniformData& data = getUniformData(name);
+		if (data.m_location != -1)
+			glCheck(glUniform1fv(data.m_location, values.size(), &values[0]));
 	}
 }
 
@@ -280,9 +456,9 @@ void Shader::setUniform(const std::string& name, const std::vector<Vector2f>& va
 {
 	if (values.size())
 	{
-		int location = getUniformLocation(name);
-		if (location != -1)
-			glCheck(glUniform2fv(location, values.size(), &values[0].x));
+		UniformData& data = getUniformData(name);
+		if (data.m_location != -1)
+			glCheck(glUniform2fv(data.m_location, values.size(), &values[0].x));
 	}
 }
 
@@ -292,9 +468,9 @@ void Shader::setUniform(const std::string& name, const std::vector<Vector3f>& va
 {
 	if (values.size())
 	{
-		int location = getUniformLocation(name);
-		if (location != -1)
-			glCheck(glUniform3fv(location, values.size(), &values[0].x));
+		UniformData& data = getUniformData(name);
+		if (data.m_location != -1)
+			glCheck(glUniform3fv(data.m_location, values.size(), &values[0].x));
 	}
 }
 
@@ -304,9 +480,9 @@ void Shader::setUniform(const std::string& name, const std::vector<Vector4f>& va
 {
 	if (values.size())
 	{
-		int location = getUniformLocation(name);
-		if (location != -1)
-			glCheck(glUniform4fv(location, values.size(), &values[0].x));
+		UniformData& data = getUniformData(name);
+		if (data.m_location != -1)
+			glCheck(glUniform4fv(data.m_location, values.size(), &values[0].x));
 	}
 }
 
@@ -316,9 +492,9 @@ void Shader::setUniform(const std::string& name, const std::vector<Matrix2f>& va
 {
 	if (values.size())
 	{
-		int location = getUniformLocation(name);
-		if (location != -1)
-			glCheck(glUniformMatrix2fv(location, values.size(), shouldTranspose, &values[0].x.x));
+		UniformData& data = getUniformData(name);
+		if (data.m_location != -1)
+			glCheck(glUniformMatrix2fv(data.m_location, values.size(), shouldTranspose, &values[0].x.x));
 	}
 }
 
@@ -328,9 +504,9 @@ void Shader::setUniform(const std::string& name, const std::vector<Matrix3f>& va
 {
 	if (values.size())
 	{
-		int location = getUniformLocation(name);
-		if (location != -1)
-			glCheck(glUniformMatrix3fv(location, values.size(), shouldTranspose, &values[0].x.x));
+		UniformData& data = getUniformData(name);
+		if (data.m_location != -1)
+			glCheck(glUniformMatrix3fv(data.m_location, values.size(), shouldTranspose, &values[0].x.x));
 	}
 }
 
@@ -340,9 +516,9 @@ void Shader::setUniform(const std::string& name, const std::vector<Matrix4f>& va
 {
 	if (values.size())
 	{
-		int location = getUniformLocation(name);
-		if (location != -1)
-			glCheck(glUniformMatrix4fv(location, values.size(), shouldTranspose, &values[0].x.x));
+		UniformData& data = getUniformData(name);
+		if (data.m_location != -1)
+			glCheck(glUniformMatrix4fv(data.m_location, values.size(), shouldTranspose, &values[0].x.x));
 	}
 }
 
@@ -364,9 +540,24 @@ void Shader::setUniform(const std::string& name, Texture& texture)
 	texture.bind(slot);
 
 	// Set uniform
-	int location = getUniformLocation(name);
-	if (location != -1)
-		glCheck(glUniform1iv(location, 1, &slot));
+	UniformData& data = getUniformData(name);
+	if (data.m_location != -1 && *(int*)data.m_data != slot)
+	{
+		glCheck(glUniform1iv(data.m_location, 1, &slot));
+		*(int*)data.m_data = slot;
+	}
+}
+
+
+///////////////////////////////////////////////////////////
+void Shader::bindUniformBlock(const std::string& name, UniformBuffer& block, Uint32 offset, Uint32 size)
+{
+	// Get uniform block index
+	Uint32 index = getUniformBlockIndex(name);
+
+	// Bind uniform block to the index
+	if (index != GL_INVALID_INDEX)
+		block.bind(index, offset, size);
 }
 
 

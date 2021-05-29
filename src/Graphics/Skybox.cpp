@@ -47,8 +47,11 @@ void Skybox::init(Scene* scene)
 
 
 ///////////////////////////////////////////////////////////
-void Skybox::render(Camera& camera)
+void Skybox::render(Camera& camera, RenderPass pass)
 {
+    // The skybox shouldn't be rendered in the shadow pass
+    if (pass == RenderPass::Shadow) return;
+
     Shader& shader = getShader();
 
     shader.bind();
@@ -62,8 +65,17 @@ void Skybox::render(Camera& camera)
     glCheck(glActiveTexture(GL_TEXTURE0));
     glCheck(glBindTexture(GL_TEXTURE_CUBE_MAP, m_id));
 
+
+    // Enable depth testing
+    glCheck(glEnable(GL_DEPTH_TEST));
+
+    // Disable writing to depth buffer
+    glCheck(glDepthMask(GL_FALSE));
+
     // Draw cubemap
     Skybox::getVertexArray().draw();
+
+    glCheck(glDepthMask(GL_TRUE));
 }
 
 
@@ -222,8 +234,11 @@ void ProceduralSkybox::init(Scene* scene)
 
 
 ///////////////////////////////////////////////////////////
-void ProceduralSkybox::render(Camera& camera)
+void ProceduralSkybox::render(Camera& camera, RenderPass pass)
 {
+    // The skybox shouldn't be rendered in the shadow pass
+    if (pass == RenderPass::Shadow) return;
+
     Shader& shader = getShader();
 
     shader.bind();
@@ -240,6 +255,7 @@ void ProceduralSkybox::render(Camera& camera)
             if (i++ == 0)
             {
                 shader.setUniform("u_lightDir", normalize(light.m_direction));
+                shader.setUniform("u_bloomColor", light.m_diffuse);
             }
         }
     );
@@ -248,15 +264,24 @@ void ProceduralSkybox::render(Camera& camera)
     shader.setUniform("u_zenithColor", m_zenithColor);
     shader.setUniform("u_horizonColor", m_horizonColor);
     shader.setUniform("u_groundColor", m_groundColor);
-    shader.setUniform("u_bloomColor", m_bloomColor);
     shader.setUniform("u_bloomSize", m_bloomSize);
     shader.setUniform("u_lightStrength", m_lightStrength);
     shader.setUniform("u_topRadius", m_topRadius);
     shader.setUniform("u_botRadius", m_botRadius);
     shader.setUniform("u_radius", m_altitude + m_botRadius);
 
+
+    // Enable depth testing
+    glCheck(glEnable(GL_DEPTH_TEST));
+    glCheck(glDepthFunc(GL_LEQUAL));
+
+    // Disable writing to depth buffer
+    glCheck(glDepthMask(GL_FALSE));
+
     // Draw cubemap
     Skybox::getVertexArray().draw();
+
+    glCheck(glDepthMask(GL_TRUE));
 }
 
 

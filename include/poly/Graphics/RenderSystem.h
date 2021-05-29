@@ -3,12 +3,60 @@
 
 #include <poly/Graphics/Camera.h>
 #include <poly/Graphics/FrameBuffer.h>
-#include <poly/Graphics/RenderState.h>
 
 namespace poly
 {
 
 class Scene;
+class Shader;
+
+
+///////////////////////////////////////////////////////////
+/// \brief An enum defining render passes
+///
+/// Render systems can decide to skip rendering for certain
+/// render passes (i.e. skipping detail foliage for reflections).
+///
+///////////////////////////////////////////////////////////
+enum class RenderPass
+{
+	Default			= 1 << 0,	//!< A default render pass
+	Shadow			= 1 << 1,	//!< A shadow render pass
+	Reflection		= 1 << 2,	//!< A reflection render pass
+};
+
+///////////////////////////////////////////////////////////
+/// \brief The binary AND operator for render pass enums
+///
+/// \param a The first operand
+/// \param b The second operand
+///
+/// \return The result
+///
+///////////////////////////////////////////////////////////
+RenderPass operator&(RenderPass a, RenderPass b);
+
+///////////////////////////////////////////////////////////
+/// \brief The binary OR operator for render pass enums
+///
+/// \param a The first operand
+/// \param b The second operand
+///
+/// \return The result
+///
+///////////////////////////////////////////////////////////
+RenderPass operator|(RenderPass a, RenderPass b);
+
+///////////////////////////////////////////////////////////
+/// \brief The binary NOT operator for render pass enums
+///
+/// \param a The operand
+///
+/// \return The result
+///
+///////////////////////////////////////////////////////////
+RenderPass operator~(RenderPass a);
+
 
 ///////////////////////////////////////////////////////////
 /// \brief The base class for all rendering procedure classes
@@ -17,6 +65,12 @@ class Scene;
 class RenderSystem
 {
 public:
+	///////////////////////////////////////////////////////////
+	/// \brief Default destructor
+	///
+	///////////////////////////////////////////////////////////
+	RenderSystem();
+
 	///////////////////////////////////////////////////////////
 	/// \brief This function should initialize anything that is scene dependent,
 	///        such as access to entities
@@ -30,9 +84,13 @@ public:
 	/// \brief Execute the rendering procedures
 	///
 	/// \param camera The camera to render from the perspective of
+	/// \param pass The render pass that is being executed
 	///
 	///////////////////////////////////////////////////////////
-	virtual void render(Camera& camera) = 0;
+	virtual void render(Camera& camera, RenderPass pass) = 0;
+
+protected:
+	Scene* m_scene;		//!< A pointer to the scene
 };
 
 }

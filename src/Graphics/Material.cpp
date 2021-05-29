@@ -11,12 +11,28 @@ namespace poly
 
 ///////////////////////////////////////////////////////////
 Material::Material() :
+	m_ambient		(1.0f),
 	m_diffuse		(1.0f),
 	m_specular		(0.1f),
 	m_shininess		(16.0f),
 	m_diffTexture	(0),
-	m_specTexture	(0)
+	m_specTexture	(0),
+	m_normalTexture	(0)
 { }
+
+
+///////////////////////////////////////////////////////////
+void Material::setAmbient(const Vector3f& color)
+{
+	m_ambient = color;
+}
+
+
+///////////////////////////////////////////////////////////
+void Material::setAmbient(float r, float g, float b)
+{
+	m_ambient = Vector3f(r, g, b);
+}
 
 
 ///////////////////////////////////////////////////////////
@@ -69,6 +85,20 @@ void Material::setSpecTexture(Texture* texture)
 
 
 ///////////////////////////////////////////////////////////
+void Material::setNormalTexture(Texture* texture)
+{
+	m_normalTexture = texture;
+}
+
+
+///////////////////////////////////////////////////////////
+void Material::setApplyFunc(const std::function<void(Shader*)>& func)
+{
+	m_applyFunc = func;
+}
+
+
+///////////////////////////////////////////////////////////
 void Material::addTexture(const std::string& uniform, Texture* texture)
 {
 	if (texture)
@@ -80,6 +110,13 @@ void Material::addTexture(const std::string& uniform, Texture* texture)
 void Material::removeTexture(const std::string& uniform)
 {
 	m_textures.erase(uniform);
+}
+
+
+///////////////////////////////////////////////////////////
+Vector3f& Material::getAmbient()
+{
+	return m_ambient;
 }
 
 
@@ -118,29 +155,30 @@ Texture* Material::getTexture(const std::string& uniform) const
 
 
 ///////////////////////////////////////////////////////////
-void Material::apply(Shader* shader, int index) const
+void Material::apply(Shader* shader) const
 {
-	std::string prefix = "u_materials[" + std::to_string(index) + "].";
+	std::string prefix = "u_material.";
+	shader->setUniform(prefix + "ambient", m_ambient);
 	shader->setUniform(prefix + "diffuse", m_diffuse);
 	shader->setUniform(prefix + "specular", m_specular);
 	shader->setUniform(prefix + "shininess", m_shininess);
 	shader->setUniform(prefix + "hasDiffTexture", (int)m_diffTexture);
 	shader->setUniform(prefix + "hasSpecTexture", (int)m_specTexture);
+	shader->setUniform(prefix + "hasNormalTexture", (int)m_normalTexture);
 
 	// Bind diffuse texture
 	if (m_diffTexture)
-	{
-		m_diffTexture->bind(0);
-		shader->setUniform("u_diffuseMaps[" + std::to_string(index) + ']', 0);
-	}
+		shader->setUniform("u_diffuseMap", *m_diffTexture);
 
 	// Bind specular texture
 	if (m_specTexture)
-	{
-		m_specTexture->bind(1);
-		shader->setUniform("u_specularMaps[" + std::to_string(index) + ']', 1);
-	}
+		shader->setUniform("u_specularMap", *m_specTexture);
 
+	// Bind normal texture
+	if (m_normalTexture)
+		shader->setUniform("u_normalMap", *m_normalTexture);
+
+	// Apply all custom textures
 	auto it = m_textures.begin();
 	for (int i = 2; it != m_textures.end(); ++it, ++i)
 	{
@@ -151,6 +189,10 @@ void Material::apply(Shader* shader, int index) const
 		// Set sampler index
 		shader->setUniform(it->first, i);
 	}
+
+	// Apply function callback
+	if (m_applyFunc)
+		m_applyFunc(shader);
 }
 
 

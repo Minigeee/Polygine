@@ -16,3 +16,6 @@
 [submodule "extlibs/FastNoise"]
 	path = extlibs/FastNoise
 	url = https://github.com/Auburn/FastNoise.git
+[submodule "extlibs/freetype"]
+	path = extlibs/freetype
+	url = https://git.savannah.nongnu.org/git/freetype/freetype2.git

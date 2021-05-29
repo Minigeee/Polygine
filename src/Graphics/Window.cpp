@@ -8,75 +8,140 @@
 namespace poly
 {
 
-///////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////
+Window* Window::s_current = 0;
+
+///////////////////////////////////////////////////////////
+Uint32 Window::numWindows = 0;
+
+///////////////////////////////////////////////////////////
+GLFWcursor* Window::s_standardCursors[6] = { 0, 0, 0, 0, 0, 0 };
+
+
+///////////////////////////////////////////////////////////
 void onKeyEvent(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
 	Window* win = (Window*)glfwGetWindowUserPointer(window);
+	Window::setCurrent(win);
+
 	win->sendEvent(E_KeyEvent((Keyboard)key, (InputAction)action));
+
 }
 
+
+///////////////////////////////////////////////////////////
 void onMouseButton(GLFWwindow* window, int button, int action, int mods)
 {
 	Window* win = (Window*)glfwGetWindowUserPointer(window);
+	Window::setCurrent(win);
+
 	win->sendEvent(E_MouseButton((Mouse)button, (InputAction)action));
 }
 
+
+///////////////////////////////////////////////////////////
 void onMouseMove(GLFWwindow* window, double x, double y)
 {
 	Window* win = (Window*)glfwGetWindowUserPointer(window);
+	Window::setCurrent(win);
+
 	win->sendEvent(E_MouseMove((float)x, (float)y));
 }
 
+
+///////////////////////////////////////////////////////////
 void onMouseScroll(GLFWwindow* window, double dx, double dy)
 {
 	Window* win = (Window*)glfwGetWindowUserPointer(window);
+	Window::setCurrent(win);
+
 	win->sendEvent(E_MouseScroll((float)dx, (float)dy));
 }
 
+
 ///////////////////////////////////////////////////////////
+void onTextInput(GLFWwindow* window, Uint32 c)
+{
+	Window* win = (Window*)glfwGetWindowUserPointer(window);
+	Window::setCurrent(win);
 
-Uint32 Window::numWindows = 0;
+	win->sendEvent(E_TextInput(c));
+}
 
-Window::Window() :
-	m_window	(0)
+
+///////////////////////////////////////////////////////////
+void onWindowResize(GLFWwindow* window, int w, int h)
+{
+	Window* win = (Window*)glfwGetWindowUserPointer(window);
+	win->sendEvent(E_WindowResize((Uint32)w, (Uint32)h));
+}
+
+
+///////////////////////////////////////////////////////////
+E_WindowResize::E_WindowResize(Uint32 w, Uint32 h) :
+	m_width		(w),
+	m_height	(h)
 {
 
 }
 
+
+///////////////////////////////////////////////////////////
+Window::Window() :
+	m_window			(0),
+	m_cursor			(0),
+	m_isVsyncEnabled	(true)
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
 Window::Window(Uint32 w, Uint32 h, const std::string& title, bool fullscreen, int multisample) :
-	m_window	(0)
+	m_window			(0),
+	m_cursor			(0),
+	m_isVsyncEnabled	(true)
 {
 	create(w, h, title, fullscreen, multisample);
 }
 
+
+///////////////////////////////////////////////////////////
 Window::Window(Window&& other) :
-	m_window	(other.m_window),
-	m_title		(std::move(other.m_title))
+	m_window			(other.m_window),
+	m_title				(std::move(other.m_title)),
+	m_isVsyncEnabled	(other.m_isVsyncEnabled)
 {
 	other.m_window = 0;
 
 	// Update window pointer
 	glfwSetWindowUserPointer(m_window, this);
-
 }
 
+
+///////////////////////////////////////////////////////////
 Window& Window::operator=(Window&& other)
 {
 	if (&other != this)
 	{
 		m_window = other.m_window;
 		m_title = std::move(other.m_title);
+		m_isVsyncEnabled = other.m_isVsyncEnabled;
 
 		other.m_window = 0;
 
 		// Update window pointer
 		glfwSetWindowUserPointer(m_window, this);
+
+		glfwSwapInterval(m_isVsyncEnabled ? 1 : 0);
 	}
 
 	return *this;
 }
 
+
+///////////////////////////////////////////////////////////
 Window::~Window()
 {
 	if (!--numWindows)
@@ -88,8 +153,8 @@ Window::~Window()
 		close();
 }
 
-///////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////
 bool Window::create(Uint32 w, Uint32 h, const std::string& title, bool fullscreen, int multisample)
 {
 	// Don't create if window is already open
@@ -156,18 +221,34 @@ bool Window::create(Uint32 w, Uint32 h, const std::string& title, bool fullscree
 	glfwSetMouseButtonCallback(m_window, onMouseButton);
 	glfwSetCursorPosCallback(m_window, onMouseMove);
 	glfwSetScrollCallback(m_window, onMouseScroll);
+	glfwSetCharCallback(m_window, onTextInput);
+	glfwSetWindowSizeCallback(m_window, onWindowResize);
+
+	// glfwGetCursorPos() is buggy
+	addListener<E_MouseMove>([&](const E_MouseMove& e) { m_cursorPos = Vector2f(e.m_x, e.m_y); });
+
+	// Resize default framebuffer on window resize
+	addListener<E_WindowResize>(
+		[&](const E_WindowResize& e)
+		{
+			FrameBuffer::Default.m_size.x = e.m_width;
+			FrameBuffer::Default.m_size.y = e.m_height;
+		}
+	);
 
 	return true;
 }
 
-///////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////
 bool Window::isOpen() const
 {
 	// The pointer exists, the window is open
 	return (bool)m_window && !glfwWindowShouldClose(m_window);
 }
 
+
+///////////////////////////////////////////////////////////
 void Window::close()
 {
 	if (m_window)
@@ -180,11 +261,15 @@ void Window::close()
 	}
 }
 
+
+///////////////////////////////////////////////////////////
 void Window::pollEvents()
 {
 	glfwPollEvents();
 }
 
+
+///////////////////////////////////////////////////////////
 void Window::display()
 {
 	// Check if window is open
@@ -193,8 +278,8 @@ void Window::display()
 	glfwSwapBuffers(m_window);
 }
 
-///////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////
 void Window::setResolution(Uint32 w, Uint32 h)
 {
 	// Check if window is open
@@ -203,6 +288,8 @@ void Window::setResolution(Uint32 w, Uint32 h)
 	glfwSetWindowSize(m_window, w, h);
 }
 
+
+///////////////////////////////////////////////////////////
 void Window::setResolution(const Vector2u& resolution)
 {
 	// Check if window is open
@@ -211,6 +298,8 @@ void Window::setResolution(const Vector2u& resolution)
 	glfwSetWindowSize(m_window, resolution.x, resolution.y);
 }
 
+
+///////////////////////////////////////////////////////////
 void Window::setTitle(const std::string& title)
 {
 	// Check if window is open
@@ -220,8 +309,45 @@ void Window::setTitle(const std::string& title)
 	glfwSetWindowTitle(m_window, title.c_str());
 }
 
-///////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////
+void Window::setCursor(Cursor cursor)
+{
+	// Check if the cursor has been loaded yet
+	GLFWcursor*& loadedCursor = s_standardCursors[(int)cursor - (int)Cursor::Arrow];
+	if (cursor != Cursor::Arrow && !loadedCursor)
+		loadedCursor = glfwCreateStandardCursor((int)cursor);
+
+	// Set cursor
+	m_cursor = loadedCursor;
+	glfwSetCursor(m_window, m_cursor);
+}
+
+
+///////////////////////////////////////////////////////////
+void Window::setCursorMode(CursorMode mode)
+{
+	// Change input mode
+	glfwSetInputMode(m_window, GLFW_CURSOR, (int)mode);
+}
+
+
+///////////////////////////////////////////////////////////
+void Window::setClipboard(const std::string& str)
+{
+	glfwSetClipboardString(m_window, str.c_str());
+}
+
+
+///////////////////////////////////////////////////////////
+void Window::setVsyncEnabled(bool enabled)
+{
+	m_isVsyncEnabled = enabled;
+	glfwSwapInterval(m_isVsyncEnabled ? 1 : 0);
+}
+
+
+///////////////////////////////////////////////////////////
 Vector2u Window::getResolution() const
 {
 	// Check if window is open
@@ -232,11 +358,55 @@ Vector2u Window::getResolution() const
 	return Vector2u(w, h);
 }
 
+
+///////////////////////////////////////////////////////////
 const std::string& Window::getTitle() const
 {
 	return m_title;
 }
 
+
 ///////////////////////////////////////////////////////////
+std::string Window::getClipboard() const
+{
+	return std::string(glfwGetClipboardString(m_window));
+}
+
+
+///////////////////////////////////////////////////////////
+bool Window::isVsyncEnabled() const
+{
+	return m_isVsyncEnabled;
+}
+
+
+///////////////////////////////////////////////////////////
+Vector2f Window::getCursorPos() const
+{
+	return m_cursorPos;
+}
+
+
+///////////////////////////////////////////////////////////
+bool Window::isKeyPressed(Keyboard key) const
+{
+	int state = glfwGetKey(m_window, (int)key);
+	return state != GLFW_RELEASE;
+}
+
+
+///////////////////////////////////////////////////////////
+void Window::setCurrent(Window* window)
+{
+	s_current = window;
+}
+
+
+///////////////////////////////////////////////////////////
+Window* Window::getCurrent()
+{
+	return s_current;
+}
+
 
 }

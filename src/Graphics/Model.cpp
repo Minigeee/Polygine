@@ -14,10 +14,52 @@ namespace poly
 
 
 ///////////////////////////////////////////////////////////
+Shader Model::s_defaultShader;
+
+///////////////////////////////////////////////////////////
+Shader Model::s_animatedShader;
+
+///////////////////////////////////////////////////////////
 ObjectPool texturePool(sizeof(Texture), 50);
 
 ///////////////////////////////////////////////////////////
 HashMap<std::string, Texture*> textureMap;
+
+
+///////////////////////////////////////////////////////////
+Mesh::Mesh() :
+	m_shader	(0)
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
+Shader& Model::getDefaultShader()
+{
+	if (!s_defaultShader.getId())
+	{
+		s_defaultShader.load("shaders/default.vert", Shader::Vertex);
+		s_defaultShader.load("shaders/default.frag", Shader::Fragment);
+		s_defaultShader.compile();
+	}
+
+	return s_defaultShader;
+}
+
+
+///////////////////////////////////////////////////////////
+Shader& Model::getAnimatedShader()
+{
+	if (!s_animatedShader.getId())
+	{
+		s_animatedShader.load("shaders/animated.vert", Shader::Vertex);
+		s_animatedShader.load("shaders/default.frag", Shader::Fragment);
+		s_animatedShader.compile();
+	}
+
+	return s_animatedShader;
+}
 
 
 namespace priv
@@ -43,11 +85,14 @@ struct ModelLoadState
 {
 	std::vector<Vertex> m_vertices;
 	std::vector<SkeletalData> m_skeletalData;
-	std::vector<Material> m_materials;
+	std::vector<Uint32> m_indices;
+	std::vector<Mesh*>* m_meshes;
+	std::vector<Uint32> m_vertexOffsets;
 	HashMap<std::string, int> m_bones;
 
 	const aiScene* m_scene;
 	std::string m_directory;
+	bool m_flatShading;
 };
 
 #endif
@@ -86,7 +131,7 @@ Texture* loadMaterialTexture(aiMaterial* material, aiTextureType type, ModelLoad
 ///////////////////////////////////////////////////////////
 void processMaterial(aiMaterial* material, ModelLoadState& state)
 {
-	Material modelMat;
+	Material& modelMat = state.m_meshes->back()->m_material;
 
 	// Diffuse
 	aiColor3D diffuse;
@@ -109,12 +154,8 @@ void processMaterial(aiMaterial* material, ModelLoadState& state)
 	modelMat.setShininess(specFactor);
 
 	// Load textures
-	Uint32 numMaterials = state.m_materials.size();
 	modelMat.setDiffTexture(loadMaterialTexture(material, aiTextureType_DIFFUSE, state));
 	modelMat.setSpecTexture(loadMaterialTexture(material, aiTextureType_SPECULAR, state));
-
-	// Add material
-	state.m_materials.push_back(modelMat);
 }
 
 
@@ -124,6 +165,10 @@ void processMesh(aiMesh* mesh, ModelLoadState& state)
 	// If there are bones, resize the skeletal data array
 	if (mesh->mNumBones)
 		state.m_skeletalData.resize(mesh->mNumVertices);
+
+	// Keep track of mesh vertex offsets
+	Uint32 vertexOffset = state.m_flatShading ? state.m_vertices.size() : state.m_indices.size();
+	state.m_vertexOffsets.push_back(vertexOffset);
 
 	// Process bones
 	for (Uint32 i = 0; i < mesh->mNumBones; ++i)
@@ -174,8 +219,9 @@ void processMesh(aiMesh* mesh, ModelLoadState& state)
 	{
 		aiVector3D& p = mesh->mVertices[i];
 		aiVector3D& n = mesh->mNormals[i];
+		aiVector3D& t = mesh->mTangents[i];
 
-		// Position and normal
+		// Position, normal, tangent
 		Vertex vertex;
 		vertex.m_position.x = p.x;
 		vertex.m_position.y = p.y;
@@ -183,6 +229,9 @@ void processMesh(aiMesh* mesh, ModelLoadState& state)
 		vertex.m_normal.x = n.x;
 		vertex.m_normal.y = n.y;
 		vertex.m_normal.z = n.z;
+		vertex.m_tangent.x = t.x;
+		vertex.m_tangent.y = t.y;
+		vertex.m_tangent.z = t.z;
 
 		// Texture coords
 		if (mesh->mTextureCoords[0])
@@ -213,12 +262,23 @@ void processMesh(aiMesh* mesh, ModelLoadState& state)
 			vertex.m_color.a = 1.0f;
 		}
 
-		// Material index
-		vertex.m_material = state.m_materials.size();
-
 		// Add to list
 		state.m_vertices.push_back(vertex);
 	}
+
+	// Load indices array if flat shading is disabled
+	if (!state.m_flatShading)
+	{
+		for (Uint32 i = 0; i < mesh->mNumFaces; ++i)
+		{
+			aiFace& face = mesh->mFaces[i];
+			for (Uint32 j = 0; j < face.mNumIndices; ++j)
+				state.m_indices.push_back(face.mIndices[j]);
+		}
+	}
+
+	// Create the mesh
+	state.m_meshes->push_back(Pool<Mesh>::alloc());
 
 	// Add material
 	if (mesh->mMaterialIndex >= 0)
@@ -319,8 +379,7 @@ Vertex::Vertex() :
 	m_position	(0.0f),
 	m_normal	(0.0f, 1.0f, 0.0f),
 	m_texCoord	(0.0f),
-	m_color		(1.0f),
-	m_material	(0)
+	m_color		(1.0f)
 { }
 
 
@@ -329,8 +388,7 @@ Vertex::Vertex(const Vector3f& pos, const Vector3f& normal) :
 	m_position	(pos),
 	m_normal	(normal),
 	m_texCoord	(0.0f),
-	m_color		(1.0f),
-	m_material	(0)
+	m_color		(1.0f)
 { }
 
 
@@ -339,8 +397,7 @@ Vertex::Vertex(const Vector3f& pos, const Vector3f& normal, const Vector2f& texC
 	m_position	(pos),
 	m_normal	(normal),
 	m_texCoord	(texCoord),
-	m_color		(1.0f),
-	m_material	(0)
+	m_color		(1.0f)
 { }
 
 
@@ -349,8 +406,7 @@ Vertex::Vertex(const Vector3f& pos, const Vector3f& normal, const Colorf& color)
 	m_position	(pos),
 	m_normal	(normal),
 	m_texCoord	(0.0f),
-	m_color		(color),
-	m_material	(0)
+	m_color		(color)
 { }
 
 
@@ -364,11 +420,33 @@ Vertex::Vertex(const Vector3f& pos, const Vector3f& normal, const Vector2f& texC
 
 
 ///////////////////////////////////////////////////////////
-bool Model::load(const std::string& fname)
+Model::Model()
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
+Model::Model(const std::string& fname, bool flatShading)
+{
+	load(fname, flatShading);
+}
+
+
+///////////////////////////////////////////////////////////
+Model::~Model()
+{
+	for (Uint32 i = 0; i < m_meshes.size(); ++i)
+		Pool<Mesh>::free(m_meshes[i]);
+}
+
+
+///////////////////////////////////////////////////////////
+bool Model::load(const std::string& fname, bool flatShading)
 {
 	// Load the model scene
 	Assimp::Importer importer;
-	const aiScene* scene = importer.ReadFile(fname, aiProcess_Triangulate | aiProcess_FlipUVs);
+	const aiScene* scene = importer.ReadFile(fname, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
 
 	// Check for errors
 	if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
@@ -381,6 +459,8 @@ bool Model::load(const std::string& fname)
 	priv::ModelLoadState state;
 	state.m_scene = scene;
 	state.m_directory = fname.substr(0, fname.find_last_of("/\\"));
+	state.m_meshes = &m_meshes;
+	state.m_flatShading = flatShading;
 
 	// Process bone data
 	int numBones = 0;
@@ -391,27 +471,63 @@ bool Model::load(const std::string& fname)
 	priv::processNode(scene->mRootNode, state);
 
 
+	// Get a default shader
+	Shader* shader = state.m_skeletalData.size() ? &getAnimatedShader() : &getDefaultShader();
+
 	// Create vertex buffer
 	m_vertices = std::move(state.m_vertices);
+	m_indices = std::move(state.m_indices);
 	m_vertexBuffer.create(m_vertices);
 
-	// Create vertex array
-	m_vertexArray.addBuffer(m_vertexBuffer, 0, 3, sizeof(Vertex), 0 * sizeof(float));
-	m_vertexArray.addBuffer(m_vertexBuffer, 1, 3, sizeof(Vertex), 3 * sizeof(float));
-	m_vertexArray.addBuffer(m_vertexBuffer, 2, 2, sizeof(Vertex), 6 * sizeof(float));
-	m_vertexArray.addBuffer(m_vertexBuffer, 3, 4, sizeof(Vertex), 8 * sizeof(float));
-	m_vertexArray.addBuffer(m_vertexBuffer, 4, 1, sizeof(Vertex), 12 * sizeof(float), 0, GLType::Int32);
+	// Setup indices array if smooth shading enabled
+	if (!flatShading)
+		m_indicesBuffer.create(m_indices);
 
 	// Create skeletal data buffer
+	// NOTE : Skeletal data for only a single mesh is supported atm
 	if (state.m_skeletalData.size())
 	{
 		// Create vertex buffer
 		m_skeletalVertexBuffer.create(state.m_skeletalData);
 
 		// Add attributes
-		m_vertexArray.addBuffer(m_skeletalVertexBuffer, 9, 4, sizeof(priv::SkeletalData), 0 * sizeof(float));
-		m_vertexArray.addBuffer(m_skeletalVertexBuffer, 10, 4, sizeof(priv::SkeletalData), 4 * sizeof(float), 0, GLType::Int32);
+		for (Uint32 i = 0; i < m_meshes.size(); ++i)
+		{
+			VertexArray& vao = m_meshes[i]->m_vertexArray;
+			vao.addBuffer(m_skeletalVertexBuffer, 9, 4, sizeof(priv::SkeletalData), 0 * sizeof(float));
+			vao.addBuffer(m_skeletalVertexBuffer, 10, 4, sizeof(priv::SkeletalData), 4 * sizeof(float), 0, GLType::Int32);
+		}
 	}
+
+	// Create vertex arrays
+	for (Uint32 i = 0; i < m_meshes.size(); ++i)
+	{
+		// Calculate buffer offset
+		Uint32 offset = state.m_vertexOffsets[i];
+		Uint32 size = (i == m_meshes.size() - 1 ? m_vertices.size() - offset : state.m_vertexOffsets[i + 1] - offset);
+		offset *= sizeof(Vertex);
+
+		VertexArray& vao = m_meshes[i]->m_vertexArray;
+		vao.addBuffer(m_vertexBuffer, 0, 3, sizeof(Vertex), offset + 0 * sizeof(float));
+		vao.addBuffer(m_vertexBuffer, 1, 3, sizeof(Vertex), offset + 3 * sizeof(float));
+		vao.addBuffer(m_vertexBuffer, 2, 2, sizeof(Vertex), offset + 6 * sizeof(float));
+		vao.addBuffer(m_vertexBuffer, 3, 4, sizeof(Vertex), offset + 8 * sizeof(float));
+		vao.addBuffer(m_vertexBuffer, 4, 3, sizeof(Vertex), offset + 12 * sizeof(float));
+
+		if (!flatShading)
+			vao.setElementBuffer(m_indicesBuffer);
+
+		// Set vertex info
+		vao.setNumVertices(size);
+		vao.setVertexOffset(0);
+
+		// Set the default shader
+		m_meshes[i]->m_shader = shader;
+	}
+
+	// Unbind indices buffer to reset state
+	if (!flatShading)
+		m_indicesBuffer.unbind();
 
 	// Create bounding box
 	m_boundingBox = priv::calcBoundingBox(m_vertices);
@@ -420,9 +536,6 @@ bool Model::load(const std::string& fname)
 	m_boundingSphere.m_position = m_boundingBox.getCenter();
 	m_boundingSphere.m_radius = length(m_boundingBox.getDimensions()) * 0.5f;
 
-	// Set materials
-	m_materials = state.m_materials;
-
 
 	LOG("Loaded model: %s", fname.c_str());
 	return true;
@@ -430,20 +543,73 @@ bool Model::load(const std::string& fname)
 
 
 ///////////////////////////////////////////////////////////
-void Model::create(const std::vector<Vertex>& vertices, BufferUsage usage)
+void Model::addMesh(const std::vector<Vertex>& vertices, const std::vector<Uint32>& indices, const Material& material, BufferUsage usage)
 {
-	m_vertices = vertices;
-	m_vertexBuffer.create(vertices, usage);
+	// Keep track of the vertex offsets
+	Uint32 vertexOffset = m_vertices.size();
+	Uint32 indexOffset = m_indices.size();
+	Uint32 offset = indices.size() ? m_indices.size() : m_vertices.size();
+	Uint32 size = indices.size() ? indices.size() : vertices.size();
+
+	// Append this list of vertices to the end of the other
+	m_vertices.insert(m_vertices.end(), vertices.begin(), vertices.end());
+	m_indices.insert(m_indices.end(), indices.begin(), indices.end());
+	m_vertexBuffer.create(m_vertices, usage);
+
+	// If indices are being used, update the index buffer
+	if (indices.size())
+	{
+		// Adjust the index values, since there may be data previously in the buffer
+		for (Uint32 i = indexOffset; i < m_indices.size(); ++i)
+			m_indices[i] += vertexOffset;
+
+		m_indicesBuffer.bind(BufferTarget::Element);
+		m_indicesBuffer.create(m_indices, usage);
+	}
+
+	// Create a single mesh
+	m_meshes.push_back(Pool<Mesh>::alloc());
+	Mesh* mesh = m_meshes.back();
+	VertexArray& vao = mesh->m_vertexArray;
 
 	// Create vertex array
-	m_vertexArray.addBuffer(m_vertexBuffer, 0, 3, sizeof(Vertex), 0 * sizeof(float));
-	m_vertexArray.addBuffer(m_vertexBuffer, 1, 3, sizeof(Vertex), 3 * sizeof(float));
-	m_vertexArray.addBuffer(m_vertexBuffer, 2, 2, sizeof(Vertex), 6 * sizeof(float));
-	m_vertexArray.addBuffer(m_vertexBuffer, 3, 4, sizeof(Vertex), 8 * sizeof(float));
-	m_vertexArray.addBuffer(m_vertexBuffer, 4, 1, sizeof(Vertex), 12 * sizeof(float), 0, GLType::Int32);
+	vao.addBuffer(m_vertexBuffer, 0, 3, sizeof(Vertex), 0 * sizeof(float));
+	vao.addBuffer(m_vertexBuffer, 1, 3, sizeof(Vertex), 3 * sizeof(float));
+	vao.addBuffer(m_vertexBuffer, 2, 2, sizeof(Vertex), 6 * sizeof(float));
+	vao.addBuffer(m_vertexBuffer, 3, 4, sizeof(Vertex), 8 * sizeof(float));
+	vao.addBuffer(m_vertexBuffer, 4, 3, sizeof(Vertex), 12 * sizeof(float));
+	vao.addBuffer(m_vertexBuffer, 5, 3, sizeof(Vertex), 15 * sizeof(float));
+
+	if (indices.size())
+		vao.setElementBuffer(m_indicesBuffer);
+
+	// Set vertex info
+	vao.setNumVertices(size);
+	vao.setVertexOffset(offset);
+
+	// Set the material
+	mesh->m_material = material;
+
+	// Set a default shader
+	mesh->m_shader = &getDefaultShader();
 
 	// Create bounding box
-	m_boundingBox = priv::calcBoundingBox(vertices);
+	BoundingBox box = priv::calcBoundingBox(vertices);
+
+	if (box.m_min.x < m_boundingBox.m_min.x)
+		m_boundingBox.m_min.x = box.m_min.x;
+	if (box.m_max.x > m_boundingBox.m_max.x)
+		m_boundingBox.m_max.x = box.m_max.x;
+
+	if (box.m_min.y < m_boundingBox.m_min.y)
+		m_boundingBox.m_min.y = box.m_min.y;
+	if (box.m_max.y > m_boundingBox.m_max.y)
+		m_boundingBox.m_max.y = box.m_max.y;
+
+	if (box.m_min.z < m_boundingBox.m_min.z)
+		m_boundingBox.m_min.z = box.m_min.z;
+	if (box.m_max.z > m_boundingBox.m_max.z)
+		m_boundingBox.m_max.z = box.m_max.z;
 
 	// Create bounding sphere
 	m_boundingSphere.m_position = m_boundingBox.getCenter();
@@ -452,52 +618,16 @@ void Model::create(const std::vector<Vertex>& vertices, BufferUsage usage)
 
 
 ///////////////////////////////////////////////////////////
-void Model::setVertices(const std::vector<Vertex>& vertices)
-{
-	// Don't set vertices if model hasn't been created yet
-	if (!m_vertexBuffer.getId()) return;
-
-	// Check if the number of new vertices is not equal to the previous number of vertices
-	if (m_vertices.size() != vertices.size())
-		// Create a new buffer if new data has more vertices
-		m_vertexBuffer.create(vertices, m_vertexBuffer.getUsage());
-
-	else
-		m_vertexBuffer.update(vertices);
-
-	// Update vector
-	m_vertices = vertices;
-
-	// Create bounding box
-	m_boundingBox = priv::calcBoundingBox(vertices);
-}
-
-
-///////////////////////////////////////////////////////////
 void Model::setMaterial(const Material& material, Uint32 index)
 {
-	m_materials[index] = material;
+	m_meshes[index]->m_material = material;
 }
 
 
 ///////////////////////////////////////////////////////////
-VertexArray& Model::getVertexArray()
+void Model::setShader(Shader* shader, Uint32 index)
 {
-	return m_vertexArray;
-}
-
-
-///////////////////////////////////////////////////////////
-const BoundingBox& Model::getBoundingBox() const
-{
-	return m_boundingBox;
-}
-
-
-///////////////////////////////////////////////////////////
-const Sphere& Model::getBoundingSphere() const
-{
-	return m_boundingSphere;
+	m_meshes[index]->m_shader = shader;
 }
 
 
@@ -509,16 +639,16 @@ const std::vector<Vertex>& Model::getVertices() const
 
 
 ///////////////////////////////////////////////////////////
-const Material& Model::getMaterial(Uint32 index) const
+Uint32 Model::getNumMeshes() const
 {
-	return m_materials[index];
+	return m_meshes.size();
 }
 
 
 ///////////////////////////////////////////////////////////
-const std::vector<Material>& Model::getMaterials() const
+Mesh* Model::getMesh(Uint32 index) const
 {
-	return m_materials;
+	return m_meshes[index];
 }
 
 

@@ -1,0 +1,27 @@
+<ui>
+    <font file="examples/fonts/segoeui/segoeui.ttf" />
+    
+    <templates>
+        <button id="num_dropdown_btn" color="sea_green">
+            <button_text color="#AAFFFF" />
+        </button>
+    </templates>
+
+    <list_view id="form1">
+        <button text="Hello #1" position="5,5" size="200,30" color="dark_slate_gray" margins="0,5" on_press="onTestPress" />
+        <text_input value="Testing" position="5,0" size="200,30" color="dark_slate_gray" on_submit="onSubmit" />
+    </list_view>
+
+    <list_view id="form2" position="220,0">
+        <button text="Hello 2" position="5,5" size="200,30" color="dark_slate_gray" margins="0,5" on_press="onTestPress" />
+        <text_input value="Test" position="5,0" size="200,30" color="dark_slate_gray" />
+    </list_view>
+
+    <dropdown position="5 100" size="200 30" color="dark_slate_gray" item_color="slate_gray">
+        <dropdown_item template="num_dropdown_btn" value="One" />
+        <dropdown_item template="num_dropdown_btn" value="Two" />
+        <dropdown_item template="num_dropdown_btn" value="Three" />
+    </dropdown>
+
+    <text id="fps_counter" origin="top_right" anchor="top_right" position="-5,5" />
+</ui>

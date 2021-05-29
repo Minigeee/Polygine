@@ -18,11 +18,61 @@ namespace poly
 {
 
 ///////////////////////////////////////////////////////////
+/// \brief An enum defining the standard cursor types
+///
+///////////////////////////////////////////////////////////
+enum class Cursor
+{
+	Arrow		= 0x00036001,	//!< The default arrow cursor
+	IBeam		= 0x00036002,	//!< The text input I-beam cursor
+	CrossHair	= 0x00036003,	//!< The crosshair cursor
+	Hand		= 0x00036004,	//!< The hand shaped cursor
+	HResize		= 0x00036005,	//!< The horizontal resize cursor
+	VResize		= 0x00036006	//!< The vertical resize cursor
+};
+
+
+///////////////////////////////////////////////////////////
+/// \brief An enum defining cursor modes
+///
+///////////////////////////////////////////////////////////
+enum class CursorMode
+{
+	Normal		= 0x00034001,	//!< The cursor is fully visible and unrestricted cursor
+	Hidden		= 0x00034002,	//!< The cursor is not visible and is unrestricted, meaning that it can leave the window
+	Disabled	= 0x00034003	//!< The cursor is not visible and restricted, meaning that it has unlimited movement within the window
+};
+
+
+///////////////////////////////////////////////////////////
+/// \brief An event that is sent whenever the window is resized
+///
+///////////////////////////////////////////////////////////
+struct E_WindowResize
+{
+	///////////////////////////////////////////////////////////
+	/// \brief Default constructor
+	///
+	///////////////////////////////////////////////////////////
+	E_WindowResize() = default;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Create a resize event from the new size
+	///
+	///////////////////////////////////////////////////////////
+	E_WindowResize(Uint32 w, Uint32 h);
+
+	Uint32 m_width;		//!< The new width in pixels
+	Uint32 m_height;	//!< The new height in pixels
+};
+
+
+///////////////////////////////////////////////////////////
 /// \brief Handles window creation, management, and user input
 ///
 ///////////////////////////////////////////////////////////
 class Window :
-	public EventSystem<E_KeyEvent, E_MouseButton, E_MouseMove, E_MouseScroll>
+	public EventSystem<E_KeyEvent, E_MouseButton, E_MouseMove, E_MouseScroll, E_TextInput, E_WindowResize>
 {
 public:
 	///////////////////////////////////////////////////////////
@@ -68,6 +118,25 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	static void pollEvents();
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the current window
+	///
+	/// This function is automatically called whenever a window
+	/// receives input events.
+	///
+	/// \param window A window pointer
+	///
+	///////////////////////////////////////////////////////////
+	static void setCurrent(Window* window);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the current window
+	///
+	/// \return A pointer to the current window
+	///
+	///////////////////////////////////////////////////////////
+	static Window* getCurrent();
 
 	///////////////////////////////////////////////////////////
 	/// \brief Create a new window using the given settings
@@ -137,6 +206,41 @@ public:
 	void setTitle(const std::string& title);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Set the cursor type to one of the standard types for thiw window
+	///
+	/// \param cursor A standard system cursor type
+	///
+	///////////////////////////////////////////////////////////
+	void setCursor(Cursor cursor);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the cursor mode for this window
+	///
+	/// \param mode The cursor mode
+	///
+	///////////////////////////////////////////////////////////
+	void setCursorMode(CursorMode mode);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set clipboard string
+	///
+	/// \param str The string to put in the clipboard
+	///
+	///////////////////////////////////////////////////////////
+	void setClipboard(const std::string& str);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set whether vsync should be enabled or not
+	///
+	/// When vsync is enabled, swapping buffers will wait until
+	/// the next screen refresh to execute.
+	///
+	/// \param enabled Whether vsync should be enabled
+	///
+	///////////////////////////////////////////////////////////
+	void setVsyncEnabled(bool enabled);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the window resolution
 	///
 	/// \return The window resolution
@@ -152,11 +256,51 @@ public:
 	///////////////////////////////////////////////////////////
 	const std::string& getTitle() const;
 
-private:
-	GLFWwindow* m_window;		//!< GLFW window pointer
-	std::string m_title;		//!< Window title
+	///////////////////////////////////////////////////////////
+	/// \brief Get the clipboard string
+	///
+	/// \return The clipboard string
+	///
+	///////////////////////////////////////////////////////////
+	std::string getClipboard() const;
 
-	static Uint32 numWindows;	//!< The number of existing windows
+	///////////////////////////////////////////////////////////
+	/// \brief Check whether vsync is enabled
+	///
+	/// \return A boolean indicating whether vsync is enabled
+	///
+	///////////////////////////////////////////////////////////
+	bool isVsyncEnabled() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the cursor position in pixels
+	///
+	/// \return The cursor position in pixels
+	///
+	///////////////////////////////////////////////////////////
+	Vector2f getCursorPos() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Check if a certain key is pressed
+	///
+	/// \param key The key to check
+	///
+	/// \return True if the key is pressed or held
+	///
+	///////////////////////////////////////////////////////////
+	bool isKeyPressed(Keyboard key) const;
+
+private:
+	GLFWwindow* m_window;						//!< GLFW window pointer
+	GLFWcursor* m_cursor;						//!< The current cursor
+	std::string m_title;						//!< Window title
+	Vector2f m_cursorPos;						//!< glfwGetCursorPos() is buggy
+	Uint32 m_framerate;							//!< 
+	bool m_isVsyncEnabled;						//!< Boolean indicating if vsync is enabled
+
+	static Window* s_current;					//!< The current window
+	static Uint32 numWindows;					//!< The number of existing windows
+	static GLFWcursor* s_standardCursors[6];	//!< The standard cursors
 };
 
 }

@@ -50,10 +50,10 @@ endfunction()
 
 # Cmake dependencies
 add_dependency_headers(tsl-hopscotch-map hopscotch-map tsl)
-add_dependency_headers(FastNoise FastNoise FastNoise)
 
 add_dependency(glfw glfw glfw)
 add_dependency(assimp assimp assimp)
+add_dependency(freetype freetype freetype)
 
 # Glad
 target_include_directories(polygine PUBLIC
@@ -92,4 +92,12 @@ endif()
 target_include_directories(polygine PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extlibs/FastNoise/Cpp>
     $<INSTALL_INTERFACE:include>)
-install(FILES "${PROJECT_SOURCE_DIR}/extlibs/FastNoise/Cpp/FastNoiseLite.h" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+install(FILES "${PROJECT_SOURCE_DIR}/extlibs/FastNoise/Cpp/FastNoiseLite.h" TYPE INCLUDE)
+
+# RapidXml
+target_include_directories(polygine PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extlibs/rapidxml/include>
+    $<INSTALL_INTERFACE:include>)
+
+# Install headers
+install(DIRECTORY "${PROJECT_SOURCE_DIR}/extlibs/rapidxml/include" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")

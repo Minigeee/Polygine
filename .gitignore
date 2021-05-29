@@ -12,6 +12,7 @@ _deps
 
 # Ignore build files
 build/
+*.log
 
 # Ignore documentation files
 generated_docs/

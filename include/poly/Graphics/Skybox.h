@@ -64,9 +64,10 @@ public:
 	/// \brief Render the skybox from the perspective of a camera
 	///
 	/// \param camera The camera to render from
+	/// \param pass The render pass that is being executed
 	///
 	///////////////////////////////////////////////////////////
-	void render(Camera& camera) override;
+	void render(Camera& camera, RenderPass pass) override;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Load a single side of the cube map from an image file
@@ -124,9 +125,10 @@ public:
 	/// \brief Render the skybox from the perspective of a camera
 	///
 	/// \param camera The camera to render from
+	/// \param pass The render pass that is being executed
 	///
 	///////////////////////////////////////////////////////////
-	void render(Camera& camera) override;
+	void render(Camera& camera, RenderPass pass) override;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the zenith color

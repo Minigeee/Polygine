@@ -1,3 +1,4 @@
+#include <poly/Core/Allocate.h>
 #include <poly/Core/Logger.h>
 
 #include <poly/Graphics/Image.h>
@@ -27,6 +28,19 @@ Image::~Image()
 {
 	// Free data if image owns the data
 	free();
+}
+
+
+///////////////////////////////////////////////////////////
+Image::Image(const std::string& fname, GLType dtype) :
+	m_data			(0),
+	m_width			(0),
+	m_height		(0),
+	m_dataType		(GLType::Unknown),
+	m_numChannels	(0),
+	m_ownsData		(false)
+{
+	load(fname, dtype);
 }
 
 
@@ -71,7 +85,7 @@ bool Image::load(const std::string& fname, GLType dtype)
 void Image::free()
 {
 	if (m_ownsData && m_data)
-		stbi_image_free(m_data);
+		FREE_DBG(m_data);
 
 	m_data = 0;
 }
@@ -109,7 +123,9 @@ void Image::create(void* data, Uint32 w, Uint32 h, Uint32 c, GLType dtype, bool 
 			typeSize = 4;
 
 		// Allocate data
-		m_data = malloc(m_width * m_height * m_numChannels * typeSize);
+		Uint32 size = m_width * m_height * m_numChannels * typeSize;
+		m_data = MALLOC_DBG(size);
+		memset(m_data, 0, size);
 
 		// Image owns data
 		m_ownsData = true;

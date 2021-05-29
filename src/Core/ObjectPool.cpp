@@ -1,4 +1,3 @@
-#include <poly/Core/Logger.h>
 #include <poly/Core/ObjectPool.h>
 
 #include <stdlib.h>
@@ -7,28 +6,32 @@
 namespace poly
 {
 
-///////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////
 ObjectPool::ObjectPool() :
 	m_firstPage		(0),
 	m_objectSize	(0),
 	m_pageSize		(512)
 { }
 
+
+///////////////////////////////////////////////////////////
 ObjectPool::ObjectPool(Uint32 objectSize, Uint32 pageSize) :
 	m_firstPage		(0),
 	m_objectSize	(objectSize),
 	m_pageSize		(pageSize)
 { }
 
+
+///////////////////////////////////////////////////////////
 ObjectPool::~ObjectPool()
 {
 	// Free all memory
 	reset();
 }
 
-///////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////
 ObjectPool::ObjectPool(ObjectPool&& other) :
 	m_firstPage		(other.m_firstPage),
 	m_objectSize	(other.m_objectSize),
@@ -39,6 +42,8 @@ ObjectPool::ObjectPool(ObjectPool&& other) :
 	other.m_pageSize = 0;
 }
 
+
+///////////////////////////////////////////////////////////
 ObjectPool& ObjectPool::operator=(ObjectPool&& other)
 {
 	if (&other != this)
@@ -55,32 +60,42 @@ ObjectPool& ObjectPool::operator=(ObjectPool&& other)
 	return *this;
 }
 
-///////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////
 void ObjectPool::setObjectSize(Uint32 size)
 {
+	ASSERT(size >= sizeof(void*), "The size of the object must be at least the size of a pointer");
+
 	if (!m_firstPage)
 		m_objectSize = size;
 }
 
+
+///////////////////////////////////////////////////////////
 void ObjectPool::setPageSize(Uint32 size)
 {
+	ASSERT(size >= 1, "The size of a page must be at least 1");
+
 	if (!m_firstPage)
 		m_pageSize = size;
 }
 
-///////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////
 Uint32 ObjectPool::getObjectSize() const
 {
 	return m_objectSize;
 }
 
+
+///////////////////////////////////////////////////////////
 Uint32 ObjectPool::getPageSize() const
 {
 	return m_pageSize;
 }
 
+
+///////////////////////////////////////////////////////////
 Uint32 ObjectPool::getNumObjects() const
 {
 	Uint32 numObjects = 0;
@@ -96,6 +111,8 @@ Uint32 ObjectPool::getNumObjects() const
 	return numObjects;
 }
 
+
+///////////////////////////////////////////////////////////
 Uint32 ObjectPool::getNumPages() const
 {
 	Uint32 numPages = 0;
@@ -111,13 +128,10 @@ Uint32 ObjectPool::getNumPages() const
 	return numPages;
 }
 
-///////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////
 void* ObjectPool::alloc()
 {
-	// Make sure valid settings
-	if (m_objectSize < 4 || m_pageSize < 1) return 0;
-
 	// First check if any pages have been allocated yet
 	if (!m_firstPage)
 		m_firstPage = allocPage();
@@ -149,15 +163,23 @@ void* ObjectPool::alloc()
 	header->m_nextFree = *(void**)header->m_nextFree;
 	++header->m_numObjects;
 
+#ifndef NDEBUG
+	// In debug mode, keep track of which slots are being used to prevent double freeing
+	Uint32 index = ((Uint8*)obj - (Uint8*)(header + 1)) / m_objectSize;
+	header->m_used[index] = true;
+#endif
+
 	// Set requested memory to 0 and return
 	memset(obj, 0, m_objectSize);
 	return obj;
 }
 
+
+///////////////////////////////////////////////////////////
 void ObjectPool::free(void* ptr)
 {
 	// Make sure there are existing pages first
-	if (!m_firstPage) return;
+	if (!m_firstPage || !ptr) return;
 
 	PageHeader* header = (PageHeader*)m_firstPage;
 	Uint8* page = (Uint8*)(header + 1);
@@ -169,12 +191,16 @@ void ObjectPool::free(void* ptr)
 		page = (Uint8*)(header + 1);
 	}
 
-	// If couldn't find the page that contains the pointer, quit
-	if (!header)
-	{
-		LOG_WARNING("Tried to free memory that doesn't belong to the object pool");
-		return;
-	}
+	// Error if the object pool doesn't contain the pointer (this shouldn't be allowed to happen)
+	ASSERT(header, "Tried to free memory that doesn't belong to the object pool");
+
+#ifndef NDEBUG
+	// In debug mode, keep track of which slots are being used to prevent double freeing
+	Uint32 index = ((Uint8*)ptr - (Uint8*)(header + 1)) / m_objectSize;
+	ASSERT(header->m_used[index], "The pointer 0x%08X is being freed from the object pool more than once, this will cause undefined behavior in release builds", (int)ptr);
+
+	header->m_used[index] = false;
+#endif
 
 	// Update free list and number of objects
 	*(void**)ptr = header->m_nextFree;
@@ -182,6 +208,8 @@ void ObjectPool::free(void* ptr)
 	--header->m_numObjects;
 }
 
+
+///////////////////////////////////////////////////////////
 void ObjectPool::reset()
 {
 	PageHeader* page = (PageHeader*)m_firstPage;
@@ -191,12 +219,10 @@ void ObjectPool::reset()
 	{
 		PageHeader* nextPage = (PageHeader*)page->m_nextPage;
 
-#ifdef WIN32
-		// Windows doesn't have aligned_free
-		_aligned_free(page);
-#else
-		aligned_free(page);
+#ifndef NDEBUG
+		page->~PageHeader();
 #endif
+		ALIGNED_FREE_DBG(page);
 
 		page = nextPage;
 	}
@@ -205,25 +231,24 @@ void ObjectPool::reset()
 	m_firstPage = 0;
 }
 
-///////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////
 void* ObjectPool::allocPage()
 {
 	// Calculate size of page
 	Uint32 pageSize = m_pageSize * m_objectSize + sizeof(PageHeader);
 
 	// Allocate aligned memory
-#ifdef WIN32
-	// Windows doesn't have aligned_alloc
-	PageHeader* header = (PageHeader*)_aligned_malloc(pageSize, 4);
-#else
-	PageHeader* page = (PageHeader*)aligned_alloc(pageSize, 4);
-#endif
+	PageHeader* header = (PageHeader*)ALIGNED_MALLOC_DBG(pageSize, alignof(std::max_align_t));
 
 	// Get the start location of the page
 	Uint8* page = (Uint8*)(header + 1);
 
 	// Initialize metadata
+#ifndef NDEBUG
+	new(header)PageHeader();
+	header->m_used.resize(m_pageSize);
+#endif
 	header->m_nextPage = 0;
 	header->m_nextFree = page;
 	header->m_numObjects = 0;
@@ -237,6 +262,5 @@ void* ObjectPool::allocPage()
 	return header;
 }
 
-///////////////////////////////////////////////////////////
 
 }
