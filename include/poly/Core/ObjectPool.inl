@@ -98,7 +98,7 @@ inline void TypePool<T>::free(T* ptr)
 	T* page = (T*)(header + 1);
 
 	// Find the page that contains the pointer
-	while (header && (ptr < page || ptr > page + m_pool.m_pageSize * m_pool.m_objectSize))
+	while (header && (ptr < page || ptr > page + m_pool.m_pageSize))
 	{
 		header = (ObjectPool::PageHeader*)header->m_nextPage;
 		page = (T*)(header + 1);
@@ -109,7 +109,7 @@ inline void TypePool<T>::free(T* ptr)
 
 #ifndef NDEBUG
 	// In debug mode, keep track of which slots are being used to prevent double freeing
-	Uint32 index = ((Uint8*)ptr - (Uint8*)(header + 1)) / m_pool.m_objectSize;
+	Uint32 index = (T*)ptr - (T*)(header + 1);
 	ASSERT(header->m_used[index], "The pointer 0x%08X is being freed from the object pool more than once, this will cause undefined behavior in release builds", (int)ptr);
 
 	header->m_used[index] = false;

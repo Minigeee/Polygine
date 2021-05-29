@@ -494,6 +494,5 @@ int main()
     return 0;
 }
 
-// TODO : Add convenience constructor loaders
 // TODO : Move Grass to game project and document it
 // TODO : Make everything UTF-encoded compatible (UI XML parsing, etc...)
