@@ -54,6 +54,45 @@ public:
 	Shader();
 
 	///////////////////////////////////////////////////////////
+	/// \brief Create a shader program from a vertex shader
+	///
+	/// This constructor loads the specified shader files,
+	/// compiles them, then links them into the final shader
+	/// program.
+	///
+	/// \param vert The path to the vertex shader file
+	///
+	///////////////////////////////////////////////////////////
+	Shader(const std::string& vert);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Create a shader program from a vertex and fragment shader
+	///
+	/// This constructor loads the specified shader files,
+	/// compiles them, then links them into the final shader
+	/// program.
+	///
+	/// \param vert The path to the vertex shader file
+	/// \param frag The path to the fragment shader file
+	///
+	///////////////////////////////////////////////////////////
+	Shader(const std::string& vert, const std::string& frag);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Create a shader program from a vertex, geometry, and fragment shader
+	///
+	/// This constructor loads the specified shader files,
+	/// compiles them, then links them into the final shader
+	/// program.
+	///
+	/// \param vert The path to the vertex shader file
+	/// \param geom The path to the geometry shader file
+	/// \param frag The path to the fragment shader file
+	///
+	///////////////////////////////////////////////////////////
+	Shader(const std::string& vert, const std::string& geom, const std::string& frag);
+
+	///////////////////////////////////////////////////////////
 	/// \brief The destructor
 	///
 	/// This will destroy the shader program, if it exists. It

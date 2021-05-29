@@ -32,6 +32,19 @@ Image::~Image()
 
 
 ///////////////////////////////////////////////////////////
+Image::Image(const std::string& fname, GLType dtype) :
+	m_data			(0),
+	m_width			(0),
+	m_height		(0),
+	m_dataType		(GLType::Unknown),
+	m_numChannels	(0),
+	m_ownsData		(false)
+{
+	load(fname, dtype);
+}
+
+
+///////////////////////////////////////////////////////////
 bool Image::load(const std::string& fname, GLType dtype)
 {
 	int x = 0, y = 0, c = 0;

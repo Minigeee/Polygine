@@ -132,6 +132,39 @@ Shader::Shader() :
 
 
 ///////////////////////////////////////////////////////////
+Shader::Shader(const std::string& vert) :
+	m_id		(0)
+{
+	if (!load(vert, Vertex)) return;
+
+	compile();
+}
+
+
+///////////////////////////////////////////////////////////
+Shader::Shader(const std::string& vert, const std::string& frag) :
+	m_id		(0)
+{
+	if (!load(vert, Vertex)) return;
+	if (!load(frag, Fragment)) return;
+
+	compile();
+}
+
+
+///////////////////////////////////////////////////////////
+Shader::Shader(const std::string& vert, const std::string& geom, const std::string& frag) :
+	m_id		(0)
+{
+	if (!load(vert, Vertex)) return;
+	if (!load(geom, Geometry)) return;
+	if (!load(frag, Fragment)) return;
+
+	compile();
+}
+
+
+///////////////////////////////////////////////////////////
 Shader::~Shader()
 {
 	if (m_id)

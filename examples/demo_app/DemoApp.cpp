@@ -75,8 +75,7 @@ int main()
     window.create(1280, 720, "My Game");
     // window.setVsyncEnabled(false);
 
-    Model model;
-    model.load("examples/models/character/character_flat.dae");
+    Model model("examples/models/character/character_flat.dae");
 
     Skeleton skeletons[3];
     Animation animation("examples/models/character/character_flat.dae", "Armature");

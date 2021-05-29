@@ -54,6 +54,18 @@ public:
 	Texture();
 
 	///////////////////////////////////////////////////////////
+	/// \brief Create the texture by loading data from an image file
+	///
+	/// \param fname The relative path to the image file
+	/// \param dtype The data type to use when loading the image
+	/// \param mipmap Determines if mipmaps should be generated for the texture
+	///
+	/// \see load
+	///
+	///////////////////////////////////////////////////////////
+	Texture(const std::string& fname, GLType dtype = GLType::Uint8, bool mipmap = false);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Destructor
 	///
 	/// This will destroy the internal texture object, if it exists

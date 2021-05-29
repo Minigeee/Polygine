@@ -420,6 +420,20 @@ Vertex::Vertex(const Vector3f& pos, const Vector3f& normal, const Vector2f& texC
 
 
 ///////////////////////////////////////////////////////////
+Model::Model()
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
+Model::Model(const std::string& fname, bool flatShading)
+{
+	load(fname, flatShading);
+}
+
+
+///////////////////////////////////////////////////////////
 Model::~Model()
 {
 	for (Uint32 i = 0; i < m_meshes.size(); ++i)

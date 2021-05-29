@@ -58,6 +58,23 @@ Texture::Texture() :
 
 
 ///////////////////////////////////////////////////////////
+Texture::Texture(const std::string& fname, GLType dtype, bool mipmap) :
+	m_id			(0),
+	m_width			(0),
+	m_height		(0),
+	m_depth			(0),
+	m_dimensions	(2),
+	m_format		(PixelFormat::Rgb),
+	m_dataType		(GLType::Uint8),
+	m_wrap			(TextureWrap::ClampToEdge),
+	m_filter		(TextureFilter::Linear),
+	m_multisampled	(false)
+{
+	load(fname, dtype, mipmap);
+}
+
+
+///////////////////////////////////////////////////////////
 Texture::~Texture()
 {
 	if (m_id)

@@ -43,6 +43,24 @@ UISystem::UISystem() :
 
 
 ///////////////////////////////////////////////////////////
+UISystem::UISystem(const std::string& fname) :
+	m_window				(0),
+	m_instanceBufferOffset	(0),
+	m_hovered				(0),
+	m_focused				(0),
+	m_loaded				(false)
+{
+	m_isVisible = false;
+
+	m_vertexArray.setNumVertices(1);
+	m_vertexArray.setDrawMode(DrawMode::Points);
+	m_instanceBuffer.create((UIInstanceData*)0, 65536, BufferUsage::Stream);
+
+	load(fname);
+}
+
+
+///////////////////////////////////////////////////////////
 UISystem::~UISystem()
 {
 
