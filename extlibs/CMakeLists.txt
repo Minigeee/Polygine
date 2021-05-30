@@ -1,103 +1,55 @@
-function(add_dependency name target src)
-    # Find package
-    find_package(${name} QUIET)
+include(${CMAKE_SOURCE_DIR}/cmake/CPM.cmake)
 
-    # If not found, get submodule
-    if (NOT &{name}_FOUND AND NOT EXISTS "${PROJECT_SOURCE_DIR}/extlibs/${src}/CMakeLists.txt")
-        message(STATUS "Getting ${name}...")
+set(CPM_SOURCE_CACHE "${CMAKE_SOURCE_DIR}/extlibs/cache")
+set(CPM_USE_LOCAL_PACKAGES)
 
-        # Get submodule
-        execute_process(COMMAND git submodule update --init -- "${PROJECT_SOURCE_DIR}/extlibs/${src}"
-                        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-    else()
-        message(STATUS "Found ${name}")
-    endif()
+# Hopscotch Map
+CPMAddPackage("gh:Tessil/hopscotch-map#master")
+target_include_directories(polygine PUBLIC
+    $<BUILD_INTERFACE:${hopscotch-map_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>)
+install(DIRECTORY ${hopscotch-map_SOURCE_DIR}/include DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
-    if (NOT &{name}_FOUND)
-        set(${name}_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/extlibs/${src}/include")
-    endif()
-    
-    # Add project
-    add_subdirectory("${src}")
+# GLFW
+CPMAddPackage("gh:glfw/glfw#master")
+target_link_libraries(polygine glfw)
+target_include_directories(polygine PRIVATE ${glfw_SOURCE_DIR}/include)
+if(NOT DEFINED glfw_FOUND)
+    install(TARGETS glfw DESTINATION "${CMAKE_INSTALL_LIBDIR}" EXPORT polygine-export)
+endif()
 
-    # Link
-    target_link_libraries(polygine PUBLIC ${target})
+# Assimp
+CPMAddPackage("gh:assimp/assimp#master")
+target_link_libraries(polygine assimp)
+target_include_directories(polygine PRIVATE ${assimp_SOURCE_DIR}/include)
+if(NOT DEFINED assimp_FOUND)
+    install(TARGETS assimp DESTINATION "${CMAKE_INSTALL_LIBDIR}" EXPORT polygine-export)
+endif()
 
-    # Export
-    # install(TARGETS ${target} EXPORT polygine)
-endfunction()
+# Freetype
+CPMAddPackage("gh:freetype/freetype#master")
+target_link_libraries(polygine freetype)
+target_include_directories(polygine PRIVATE ${freetype_SOURCE_DIR}/include)
+if(NOT DEFINED freetype_FOUND)
+    install(TARGETS freetype DESTINATION "${CMAKE_INSTALL_LIBDIR}" EXPORT polygine-export)
+endif()
 
-function(add_dependency_headers name src include_dir)
-    # If not found, get submodule
-    if (NOT EXISTS "${PROJECT_SOURCE_DIR}/extlibs/${src}")
-        message(STATUS "Getting ${name}...")
+# Stb
+CPMAddPackage("gh:nothings/stb#master")
+target_include_directories(polygine PRIVATE ${stb_SOURCE_DIR})
 
-        # Get submodule
-        execute_process(COMMAND git submodule update --init -- "${PROJECT_SOURCE_DIR}/extlibs/${src}"
-                        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-    else()
-        message(STATUS "Found ${name}")
-    endif()
-    
-    # Add includes
-    target_include_directories(polygine PUBLIC
-        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extlibs/${src}/include>
-        $<INSTALL_INTERFACE:include>)
-
-    # Install headers
-    install(DIRECTORY "${PROJECT_SOURCE_DIR}/extlibs/${src}/include/${include_dir}" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
-endfunction()
-
-# Cmake dependencies
-add_dependency_headers(tsl-hopscotch-map hopscotch-map tsl)
-
-add_dependency(glfw glfw glfw)
-add_dependency(assimp assimp assimp)
-add_dependency(freetype freetype freetype)
+# Fastnoise
+CPMAddPackage("gh:Auburn/FastNoiseLite#master")
+target_include_directories(polygine PRIVATE ${FastNoiseLite_SOURCE_DIR}/Cpp)
 
 # Glad
 target_include_directories(polygine PUBLIC
-    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extlibs/glad/include>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/extlibs/glad/include>
     $<INSTALL_INTERFACE:include>)
-target_sources(polygine PRIVATE "${PROJECT_SOURCE_DIR}/extlibs/glad/src/glad.c")
-install(DIRECTORY "${PROJECT_SOURCE_DIR}/extlibs/glad/include/glad" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+target_sources(polygine PRIVATE ${CMAKE_SOURCE_DIR}/extlibs/glad/src/glad.c)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/extlibs/glad/include/glad DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
-# stb_image
-if (NOT EXISTS "${PROJECT_SOURCE_DIR}/extlibs/stb/stb_image.h")
-    message(STATUS "Getting stb_image.h...")
-
-    # Get submodule
-    execute_process(COMMAND git submodule update --init -- "${PROJECT_SOURCE_DIR}/extlibs/stb"
-                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-else()
-    message(STATUS "Found stb_image.h")
-endif()
-
+# RapidXML
 target_include_directories(polygine PUBLIC
-    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extlibs/stb>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/extlibs/rapidxml/include>
     $<INSTALL_INTERFACE:include>)
-install(DIRECTORY "${PROJECT_SOURCE_DIR}/extlibs/stb" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
-
-# FastNoise
-if (NOT EXISTS "${PROJECT_SOURCE_DIR}/extlibs/FastNoise/Cpp/FastNoiseLite.h")
-    message(STATUS "Getting FastNoiseLite.h...")
-
-    # Get submodule
-    execute_process(COMMAND git submodule update --init -- "${PROJECT_SOURCE_DIR}/extlibs/FastNoise"
-                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-else()
-    message(STATUS "Found FastNoiseLite.h")
-endif()
-
-target_include_directories(polygine PUBLIC
-    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extlibs/FastNoise/Cpp>
-    $<INSTALL_INTERFACE:include>)
-install(FILES "${PROJECT_SOURCE_DIR}/extlibs/FastNoise/Cpp/FastNoiseLite.h" TYPE INCLUDE)
-
-# RapidXml
-target_include_directories(polygine PUBLIC
-    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extlibs/rapidxml/include>
-    $<INSTALL_INTERFACE:include>)
-
-# Install headers
-install(DIRECTORY "${PROJECT_SOURCE_DIR}/extlibs/rapidxml/include" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")

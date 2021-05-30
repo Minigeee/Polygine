@@ -3,8 +3,6 @@
 
 #include <poly/Core/DataTypes.h>
 
-#include <FastNoiseLite.h>
-
 namespace poly
 {
 
@@ -27,6 +25,14 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	FractalNoise();
+
+	///////////////////////////////////////////////////////////
+	/// \brief Destructor
+	///
+	/// Destroys the noise generator object
+	///
+	///////////////////////////////////////////////////////////
+	~FractalNoise();
 
 	///////////////////////////////////////////////////////////
 	/// \brief Generate noise from a 1D point
@@ -149,7 +155,7 @@ public:
 	void setGain(float gain);
 
 private:
-	FastNoiseLite m_noise;	//!< The noise generator
+	void* m_generator;	//!< The noise generator
 };
 
 }
