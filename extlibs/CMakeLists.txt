@@ -19,11 +19,11 @@ if(NOT DEFINED glfw_FOUND)
 endif()
 
 # Assimp
-CPMAddPackage("gh:assimp/assimp#master")
+CPMAddPackage("gh:assimp/assimp#v5.0.1")
 target_link_libraries(polygine assimp)
 target_include_directories(polygine PRIVATE ${assimp_SOURCE_DIR}/include)
 if(NOT DEFINED assimp_FOUND)
-    install(TARGETS assimp DESTINATION "${CMAKE_INSTALL_LIBDIR}" EXPORT polygine-export)
+    install(TARGETS zlibstatic IrrXML assimp DESTINATION "${CMAKE_INSTALL_LIBDIR}" EXPORT polygine-export)
 endif()
 
 # Freetype
