@@ -71,9 +71,11 @@ public:
 	template <typename... Cs>
 	std::vector<Entity> createEntities(Uint16 num, const Cs&... components);
 
-	void removeEntity(Entity::Id id);
+	void removeEntity(const Entity& entity);
 
 	void removeQueuedEntities();
+
+	std::vector<Entity>& getRemoveQueue();
 
 	template <typename C>
 	C* getComponent(Entity::Id id) const;
@@ -93,7 +95,7 @@ public:
 
 private:
 	template <typename... Cs>
-	void removeEntitiesImpl(const std::vector<Entity::Id>& ids);
+	void removeEntitiesImpl(const std::vector<Entity>& entities);
 
 private:
 	Scene* m_scene;
@@ -102,9 +104,9 @@ private:
 
 	HandleArray<Entity::Id> m_entityIds;
 	HashSet<Uint32> m_componentTypes;
-	std::vector<Entity::Id> m_removeQueue;
+	std::vector<Entity> m_removeQueue;
 
-	std::function<void(const std::vector<Entity::Id>&)> m_removeFunc;
+	std::function<void(const std::vector<Entity>&)> m_removeFunc;
 };
 
 }

@@ -1,6 +1,26 @@
 include(${CMAKE_SOURCE_DIR}/cmake/CPM.cmake)
 
 set(CPM_SOURCE_CACHE "${CMAKE_SOURCE_DIR}/extlibs/cache")
+
+# ReactPhysics3D
+CPMAddPackage("gh:DanielChappuis/reactphysics3d#master")
+target_link_libraries(polygine reactphysics3d)
+configure_file("${CMAKE_SOURCE_DIR}/extlibs/reactphysics3d/PhysicsWorld.h" "${reactphysics3d_SOURCE_DIR}/include/reactphysics3d/engine/PhysicsWorld.h")
+configure_file("${CMAKE_SOURCE_DIR}/extlibs/reactphysics3d/CollisionBody.h" "${reactphysics3d_SOURCE_DIR}/include/reactphysics3d/body/CollisionBody.h")
+configure_file("${CMAKE_SOURCE_DIR}/extlibs/reactphysics3d/RigidBody.h" "${reactphysics3d_SOURCE_DIR}/include/reactphysics3d/body/RigidBody.h")
+configure_file("${CMAKE_SOURCE_DIR}/extlibs/reactphysics3d/Components.h" "${reactphysics3d_SOURCE_DIR}/include/reactphysics3d/components/Components.h")
+configure_file("${CMAKE_SOURCE_DIR}/extlibs/reactphysics3d/ColliderComponents.h" "${reactphysics3d_SOURCE_DIR}/include/reactphysics3d/components/ColliderComponents.h")
+configure_file("${CMAKE_SOURCE_DIR}/extlibs/reactphysics3d/CollisionBodyComponents.h" "${reactphysics3d_SOURCE_DIR}/include/reactphysics3d/components/CollisionBodyComponents.h")
+configure_file("${CMAKE_SOURCE_DIR}/extlibs/reactphysics3d/RigidBodyComponents.h" "${reactphysics3d_SOURCE_DIR}/include/reactphysics3d/components/RigidBodyComponents.h")
+configure_file("${CMAKE_SOURCE_DIR}/extlibs/reactphysics3d/TransformComponents.h" "${reactphysics3d_SOURCE_DIR}/include/reactphysics3d/components/TransformComponents.h")
+target_include_directories(polygine PUBLIC
+    $<BUILD_INTERFACE:${reactphysics3d_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>)
+if(NOT DEFINED reactphysics3d_FOUND)
+    install(TARGETS reactphysics3d DESTINATION "${CMAKE_INSTALL_LIBDIR}" EXPORT polygine-export)
+endif()
+
+# Use local packages if available
 set(CPM_USE_LOCAL_PACKAGES)
 
 # Hopscotch Map

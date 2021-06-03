@@ -68,6 +68,10 @@ public:
 
 	Quaternion operator-() const;
 
+	bool operator==(const Quaternion& q) const;
+
+	bool operator!=(const Quaternion& q) const;
+
 	float x, y, z, w;
 };
 

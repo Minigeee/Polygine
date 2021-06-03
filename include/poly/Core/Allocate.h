@@ -86,10 +86,10 @@ static AllocateInit g_allocateInit;
 #define MALLOC_DBG(size) ::malloc(size)
 #define FREE_DBG(ptr) ::free(ptr)
 #ifdef WIN32
-#define ALIGNED_MALLOC_DBG(size, align) ::_aligned_alloc(size, align)
+#define ALIGNED_MALLOC_DBG(size, align) ::_aligned_malloc(size, align)
 #define ALIGNED_FREE_DBG(ptr) ::_aligned_free(ptr)
 #else
-#define ALIGNED_MALLOC_DBG(size, align) ::aligned_alloc(size, align)
+#define ALIGNED_MALLOC_DBG(size, align) ::aligned_malloc(size, align)
 #define ALIGNED_FREE_DBG(ptr) ::aligned_free(ptr)
 #endif
 #endif

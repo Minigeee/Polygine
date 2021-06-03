@@ -207,4 +207,13 @@ inline void Pool<T>::free(T* ptr)
 		s_wrapper.m_pool.free(ptr);
 }
 
+
+///////////////////////////////////////////////////////////
+template <typename T>
+inline bool Pool<T>::isInitialized()
+{
+	return s_isInitialized;
+}
+
+
 }

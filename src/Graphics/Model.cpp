@@ -639,6 +639,13 @@ const std::vector<Vertex>& Model::getVertices() const
 
 
 ///////////////////////////////////////////////////////////
+const std::vector<Uint32>& Model::getIndices() const
+{
+	return m_indices;
+}
+
+
+///////////////////////////////////////////////////////////
 Uint32 Model::getNumMeshes() const
 {
 	return m_meshes.size();

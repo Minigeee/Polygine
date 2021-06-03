@@ -243,6 +243,8 @@ void Dropdown::removeItem(Uint32 index)
 ///////////////////////////////////////////////////////////
 void Dropdown::clearItems()
 {
+	if (!Pool<VListView>::isInitialized()) return;
+
 	const std::vector<UIElement*>& children = m_menu->getChildren();
 	for (int i = children.size() - 1; i >= 0; --i)
 	{

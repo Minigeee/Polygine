@@ -34,6 +34,24 @@ E_EntitiesCreated::E_EntitiesCreated(std::vector<Entity>& entities) :
 
 
 ///////////////////////////////////////////////////////////
+E_EntitiesRemoved::E_EntitiesRemoved() :
+	m_numEntities	(0),
+	m_entities		(0)
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
+E_EntitiesRemoved::E_EntitiesRemoved(std::vector<Entity>& entities) :
+	m_numEntities	(entities.size()),
+	m_entities		(&entities[0])
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
 Scene::Scene() :
 	m_handle				(s_idArray.add(true))
 {
@@ -71,10 +89,10 @@ Uint16 Scene::getId() const
 
 
 ///////////////////////////////////////////////////////////
-void Scene::removeEntity(Entity::Id id)
+void Scene::removeEntity(const Entity& entity)
 {
 	// Find the correct group
-	Uint32 groupId = id.m_group;
+	Uint32 groupId = entity.getId().m_group;
 
 	// Entity removal is protected by mutex
 	std::lock_guard<std::mutex> lock(m_entityMutex);
@@ -83,7 +101,14 @@ void Scene::removeEntity(Entity::Id id)
 	ASSERT(it != m_entityGroups.end(), "Can not remove entity from unknown entity group: %d", groupId);
 
 	// This function adds it to a remove queue
-	it.value().removeEntity(id);
+	it.value().removeEntity(entity);
+}
+
+
+///////////////////////////////////////////////////////////
+void Scene::removeEntity(Entity::Id id)
+{
+	removeEntity(Entity(this, id));
 }
 
 
@@ -95,7 +120,18 @@ void Scene::removeQueuedEntities()
 
 	// Clear all queues
 	for (auto it = m_entityGroups.begin(); it != m_entityGroups.end(); ++it)
-		it.value().removeQueuedEntities();
+	{
+		priv::EntityGroup& group = it.value();
+
+		if (group.getRemoveQueue().size())
+		{
+			// Send remove event
+			sendEvent(E_EntitiesRemoved(group.getRemoveQueue()));
+
+			// Remove entities
+			group.removeQueuedEntities();
+		}
+	}
 }
 
 

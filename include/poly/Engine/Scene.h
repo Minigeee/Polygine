@@ -17,6 +17,14 @@ namespace poly
 
 ///////////////////////////////////////////////////////////
 /// \brief An event that occurs whenever entities are created in a scene
+/// \ingroup Components
+///
+/// This event is generated whenever a group of entities of
+/// any type is created, and every single entity inside the
+/// list is guaranteed to contain the same set of components.
+/// This means that when checking which components are attached
+/// to the group of entities, only the first entity in the list
+/// has to be checked.
 ///
 ///////////////////////////////////////////////////////////
 struct E_EntitiesCreated
@@ -32,6 +40,37 @@ struct E_EntitiesCreated
 	///
 	///////////////////////////////////////////////////////////
 	E_EntitiesCreated(std::vector<Entity>& entities);
+
+	Uint32 m_numEntities;	//!< Number of entities
+	Entity* m_entities;		//!< Pointer to the first entity in the list
+};
+
+
+///////////////////////////////////////////////////////////
+/// \brief An event that occurs whenever entities are destroyed
+/// \ingroup Components
+///
+/// This event is generated during the actual destruction of
+/// the entities, not when Scene::removeEntity() is called.
+/// The list of destroyed entities in each event will all
+/// contain the same set of components, so when checking which
+/// components are attached to the entities, only the first
+/// entity in the list has to be checked.
+///
+///////////////////////////////////////////////////////////
+struct E_EntitiesRemoved
+{
+	///////////////////////////////////////////////////////////
+	/// \brief Default constructor
+	///
+	///////////////////////////////////////////////////////////
+	E_EntitiesRemoved();
+
+	///////////////////////////////////////////////////////////
+	/// \brief Create an event from a list of entities
+	///
+	///////////////////////////////////////////////////////////
+	E_EntitiesRemoved(std::vector<Entity>& entities);
 
 	Uint32 m_numEntities;	//!< Number of entities
 	Entity* m_entities;		//!< Pointer to the first entity in the list
@@ -218,6 +257,25 @@ public:
 	///////////////////////////////////////////////////////////
 	template <typename... Cs>
 	std::vector<Entity> createEntities(Uint32 num, Tuple<Cs...>& components);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Queue an entity for removal
+	///
+	/// Removing entities while component data is being processed
+	/// can often lead to unpredictable behavior, so entities
+	/// must be queued for removal instead.
+	///
+	/// The queued entities can then all be removed at once
+	/// at a later time, most often at the end of the update frame.
+	///
+	/// This function is thread-safe.
+	///
+	/// \param id The id of the entity to remove
+	///
+	/// \see removeQueuedEntities
+	///
+	///////////////////////////////////////////////////////////
+	void removeEntity(const Entity& entity);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Queue an entity for removal
