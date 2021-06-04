@@ -1,50 +1,82 @@
 #include <poly/Physics/Collider.h>
 
+#include <reactphysics3d/reactphysics3d.h>
+
+#define COLLIDER_CAST(x) reinterpret_cast<reactphysics3d::Collider*>(x)
+
 namespace poly
 {
 
 
 ///////////////////////////////////////////////////////////
 Collider::Collider() :
-	m_position		(0.0f),
-	m_rotation		()
+	m_collider				(0),
+	m_bounciness			(0.1f),
+	m_frictionCoefficient	(0.2f),
+	m_rollingResistance		(0.0f)
 {
 
 }
 
 
 ///////////////////////////////////////////////////////////
-void Collider::setPosition(const Vector3f& pos)
+void Collider::setBounciness(float bounciness)
 {
-	m_position = pos;
+	m_bounciness = bounciness;
+	if (m_collider)
+		COLLIDER_CAST(m_collider)->getMaterial().setBounciness(m_bounciness);
 }
 
 
 ///////////////////////////////////////////////////////////
-void Collider::setPosition(float x, float y, float z)
+void Collider::setFrictionCoefficient(float coefficient)
 {
-	m_position = Vector3f(x, y, z);
+	m_frictionCoefficient = coefficient;
+	if (m_collider)
+		COLLIDER_CAST(m_collider)->getMaterial().setFrictionCoefficient(m_frictionCoefficient);
 }
 
 
 ///////////////////////////////////////////////////////////
-void Collider::setRotation(const Quaternion& rot)
+void Collider::setRollingResistance(float resistance)
 {
-	m_rotation = rot;
+	m_rollingResistance = resistance;
+	if (m_collider)
+		COLLIDER_CAST(m_collider)->getMaterial().setRollingResistance(m_rollingResistance);
 }
 
 
 ///////////////////////////////////////////////////////////
-const Vector3f& Collider::getPosition() const
+float Collider::getBounciness() const
 {
-	return m_position;
+	return m_bounciness;
 }
 
 
 ///////////////////////////////////////////////////////////
-const Quaternion& Collider::getRotation() const
+float Collider::getFrictionCoefficient() const
 {
-	return m_rotation;
+	return m_frictionCoefficient;
+}
+
+
+///////////////////////////////////////////////////////////
+float Collider::getRollingResistance() const
+{
+	return m_rollingResistance;
+}
+
+
+///////////////////////////////////////////////////////////
+void Collider::setCollider(void* collider)
+{
+	m_collider = collider;
+
+	reactphysics3d::Collider* rp3d = COLLIDER_CAST(collider);
+	reactphysics3d::Material& material = rp3d->getMaterial();
+	material.setBounciness(m_bounciness);
+	material.setFrictionCoefficient(m_frictionCoefficient);
+	material.setRollingResistance(m_rollingResistance);
 }
 
 

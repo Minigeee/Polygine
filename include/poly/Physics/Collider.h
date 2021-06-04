@@ -8,24 +8,36 @@ namespace poly
 {
 
 
+class Physics;
+
+
 class Collider
 {
+	friend Physics;
+
 public:
 	Collider();
 
-	void setPosition(const Vector3f& position);
+	void setBounciness(float bounciness);
 
-	void setPosition(float x, float y, float z);
+	void setFrictionCoefficient(float coefficient);
 
-	void setRotation(const Quaternion& rot);
+	void setRollingResistance(float resistance);
 
-	const Vector3f& getPosition() const;
+	float getBounciness() const;
 
-	const Quaternion& getRotation() const;
+	float getFrictionCoefficient() const;
+
+	float getRollingResistance() const;
 
 private:
-	Vector3f m_position;
-	Quaternion m_rotation;
+	void setCollider(void* collider);
+
+private:
+	void* m_collider;
+	float m_bounciness;
+	float m_frictionCoefficient;
+	float m_rollingResistance;
 };
 
 

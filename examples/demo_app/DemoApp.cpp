@@ -36,12 +36,9 @@
 #include <poly/Math/Noise.h>
 #include <poly/Math/Transform.h>
 
-#include <poly/Physics/BoxCollider.h>
 #include <poly/Physics/Components.h>
-#include <poly/Physics/ConvexMeshCollider.h>
-#include <poly/Physics/HeightMapCollider.h>
 #include <poly/Physics/Physics.h>
-#include <poly/Physics/SphereCollider.h>
+#include <poly/Physics/Shapes.h>
 
 #include <poly/UI/Button.h>
 #include <poly/UI/Dropdown.h>
@@ -140,15 +137,10 @@ int main()
 
     Model model("examples/models/character/character_flat.dae");
 
-    Skeleton skeletons[3];
+    Skeleton skeleton;
     Animation animation("examples/models/character/character_flat.dae", "Armature");
-    skeletons[0].load("examples/models/character/character_flat.dae");
-    skeletons[0].setAnimation(&animation);
-    skeletons[1] = skeletons[0];
-    skeletons[1].setAnimationTime(0.5f);
-    skeletons[2] = skeletons[0];
-    skeletons[2].setAnimationTime(0.5f);
-    skeletons[2].setAnimationSpeed(1.5f);
+    skeleton.load("examples/models/character/character_flat.dae");
+    skeleton.setAnimation(&animation);
 
     Camera camera;
     camera.setPosition(0.0f, 50.0f, 0.0f);
@@ -239,11 +231,15 @@ int main()
     t.m_scale = Vector3f(0.25f);
     RenderComponent r(&model);
     r.m_castsShadows = true;
-    scene.createEntity(t, r, AnimationComponent(&skeletons[0]), DynamicTag());
-    t.m_position.x = 5.0f;
-    scene.createEntity(t, r, AnimationComponent(&skeletons[1]), DynamicTag());
-    t.m_position.x = -5.0f;
-    scene.createEntity(t, r, AnimationComponent(&skeletons[2]), DynamicTag());
+    RigidBodyComponent rbody;
+    rbody.m_position.y = 52.0f;
+    rbody.m_mass = 65.0f;
+    rbody.m_inertiaTensor = Vector3f(INFINITY);
+    Entity player = scene.createEntity(t, r, AnimationComponent(&skeleton), rbody, DynamicTag());
+    CapsuleShape capsule(0.4f, 1.0f);
+    capsule.m_position = Vector3f(0.0f, 0.9f, 0.0f);
+    Collider playerCollider = physics->addCollider(player, capsule);
+    playerCollider.setFrictionCoefficient(0.5f);
 
     t.m_scale = Vector3f(1.0f);
 
@@ -253,14 +249,15 @@ int main()
         rbody.m_position = Vector3f(0.0f, 60.0f + 2 * i, -5.0f);
         rbody.m_mass = 10.0f;
         Entity boxEntity1 = scene.createEntity(t, RenderComponent(&box), rbody, DynamicTag());
-        physics->addCollider(boxEntity1, BoxCollider(1.0f, 1.0f, 1.0f));
+        physics->addCollider(boxEntity1, BoxShape(1.0f, 1.0f, 1.0f));
     }
 
-    RigidBodyComponent rbody;
     rbody.m_position = Vector3f(0.0f, 0.0f, 0.0f);
     rbody.m_type = RigidBodyType::Static;
-    Entity boxEntity2 = scene.createEntity(t, rbody, DynamicTag());
-    physics->addCollider(boxEntity2, HeightMapCollider(heightMap, Vector3f(4000.0f, 200.0f, 4000.0f)));
+    Entity terrainEntity = scene.createEntity(t, rbody, DynamicTag());
+    HeightMapShape terrainShape(heightMap, Vector3f(4000.0f, 200.0f, 4000.0f));
+    Collider terrainCollider = physics->addCollider(terrainEntity, terrainShape);
+    terrainCollider.setFrictionCoefficient(2.0f);
 
 
     Clock clock;
@@ -422,6 +419,7 @@ int main()
                     cameraRot.x = -89.0f;
 
                 camera.setRotation(cameraRot);
+                player.get<RigidBodyComponent>()->m_rotation = Quaternion(0.0f, -cameraRot.y + 180.0f, 0.0f);
             }
             else if (rightDown)
             {
@@ -503,14 +501,8 @@ int main()
         float elapsed = clock.restart().toSeconds();
         time += elapsed;
 
-        scene.system<TransformComponent>(
-            [&](const Entity::Id& id, TransformComponent& t)
-            {
-                t.m_rotation.y = 0.0f;
-            }
-        );
-
         Vector3f move;
+        bool jump = false;
         if (keyMap[Keyboard::W])
             move += camera.getDirection();
         if (keyMap[Keyboard::S])
@@ -520,23 +512,31 @@ int main()
         if (keyMap[Keyboard::D])
             move += camera.getRightDir();
         if (keyMap[Keyboard::Space])
-            move.y += 1.0f;
-        if (keyMap[Keyboard::LeftShift])
-            move.y -= 1.0f;
+            jump = true;
 
+        RigidBodyComponent* rbody = player.get<RigidBodyComponent>();
         if (length(move) != 0.0f)
-            camera.move(normalize(move) * elapsed * 3.4f);
+        {
+            Vector3f velocity = normalize(Vector3f(move.x, 0.0f, move.z)) * 3.4f;
+            rbody->m_linearVelocity.x = velocity.x;
+            rbody->m_linearVelocity.z = velocity.z;
+        }
+        if (jump)
+            rbody->m_linearVelocity.y = 3.5f;
 
         scene.getExtension<Physics>()->update(elapsed);
 
         // Copy position and rotation
         scene.system<RigidBodyComponent, TransformComponent>(
             [&](const Entity::Id& id, const RigidBodyComponent& rbody, TransformComponent& t)
-            {
+             {
                 t.m_position = rbody.m_position;
                 t.m_rotation = rbody.m_rotation;
             }
         );
+
+        TransformComponent* t = player.get<TransformComponent>();
+        camera.setPosition(t->m_position - 3.0f * camera.getDirection() + Vector3f(0.0f, 2.0f, 0.0f));
 
         const ProfilerData& data = Profiler::getData("main", "GameLoop");
 
@@ -561,9 +561,7 @@ int main()
         ui.update(elapsed);
 
         // Render scene
-        skeletons[0].update(elapsed);
-        skeletons[1].update(elapsed);
-        skeletons[2].update(elapsed);
+        skeleton.update(elapsed);
         octree.update();
         scene.getExtension<Shadows>()->render(camera);
         scene.render(camera, framebuffers[0]);

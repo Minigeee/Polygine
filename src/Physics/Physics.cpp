@@ -5,14 +5,8 @@
 
 #include <poly/Graphics/Model.h>
 
-#include <poly/Physics/BoxCollider.h>
-#include <poly/Physics/CapsuleCollider.h>
 #include <poly/Physics/Components.h>
-#include <poly/Physics/ConcaveMeshCollider.h>
-#include <poly/Physics/ConvexMeshCollider.h>
-#include <poly/Physics/HeightMapCollider.h>
 #include <poly/Physics/Physics.h>
-#include <poly/Physics/SphereCollider.h>
 
 #include <reactphysics3d/reactphysics3d.h>
 
@@ -51,6 +45,21 @@ HashMap<float, void*> Physics::s_sphereShapes;
 
 
 ///////////////////////////////////////////////////////////
+Physics::RigidBodyData::RigidBodyData(const Entity::Id& id, void* body) :
+	m_id				(id),
+	m_body				(body),
+	m_position			(0.0f),
+	m_linearVelocity	(0.0f),
+	m_angularVelocity	(0.0f),
+	m_type				(RigidBodyType::Dynamic),
+	m_allowedSleep		(true),
+	m_isSleeping		(false)
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
 Physics::Physics(Scene* scene) :
 	Extension		(scene),
 	m_world			(g_common.createPhysicsWorld())
@@ -70,9 +79,9 @@ Physics::Physics(Scene* scene) :
 
 					// Add data to map
 					Entity::Id id = e.m_entities[i].getId();
-					std::vector<GroupedBodyData>& group = m_groupedRigidBodies[id.m_group];
+					std::vector<RigidBodyData>& group = m_groupedRigidBodies[id.m_group];
 					m_rigidBodies[id] = BodyData{ body, id.m_group, group.size() };
-					group.push_back(GroupedBodyData{ id, body, Vector3f(0.0f), Quaternion(), RigidBodyType::Dynamic, false });
+					group.push_back(RigidBodyData(id, body));
 				}
 			}
 		}
@@ -86,7 +95,7 @@ Physics::Physics(Scene* scene) :
 				for (Uint32 i = 0; i < e.m_numEntities; ++i)
 				{
 					Entity::Id id = e.m_entities[i].getId();
-					std::vector<GroupedBodyData>& group = m_groupedRigidBodies[id.m_group];
+					std::vector<RigidBodyData>& group = m_groupedRigidBodies[id.m_group];
 
 					// Destroy the rigid body
 					auto it = m_rigidBodies.find(id);
@@ -133,7 +142,7 @@ void Physics::update(float dt)
 	reactphysics3d::RigidBodyComponents& rbodyComponents = world->mRigidBodyComponents;
 	reactphysics3d::TransformComponents& tComponents = world->mTransformComponents;
 
-	std::vector<GroupedBodyData>* group = 0;
+	std::vector<RigidBodyData>* group = 0;
 	Uint32 groupId = 0;
 	Uint32 localIndex = 0;
 
@@ -151,7 +160,7 @@ void Physics::update(float dt)
 				localIndex = 0;
 			}
 
-			GroupedBodyData& data = group->at(localIndex);
+			RigidBodyData& data = group->at(localIndex);
 
 			// Get indices
 			reactphysics3d::Entity entity = RBODY_CAST(data.m_body)->getEntity();
@@ -163,27 +172,38 @@ void Physics::update(float dt)
 			if (data.m_type != RigidBodyType::Dynamic)
 				invMass = 0.0f;
 
+			// Inverse inertia tensor
+			Vector3f invInertiaTensor(
+				body.m_inertiaTensor.x == INFINITY ? 0.0f : 1.0f / body.m_inertiaTensor.x,
+				body.m_inertiaTensor.y == INFINITY ? 0.0f : 1.0f / body.m_inertiaTensor.y,
+				body.m_inertiaTensor.z == INFINITY ? 0.0f : 1.0f / body.m_inertiaTensor.z
+			);
+
 			// Change properties based on body type
+			reactphysics3d::BodyType type = reactphysics3d::BodyType::DYNAMIC;
+			if (body.m_type == RigidBodyType::Static)
+			{
+				body.m_linearVelocity = Vector3f(0.0f);
+				body.m_angularVelocity = Vector3f(0.0f);
+				body.m_inertiaTensor = Vector3f(INFINITY);
+				body.m_mass = INFINITY;
+				invInertiaTensor = Vector3f(0.0f);
+				invMass = 0.0f;
+
+				type = reactphysics3d::BodyType::STATIC;
+			}
+			else if (body.m_type == RigidBodyType::Kinematic)
+			{
+				body.m_inertiaTensor = Vector3f(INFINITY);
+				body.m_mass = INFINITY;
+				invInertiaTensor = Vector3f(0.0f);
+				invMass = 0.0f;
+
+				type = reactphysics3d::BodyType::KINEMATIC;
+			}
+
 			if (body.m_type != data.m_type)
 			{
-				reactphysics3d::BodyType type = reactphysics3d::BodyType::DYNAMIC;
-				if (body.m_type == RigidBodyType::Static)
-				{
-					body.m_linearVelocity = Vector3f(0.0f);
-					body.m_angularVelocity = Vector3f(0.0f);
-					body.m_mass = INFINITY;
-					invMass = 0.0f;
-
-					type = reactphysics3d::BodyType::STATIC;
-				}
-				else if (body.m_type == RigidBodyType::Kinematic)
-				{
-					body.m_mass = INFINITY;
-					invMass = 0.0f;
-
-					type = reactphysics3d::BodyType::KINEMATIC;
-				}
-
 				// Call the function
 				RBODY_CAST(data.m_body)->setType(type);
 
@@ -217,7 +237,8 @@ void Physics::update(float dt)
 			}
 
 			// Check if the body needs to be awakened
-			if (data.m_isSleeping)
+			data.m_isSleeping = rbodyComponents.mIsSleeping[bodyIndex];
+			if (data.m_allowedSleep && data.m_isSleeping)
 			{
 				float linVelocitySquared = dot(body.m_linearVelocity, body.m_linearVelocity);
 				float angVelocitySquared = dot(body.m_angularVelocity, body.m_angularVelocity);
@@ -228,16 +249,42 @@ void Physics::update(float dt)
 					RBODY_CAST(data.m_body)->setIsSleeping(false);
 			}
 
-			// Copy values
+			// Update mass properties
 			if (data.m_type == RigidBodyType::Dynamic)
+			{
+				if (data.m_massPropertiesUpdated)
+					// Update center of mass if the properties were updated
+					body.m_centerOfMass = POLY_VEC3(rbodyComponents.mCentersOfMassLocal[bodyIndex]);
+
+				// Set mass
 				rbodyComponents.mMasses[bodyIndex] = body.m_mass;
+
+				// Update inertia tensor
+				if (data.m_massPropertiesUpdated && body.m_inertiaTensor == Vector3f(1.0f))
+					// Update the component inertia tensor if it wasn't modified externally
+					body.m_inertiaTensor = POLY_VEC3(rbodyComponents.mLocalInertiaTensors[bodyIndex]);
+				else
+					// If it was modified, 
+					rbodyComponents.mLocalInertiaTensors[bodyIndex] = RP3D_VEC3(body.m_inertiaTensor);
+
+				data.m_massPropertiesUpdated = false;
+			}
+
+			// Copy values
 			rbodyComponents.mInverseMasses[bodyIndex] = invMass;
+			rbodyComponents.mInverseInertiaTensorsLocal[bodyIndex] = RP3D_VEC3(invInertiaTensor);
 			rbodyComponents.mLinearVelocities[bodyIndex] = RP3D_VEC3(body.m_linearVelocity);
 			rbodyComponents.mAngularVelocities[bodyIndex] = RP3D_VEC3(body.m_angularVelocity);
 			rbodyComponents.mLinearDampings[bodyIndex] = body.m_linearDamping;
 			rbodyComponents.mAngularDampings[bodyIndex] = body.m_angularDamping;
 			rbodyComponents.mExternalForces[bodyIndex] = RP3D_VEC3(body.m_force);
 			rbodyComponents.mExternalTorques[bodyIndex] = RP3D_VEC3(body.m_torque);
+
+			// Cache certain properties
+			data.m_position = body.m_position;
+			data.m_rotation = body.m_rotation;
+			data.m_linearVelocity = body.m_linearVelocity;
+			data.m_angularVelocity = body.m_angularVelocity;
 
 			++localIndex;
 		}
@@ -268,7 +315,7 @@ void Physics::update(float dt)
 				localIndex = 0;
 			}
 
-			GroupedBodyData& data = group->at(localIndex);
+			RigidBodyData& data = group->at(localIndex);
 
 			// Get indices
 			reactphysics3d::Entity entity = RBODY_CAST(data.m_body)->getEntity();
@@ -279,22 +326,18 @@ void Physics::update(float dt)
 			reactphysics3d::Transform& transform = tComponents.mTransforms[transformIndex];
 
 			// Copy data
-			body.m_position = POLY_VEC3(transform.getPosition());
-			body.m_rotation = POLY_QUAT(transform.getOrientation());
-			body.m_mass = rbodyComponents.mMasses[bodyIndex];
-			body.m_linearVelocity = POLY_VEC3(rbodyComponents.mLinearVelocities[bodyIndex]);
-			body.m_angularVelocity = POLY_VEC3(rbodyComponents.mAngularVelocities[bodyIndex]);
-			body.m_centerOfMass = POLY_VEC3(rbodyComponents.mCentersOfMassLocal[bodyIndex]);
-			body.m_linearDamping = rbodyComponents.mLinearDampings[bodyIndex];
-			body.m_angularDamping = rbodyComponents.mAngularDampings[bodyIndex];
+			if (body.m_position == data.m_position)
+				body.m_position = POLY_VEC3(transform.getPosition());
+			if (body.m_rotation == data.m_rotation)
+				body.m_rotation = POLY_QUAT(transform.getOrientation());
+			if (body.m_linearVelocity == data.m_linearVelocity)
+				body.m_linearVelocity = POLY_VEC3(rbodyComponents.mLinearVelocities[bodyIndex]);
+			if (body.m_angularVelocity == data.m_angularVelocity)
+				body.m_angularVelocity = POLY_VEC3(rbodyComponents.mAngularVelocities[bodyIndex]);
 
 			// Forces are reset to zero
 			body.m_force = Vector3f(0.0f);
 			body.m_torque = Vector3f(0.0f);
-
-			data.m_position = body.m_position;
-			data.m_rotation = body.m_rotation;
-			data.m_isSleeping = rbodyComponents.mIsSleeping[bodyIndex];
 
 			++localIndex;
 		}
@@ -305,130 +348,169 @@ void Physics::update(float dt)
 
 
 ///////////////////////////////////////////////////////////
-void Physics::addCollider(const Entity& entity, const BoxCollider& collider)
+void Physics::setSleepAllowed(const Entity& entity, bool allowed)
 {
-	ASSERT(entity.has<RigidBodyComponent>(), "A collider can only be added to an entity with a rigid body or a collision body");
+	BodyData& data = m_rigidBodies[entity.getId()];
 
-	// Get a box shape
-	reactphysics3d::BoxShape* shape = (reactphysics3d::BoxShape*)getBoxShape(collider.getDimensions());
+	// Change option in engine
+	reactphysics3d::RigidBody* body = (reactphysics3d::RigidBody*)data.m_body;
+	body->setIsAllowedToSleep(allowed);
 
-	// Get rigid body
-	reactphysics3d::RigidBody* body = (reactphysics3d::RigidBody*)m_rigidBodies[entity.getId()].m_body;
-	const Vector3f& pos = collider.getPosition();
-	const Quaternion& rot = collider.getRotation();
-	reactphysics3d::Transform transform(RP3D_VEC3(pos), RP3D_QUAT(rot));
-
-	// Add the collider
-	body->addCollider(shape, transform);
-	body->updateMassPropertiesFromColliders();
+	// Update cache
+	RigidBodyData& group = m_groupedRigidBodies[data.m_group][data.m_index];
+	group.m_allowedSleep = allowed;
 }
 
 
 ///////////////////////////////////////////////////////////
-void Physics::addCollider(const Entity& entity, const CapsuleCollider& collider)
+Collider Physics::addCollider(const Entity& entity, BoxShape& shape)
 {
 	ASSERT(entity.has<RigidBodyComponent>(), "A collider can only be added to an entity with a rigid body or a collision body");
 
 	// Get a box shape
-	reactphysics3d::CapsuleShape* shape =
-		(reactphysics3d::CapsuleShape*)getCapsuleShape(Vector2f(collider.getRadius(), collider.getHeight()));
+	reactphysics3d::BoxShape* rp3dShape = (reactphysics3d::BoxShape*)getBoxShape(shape.m_dimensions);
 
 	// Get rigid body
-	reactphysics3d::RigidBody* body = (reactphysics3d::RigidBody*)m_rigidBodies[entity.getId()].m_body;
-	const Vector3f& pos = collider.getPosition();
-	const Quaternion& rot = collider.getRotation();
+	BodyData& data = m_rigidBodies[entity.getId()];
+	reactphysics3d::RigidBody* body = (reactphysics3d::RigidBody*)data.m_body;
+	const Vector3f& pos = shape.m_position;
+	const Quaternion& rot = shape.m_rotation;
 	reactphysics3d::Transform transform(RP3D_VEC3(pos), RP3D_QUAT(rot));
 
 	// Add the collider
-	body->addCollider(shape, transform);
+	Collider collider;
+	collider.setCollider(body->addCollider(rp3dShape, transform));
 	body->updateMassPropertiesFromColliders();
+	m_groupedRigidBodies[data.m_group][data.m_index].m_massPropertiesUpdated = true;
+
+	return collider;
 }
 
 
 ///////////////////////////////////////////////////////////
-void Physics::addCollider(const Entity& entity, const ConcaveMeshCollider& collider)
+Collider Physics::addCollider(const Entity& entity, CapsuleShape& shape)
 {
 	ASSERT(entity.has<RigidBodyComponent>(), "A collider can only be added to an entity with a rigid body or a collision body");
 
 	// Get a box shape
-	reactphysics3d::ConcaveMeshShape* shape = (reactphysics3d::ConcaveMeshShape*)getConcaveMeshShape(collider);
+	reactphysics3d::CapsuleShape* rp3dShape =
+		(reactphysics3d::CapsuleShape*)getCapsuleShape(Vector2f(shape.m_radius, shape.m_height));
 
 	// Get rigid body
-	reactphysics3d::RigidBody* body = (reactphysics3d::RigidBody*)m_rigidBodies[entity.getId()].m_body;
-	const Vector3f& pos = collider.getPosition();
-	const Quaternion& rot = collider.getRotation();
+	BodyData& data = m_rigidBodies[entity.getId()];
+	reactphysics3d::RigidBody* body = (reactphysics3d::RigidBody*)data.m_body;
+	const Vector3f& pos = shape.m_position;
+	const Quaternion& rot = shape.m_rotation;
 	reactphysics3d::Transform transform(RP3D_VEC3(pos), RP3D_QUAT(rot));
 
 	// Add the collider
-	body->addCollider(shape, transform);
+	Collider collider;
+	collider.setCollider(body->addCollider(rp3dShape, transform));
 	body->updateMassPropertiesFromColliders();
+	m_groupedRigidBodies[data.m_group][data.m_index].m_massPropertiesUpdated = true;
+
+	return collider;
 }
 
 
 ///////////////////////////////////////////////////////////
-void Physics::addCollider(const Entity& entity, const ConvexMeshCollider& collider)
+Collider Physics::addCollider(const Entity& entity, ConcaveMeshShape& shape)
 {
 	ASSERT(entity.has<RigidBodyComponent>(), "A collider can only be added to an entity with a rigid body or a collision body");
 
 	// Get a box shape
-	reactphysics3d::ConvexMeshShape* shape = (reactphysics3d::ConvexMeshShape*)getConvexMeshShape(collider);
+	reactphysics3d::ConcaveMeshShape* rp3dShape = (reactphysics3d::ConcaveMeshShape*)getConcaveMeshShape(shape);
 
 	// Get rigid body
-	reactphysics3d::RigidBody* body = (reactphysics3d::RigidBody*)m_rigidBodies[entity.getId()].m_body;
-	const Vector3f& pos = collider.getPosition();
-	const Quaternion& rot = collider.getRotation();
+	BodyData& data = m_rigidBodies[entity.getId()];
+	reactphysics3d::RigidBody* body = (reactphysics3d::RigidBody*)data.m_body;
+	const Vector3f& pos = shape.m_position;
+	const Quaternion& rot = shape.m_rotation;
 	reactphysics3d::Transform transform(RP3D_VEC3(pos), RP3D_QUAT(rot));
 
 	// Add the collider
-	body->addCollider(shape, transform);
+	Collider collider;
+	collider.setCollider(body->addCollider(rp3dShape, transform));
 	body->updateMassPropertiesFromColliders();
+	m_groupedRigidBodies[data.m_group][data.m_index].m_massPropertiesUpdated = true;
+
+	return collider;
 }
 
 
 ///////////////////////////////////////////////////////////
-void Physics::addCollider(const Entity& entity, const HeightMapCollider& collider)
+Collider Physics::addCollider(const Entity& entity, ConvexMeshShape& shape)
 {
 	ASSERT(entity.has<RigidBodyComponent>(), "A collider can only be added to an entity with a rigid body or a collision body");
 
-	// Calculate scale
-	const Vector3f& dims = collider.getDimensions();
-	Vector3f scale(dims.x / collider.getMapSize().x, dims.y, dims.z / collider.getMapSize().y);
+	// Get a box shape
+	reactphysics3d::ConvexMeshShape* rp3dShape = (reactphysics3d::ConvexMeshShape*)getConvexMeshShape(shape);
+
+	// Get rigid body
+	BodyData& data = m_rigidBodies[entity.getId()];
+	reactphysics3d::RigidBody* body = (reactphysics3d::RigidBody*)data.m_body;
+	const Vector3f& pos = shape.m_position;
+	const Quaternion& rot = shape.m_rotation;
+	reactphysics3d::Transform transform(RP3D_VEC3(pos), RP3D_QUAT(rot));
+
+	// Add the collider
+	Collider collider;
+	collider.setCollider(body->addCollider(rp3dShape, transform));
+	body->updateMassPropertiesFromColliders();
+	m_groupedRigidBodies[data.m_group][data.m_index].m_massPropertiesUpdated = true;
+
+	return collider;
+}
+
+
+///////////////////////////////////////////////////////////
+Collider Physics::addCollider(const Entity& entity, HeightMapShape& shape)
+{
+	ASSERT(entity.has<RigidBodyComponent>(), "A collider can only be added to an entity with a rigid body or a collision body");
 
 	// Create a height field collider
-	reactphysics3d::HeightFieldShape* shape = (reactphysics3d::HeightFieldShape*)getHeightMapShape(collider);
+	reactphysics3d::HeightFieldShape* rp3dShape = (reactphysics3d::HeightFieldShape*)getHeightMapShape(shape);
 
 	// Get rigid body
-	reactphysics3d::RigidBody* body = (reactphysics3d::RigidBody*)m_rigidBodies[entity.getId()].m_body;
-	Vector3f pos = collider.getPosition();
-	pos.y += 0.5f * dims.y;
-	const Quaternion& rot = collider.getRotation();
+	BodyData& data = m_rigidBodies[entity.getId()];
+	reactphysics3d::RigidBody* body = (reactphysics3d::RigidBody*)data.m_body;
+	Vector3f pos = shape.m_position;
+	pos.y += 0.5f * shape.m_dimensions.y;
+	const Quaternion& rot = shape.m_rotation;
 	reactphysics3d::Transform transform(RP3D_VEC3(pos), RP3D_QUAT(rot));
 
 	// Add the collider
-	reactphysics3d::Collider* c = body->addCollider(shape, transform);
+	Collider collider;
+	collider.setCollider(body->addCollider(rp3dShape, transform));
 	body->updateMassPropertiesFromColliders();
+	m_groupedRigidBodies[data.m_group][data.m_index].m_massPropertiesUpdated = true;
 
-	c->getMaterial().setFrictionCoefficient(1.0f);
+	return collider;
 }
 
 
 ///////////////////////////////////////////////////////////
-void Physics::addCollider(const Entity& entity, const SphereCollider& collider)
+Collider Physics::addCollider(const Entity& entity, SphereShape& shape)
 {
 	ASSERT(entity.has<RigidBodyComponent>(), "A collider can only be added to an entity with a rigid body or a collision body");
 
 	// Get a box shape
-	reactphysics3d::SphereShape* shape = (reactphysics3d::SphereShape*)getSphereShape(collider.getRadius());
+	reactphysics3d::SphereShape* rp3dShape = (reactphysics3d::SphereShape*)getSphereShape(shape.m_radius);
 
 	// Get rigid body
-	reactphysics3d::RigidBody* body = (reactphysics3d::RigidBody*)m_rigidBodies[entity.getId()].m_body;
-	const Vector3f& pos = collider.getPosition();
-	const Quaternion& rot = collider.getRotation();
+	BodyData& data = m_rigidBodies[entity.getId()];
+	reactphysics3d::RigidBody* body = (reactphysics3d::RigidBody*)data.m_body;
+	const Vector3f& pos = shape.m_position;
+	const Quaternion& rot = shape.m_rotation;
 	reactphysics3d::Transform transform(RP3D_VEC3(pos), RP3D_QUAT(rot));
 
 	// Add the collider
-	body->addCollider(shape, transform);
+	Collider collider;
+	collider.setCollider(body->addCollider(rp3dShape, transform));
 	body->updateMassPropertiesFromColliders();
+	m_groupedRigidBodies[data.m_group][data.m_index].m_massPropertiesUpdated = true;
+
+	return collider;
 }
 
 
@@ -471,33 +553,49 @@ void* Physics::getCapsuleShape(const Vector2f& dims)
 
 
 ///////////////////////////////////////////////////////////
-void* Physics::getConcaveMeshShape(const ConcaveMeshCollider& collider)
+void* Physics::getConcaveMeshShape(const ConcaveMeshShape& shape)
 {
 	// Create a new shape that will be shareable
-	void* shape = 0;
+	void* rp3d = 0;
 
-	void* ptr = collider.getIndices() ? (void*)collider.getIndices() : (void*)collider.getVertices();
+	const std::vector<Vertex>& vertices = shape.m_model->getVertices();
+	const std::vector<Uint32>& indices = shape.m_model->getIndices();
+	bool usesIndices = indices.size() > 0;
 
-	auto it = s_concaveMeshShapes.find(ptr);
+	// Get the vertex offset and number of vertices
+	Uint32 numMeshes = shape.m_model->getNumMeshes();
+	Uint32 vertexOffset = shape.m_model->getMesh(shape.m_meshNum)->m_offset;
+	Uint32 numVertices =
+		shape.m_meshNum + 1 == numMeshes ?
+		(usesIndices ? indices.size() : vertices.size()) :
+		shape.m_model->getMesh(shape.m_meshNum + 1)->m_offset;
+	numVertices -= vertexOffset;
+
+	// Get the key pointer that will be used to create a map entry
+	void* key = usesIndices ? (void*)&indices[vertexOffset] : (void*)&vertices[vertexOffset];
+
+	auto it = s_concaveMeshShapes.find(key);
 	if (it == s_concaveMeshShapes.end())
 	{
-		ConcaveMeshData& data = s_concaveMeshShapes[ptr];
+		// Create a map entry
+		ConcaveMeshData& data = s_concaveMeshShapes[key];
 
 		// If there are no indices, allocate a new array
-		data.m_indices = collider.getIndices();
-		if (!data.m_indices)
+		if (!usesIndices)
 		{
-			data.m_indices = (Uint32*)MALLOC_DBG(collider.getNumVertices() * sizeof(Uint32));
-			for (Uint32 i = 0; i < collider.getNumVertices(); ++i)
+			data.m_indices = (Uint32*)MALLOC_DBG(numVertices * sizeof(Uint32));
+			for (Uint32 i = 0; i < numVertices; ++i)
 				data.m_indices[i] = i;
 		}
+		else
+			data.m_indices = (Uint32*)&indices[vertexOffset];
 
 		// Create vertex array
 		reactphysics3d::TriangleVertexArray* vertexArray = new reactphysics3d::TriangleVertexArray(
-			collider.getNumUniqueVertices(),
-			collider.getVertices(),
+			usesIndices ? vertices.size() : numVertices,
+			usesIndices ? &vertices[0] : &vertices[vertexOffset],
 			sizeof(Vertex),
-			collider.getNumVertices() / 3,
+			numVertices / 3,
 			data.m_indices,
 			sizeof(Uint32),
 			reactphysics3d::TriangleVertexArray::VertexDataType::VERTEX_FLOAT_TYPE,
@@ -509,39 +607,55 @@ void* Physics::getConcaveMeshShape(const ConcaveMeshCollider& collider)
 		mesh->addSubpart(vertexArray);
 
 		// Create shape
-		data.m_shape = shape = g_common.createConcaveMeshShape(mesh);
+		data.m_shape = rp3d = g_common.createConcaveMeshShape(mesh);
 	}
 	else
-		shape = it.value().m_shape;
+		rp3d = it.value().m_shape;
 
-	return shape;
+	return rp3d;
 }
 
 
 ///////////////////////////////////////////////////////////
-void* Physics::getConvexMeshShape(const ConvexMeshCollider& collider)
+void* Physics::getConvexMeshShape(const ConvexMeshShape& shape)
 {
 	// Create a new shape that will be shareable
-	void* shape = 0;
+	void* rp3d = 0;
 
-	void* ptr = collider.getIndices() ? (void*)collider.getIndices() : (void*)collider.getVertices();
+	const std::vector<Vertex>& vertices = shape.m_model->getVertices();
+	const std::vector<Uint32>& indices = shape.m_model->getIndices();
+	bool usesIndices = indices.size() > 0;
 
-	auto it = s_convexMeshShapes.find(ptr);
+	// Get the vertex offset and number of vertices
+	Uint32 numMeshes = shape.m_model->getNumMeshes();
+	Uint32 vertexOffset = shape.m_model->getMesh(shape.m_meshNum)->m_offset;
+	Uint32 numVertices =
+		shape.m_meshNum + 1 == numMeshes ?
+			(usesIndices ? indices.size() : vertices.size()) :
+			shape.m_model->getMesh(shape.m_meshNum + 1)->m_offset;
+	numVertices -= vertexOffset;
+
+	// Get the key pointer that will be used to create a map entry
+	void* key = usesIndices ? (void*)&indices[vertexOffset] : (void*)&vertices[vertexOffset];
+
+	auto it = s_convexMeshShapes.find(key);
 	if (it == s_convexMeshShapes.end())
 	{
-		ConvexMeshData& data = s_convexMeshShapes[ptr];
+		// Create a map entry
+		ConvexMeshData& data = s_convexMeshShapes[key];
 
 		// If there are no indices, allocate a new array
-		data.m_indices = collider.getIndices();
-		if (!data.m_indices)
+		if (!usesIndices)
 		{
-			data.m_indices = (Uint32*)MALLOC_DBG(collider.getNumVertices() * sizeof(Uint32));
-			for (Uint32 i = 0; i < collider.getNumVertices(); ++i)
+			data.m_indices = (Uint32*)MALLOC_DBG(numVertices * sizeof(Uint32));
+			for (Uint32 i = 0; i < numVertices; ++i)
 				data.m_indices[i] = i;
 		}
+		else
+			data.m_indices = (Uint32*)&indices[vertexOffset];
 
 		// Create the faces array
-		Uint32 numFaces = collider.getNumVertices() / 3;
+		Uint32 numFaces = numVertices / 3;
 		reactphysics3d::PolygonVertexArray::PolygonFace* faces =
 			(reactphysics3d::PolygonVertexArray::PolygonFace*)MALLOC_DBG(
 				numFaces * sizeof(reactphysics3d::PolygonVertexArray::PolygonFace)
@@ -557,8 +671,8 @@ void* Physics::getConvexMeshShape(const ConvexMeshCollider& collider)
 
 		// Create vertex array
 		reactphysics3d::PolygonVertexArray* vertexArray = new reactphysics3d::PolygonVertexArray(
-			collider.getNumUniqueVertices(),
-			collider.getVertices(),
+			usesIndices ? vertices.size() : numVertices,
+			usesIndices ? &vertices[0] : &vertices[vertexOffset],
 			sizeof(Vertex),
 			data.m_indices,
 			sizeof(Uint32),
@@ -573,34 +687,34 @@ void* Physics::getConvexMeshShape(const ConvexMeshCollider& collider)
 		reactphysics3d::PolyhedronMesh* mesh = g_common.createPolyhedronMesh(vertexArray);
 
 		// Create shape
-		data.m_shape = shape = g_common.createConvexMeshShape(mesh);
+		data.m_shape = rp3d = g_common.createConvexMeshShape(mesh);
 	}
 	else
-		shape = it.value().m_shape;
+		rp3d = it.value().m_shape;
 
-	return shape;
+	return rp3d;
 }
 
 
 ///////////////////////////////////////////////////////////
-void* Physics::getHeightMapShape(const HeightMapCollider& collider)
+void* Physics::getHeightMapShape(const HeightMapShape& shape)
 {
 	// Create a new shape that will be shareable
-	void* shape = 0;
+	void* rp3d = 0;
 
-	auto it = s_heightMapShapes.find(collider.getHeightData());
+	auto it = s_heightMapShapes.find(shape.m_data);
 	if (it == s_heightMapShapes.end())
 	{
 		// Calculate scale
-		const Vector3f& dims = collider.getDimensions();
-		Vector3f scale(dims.x / collider.getMapSize().x, dims.y, dims.z / collider.getMapSize().y);
+		const Vector3f& dims = shape.m_dimensions;
+		Vector3f scale(dims.x / shape.m_imageSize.x, dims.y, dims.z / shape.m_imageSize.y);
 
-		shape = s_heightMapShapes[collider.getHeightData()] = g_common.createHeightFieldShape(
-			collider.getMapSize().x,
-			collider.getMapSize().y,
+		rp3d = s_heightMapShapes[shape.m_data] = g_common.createHeightFieldShape(
+			shape.m_imageSize.x,
+			shape.m_imageSize.y,
 			0.0f,
 			1.0f,
-			collider.getHeightData(),
+			shape.m_data,
 			reactphysics3d::HeightFieldShape::HeightDataType::HEIGHT_FLOAT_TYPE,
 			1,
 			1.0f,
@@ -608,9 +722,9 @@ void* Physics::getHeightMapShape(const HeightMapCollider& collider)
 		);
 	}
 	else
-		shape = it.value();
+		rp3d = it.value();
 
-	return shape;
+	return rp3d;
 }
 
 

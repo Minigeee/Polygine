@@ -5,16 +5,11 @@
 
 #include <poly/Engine/Extension.h>
 
+#include <poly/Physics/Collider.h>
+#include <poly/Physics/Shapes.h>
+
 namespace poly
 {
-
-
-class BoxCollider;
-class CapsuleCollider;
-class ConcaveMeshCollider;
-class ConvexMeshCollider;
-class HeightMapCollider;
-class SphereCollider;
 
 
 class Physics : public Extension
@@ -26,17 +21,19 @@ public:
 
 	void update(float dt);
 
-	void addCollider(const Entity& entity, const BoxCollider& collider);
+	void setSleepAllowed(const Entity& entity, bool allowed);
 
-	void addCollider(const Entity& entity, const CapsuleCollider& collider);
+	Collider addCollider(const Entity& entity, BoxShape& shape);
 
-	void addCollider(const Entity& entity, const ConcaveMeshCollider& collider);
+	Collider addCollider(const Entity& entity, CapsuleShape& shape);
 
-	void addCollider(const Entity& entity, const ConvexMeshCollider& collider);
+	Collider addCollider(const Entity& entity, ConcaveMeshShape& shape);
 
-	void addCollider(const Entity& entity, const HeightMapCollider& collider);
+	Collider addCollider(const Entity& entity, ConvexMeshShape& shape);
 
-	void addCollider(const Entity& entity, const SphereCollider& collider);
+	Collider addCollider(const Entity& entity, HeightMapShape& shape);
+
+	Collider addCollider(const Entity& entity, SphereShape& shape);
 
 private:
 	struct BodyData
@@ -46,14 +43,20 @@ private:
 		Uint32 m_index;
 	};
 
-	struct GroupedBodyData
+	struct RigidBodyData
 	{
+		RigidBodyData(const Entity::Id& id, void* body);
+
 		Entity::Id m_id;
 		void* m_body;
 		Vector3f m_position;
 		Quaternion m_rotation;
+		Vector3f m_linearVelocity;
+		Vector3f m_angularVelocity;
 		RigidBodyType m_type;
+		bool m_allowedSleep;
 		bool m_isSleeping;
+		bool m_massPropertiesUpdated;
 	};
 
 	struct ConcaveMeshData
@@ -83,11 +86,11 @@ private:
 
 	void* getCapsuleShape(const Vector2f& dims);
 
-	void* getConcaveMeshShape(const ConcaveMeshCollider& collider);
+	void* getConcaveMeshShape(const ConcaveMeshShape& shape);
 
-	void* getConvexMeshShape(const ConvexMeshCollider& collider);
+	void* getConvexMeshShape(const ConvexMeshShape& shape);
 
-	void* getHeightMapShape(const HeightMapCollider& collider);
+	void* getHeightMapShape(const HeightMapShape& shape);
 
 	void* getSphereShape(float radius);
 
@@ -96,7 +99,7 @@ private:
 	void* m_world;
 
 	HashMap<Entity::Id, BodyData> m_rigidBodies;
-	HashMap<Uint32, std::vector<GroupedBodyData>> m_groupedRigidBodies;		//!< Map entity group to list of rigid bodies
+	HashMap<Uint32, std::vector<RigidBodyData>> m_groupedRigidBodies;		//!< Map entity group to list of rigid bodies
 
 	static HashMap<float, void*> s_boxShapes;
 	static HashMap<float, void*> s_capsuleShapes;

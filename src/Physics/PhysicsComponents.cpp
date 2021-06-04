@@ -13,6 +13,7 @@ RigidBodyComponent::RigidBodyComponent() :
 	m_linearVelocity	(0.0f),
 	m_angularVelocity	(0.0f),
 	m_centerOfMass		(0.0f),
+	m_inertiaTensor		(1.0f),
 	m_linearDamping		(0.0f),
 	m_angularDamping	(0.0f),
 	m_force				(0.0f),

@@ -30,6 +30,7 @@ struct RigidBodyComponent
 	Vector3f m_linearVelocity;
 	Vector3f m_angularVelocity;
 	Vector3f m_centerOfMass;
+	Vector3f m_inertiaTensor;
 	float m_linearDamping;
 	float m_angularDamping;
 	Vector3f m_force;
