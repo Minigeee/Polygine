@@ -82,7 +82,7 @@ int main()
 
     // Create a new window
     window.create(1280, 720, "My Game");
-    // window.setVsyncEnabled(false);
+    window.setVsyncEnabled(false);
 
     std::vector<Vertex> vertices =
     {
@@ -562,10 +562,10 @@ int main()
 
         // Render scene
         skeletons[0].update(elapsed);
-        // skeletons[1].update(elapsed);
-        // skeletons[2].update(elapsed);
-        scene.getExtension<Shadows>()->render(camera);
+        skeletons[1].update(elapsed);
+        skeletons[2].update(elapsed);
         octree.update();
+        scene.getExtension<Shadows>()->render(camera);
         scene.render(camera, framebuffers[0]);
 
         ssao.render(framebuffers[0], framebuffers[1]);
@@ -607,3 +607,4 @@ int main()
 // TODO : Make everything UTF-encoded compatible (UI XML parsing, etc...)
 // TODO : Add light documentation to ECS.h
 // TODO : Merge coplanar faces for convex mesh colliders
+// TODO : Merge octree cells that can be merged (for more efficiency when moving around the world, as some entities will be unloaded at far distances)

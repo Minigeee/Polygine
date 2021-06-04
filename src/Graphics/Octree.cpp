@@ -17,6 +17,8 @@
 
 #include <poly/Math/Transform.h>
 
+#include <iostream>
+
 #define BASE_SIZE 16.0f
 
 namespace poly
@@ -288,6 +290,9 @@ void Octree::split(Node* node)
 		{
 			EntityData* data = child->m_data[j];
 			priv::updateBoundingBox(child->m_boundingBox, data->m_boundingBox);
+
+			// Also update the data's containing node reference
+			data->m_node = child;
 		}
 
 		// Update parent bounding box
@@ -587,8 +592,8 @@ void Octree::update(const Entity::Id& entity, RenderComponent& r, TransformCompo
 	// Get cell info
 	float cellSize = BASE_SIZE * powf(2.0f, (float)node->m_level - 1.0f);
 	Vector3f cellMin = node->m_boundingBox.m_min / cellSize;
-	Vector3f cellMax = cellMin + Vector3f(cellSize);
 	cellMin = Vector3f(roundf(cellMin.x), roundf(cellMin.y), roundf(cellMin.z)) * cellSize;
+	Vector3f cellMax = cellMin + Vector3f(cellSize);
 
 	// Check if the bounding box is still inside correct area
 	Vector3f pos = bbox.getCenter();
