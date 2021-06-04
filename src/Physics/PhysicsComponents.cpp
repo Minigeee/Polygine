@@ -48,4 +48,12 @@ void RigidBodyComponent::addForceAtWorldPos(const Vector3f& force, const Vector3
 }
 
 
+///////////////////////////////////////////////////////////
+CollisionBodyComponent::CollisionBodyComponent() :
+	m_position			(0.0f)
+{
+
+}
+
+
 }

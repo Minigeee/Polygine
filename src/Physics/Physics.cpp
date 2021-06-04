@@ -12,6 +12,7 @@
 
 #define WORLD_CAST(x) reinterpret_cast<reactphysics3d::PhysicsWorld*>(x)
 #define RBODY_CAST(x) reinterpret_cast<reactphysics3d::RigidBody*>(x)
+#define CBODY_CAST(x) reinterpret_cast<reactphysics3d::CollisionBody*>(x)
 
 #define RP3D_VEC3(v) reactphysics3d::Vector3(v.x, v.y, v.z)
 #define RP3D_QUAT(q) reactphysics3d::Quaternion(q.x, q.y, q.z, q.w)
@@ -66,23 +67,33 @@ Physics::Physics(Scene* scene) :
 {
 	reactphysics3d::PhysicsWorld* world = WORLD_CAST(m_world);
 
+	// Add all current rigid and collision bodies
+	scene->system<RigidBodyComponent>(
+		[&](const Entity::Id& id, RigidBodyComponent& body)
+		{
+			addRigidBody(id);
+		}
+	);
+	scene->system<CollisionBodyComponent>(
+		[&](const Entity::Id& id, CollisionBodyComponent& body)
+		{
+			addCollisionBody(id);
+		}
+	);
+
 	// Add event listeners
 	scene->addListener<E_EntitiesCreated>(
-		[&, world](const E_EntitiesCreated& e)
+		[&](const E_EntitiesCreated& e)
 		{
 			if (e.m_entities->has<RigidBodyComponent>())
 			{
 				for (Uint32 i = 0; i < e.m_numEntities; ++i)
-				{
-					// Create a new rigid body
-					reactphysics3d::RigidBody* body = world->createRigidBody(reactphysics3d::Transform::identity());
-
-					// Add data to map
-					Entity::Id id = e.m_entities[i].getId();
-					std::vector<RigidBodyData>& group = m_groupedRigidBodies[id.m_group];
-					m_rigidBodies[id] = BodyData{ body, id.m_group, group.size() };
-					group.push_back(RigidBodyData(id, body));
-				}
+					addRigidBody(e.m_entities[i].getId());
+			}
+			else if (e.m_entities->has<CollisionBodyComponent>())
+			{
+				for (Uint32 i = 0; i < e.m_numEntities; ++i)
+					addCollisionBody(e.m_entities[i].getId());
 			}
 		}
 	);
@@ -93,30 +104,12 @@ Physics::Physics(Scene* scene) :
 			if (e.m_entities->has<RigidBodyComponent>())
 			{
 				for (Uint32 i = 0; i < e.m_numEntities; ++i)
-				{
-					Entity::Id id = e.m_entities[i].getId();
-					std::vector<RigidBodyData>& group = m_groupedRigidBodies[id.m_group];
-
-					// Destroy the rigid body
-					auto it = m_rigidBodies.find(id);
-					const BodyData& data = it.value();
-					world->destroyRigidBody(RBODY_CAST(data.m_body));
-
-					if (group.size() > 1)
-					{
-						// Remove the entry from the grouped map by moving the last entry into its spot
-						group[data.m_index] = group.back();
-
-						// Update the moved entry's index
-						m_rigidBodies[group[data.m_index].m_id].m_index = data.m_index;
-					}
-
-					// Remove the last entry
-					group.pop_back();
-
-					// Remove the entry from the nongrouped map
-					m_rigidBodies.erase(it);
-				}
+					removeRigidBody(e.m_entities[i].getId());
+			}
+			else if (e.m_entities->has<CollisionBodyComponent>())
+			{
+				for (Uint32 i = 0; i < e.m_numEntities; ++i)
+					removeCollisionBody(e.m_entities[i].getId());
 			}
 		}
 	);
@@ -127,6 +120,86 @@ Physics::Physics(Scene* scene) :
 Physics::~Physics()
 {
 	g_common.destroyPhysicsWorld(WORLD_CAST(m_world));
+}
+
+
+///////////////////////////////////////////////////////////
+void Physics::addRigidBody(Entity::Id id)
+{
+	// Create a new rigid body
+	reactphysics3d::RigidBody* body = WORLD_CAST(m_world)->createRigidBody(reactphysics3d::Transform::identity());
+
+	// Add data to map
+	std::vector<RigidBodyData>& group = m_groupedRigidBodies[id.m_group];
+	m_rigidBodies[id] = BodyData{ body, id.m_group, group.size() };
+	group.push_back(RigidBodyData(id, body));
+}
+
+
+///////////////////////////////////////////////////////////
+void Physics::addCollisionBody(Entity::Id id)
+{
+	// Create a new collision body
+	reactphysics3d::CollisionBody* body = WORLD_CAST(m_world)->createCollisionBody(reactphysics3d::Transform::identity());
+
+	// Add data to map
+	std::vector<CollisionBodyData>& group = m_groupedCollisionBodies[id.m_group];
+	m_collisionBodies[id] = BodyData{ body, id.m_group, group.size() };
+	group.push_back(CollisionBodyData{ id, body });
+}
+
+
+///////////////////////////////////////////////////////////
+void Physics::removeRigidBody(Entity::Id id)
+{
+	std::vector<RigidBodyData>& group = m_groupedRigidBodies[id.m_group];
+
+	// Destroy the rigid body
+	auto it = m_rigidBodies.find(id);
+	const BodyData& data = it.value();
+	WORLD_CAST(m_world)->destroyRigidBody(RBODY_CAST(data.m_body));
+
+	if (group.size() > 1)
+	{
+		// Remove the entry from the grouped map by moving the last entry into its spot
+		group[data.m_index] = group.back();
+
+		// Update the moved entry's index
+		m_rigidBodies[group[data.m_index].m_id].m_index = data.m_index;
+	}
+
+	// Remove the last entry
+	group.pop_back();
+
+	// Remove the entry from the nongrouped map
+	m_rigidBodies.erase(it);
+}
+
+
+///////////////////////////////////////////////////////////
+void Physics::removeCollisionBody(Entity::Id id)
+{
+	std::vector<CollisionBodyData>& group = m_groupedCollisionBodies[id.m_group];
+
+	// Destroy the collision body
+	auto it = m_collisionBodies.find(id);
+	const BodyData& data = it.value();
+	WORLD_CAST(m_world)->destroyCollisionBody(CBODY_CAST(data.m_body));
+
+	if (group.size() > 1)
+	{
+		// Remove the entry from the grouped map by moving the last entry into its spot
+		group[data.m_index] = group.back();
+
+		// Update the moved entry's index
+		m_collisionBodies[group[data.m_index].m_id].m_index = data.m_index;
+	}
+
+	// Remove the last entry
+	group.pop_back();
+
+	// Remove the entry from the nongrouped map
+	m_collisionBodies.erase(it);
 }
 
 
@@ -290,6 +363,34 @@ void Physics::update(float dt)
 		}
 	);
 
+	// Collision bodies
+	std::vector<CollisionBodyData>* cbodyGroup = 0;
+	groupId = 0;
+	localIndex = 0;
+	m_scene->system<CollisionBodyComponent>(
+		[&](const Entity::Id& id, const CollisionBodyComponent& body)
+		{
+			// Change group if changed
+			if (id.m_group != groupId)
+			{
+				groupId = id.m_group;
+				cbodyGroup = &m_groupedCollisionBodies[groupId];
+				localIndex = 0;
+			}
+
+			CollisionBodyData& data = cbodyGroup->at(localIndex);
+
+			// Get indices
+			reactphysics3d::Entity entity = CBODY_CAST(data.m_body)->getEntity();
+			Uint32 transformIndex = tComponents.mMapEntityToComponentIndex[entity];
+
+			// Collision body transforms will only be modified externally
+			reactphysics3d::Transform transform(RP3D_VEC3(body.m_position), RP3D_QUAT(body.m_rotation));
+			tComponents.mTransforms[transformIndex] = transform;
+			RBODY_CAST(data.m_body)->updateBroadPhaseState(0);
+		}
+	);
+
 	STOP_PROFILING(copyToEngine);
 
 
@@ -363,154 +464,111 @@ void Physics::setSleepAllowed(const Entity& entity, bool allowed)
 
 
 ///////////////////////////////////////////////////////////
-Collider Physics::addCollider(const Entity& entity, BoxShape& shape)
+Collider Physics::createCollider(const Entity& entity, const PhysicsShape& shape, void* rp3dShape)
 {
-	ASSERT(entity.has<RigidBodyComponent>(), "A collider can only be added to an entity with a rigid body or a collision body");
-
-	// Get a box shape
-	reactphysics3d::BoxShape* rp3dShape = (reactphysics3d::BoxShape*)getBoxShape(shape.m_dimensions);
-
-	// Get rigid body
-	BodyData& data = m_rigidBodies[entity.getId()];
-	reactphysics3d::RigidBody* body = (reactphysics3d::RigidBody*)data.m_body;
-	const Vector3f& pos = shape.m_position;
-	const Quaternion& rot = shape.m_rotation;
-	reactphysics3d::Transform transform(RP3D_VEC3(pos), RP3D_QUAT(rot));
-
-	// Add the collider
+	// Create transform
+	reactphysics3d::Transform transform(RP3D_VEC3(shape.m_position), RP3D_QUAT(shape.m_rotation));
 	Collider collider;
-	collider.setCollider(body->addCollider(rp3dShape, transform));
-	body->updateMassPropertiesFromColliders();
-	m_groupedRigidBodies[data.m_group][data.m_index].m_massPropertiesUpdated = true;
+
+	if (entity.has<RigidBodyComponent>())
+	{
+		// Get rigid body
+		BodyData& data = m_rigidBodies[entity.getId()];
+		reactphysics3d::RigidBody* body = (reactphysics3d::RigidBody*)data.m_body;
+
+		// Add the collider
+		collider.setCollider(body->addCollider((reactphysics3d::CollisionShape*)rp3dShape, transform));
+		body->updateMassPropertiesFromColliders();
+		m_groupedRigidBodies[data.m_group][data.m_index].m_massPropertiesUpdated = true;
+	}
+	else
+	{
+		// Get collision body
+		BodyData& data = m_collisionBodies[entity.getId()];
+		reactphysics3d::CollisionBody* body = (reactphysics3d::CollisionBody*)data.m_body;
+
+		// Add the collider
+		collider.setCollider(body->addCollider((reactphysics3d::CollisionShape*)rp3dShape, transform));
+	}
 
 	return collider;
 }
 
 
 ///////////////////////////////////////////////////////////
-Collider Physics::addCollider(const Entity& entity, CapsuleShape& shape)
+Collider Physics::addCollider(const Entity& entity, const BoxShape& shape)
 {
-	ASSERT(entity.has<RigidBodyComponent>(), "A collider can only be added to an entity with a rigid body or a collision body");
+	ASSERT(entity.has<RigidBodyComponent>() || entity.has<CollisionBodyComponent>(), "A collider can only be added to an entity with a rigid body or a collision body");
 
 	// Get a box shape
-	reactphysics3d::CapsuleShape* rp3dShape =
+	reactphysics3d::CollisionShape* rp3dShape = (reactphysics3d::BoxShape*)getBoxShape(shape.m_dimensions);
+
+	return createCollider(entity, shape, rp3dShape);
+}
+
+
+///////////////////////////////////////////////////////////
+Collider Physics::addCollider(const Entity& entity, const CapsuleShape& shape)
+{
+	ASSERT(entity.has<RigidBodyComponent>() || entity.has<CollisionBodyComponent>(), "A collider can only be added to an entity with a rigid body or a collision body");
+
+	// Get a capsule shape
+	reactphysics3d::CollisionShape* rp3dShape =
 		(reactphysics3d::CapsuleShape*)getCapsuleShape(Vector2f(shape.m_radius, shape.m_height));
 
-	// Get rigid body
-	BodyData& data = m_rigidBodies[entity.getId()];
-	reactphysics3d::RigidBody* body = (reactphysics3d::RigidBody*)data.m_body;
-	const Vector3f& pos = shape.m_position;
-	const Quaternion& rot = shape.m_rotation;
-	reactphysics3d::Transform transform(RP3D_VEC3(pos), RP3D_QUAT(rot));
-
-	// Add the collider
-	Collider collider;
-	collider.setCollider(body->addCollider(rp3dShape, transform));
-	body->updateMassPropertiesFromColliders();
-	m_groupedRigidBodies[data.m_group][data.m_index].m_massPropertiesUpdated = true;
-
-	return collider;
+	return createCollider(entity, shape, rp3dShape);
 }
 
 
 ///////////////////////////////////////////////////////////
-Collider Physics::addCollider(const Entity& entity, ConcaveMeshShape& shape)
+Collider Physics::addCollider(const Entity& entity, const ConcaveMeshShape& shape)
 {
-	ASSERT(entity.has<RigidBodyComponent>(), "A collider can only be added to an entity with a rigid body or a collision body");
+	ASSERT(entity.has<RigidBodyComponent>() || entity.has<CollisionBodyComponent>(), "A collider can only be added to an entity with a rigid body or a collision body");
 
-	// Get a box shape
-	reactphysics3d::ConcaveMeshShape* rp3dShape = (reactphysics3d::ConcaveMeshShape*)getConcaveMeshShape(shape);
+	// Get a concave mesh shape
+	reactphysics3d::CollisionShape* rp3dShape = (reactphysics3d::ConcaveMeshShape*)getConcaveMeshShape(shape);
 
-	// Get rigid body
-	BodyData& data = m_rigidBodies[entity.getId()];
-	reactphysics3d::RigidBody* body = (reactphysics3d::RigidBody*)data.m_body;
-	const Vector3f& pos = shape.m_position;
-	const Quaternion& rot = shape.m_rotation;
-	reactphysics3d::Transform transform(RP3D_VEC3(pos), RP3D_QUAT(rot));
-
-	// Add the collider
-	Collider collider;
-	collider.setCollider(body->addCollider(rp3dShape, transform));
-	body->updateMassPropertiesFromColliders();
-	m_groupedRigidBodies[data.m_group][data.m_index].m_massPropertiesUpdated = true;
-
-	return collider;
+	return createCollider(entity, shape, rp3dShape);
 }
 
 
 ///////////////////////////////////////////////////////////
-Collider Physics::addCollider(const Entity& entity, ConvexMeshShape& shape)
+Collider Physics::addCollider(const Entity& entity, const ConvexMeshShape& shape)
 {
-	ASSERT(entity.has<RigidBodyComponent>(), "A collider can only be added to an entity with a rigid body or a collision body");
+	ASSERT(entity.has<RigidBodyComponent>() || entity.has<CollisionBodyComponent>(), "A collider can only be added to an entity with a rigid body or a collision body");
 
-	// Get a box shape
-	reactphysics3d::ConvexMeshShape* rp3dShape = (reactphysics3d::ConvexMeshShape*)getConvexMeshShape(shape);
+	// Get a convex mesh shape
+	reactphysics3d::CollisionShape* rp3dShape = (reactphysics3d::ConvexMeshShape*)getConvexMeshShape(shape);
 
-	// Get rigid body
-	BodyData& data = m_rigidBodies[entity.getId()];
-	reactphysics3d::RigidBody* body = (reactphysics3d::RigidBody*)data.m_body;
-	const Vector3f& pos = shape.m_position;
-	const Quaternion& rot = shape.m_rotation;
-	reactphysics3d::Transform transform(RP3D_VEC3(pos), RP3D_QUAT(rot));
-
-	// Add the collider
-	Collider collider;
-	collider.setCollider(body->addCollider(rp3dShape, transform));
-	body->updateMassPropertiesFromColliders();
-	m_groupedRigidBodies[data.m_group][data.m_index].m_massPropertiesUpdated = true;
-
-	return collider;
+	return createCollider(entity, shape, rp3dShape);
 }
 
 
 ///////////////////////////////////////////////////////////
-Collider Physics::addCollider(const Entity& entity, HeightMapShape& shape)
+Collider Physics::addCollider(const Entity& entity, const HeightMapShape& shape)
 {
-	ASSERT(entity.has<RigidBodyComponent>(), "A collider can only be added to an entity with a rigid body or a collision body");
+	ASSERT(entity.has<RigidBodyComponent>() || entity.has<CollisionBodyComponent>(), "A collider can only be added to an entity with a rigid body or a collision body");
 
-	// Create a height field collider
-	reactphysics3d::HeightFieldShape* rp3dShape = (reactphysics3d::HeightFieldShape*)getHeightMapShape(shape);
+	// Create a height field shape
+	reactphysics3d::CollisionShape* rp3dShape = (reactphysics3d::HeightFieldShape*)getHeightMapShape(shape);
 
-	// Get rigid body
-	BodyData& data = m_rigidBodies[entity.getId()];
-	reactphysics3d::RigidBody* body = (reactphysics3d::RigidBody*)data.m_body;
-	Vector3f pos = shape.m_position;
-	pos.y += 0.5f * shape.m_dimensions.y;
-	const Quaternion& rot = shape.m_rotation;
-	reactphysics3d::Transform transform(RP3D_VEC3(pos), RP3D_QUAT(rot));
+	// Adjust y-position of height shape
+	HeightMapShape newShape(shape);
+	newShape.m_position.y += 0.5f * shape.m_dimensions.y;
 
-	// Add the collider
-	Collider collider;
-	collider.setCollider(body->addCollider(rp3dShape, transform));
-	body->updateMassPropertiesFromColliders();
-	m_groupedRigidBodies[data.m_group][data.m_index].m_massPropertiesUpdated = true;
-
-	return collider;
+	return createCollider(entity, newShape, rp3dShape);
 }
 
 
 ///////////////////////////////////////////////////////////
-Collider Physics::addCollider(const Entity& entity, SphereShape& shape)
+Collider Physics::addCollider(const Entity& entity, const SphereShape& shape)
 {
-	ASSERT(entity.has<RigidBodyComponent>(), "A collider can only be added to an entity with a rigid body or a collision body");
+	ASSERT(entity.has<RigidBodyComponent>() || entity.has<CollisionBodyComponent>(), "A collider can only be added to an entity with a rigid body or a collision body");
 
-	// Get a box shape
-	reactphysics3d::SphereShape* rp3dShape = (reactphysics3d::SphereShape*)getSphereShape(shape.m_radius);
+	// Get a sphere shape
+	reactphysics3d::CollisionShape* rp3dShape = (reactphysics3d::SphereShape*)getSphereShape(shape.m_radius);
 
-	// Get rigid body
-	BodyData& data = m_rigidBodies[entity.getId()];
-	reactphysics3d::RigidBody* body = (reactphysics3d::RigidBody*)data.m_body;
-	const Vector3f& pos = shape.m_position;
-	const Quaternion& rot = shape.m_rotation;
-	reactphysics3d::Transform transform(RP3D_VEC3(pos), RP3D_QUAT(rot));
-
-	// Add the collider
-	Collider collider;
-	collider.setCollider(body->addCollider(rp3dShape, transform));
-	body->updateMassPropertiesFromColliders();
-	m_groupedRigidBodies[data.m_group][data.m_index].m_massPropertiesUpdated = true;
-
-	return collider;
+	return createCollider(entity, shape, rp3dShape);
 }
 
 

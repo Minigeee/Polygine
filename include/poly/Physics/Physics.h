@@ -23,17 +23,17 @@ public:
 
 	void setSleepAllowed(const Entity& entity, bool allowed);
 
-	Collider addCollider(const Entity& entity, BoxShape& shape);
+	Collider addCollider(const Entity& entity, const BoxShape& shape);
 
-	Collider addCollider(const Entity& entity, CapsuleShape& shape);
+	Collider addCollider(const Entity& entity, const CapsuleShape& shape);
 
-	Collider addCollider(const Entity& entity, ConcaveMeshShape& shape);
+	Collider addCollider(const Entity& entity, const ConcaveMeshShape& shape);
 
-	Collider addCollider(const Entity& entity, ConvexMeshShape& shape);
+	Collider addCollider(const Entity& entity, const ConvexMeshShape& shape);
 
-	Collider addCollider(const Entity& entity, HeightMapShape& shape);
+	Collider addCollider(const Entity& entity, const HeightMapShape& shape);
 
-	Collider addCollider(const Entity& entity, SphereShape& shape);
+	Collider addCollider(const Entity& entity, const SphereShape& shape);
 
 private:
 	struct BodyData
@@ -59,6 +59,12 @@ private:
 		bool m_massPropertiesUpdated;
 	};
 
+	struct CollisionBodyData
+	{
+		Entity::Id m_id;
+		void* m_body;
+	};
+
 	struct ConcaveMeshData
 	{
 		ConcaveMeshData();
@@ -82,6 +88,16 @@ private:
 		void* m_vertexArray;
 	};
 
+	void addRigidBody(Entity::Id id);
+
+	void addCollisionBody(Entity::Id id);
+
+	void removeRigidBody(Entity::Id id);
+
+	void removeCollisionBody(Entity::Id id);
+
+	Collider createCollider(const Entity& entity, const PhysicsShape& shape, void* rp3dShape);
+
 	void* getBoxShape(const Vector3f& dims);
 
 	void* getCapsuleShape(const Vector2f& dims);
@@ -98,8 +114,10 @@ private:
 
 	void* m_world;
 
-	HashMap<Entity::Id, BodyData> m_rigidBodies;
-	HashMap<Uint32, std::vector<RigidBodyData>> m_groupedRigidBodies;		//!< Map entity group to list of rigid bodies
+	HashMap<Entity::Id, BodyData> m_rigidBodies;								//!< Map entity id to physics body data (rigid bodies)
+	HashMap<Entity::Id, BodyData> m_collisionBodies;							//!< Map entity id to physics body data (collision bodies)
+	HashMap<Uint32, std::vector<RigidBodyData>> m_groupedRigidBodies;			//!< Map entity group to list of rigid bodies
+	HashMap<Uint32, std::vector<CollisionBodyData>> m_groupedCollisionBodies;	//!< Map entity group to list of collision bodies
 
 	static HashMap<float, void*> s_boxShapes;
 	static HashMap<float, void*> s_capsuleShapes;
