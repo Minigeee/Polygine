@@ -6,6 +6,7 @@
 #include <poly/Graphics/Model.h>
 
 #include <poly/Physics/Components.h>
+#include <poly/Physics/Events.h>
 #include <poly/Physics/Physics.h>
 
 #include <reactphysics3d/reactphysics3d.h>
@@ -21,6 +22,134 @@
 
 namespace poly
 {
+
+
+///////////////////////////////////////////////////////////
+class PhysicsEventHandler : public reactphysics3d::EventListener
+{
+public:
+	///////////////////////////////////////////////////////////
+	PhysicsEventHandler(Physics* physics, Scene* scene) :
+		m_physics			(physics),
+		m_scene				(scene),
+		m_contactPoints		(10)
+	{ }
+
+
+	///////////////////////////////////////////////////////////
+	void onContact(const reactphysics3d::CollisionCallback::CallbackData& data) override
+	{
+		for (Uint32 i = 0; i < data.getNbContactPairs(); ++i)
+		{
+			auto contactPair = data.getContactPair(i);
+
+			// Only handle start and end events
+			if (contactPair.getEventType() == reactphysics3d::CollisionCallback::ContactPair::EventType::ContactStay)
+				continue;
+
+			// Copy all contact points into list
+			for (Uint32 j = 0; j < contactPair.getNbContactPoints(); ++j)
+			{
+				auto contactPoint = contactPair.getContactPoint(j);
+				const reactphysics3d::Vector3& n = contactPoint.getWorldNormal();
+				const reactphysics3d::Vector3& p1 = contactPoint.getLocalPointOnCollider1();
+				const reactphysics3d::Vector3& p2 = contactPoint.getLocalPointOnCollider2();
+
+				poly::ContactPoint point = poly::ContactPoint{
+					contactPoint.getPenetrationDepth(),
+					POLY_VEC3(n),
+					POLY_VEC3(p1),
+					POLY_VEC3(p2)
+				};
+
+				if (j >= m_contactPoints.size())
+					m_contactPoints.push_back(point);
+				else
+					m_contactPoints[j] = point;
+			}
+
+			// Create the event object
+			E_PhysicsCollision e;
+
+			// Get the associated entity ids
+			e.m_entity1 = m_physics->m_mapBodyToEntity[contactPair.getBody1()];
+			e.m_entity2 = m_physics->m_mapBodyToEntity[contactPair.getBody2()];
+
+			// Create the collider objects
+			reactphysics3d::Collider* c1 = contactPair.getCollider1();
+			reactphysics3d::Collider* c2 = contactPair.getCollider1();
+
+			e.m_collider1.m_bounciness = c1->getMaterial().getBounciness();
+			e.m_collider1.m_frictionCoefficient = c1->getMaterial().getFrictionCoefficient();
+			e.m_collider1.m_rollingResistance = c1->getMaterial().getRollingResistance();
+
+			e.m_collider2.m_bounciness = c2->getMaterial().getBounciness();
+			e.m_collider2.m_frictionCoefficient = c2->getMaterial().getFrictionCoefficient();
+			e.m_collider2.m_rollingResistance = c2->getMaterial().getRollingResistance();
+
+			// Set contact point info
+			e.m_numContacts = contactPair.getNbContactPoints();
+			e.m_contacts = &m_contactPoints[0];
+
+			// Set event type
+			if (contactPair.getEventType() == reactphysics3d::CollisionCallback::ContactPair::EventType::ContactStart)
+				e.m_type = CollisionEventType::Start;
+			else
+				e.m_type = CollisionEventType::End;
+
+			// Send the event
+			m_scene->sendEvent<E_PhysicsCollision>(e);
+		}
+	}
+
+
+	///////////////////////////////////////////////////////////
+	void onTrigger(const reactphysics3d::OverlapCallback::CallbackData& data) override
+	{
+		for (Uint32 i = 0; i < data.getNbOverlappingPairs(); ++i)
+		{
+			auto overlapPair = data.getOverlappingPair(i);
+
+			// Only handle start and end events
+			if (overlapPair.getEventType() == reactphysics3d::OverlapCallback::OverlapPair::EventType::OverlapStay)
+				continue;
+
+			// Create the event object
+			E_PhysicsTrigger e;
+
+			// Get the associated entity ids
+			e.m_entity1 = m_physics->m_mapBodyToEntity[overlapPair.getBody1()];
+			e.m_entity2 = m_physics->m_mapBodyToEntity[overlapPair.getBody2()];
+
+			// Create the collider objects
+			reactphysics3d::Collider* c1 = overlapPair.getCollider1();
+			reactphysics3d::Collider* c2 = overlapPair.getCollider1();
+
+			e.m_collider1.m_bounciness = c1->getMaterial().getBounciness();
+			e.m_collider1.m_frictionCoefficient = c1->getMaterial().getFrictionCoefficient();
+			e.m_collider1.m_rollingResistance = c1->getMaterial().getRollingResistance();
+
+			e.m_collider2.m_bounciness = c2->getMaterial().getBounciness();
+			e.m_collider2.m_frictionCoefficient = c2->getMaterial().getFrictionCoefficient();
+			e.m_collider2.m_rollingResistance = c2->getMaterial().getRollingResistance();
+
+			// Set event type
+			if (overlapPair.getEventType() == reactphysics3d::OverlapCallback::OverlapPair::EventType::OverlapStart)
+				e.m_type = CollisionEventType::Start;
+			else
+				e.m_type = CollisionEventType::End;
+
+			// Send the event
+			m_scene->sendEvent<E_PhysicsTrigger>(e);
+		}
+	}
+
+
+private:
+	Physics* m_physics;
+	Scene* m_scene;
+	std::vector<poly::ContactPoint> m_contactPoints;
+};
 
 
 ///////////////////////////////////////////////////////////
@@ -63,10 +192,9 @@ Physics::RigidBodyData::RigidBodyData(const Entity::Id& id, void* body) :
 ///////////////////////////////////////////////////////////
 Physics::Physics(Scene* scene) :
 	Extension		(scene),
-	m_world			(g_common.createPhysicsWorld())
+	m_world			(g_common.createPhysicsWorld()),
+	m_eventHandler	(new PhysicsEventHandler(this, scene))
 {
-	reactphysics3d::PhysicsWorld* world = WORLD_CAST(m_world);
-
 	// Add all current rigid and collision bodies
 	scene->system<RigidBodyComponent>(
 		[&](const Entity::Id& id, RigidBodyComponent& body)
@@ -99,7 +227,7 @@ Physics::Physics(Scene* scene) :
 	);
 
 	scene->addListener<E_EntitiesRemoved>(
-		[&, world](const E_EntitiesRemoved& e)
+		[&](const E_EntitiesRemoved& e)
 		{
 			if (e.m_entities->has<RigidBodyComponent>())
 			{
@@ -113,6 +241,9 @@ Physics::Physics(Scene* scene) :
 			}
 		}
 	);
+
+	// Set event listener
+	WORLD_CAST(m_world)->setEventListener(m_eventHandler);
 }
 
 
@@ -120,6 +251,7 @@ Physics::Physics(Scene* scene) :
 Physics::~Physics()
 {
 	g_common.destroyPhysicsWorld(WORLD_CAST(m_world));
+	delete m_eventHandler;
 }
 
 
@@ -133,6 +265,9 @@ void Physics::addRigidBody(Entity::Id id)
 	std::vector<RigidBodyData>& group = m_groupedRigidBodies[id.m_group];
 	m_rigidBodies[id] = BodyData{ body, id.m_group, group.size() };
 	group.push_back(RigidBodyData(id, body));
+
+	// Map id to body
+	m_mapBodyToEntity[(reactphysics3d::CollisionBody*)body] = id;
 }
 
 
@@ -146,6 +281,9 @@ void Physics::addCollisionBody(Entity::Id id)
 	std::vector<CollisionBodyData>& group = m_groupedCollisionBodies[id.m_group];
 	m_collisionBodies[id] = BodyData{ body, id.m_group, group.size() };
 	group.push_back(CollisionBodyData{ id, body });
+
+	// Map id to body
+	m_mapBodyToEntity[(reactphysics3d::CollisionBody*)body] = id;
 }
 
 
@@ -158,6 +296,9 @@ void Physics::removeRigidBody(Entity::Id id)
 	auto it = m_rigidBodies.find(id);
 	const BodyData& data = it.value();
 	WORLD_CAST(m_world)->destroyRigidBody(RBODY_CAST(data.m_body));
+
+	// Remove body to entity mapping
+	m_mapBodyToEntity.erase((reactphysics3d::CollisionBody*)RBODY_CAST(data.m_body));
 
 	if (group.size() > 1)
 	{
@@ -185,6 +326,9 @@ void Physics::removeCollisionBody(Entity::Id id)
 	auto it = m_collisionBodies.find(id);
 	const BodyData& data = it.value();
 	WORLD_CAST(m_world)->destroyCollisionBody(CBODY_CAST(data.m_body));
+
+	// Remove body to entity mapping
+	m_mapBodyToEntity.erase(CBODY_CAST(data.m_body));
 
 	if (group.size() > 1)
 	{

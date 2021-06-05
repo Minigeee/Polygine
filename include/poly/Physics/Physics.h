@@ -12,8 +12,13 @@ namespace poly
 {
 
 
+class PhysicsEventHandler;
+
+
 class Physics : public Extension
 {
+	friend PhysicsEventHandler;
+
 public:
 	Physics(Scene* scene);
 
@@ -111,13 +116,14 @@ private:
 	void* getSphereShape(float radius);
 
 private:
-
 	void* m_world;
+	PhysicsEventHandler* m_eventHandler;
 
 	HashMap<Entity::Id, BodyData> m_rigidBodies;								//!< Map entity id to physics body data (rigid bodies)
 	HashMap<Entity::Id, BodyData> m_collisionBodies;							//!< Map entity id to physics body data (collision bodies)
 	HashMap<Uint32, std::vector<RigidBodyData>> m_groupedRigidBodies;			//!< Map entity group to list of rigid bodies
 	HashMap<Uint32, std::vector<CollisionBodyData>> m_groupedCollisionBodies;	//!< Map entity group to list of collision bodies
+	HashMap<void*, Entity::Id> m_mapBodyToEntity;								//!< Map collision bodies to entity ids
 
 	static HashMap<float, void*> s_boxShapes;
 	static HashMap<float, void*> s_capsuleShapes;

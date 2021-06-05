@@ -37,6 +37,7 @@
 #include <poly/Math/Transform.h>
 
 #include <poly/Physics/Components.h>
+#include <poly/Physics/Events.h>
 #include <poly/Physics/Physics.h>
 #include <poly/Physics/Shapes.h>
 
@@ -239,7 +240,7 @@ int main()
     CapsuleShape capsule(0.4f, 1.0f);
     capsule.m_position = Vector3f(0.0f, 0.9f, 0.0f);
     Collider playerCollider = physics->addCollider(player, capsule);
-    playerCollider.setFrictionCoefficient(0.5f);
+    playerCollider.setFrictionCoefficient(1.0f);
 
     t.m_scale = Vector3f(1.0f);
 
@@ -340,6 +341,24 @@ int main()
         Vector3f(0.7f, 0.5f, 0.3f),
         Vector3f(0.02f, 0.06f, 0.12f)
     };
+
+
+    bool onGround = true;
+    Clock leftGroundClock;
+    scene.addListener<E_PhysicsCollision>(
+        [&](const E_PhysicsCollision& e)
+        {
+            if (e.m_entity1 == player.getId() || e.m_entity2 == player.getId())
+            {
+                if (e.m_entity1 == terrainEntity.getId() || e.m_entity2 == terrainEntity.getId())
+                {
+                    onGround = e.m_type == CollisionEventType::Start;
+                    if (!onGround)
+                        leftGroundClock.restart();
+                }
+            }
+        }
+    );
 
 
     // Add an event listener
@@ -517,12 +536,32 @@ int main()
         RigidBodyComponent* rbody = player.get<RigidBodyComponent>();
         if (length(move) != 0.0f)
         {
-            Vector3f velocity = normalize(Vector3f(move.x, 0.0f, move.z)) * 3.4f;
-            rbody->m_linearVelocity.x = velocity.x;
-            rbody->m_linearVelocity.z = velocity.z;
+            if (!onGround)
+            {
+                const float maxAirVelocity = 5.0f;
+                float velocity = length(rbody->m_linearVelocity * Vector3f(1, 0, 1));
+
+                Vector3f force = normalize(Vector3f(move.x, 0.0f, move.z));
+                if (velocity < maxAirVelocity)
+                    force *= 1000.0f * rbody->m_mass * elapsed;
+                else
+                    force *= -rbody->m_mass * (velocity - maxAirVelocity) * 0.01f / elapsed;
+
+                rbody->m_force.x += force.x;
+                rbody->m_force.z += force.z;
+            }
+            else
+            {
+                Vector3f velocity = normalize(Vector3f(move.x, 0.0f, move.z)) * 4.0f;
+                rbody->m_linearVelocity.x = velocity.x;
+                rbody->m_linearVelocity.z = velocity.z;
+            }
         }
         if (jump)
-            rbody->m_linearVelocity.y = 3.5f;
+        {
+            if (onGround || leftGroundClock.getElapsedTime().toSeconds() < 0.2f)
+                rbody->m_linearVelocity.y = 5.5f;
+        }
 
         scene.getExtension<Physics>()->update(elapsed);
 

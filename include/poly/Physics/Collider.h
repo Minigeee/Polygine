@@ -9,11 +9,13 @@ namespace poly
 
 
 class Physics;
+class PhysicsEventHandler;
 
 
 class Collider
 {
 	friend Physics;
+	friend PhysicsEventHandler;
 
 public:
 	Collider();
@@ -24,11 +26,15 @@ public:
 
 	void setRollingResistance(float resistance);
 
+	void setIsTrigger(bool trigger);
+
 	float getBounciness() const;
 
 	float getFrictionCoefficient() const;
 
 	float getRollingResistance() const;
+
+	bool isTrigger() const;
 
 private:
 	void setCollider(void* collider);
@@ -38,6 +44,7 @@ private:
 	float m_bounciness;
 	float m_frictionCoefficient;
 	float m_rollingResistance;
+	bool m_isTrigger;
 };
 
 
