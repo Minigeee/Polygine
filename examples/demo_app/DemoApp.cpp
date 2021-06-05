@@ -226,6 +226,7 @@ int main()
 
     // Activate physics extension
     Physics* physics = scene.getExtension<Physics>();
+    physics->setGravity(0.0f, -12.0f, 0.0f);
 
     TransformComponent t;
     t.m_position.y = 52.0f;
@@ -233,7 +234,7 @@ int main()
     RenderComponent r(&model);
     r.m_castsShadows = true;
     RigidBodyComponent rbody;
-    rbody.m_position.y = 52.0f;
+    rbody.m_position.y = 55.0f;
     rbody.m_mass = 65.0f;
     rbody.m_inertiaTensor = Vector3f(INFINITY);
     Entity player = scene.createEntity(t, r, AnimationComponent(&skeleton), rbody, DynamicTag());
@@ -343,18 +344,47 @@ int main()
     };
 
 
-    bool onGround = true;
+    HashSet<Entity::Id> touchingFeet;
+    bool onGround = false;
+    bool usedDoubleJump = false;
     Clock leftGroundClock;
+    Clock dashClock;
+    const float jumpSpeed = 6.0f;
+
     scene.addListener<E_PhysicsCollision>(
         [&](const E_PhysicsCollision& e)
         {
-            if (e.m_entity1 == player.getId() || e.m_entity2 == player.getId())
+            int playerIndex = -1;
+            if (e.m_entities[0] == player.getId())
+                playerIndex = 0;
+            else if (e.m_entities[1] == player.getId())
+                playerIndex = 1;
+            else
+                return;
+
+            if (e.m_type == CollisionEventType::Start)
             {
-                if (e.m_entity1 == terrainEntity.getId() || e.m_entity2 == terrainEntity.getId())
+                for (Uint32 i = 0; i < e.m_numContacts; ++i)
                 {
-                    onGround = e.m_type == CollisionEventType::Start;
-                    if (!onGround)
-                        leftGroundClock.restart();
+                    const ContactPoint& point = e.m_contacts[i];
+                    if (point.m_pointOnColliders[playerIndex].y < -0.8f)
+                    {
+                        touchingFeet.insert(e.m_entities[(playerIndex + 1) % 2]);
+                        onGround = true;
+                        usedDoubleJump = false;
+                    }
+                }
+            }
+            else
+            {
+                auto it = touchingFeet.find(e.m_entities[(playerIndex + 1) % 2]);
+                if (it != touchingFeet.end())
+                    touchingFeet.erase(it);
+
+                if (touchingFeet.size() == 0)
+                {
+                    leftGroundClock.restart();
+                    onGround = false;
                 }
             }
         }
@@ -380,9 +410,30 @@ int main()
                         fpsCounter = (Text*)ui.getElement("fps_counter");
                     }
                 }
+
+                if (e.m_key == Keyboard::Space)
+                {
+                    if (onGround || leftGroundClock.getElapsedTime().toSeconds() < 0.2f)
+                    {
+                        player.get<RigidBodyComponent>()->m_linearVelocity.y = jumpSpeed;
+                    }
+                    else if (!usedDoubleJump)
+                    {
+                        player.get<RigidBodyComponent>()->m_linearVelocity.y = jumpSpeed;
+                        usedDoubleJump = true;
+                    }
+                }
+
+                if (e.m_key == Keyboard::LeftShift)
+                {
+                    if (dashClock.getElapsedTime() > 5.0f)
+                        dashClock.restart();
+                }
             }
             else if (e.m_action == InputAction::Release)
+            {
                 keyMap[e.m_key] = false;
+            }
         }
     );
 
@@ -520,48 +571,44 @@ int main()
         float elapsed = clock.restart().toSeconds();
         time += elapsed;
 
-        Vector3f move;
-        bool jump = false;
+        // Get lateral movement vector
+        Vector3f move(0.0f);
         if (keyMap[Keyboard::W])
             move += camera.getDirection();
         if (keyMap[Keyboard::S])
             move -= camera.getDirection();
-        if (keyMap[Keyboard::A])
-            move -= camera.getRightDir();
         if (keyMap[Keyboard::D])
             move += camera.getRightDir();
-        if (keyMap[Keyboard::Space])
-            jump = true;
+        if (keyMap[Keyboard::A])
+            move -= camera.getRightDir();
 
-        RigidBodyComponent* rbody = player.get<RigidBodyComponent>();
-        if (length(move) != 0.0f)
+        const float maxVelocity = 5.0f;
+
+        // Get velocity
+        RigidBodyComponent* body = player.get<RigidBodyComponent>();
+        Vector3f velocity = body->m_linearVelocity * Vector3f(1, 0, 1);
+        float velocityMag = length(velocity);
+        Vector3f velocityDir = velocityMag == 0.0f ? Vector3f(0.0f) : velocity / velocityMag;
+
+        // Calculate drag factor
+        float coefficient = onGround ? 1000.0f : 50.0f;
+        Vector3f drag = -velocityDir * 0.5f * coefficient * velocityMag * velocityMag;
+
+        body->m_force += drag;
+
+        if (length(move) > 0.0f)
         {
-            if (!onGround)
-            {
-                const float maxAirVelocity = 5.0f;
-                float velocity = length(rbody->m_linearVelocity * Vector3f(1, 0, 1));
+            // Reduce friction while moving
+            playerCollider.setFrictionCoefficient(0.0f);
 
-                Vector3f force = normalize(Vector3f(move.x, 0.0f, move.z));
-                if (velocity < maxAirVelocity)
-                    force *= 1000.0f * rbody->m_mass * elapsed;
-                else
-                    force *= -rbody->m_mass * (velocity - maxAirVelocity) * 0.01f / elapsed;
+            // Get lateral direction
+            move = normalize(Vector3f(move.x, 0.0f, move.z));
 
-                rbody->m_force.x += force.x;
-                rbody->m_force.z += force.z;
-            }
-            else
-            {
-                Vector3f velocity = normalize(Vector3f(move.x, 0.0f, move.z)) * 4.0f;
-                rbody->m_linearVelocity.x = velocity.x;
-                rbody->m_linearVelocity.z = velocity.z;
-            }
+            Vector3f force = move * 0.5f * coefficient * maxVelocity * maxVelocity;
+            body->m_force += force;
         }
-        if (jump)
-        {
-            if (onGround || leftGroundClock.getElapsedTime().toSeconds() < 0.2f)
-                rbody->m_linearVelocity.y = 5.5f;
-        }
+        else
+            playerCollider.setFrictionCoefficient(1.0f);
 
         scene.getExtension<Physics>()->update(elapsed);
 
@@ -645,3 +692,4 @@ int main()
 // TODO : Add light documentation to ECS.h
 // TODO : Merge coplanar faces for convex mesh colliders
 // TODO : Merge octree cells that can be merged (for more efficiency when moving around the world, as some entities will be unloaded at far distances)
+// TODO : Improve demo movement system

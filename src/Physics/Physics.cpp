@@ -72,20 +72,24 @@ public:
 			E_PhysicsCollision e;
 
 			// Get the associated entity ids
-			e.m_entity1 = m_physics->m_mapBodyToEntity[contactPair.getBody1()];
-			e.m_entity2 = m_physics->m_mapBodyToEntity[contactPair.getBody2()];
+			e.m_entities[0] = m_physics->m_mapBodyToEntity[contactPair.getBody1()];
+			e.m_entities[1] = m_physics->m_mapBodyToEntity[contactPair.getBody2()];
 
 			// Create the collider objects
 			reactphysics3d::Collider* c1 = contactPair.getCollider1();
 			reactphysics3d::Collider* c2 = contactPair.getCollider1();
 
-			e.m_collider1.m_bounciness = c1->getMaterial().getBounciness();
-			e.m_collider1.m_frictionCoefficient = c1->getMaterial().getFrictionCoefficient();
-			e.m_collider1.m_rollingResistance = c1->getMaterial().getRollingResistance();
+			e.m_colliders[0].m_bounciness = c1->getMaterial().getBounciness();
+			e.m_colliders[0].m_frictionCoefficient = c1->getMaterial().getFrictionCoefficient();
+			e.m_colliders[0].m_rollingResistance = c1->getMaterial().getRollingResistance();
+			e.m_colliders[0].m_collisionCategory = c1->getCollisionCategoryBits();
+			e.m_colliders[0].m_collisionMask = c1->getCollideWithMaskBits();
 
-			e.m_collider2.m_bounciness = c2->getMaterial().getBounciness();
-			e.m_collider2.m_frictionCoefficient = c2->getMaterial().getFrictionCoefficient();
-			e.m_collider2.m_rollingResistance = c2->getMaterial().getRollingResistance();
+			e.m_colliders[1].m_bounciness = c2->getMaterial().getBounciness();
+			e.m_colliders[1].m_frictionCoefficient = c2->getMaterial().getFrictionCoefficient();
+			e.m_colliders[1].m_rollingResistance = c2->getMaterial().getRollingResistance();
+			e.m_colliders[1].m_collisionCategory = c2->getCollisionCategoryBits();
+			e.m_colliders[1].m_collisionMask = c2->getCollideWithMaskBits();
 
 			// Set contact point info
 			e.m_numContacts = contactPair.getNbContactPoints();
@@ -118,20 +122,24 @@ public:
 			E_PhysicsTrigger e;
 
 			// Get the associated entity ids
-			e.m_entity1 = m_physics->m_mapBodyToEntity[overlapPair.getBody1()];
-			e.m_entity2 = m_physics->m_mapBodyToEntity[overlapPair.getBody2()];
+			e.m_entities[0] = m_physics->m_mapBodyToEntity[overlapPair.getBody1()];
+			e.m_entities[1] = m_physics->m_mapBodyToEntity[overlapPair.getBody2()];
 
 			// Create the collider objects
 			reactphysics3d::Collider* c1 = overlapPair.getCollider1();
 			reactphysics3d::Collider* c2 = overlapPair.getCollider1();
 
-			e.m_collider1.m_bounciness = c1->getMaterial().getBounciness();
-			e.m_collider1.m_frictionCoefficient = c1->getMaterial().getFrictionCoefficient();
-			e.m_collider1.m_rollingResistance = c1->getMaterial().getRollingResistance();
+			e.m_colliders[0].m_bounciness = c1->getMaterial().getBounciness();
+			e.m_colliders[0].m_frictionCoefficient = c1->getMaterial().getFrictionCoefficient();
+			e.m_colliders[0].m_rollingResistance = c1->getMaterial().getRollingResistance();
+			e.m_colliders[0].m_collisionCategory = c1->getCollisionCategoryBits();
+			e.m_colliders[0].m_collisionMask = c1->getCollideWithMaskBits();
 
-			e.m_collider2.m_bounciness = c2->getMaterial().getBounciness();
-			e.m_collider2.m_frictionCoefficient = c2->getMaterial().getFrictionCoefficient();
-			e.m_collider2.m_rollingResistance = c2->getMaterial().getRollingResistance();
+			e.m_colliders[1].m_bounciness = c2->getMaterial().getBounciness();
+			e.m_colliders[1].m_frictionCoefficient = c2->getMaterial().getFrictionCoefficient();
+			e.m_colliders[1].m_rollingResistance = c2->getMaterial().getRollingResistance();
+			e.m_colliders[1].m_collisionCategory = c2->getCollisionCategoryBits();
+			e.m_colliders[1].m_collisionMask = c2->getCollideWithMaskBits();
 
 			// Set event type
 			if (overlapPair.getEventType() == reactphysics3d::OverlapCallback::OverlapPair::EventType::OverlapStart)
@@ -593,6 +601,22 @@ void Physics::update(float dt)
 
 
 ///////////////////////////////////////////////////////////
+void Physics::setGravity(const Vector3f& gravity)
+{
+	m_gravity = gravity;
+	WORLD_CAST(m_world)->setGravity(RP3D_VEC3(m_gravity));
+}
+
+
+///////////////////////////////////////////////////////////
+void Physics::setGravity(float x, float y, float z)
+{
+	m_gravity = Vector3f(x, y, z);
+	WORLD_CAST(m_world)->setGravity(RP3D_VEC3(m_gravity));
+}
+
+
+///////////////////////////////////////////////////////////
 void Physics::setSleepAllowed(const Entity& entity, bool allowed)
 {
 	BodyData& data = m_rigidBodies[entity.getId()];
@@ -604,6 +628,13 @@ void Physics::setSleepAllowed(const Entity& entity, bool allowed)
 	// Update cache
 	RigidBodyData& group = m_groupedRigidBodies[data.m_group][data.m_index];
 	group.m_allowedSleep = allowed;
+}
+
+
+///////////////////////////////////////////////////////////
+const Vector3f& Physics::getGravity() const
+{
+	return m_gravity;
 }
 
 

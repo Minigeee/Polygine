@@ -14,6 +14,8 @@ Collider::Collider() :
 	m_bounciness			(0.1f),
 	m_frictionCoefficient	(0.2f),
 	m_rollingResistance		(0.0f),
+	m_collisionCategory		(1),
+	m_collisionMask			(0xFFFF),
 	m_isTrigger				(false)
 {
 
@@ -48,6 +50,24 @@ void Collider::setRollingResistance(float resistance)
 
 
 ///////////////////////////////////////////////////////////
+void Collider::setCollisionCategory(Uint16 category)
+{
+	m_collisionCategory = category;
+	if (m_collider)
+		COLLIDER_CAST(m_collider)->setCollisionCategoryBits(m_collisionCategory);
+}
+
+
+///////////////////////////////////////////////////////////
+void Collider::setCollisionMask(Uint16 mask)
+{
+	m_collisionMask = mask;
+	if (m_collider)
+		COLLIDER_CAST(m_collider)->setCollideWithMaskBits(m_collisionMask);
+}
+
+
+///////////////////////////////////////////////////////////
 void Collider::setIsTrigger(bool trigger)
 {
 	m_isTrigger = trigger;
@@ -78,6 +98,20 @@ float Collider::getRollingResistance() const
 
 
 ///////////////////////////////////////////////////////////
+Uint16 Collider::getCollisionCategory() const
+{
+	return m_collisionCategory;
+}
+
+
+///////////////////////////////////////////////////////////
+Uint16 Collider::getCollisionMask() const
+{
+	return m_collisionMask;
+}
+
+
+///////////////////////////////////////////////////////////
 bool Collider::isTrigger() const
 {
 	return m_isTrigger;
@@ -91,6 +125,8 @@ void Collider::setCollider(void* collider)
 
 	reactphysics3d::Collider* rp3d = COLLIDER_CAST(collider);
 	rp3d->setIsTrigger(m_isTrigger);
+	rp3d->setCollisionCategoryBits(m_collisionCategory);
+	rp3d->setCollideWithMaskBits(m_collisionMask);
 
 	reactphysics3d::Material& material = rp3d->getMaterial();
 	material.setBounciness(m_bounciness);

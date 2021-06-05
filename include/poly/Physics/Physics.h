@@ -26,7 +26,13 @@ public:
 
 	void update(float dt);
 
+	void setGravity(const Vector3f& gravity);
+
+	void setGravity(float x, float y, float z);
+
 	void setSleepAllowed(const Entity& entity, bool allowed);
+
+	const Vector3f& getGravity() const;
 
 	Collider addCollider(const Entity& entity, const BoxShape& shape);
 
@@ -118,6 +124,7 @@ private:
 private:
 	void* m_world;
 	PhysicsEventHandler* m_eventHandler;
+	Vector3f m_gravity;
 
 	HashMap<Entity::Id, BodyData> m_rigidBodies;								//!< Map entity id to physics body data (rigid bodies)
 	HashMap<Entity::Id, BodyData> m_collisionBodies;							//!< Map entity id to physics body data (collision bodies)

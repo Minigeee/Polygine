@@ -28,8 +28,7 @@ struct ContactPoint
 {
 	float m_penetrationDepth;		//!< The penetration depth between the two colliders
 	Vector3f m_normal;				//!< The normal of the contact point, in world space coordinate system
-	Vector3f m_pointOnCollider1;	//!< The local position of the contact point on the first collider object
-	Vector3f m_pointOnCollider2;	//!< The local position of the contact point on the second collider object
+	Vector3f m_pointOnColliders[2];	//!< The local position of the contact points on the collider objects
 };
 
 
@@ -46,10 +45,8 @@ struct E_PhysicsCollision
 	{ }
 
 	CollisionEventType m_type;	//!< The collision event type
-	Entity::Id m_entity1;		//!< The id of the first entity involved in the collision event
-	Entity::Id m_entity2;		//!< The id of the second entity involved in the collision event
-	Collider m_collider1;		//!< The first collider object involved in the collision event
-	Collider m_collider2;		//!< The second collider object involved in the collision event
+	Entity::Id m_entities[2];	//!< The id of the entities involved in the collision event
+	Collider m_colliders[2];	//!< The collider objects involved in the collision event
 	Uint32 m_numContacts;		//!< The number of contact points in the collision
 	ContactPoint* m_contacts;	//!< The list of contact points
 };
@@ -66,10 +63,8 @@ struct E_PhysicsTrigger
 	{ }
 
 	CollisionEventType m_type;	//!< The trigger collision event type
-	Entity::Id m_entity1;		//!< The id of the first entity involved in the collision event
-	Entity::Id m_entity2;		//!< The id of the second entity involved in the collision event
-	Collider m_collider1;		//!< The first collider object involved in the collision event
-	Collider m_collider2;		//!< The second collider object involved in the collision event
+	Entity::Id m_entities[2];	//!< The id of the entities involved in the collision event
+	Collider m_colliders[2];	//!< The collider objects involved in the collision event
 };
 
 

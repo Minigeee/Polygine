@@ -26,6 +26,10 @@ public:
 
 	void setRollingResistance(float resistance);
 
+	void setCollisionCategory(Uint16 category);
+
+	void setCollisionMask(Uint16 mask);
+
 	void setIsTrigger(bool trigger);
 
 	float getBounciness() const;
@@ -33,6 +37,10 @@ public:
 	float getFrictionCoefficient() const;
 
 	float getRollingResistance() const;
+
+	Uint16 getCollisionCategory() const;
+
+	Uint16 getCollisionMask() const;
 
 	bool isTrigger() const;
 
@@ -44,6 +52,8 @@ private:
 	float m_bounciness;
 	float m_frictionCoefficient;
 	float m_rollingResistance;
+	Uint16 m_collisionCategory;
+	Uint16 m_collisionMask;
 	bool m_isTrigger;
 };
 
