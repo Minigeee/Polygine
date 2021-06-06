@@ -5,6 +5,8 @@
 
 #include <poly/Engine/Extension.h>
 
+#include <poly/Math/Ray.h>
+
 #include <poly/Physics/Collider.h>
 #include <poly/Physics/Shapes.h>
 
@@ -15,6 +17,21 @@ namespace poly
 class PhysicsEventHandler;
 
 
+///////////////////////////////////////////////////////////
+/// \brief A struct returned from raycast queries containing info about the raycast results
+///
+///////////////////////////////////////////////////////////
+struct RaycastInfo
+{
+	Entity::Id m_entity;	//!< The entity the raycast collided with
+	Collider m_collider;	//!< The collider object the raycast collided with
+	Vector3f m_point;		//!< The point the ray intersects the collider at in world space coordinates
+	Vector3f m_normal;		//!< The normal of the intersection surface in world space coordinate system
+	float m_fraction;		//!< The fraction of the ray that comes before the intersection point
+};
+
+
+///////////////////////////////////////////////////////////
 class Physics : public Extension
 {
 	friend PhysicsEventHandler;
@@ -25,6 +42,8 @@ public:
 	~Physics();
 
 	void update(float dt);
+
+	std::vector<RaycastInfo>& raycast(const Ray& ray, float dist, Uint16 mask = 0xFFFF);
 
 	void setGravity(const Vector3f& gravity);
 
@@ -45,6 +64,10 @@ public:
 	Collider addCollider(const Entity& entity, const HeightMapShape& shape);
 
 	Collider addCollider(const Entity& entity, const SphereShape& shape);
+
+	void removeCollider(const Entity& entity, Uint32 index);
+
+	void removeCollider(const Entity& entity, const Collider& collider);
 
 private:
 	struct BodyData
@@ -131,6 +154,8 @@ private:
 	HashMap<Uint32, std::vector<RigidBodyData>> m_groupedRigidBodies;			//!< Map entity group to list of rigid bodies
 	HashMap<Uint32, std::vector<CollisionBodyData>> m_groupedCollisionBodies;	//!< Map entity group to list of collision bodies
 	HashMap<void*, Entity::Id> m_mapBodyToEntity;								//!< Map collision bodies to entity ids
+
+	std::vector<poly::RaycastInfo> m_raycastInfo;
 
 	static HashMap<float, void*> s_boxShapes;
 	static HashMap<float, void*> s_capsuleShapes;

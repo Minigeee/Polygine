@@ -25,7 +25,9 @@ namespace poly
 
 
 ///////////////////////////////////////////////////////////
-class PhysicsEventHandler : public reactphysics3d::EventListener
+class PhysicsEventHandler :
+	public reactphysics3d::EventListener,
+	public reactphysics3d::RaycastCallback
 {
 public:
 	///////////////////////////////////////////////////////////
@@ -150,6 +152,34 @@ public:
 			// Send the event
 			m_scene->sendEvent<E_PhysicsTrigger>(e);
 		}
+	}
+
+
+	///////////////////////////////////////////////////////////
+	float notifyRaycastHit(const reactphysics3d::RaycastInfo& rp3dInfo) override
+	{
+		poly::RaycastInfo info;
+
+		// Get the associated entity id
+		info.m_entity = m_physics->m_mapBodyToEntity[rp3dInfo.body];
+
+		// Create collider object
+		reactphysics3d::Collider* c = rp3dInfo.collider;
+		info.m_collider.m_bounciness = c->getMaterial().getBounciness();
+		info.m_collider.m_frictionCoefficient = c->getMaterial().getFrictionCoefficient();
+		info.m_collider.m_rollingResistance = c->getMaterial().getRollingResistance();
+		info.m_collider.m_collisionCategory = c->getCollisionCategoryBits();
+		info.m_collider.m_collisionMask = c->getCollideWithMaskBits();
+
+		// Copy scalar and vector properties
+		info.m_point = POLY_VEC3(rp3dInfo.worldPoint);
+		info.m_normal = POLY_VEC3(rp3dInfo.worldNormal);
+		info.m_fraction = rp3dInfo.hitFraction;
+
+		// Add to physics object list
+		m_physics->m_raycastInfo.push_back(info);
+
+		return 1.0f;
 	}
 
 
@@ -601,6 +631,22 @@ void Physics::update(float dt)
 
 
 ///////////////////////////////////////////////////////////
+std::vector<RaycastInfo>& Physics::raycast(const Ray& ray, float dist, Uint16 mask)
+{
+	Vector3f end = ray.m_origin + dist * normalize(ray.m_direction);
+	reactphysics3d::Ray rp3dRay(RP3D_VEC3(ray.m_origin), RP3D_VEC3(end));
+
+	// Clear the raycast info list
+	m_raycastInfo.clear();
+
+	// Raycast test
+	WORLD_CAST(m_world)->raycast(rp3dRay, m_eventHandler, mask);
+
+	return m_raycastInfo;
+}
+
+
+///////////////////////////////////////////////////////////
 void Physics::setGravity(const Vector3f& gravity)
 {
 	m_gravity = gravity;
@@ -619,14 +665,21 @@ void Physics::setGravity(float x, float y, float z)
 ///////////////////////////////////////////////////////////
 void Physics::setSleepAllowed(const Entity& entity, bool allowed)
 {
-	BodyData& data = m_rigidBodies[entity.getId()];
+	BodyData* data = 0;
+	{
+		auto it = m_rigidBodies.find(entity.getId());
+		if (it != m_rigidBodies.end())
+			data = &it.value();
+		else
+			return;
+	}
 
 	// Change option in engine
-	reactphysics3d::RigidBody* body = (reactphysics3d::RigidBody*)data.m_body;
+	reactphysics3d::RigidBody* body = RBODY_CAST(data->m_body);
 	body->setIsAllowedToSleep(allowed);
 
 	// Update cache
-	RigidBodyData& group = m_groupedRigidBodies[data.m_group][data.m_index];
+	RigidBodyData& group = m_groupedRigidBodies[data->m_group][data->m_index];
 	group.m_allowedSleep = allowed;
 }
 
@@ -744,6 +797,67 @@ Collider Physics::addCollider(const Entity& entity, const SphereShape& shape)
 	reactphysics3d::CollisionShape* rp3dShape = (reactphysics3d::SphereShape*)getSphereShape(shape.m_radius);
 
 	return createCollider(entity, shape, rp3dShape);
+}
+
+
+///////////////////////////////////////////////////////////
+void Physics::removeCollider(const Entity& entity, Uint32 index)
+{
+	BodyData* data = 0;
+	reactphysics3d::CollisionBody* body = 0;
+	{
+		auto it = m_rigidBodies.find(entity.getId());
+		if (it != m_rigidBodies.end())
+		{
+			data = &it.value();
+			body = dynamic_cast<reactphysics3d::CollisionBody*>(RBODY_CAST(data->m_body));
+		}
+		else
+		{
+			it = m_collisionBodies.find(entity.getId());
+			if (it != m_collisionBodies.end())
+			{
+				data = &it.value();
+				body = CBODY_CAST(data->m_body);
+			}
+			else
+				return;
+		}
+	}
+
+	// Remove the collider
+	reactphysics3d::Collider* collider = body->getCollider(index);
+	body->removeCollider(collider);
+}
+
+
+///////////////////////////////////////////////////////////
+void Physics::removeCollider(const Entity& entity, const Collider& collider)
+{
+	BodyData* data = 0;
+	reactphysics3d::CollisionBody* body = 0;
+	{
+		auto it = m_rigidBodies.find(entity.getId());
+		if (it != m_rigidBodies.end())
+		{
+			data = &it.value();
+			body = dynamic_cast<reactphysics3d::CollisionBody*>(RBODY_CAST(data->m_body));
+		}
+		else
+		{
+			it = m_collisionBodies.find(entity.getId());
+			if (it != m_collisionBodies.end())
+			{
+				data = &it.value();
+				body = CBODY_CAST(data->m_body);
+			}
+			else
+				return;
+		}
+	}
+
+	// Remove the collider
+	body->removeCollider(reinterpret_cast<reactphysics3d::Collider*>(collider.m_collider));
 }
 
 
