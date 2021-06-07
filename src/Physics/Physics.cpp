@@ -179,7 +179,13 @@ public:
 		// Add to physics object list
 		m_physics->m_raycastInfo.push_back(info);
 
-		return 1.0f;
+		// Determine if raycast should continue
+		float ret = 1.0f;
+		Uint32 max = m_physics->m_maxRaycastIntersects;
+		if (max > 0)
+			ret = ++m_physics->m_numRaycastIntersects >= max ? 0.0f : 1.0f;
+
+		return ret;
 	}
 
 
@@ -631,12 +637,14 @@ void Physics::update(float dt)
 
 
 ///////////////////////////////////////////////////////////
-std::vector<RaycastInfo>& Physics::raycast(const Ray& ray, float dist, Uint16 mask)
+std::vector<RaycastInfo>& Physics::raycast(const Ray& ray, float dist, Uint16 mask, Uint32 maxIntersects)
 {
 	Vector3f end = ray.m_origin + dist * normalize(ray.m_direction);
 	reactphysics3d::Ray rp3dRay(RP3D_VEC3(ray.m_origin), RP3D_VEC3(end));
 
 	// Clear the raycast info list
+	m_numRaycastIntersects = 0;
+	m_maxRaycastIntersects = maxIntersects;
 	m_raycastInfo.clear();
 
 	// Raycast test
@@ -1088,6 +1096,72 @@ void* Physics::getSphereShape(float radius)
 		shape = it.value();
 
 	return shape;
+}
+
+
+///////////////////////////////////////////////////////////
+Joint Physics::addJoint(const Entity& e1, const Entity& e2, Joint::Type type, const Vector3f& point, const Vector3f& axis)
+{
+	ASSERT(e1.has<RigidBodyComponent>() && e2.has<RigidBodyComponent>(), "Entities must have a RigidBodyComponent to be attached to joints");
+
+	Joint joint;
+
+	// Get the two bodies
+	reactphysics3d::RigidBody* b1 = RBODY_CAST(m_rigidBodies[e1.getId()].m_body);
+	reactphysics3d::RigidBody* b2 = RBODY_CAST(m_rigidBodies[e2.getId()].m_body);
+
+	if (type == Joint::BallAndSocket)
+	{
+		reactphysics3d::BallAndSocketJointInfo info(b1, b2, RP3D_VEC3(point));
+		auto rp3d = dynamic_cast<reactphysics3d::BallAndSocketJoint*>(WORLD_CAST(m_world)->createJoint(info));
+		joint.setJoint(rp3d, type);
+	}
+	else if (type == Joint::Hinge)
+	{
+		reactphysics3d::HingeJointInfo info(b1, b2, RP3D_VEC3(point), RP3D_VEC3(axis));
+		auto rp3d = dynamic_cast<reactphysics3d::HingeJoint*>(WORLD_CAST(m_world)->createJoint(info));
+		joint.setJoint(rp3d, type);
+	}
+	else if (type == Joint::Slider)
+	{
+		reactphysics3d::SliderJointInfo info(b1, b2, RP3D_VEC3(point), RP3D_VEC3(axis));
+		auto rp3d = dynamic_cast<reactphysics3d::SliderJoint*>(WORLD_CAST(m_world)->createJoint(info));
+		joint.setJoint(rp3d, type);
+	}
+	else
+	{
+		reactphysics3d::FixedJointInfo info(b1, b2, RP3D_VEC3(point));
+		auto rp3d = dynamic_cast<reactphysics3d::FixedJoint*>(WORLD_CAST(m_world)->createJoint(info));
+		joint.setJoint(rp3d, type);
+	}
+
+	return joint;
+}
+
+
+///////////////////////////////////////////////////////////
+void Physics::removeJoint(const Joint& joint)
+{
+	if (joint.m_type == Joint::BallAndSocket)
+	{
+		auto rp3d = reinterpret_cast<reactphysics3d::BallAndSocketJoint*>(joint.m_joint);
+		WORLD_CAST(m_world)->destroyJoint(rp3d);
+	}
+	else if (joint.m_type == Joint::Hinge)
+	{
+		auto rp3d = reinterpret_cast<reactphysics3d::HingeJoint*>(joint.m_joint);
+		WORLD_CAST(m_world)->destroyJoint(rp3d);
+	}
+	else if (joint.m_type == Joint::Slider)
+	{
+		auto rp3d = reinterpret_cast<reactphysics3d::SliderJoint*>(joint.m_joint);
+		WORLD_CAST(m_world)->destroyJoint(rp3d);
+	}
+	else
+	{
+		auto rp3d = reinterpret_cast<reactphysics3d::FixedJoint*>(joint.m_joint);
+		WORLD_CAST(m_world)->destroyJoint(rp3d);
+	}
 }
 
 

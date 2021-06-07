@@ -8,6 +8,7 @@
 #include <poly/Math/Ray.h>
 
 #include <poly/Physics/Collider.h>
+#include <poly/Physics/Joints.h>
 #include <poly/Physics/Shapes.h>
 
 namespace poly
@@ -43,7 +44,12 @@ public:
 
 	void update(float dt);
 
-	std::vector<RaycastInfo>& raycast(const Ray& ray, float dist, Uint16 mask = 0xFFFF);
+	std::vector<RaycastInfo>& raycast(
+		const Ray& ray,
+		float dist,
+		Uint16 mask = 0xFFFF,
+		Uint32 maxIntersects = 0
+	);
 
 	void setGravity(const Vector3f& gravity);
 
@@ -68,6 +74,16 @@ public:
 	void removeCollider(const Entity& entity, Uint32 index);
 
 	void removeCollider(const Entity& entity, const Collider& collider);
+
+	Joint addJoint(
+		const Entity& e1,
+		const Entity& e2,
+		Joint::Type type,
+		const Vector3f& point,
+		const Vector3f& axis = Vector3f(0.0f, 1.0f, 0.0f)
+	);
+
+	void removeJoint(const Joint& joint);
 
 private:
 	struct BodyData
@@ -155,6 +171,8 @@ private:
 	HashMap<Uint32, std::vector<CollisionBodyData>> m_groupedCollisionBodies;	//!< Map entity group to list of collision bodies
 	HashMap<void*, Entity::Id> m_mapBodyToEntity;								//!< Map collision bodies to entity ids
 
+	Uint32 m_numRaycastIntersects;
+	Uint32 m_maxRaycastIntersects;
 	std::vector<poly::RaycastInfo> m_raycastInfo;
 
 	static HashMap<float, void*> s_boxShapes;
