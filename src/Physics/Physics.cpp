@@ -5,6 +5,8 @@
 
 #include <poly/Graphics/Model.h>
 
+#include <poly/Math/Functions.h>
+
 #include <poly/Physics/Components.h>
 #include <poly/Physics/Events.h>
 #include <poly/Physics/Physics.h>
@@ -972,86 +974,6 @@ void* Physics::getConcaveMeshShape(const ConcaveMeshShape& shape)
 
 
 ///////////////////////////////////////////////////////////
-void* Physics::getConvexMeshShape(const ConvexMeshShape& shape)
-{
-	// Create a new shape that will be shareable
-	void* rp3d = 0;
-
-	const std::vector<Vertex>& vertices = shape.m_model->getVertices();
-	const std::vector<Uint32>& indices = shape.m_model->getIndices();
-	bool usesIndices = indices.size() > 0;
-
-	// Get the vertex offset and number of vertices
-	Uint32 numMeshes = shape.m_model->getNumMeshes();
-	Uint32 vertexOffset = shape.m_model->getMesh(shape.m_meshNum)->m_offset;
-	Uint32 numVertices =
-		shape.m_meshNum + 1 == numMeshes ?
-			(usesIndices ? indices.size() : vertices.size()) :
-			shape.m_model->getMesh(shape.m_meshNum + 1)->m_offset;
-	numVertices -= vertexOffset;
-
-	// Get the key pointer that will be used to create a map entry
-	void* key = usesIndices ? (void*)&indices[vertexOffset] : (void*)&vertices[vertexOffset];
-
-	auto it = s_convexMeshShapes.find(key);
-	if (it == s_convexMeshShapes.end())
-	{
-		// Create a map entry
-		ConvexMeshData& data = s_convexMeshShapes[key];
-
-		// If there are no indices, allocate a new array
-		if (!usesIndices)
-		{
-			data.m_indices = (Uint32*)MALLOC_DBG(numVertices * sizeof(Uint32));
-			for (Uint32 i = 0; i < numVertices; ++i)
-				data.m_indices[i] = i;
-		}
-		else
-			data.m_indices = (Uint32*)&indices[vertexOffset];
-
-		// Create the faces array
-		Uint32 numFaces = numVertices / 3;
-		reactphysics3d::PolygonVertexArray::PolygonFace* faces =
-			(reactphysics3d::PolygonVertexArray::PolygonFace*)MALLOC_DBG(
-				numFaces * sizeof(reactphysics3d::PolygonVertexArray::PolygonFace)
-			);
-		data.m_faces = faces;
-
-		// Set face data
-		for (Uint32 f = 0; f < numFaces; ++f)
-		{
-			faces[f].indexBase = f * 3;
-			faces[f].nbVertices = 3;
-		}
-
-		// Create vertex array
-		reactphysics3d::PolygonVertexArray* vertexArray = new reactphysics3d::PolygonVertexArray(
-			usesIndices ? vertices.size() : numVertices,
-			usesIndices ? &vertices[0] : &vertices[vertexOffset],
-			sizeof(Vertex),
-			data.m_indices,
-			sizeof(Uint32),
-			numFaces,
-			faces,
-			reactphysics3d::PolygonVertexArray::VertexDataType::VERTEX_FLOAT_TYPE,
-			reactphysics3d::PolygonVertexArray::IndexDataType::INDEX_INTEGER_TYPE
-		);
-		data.m_vertexArray = vertexArray;
-
-		// Create mesh
-		reactphysics3d::PolyhedronMesh* mesh = g_common.createPolyhedronMesh(vertexArray);
-
-		// Create shape
-		data.m_shape = rp3d = g_common.createConvexMeshShape(mesh);
-	}
-	else
-		rp3d = it.value().m_shape;
-
-	return rp3d;
-}
-
-
-///////////////////////////////////////////////////////////
 void* Physics::getHeightMapShape(const HeightMapShape& shape)
 {
 	// Create a new shape that will be shareable
@@ -1203,6 +1125,9 @@ Physics::ConvexMeshData::ConvexMeshData() :
 ///////////////////////////////////////////////////////////
 Physics::ConvexMeshData::~ConvexMeshData()
 {
+	if (m_vertices)
+		FREE_DBG(m_vertices);
+
 	if (m_indices)
 		FREE_DBG(m_indices);
 
@@ -1215,6 +1140,427 @@ Physics::ConvexMeshData::~ConvexMeshData()
 	m_indices = 0;
 	m_faces = 0;
 	m_vertexArray = 0;
+}
+
+
+///////////////////////////////////////////////////////////
+namespace priv
+{
+
+
+///////////////////////////////////////////////////////////
+struct ConvexMeshFace
+{
+	std::vector<Uint32> m_vertices;
+	Vector3f m_normal;
+};
+
+
+///////////////////////////////////////////////////////////
+struct ConvexMeshFaceInfo
+{
+	Uint32 m_index;
+	Uint32 m_numVertices;
+};
+
+
+///////////////////////////////////////////////////////////
+std::vector<Vector3f> mergeVertices(const std::vector<Vertex>& vertices, std::vector<Uint32>& indices)
+{
+	// The list vertices to return
+	std::vector<Vector3f> merged;
+
+	constexpr float mergeDist = 0.0001f;
+	constexpr float mergeDistSquared = mergeDist * mergeDist;
+
+	// This loop is O(n^2), so it is pretty inefficient, but is simple
+	for (Uint32 v = 0; v < vertices.size(); ++v)
+	{
+		// Check if any of the added vertices are close enough
+		// This uses a linear search
+		int index = -1;
+		for (Uint32 i = 0; i < merged.size(); ++i)
+		{
+			Vector3f offset = merged[i] - vertices[v].m_position;
+			float distSquared = dot(offset, offset);
+
+			// Check if the two vertices are close enough
+			if (distSquared <= mergeDistSquared)
+			{
+				index = i;
+				break;
+			}
+		}
+
+		// If a close vertex was found, don't add the vertex to the merged list, and add its index instead
+		if (index >= 0)
+			indices.push_back((Uint32)index);
+
+		// Otherwise add it as a new vertex
+		else
+		{
+			merged.push_back(vertices[v].m_position);
+			indices.push_back(merged.size() - 1);
+		}
+	}
+
+	// Return the list of merged vertices
+	return merged;
+}
+
+
+///////////////////////////////////////////////////////////
+bool isSharedVertex(const Vector3i& shared, Uint32 vertex)
+{
+	return (int)vertex == shared.x || (int)vertex == shared.y || (int)vertex == shared.z;
+}
+
+
+///////////////////////////////////////////////////////////
+std::vector<ConvexMeshFaceInfo> mergeFaces(std::vector<Vector3f>& vertices, std::vector<Uint32>& indices)
+{
+	// Keep track of which vertices belong to which faces
+	std::vector<std::vector<Uint32>> mapVertexToFaces(vertices.size());
+
+	// Create a list of triangle faces
+	std::vector<ConvexMeshFace> faces;
+	std::vector<bool> isFaceValid;
+	std::vector<Uint32> mapFaceIndexCorrection;
+
+	for (Uint32 v = 0; v < indices.size(); v += 3)
+	{
+		ConvexMeshFace face;
+
+		// Normal
+		Vector3f v0 = vertices[indices[v + 0]] - vertices[indices[v + 1]];
+		Vector3f v1 = vertices[indices[v + 0]] - vertices[indices[v + 2]];
+		face.m_normal = normalize(cross(v0, v1));
+
+		// Vertices
+		face.m_vertices.push_back(indices[v + 0]);
+		face.m_vertices.push_back(indices[v + 1]);
+		face.m_vertices.push_back(indices[v + 2]);
+
+		// Map shared faces to shared vertices
+		HashMap<Uint32, Vector3i> mapFaceToSharedVertices;
+		for (Uint32 i = 0; i < 3; ++i)
+		{
+			std::vector<Uint32>& sharedFaces = mapVertexToFaces[indices[v + i]];
+
+			// For every shared face, add the vertices the shared face shares with the current face
+			for (Uint32 j = 0; j < sharedFaces.size(); ++j)
+			{
+				auto it = mapFaceToSharedVertices.find(sharedFaces[j]);
+
+				// Each face can only share a maximum of 3 vertices with the new faces
+				// because the new face is guaranteed to be a triangle with 3 vertices
+				// So using a vector3 is ok in this situation where the max number of shared vertices is known
+				if (it == mapFaceToSharedVertices.end())
+					// Create a new mapping with the first one filled, and the rest as a negative number
+					mapFaceToSharedVertices[sharedFaces[j]] = Vector3i(indices[v + i], -1, -1);
+				else
+				{
+					if (it.value().y < 0)
+						it.value().y = indices[v + i];
+					else
+						it.value().z = indices[v + i];
+				}
+			}
+		}
+
+		// If shared faces were found, check if the shared faces are coplanar
+		HashMap<Uint32, bool> faceIsCoplanar;
+		bool facesMerged = false;
+		for (auto it = mapFaceToSharedVertices.begin(); it != mapFaceToSharedVertices.end(); ++it)
+		{
+			Uint32 faceIndex = mapFaceIndexCorrection[it->first];
+			const Vector3i& sharedVertices = it->second;
+
+			// If they only share a single vertex, they cannot be merged
+			if (sharedVertices.y < 0)
+			{
+				faceIsCoplanar[faceIndex] = false;
+				continue;
+			}
+
+			// If they share 3 vertices, they are coplanar
+			Uint32 numShared = (sharedVertices.z >= 0 ? 3 : 2);
+			bool coplanar = numShared == 3;
+
+			constexpr float dotThreshold = 0.999998487f;
+			coplanar |= (dot(faces[faceIndex].m_normal, face.m_normal) >= dotThreshold);
+			faceIsCoplanar[faceIndex] = coplanar;
+			facesMerged |= coplanar;
+
+			// If they are coplanar, merge them
+			if (coplanar)
+			{
+				std::vector<Uint32> newVertices;
+				const ConvexMeshFace& coplanarFace = faces[faceIndex];
+
+				// 2 shared and 3 shared are handled differently
+				if (numShared == 2)
+				{
+					// 2 shared vertices
+					Uint32 current = 0;
+					Uint32 index = 0;
+					const ConvexMeshFace* coplanarFaces[] = { &face, &coplanarFace };
+
+					// Add the first vertex
+					newVertices.push_back(coplanarFaces[current]->m_vertices[index]);
+
+					// Add the vertices
+					Uint32 nextIndex = (index + 1) % coplanarFaces[current]->m_vertices.size();
+					while (newVertices.size() < coplanarFace.m_vertices.size() + 1)
+					{
+						Uint32 currentVertex = coplanarFaces[current]->m_vertices[index];
+
+						// Check if need to switch face
+						if (
+							isSharedVertex(sharedVertices, coplanarFaces[current]->m_vertices[index]) &&
+							isSharedVertex(sharedVertices, coplanarFaces[current]->m_vertices[nextIndex]))
+						{
+							current = (current + 1) % 2;
+
+							// Find the index of the vertex
+							const std::vector<Uint32>& currentVertices = coplanarFaces[current]->m_vertices;
+							for (Uint32 i = 0; i < currentVertices.size(); ++i)
+							{
+								if (currentVertices[i] == currentVertex)
+								{
+									index = i;
+									break;
+								}
+							}
+
+							// Update next vertex
+							nextIndex = (index + 1) % currentVertices.size();
+						}
+
+						// Update current and next index
+						index = nextIndex;
+						nextIndex = (index + 1) % coplanarFaces[current]->m_vertices.size();
+
+						// Add the current vertex
+						newVertices.push_back(coplanarFaces[current]->m_vertices[index]);
+					}
+				}
+				else
+				{
+					// 3 shared vertices
+
+					// Need to find the middle shared vertex on the coplanar face
+					Uint32 middleIndex = 0;
+					for (Uint32 i = 0; i < coplanarFace.m_vertices.size(); ++i)
+					{
+						Uint32 nextIndex = (i + 1) % coplanarFace.m_vertices.size();
+
+						if (
+							!isSharedVertex(sharedVertices, coplanarFace.m_vertices[i]) &&
+							isSharedVertex(sharedVertices, coplanarFace.m_vertices[nextIndex]))
+						{
+							middleIndex = (nextIndex + 1) % coplanarFace.m_vertices.size();
+							break;
+						}
+					}
+
+					// Add every vertex in order except for the middle index
+					for (Uint32 i = 0; i < coplanarFace.m_vertices.size(); ++i)
+					{
+						// Skip middle index
+						if (i == middleIndex) continue;
+
+						newVertices.push_back(coplanarFace.m_vertices[i]);
+					}
+				}
+
+				// Replace the vertices of the current face
+				face.m_vertices = newVertices;
+			}
+		}
+
+		// If faces were merged, update every face that was merged
+		if (facesMerged)
+		{
+			int newFaceIndex = -1;
+
+			for (auto it = faceIsCoplanar.begin(); it != faceIsCoplanar.end(); ++it)
+			{
+				// Skip faces that weren't merged
+				if (!it->second) continue;
+
+				// No need to correct this face index because it is already corrected
+				Uint32 faceIndex = it->first;
+
+				if (newFaceIndex < 0)
+				{
+					// If the new face wasn't assigned yet, assign it
+					faces[faceIndex] = face;
+
+					// Update mappings
+					for (Uint32 i = 0; i < face.m_vertices.size(); ++i)
+					{
+						// Get the mapped faces
+						std::vector<Uint32>& mapping = mapVertexToFaces[face.m_vertices[i]];
+
+						bool found = false;
+						for (Uint32 j = 0; j < mapping.size(); ++j)
+						{
+							if (mapping[j] == faceIndex)
+							{
+								found = true;
+								break;
+							}
+						}
+
+						// If not found in the mapping, add it to the mapping
+						if (!found)
+							mapping.push_back(faceIndex);
+					}
+
+					// Update new face index
+					newFaceIndex = faceIndex;
+				}
+				else
+				{
+					// Otherwise, invalidate the face
+					isFaceValid[faceIndex] = false;
+
+					// Add to mapping
+					mapFaceIndexCorrection[faceIndex] = newFaceIndex;
+				}
+			}
+
+			// Add to mapping
+			isFaceValid.push_back(false);
+			mapFaceIndexCorrection.push_back(newFaceIndex);
+		}
+		else
+		{
+			// Map vertices to face
+			Uint32 faceIndex = v / 3;
+			mapVertexToFaces[indices[v + 0]].push_back(faceIndex);
+			mapVertexToFaces[indices[v + 1]].push_back(faceIndex);
+			mapVertexToFaces[indices[v + 2]].push_back(faceIndex);
+
+			// Add the face
+			faces.push_back(std::move(face));
+
+			// Mark this face as valid
+			isFaceValid.push_back(true);
+			mapFaceIndexCorrection.push_back(faces.size() - 1);
+		}
+	}
+
+	// After the previous loop, should have a list of faces,
+	// and a list of booleans indicating which ones are valid
+
+	// Create the indices array, and the faces info array
+	std::vector<ConvexMeshFaceInfo> info;
+	indices.clear();
+
+	for (Uint32 i = 0; i < isFaceValid.size(); ++i)
+	{
+		// Skip invalid faces
+		if (!isFaceValid[i]) continue;
+
+		const ConvexMeshFace& face = faces[mapFaceIndexCorrection[i]];
+
+		// Add info
+		info.push_back(ConvexMeshFaceInfo{ indices.size(), face.m_vertices.size() });
+
+		// Add all indices
+		for (Uint32 j = 0; j < face.m_vertices.size(); ++j)
+			indices.push_back(face.m_vertices[j]);
+	}
+
+	return info;
+}
+
+
+}
+
+
+///////////////////////////////////////////////////////////
+void* Physics::getConvexMeshShape(const ConvexMeshShape& shape)
+{
+	// Create a new shape that will be shareable
+	void* rp3d = 0;
+
+	const std::vector<Vertex>& vertices = shape.m_model->getVertices();
+	std::vector<Uint32> indices = shape.m_model->getIndices();
+	bool usesIndices = indices.size() > 0;
+
+	// Get the key pointer that will be used to create a map entry
+	Uint32 vertexOffset = shape.m_model->getMesh(shape.m_meshNum)->m_offset;
+	void* key = usesIndices ? (void*)&indices[vertexOffset] : (void*)&vertices[vertexOffset];
+
+	auto it = s_convexMeshShapes.find(key);
+	if (it == s_convexMeshShapes.end())
+	{
+		// Merge vertices and generate indices
+		std::vector<Vector3f> merged;
+		if (indices.size() == 0)
+			merged = priv::mergeVertices(vertices, indices);
+		else
+		{
+			merged.reserve(vertices.size());
+			for (Uint32 i = 0; i < vertices.size(); ++i)
+				merged.push_back(vertices[i].m_position);
+		}
+
+		// Merge coplanar faces and generate face info
+		auto faceInfo = priv::mergeFaces(merged, indices);
+
+		// Create a map entry
+		ConvexMeshData& data = s_convexMeshShapes[key];
+
+		// Allocate space for permenant vertex array
+		data.m_vertices = (Vector3f*)MALLOC_DBG(merged.size() * sizeof(Vector3f));
+		memcpy(data.m_vertices, &merged[0], merged.size() * sizeof(Vector3f));
+
+		// Allocate space for permenant index array
+		data.m_indices = (Uint32*)MALLOC_DBG(indices.size() * sizeof(Uint32));
+		memcpy(data.m_indices, &indices[0], indices.size() * sizeof(Uint32));
+
+		// Create the faces array
+		reactphysics3d::PolygonVertexArray::PolygonFace* faces =
+			(reactphysics3d::PolygonVertexArray::PolygonFace*)MALLOC_DBG(
+				faceInfo.size() * sizeof(reactphysics3d::PolygonVertexArray::PolygonFace)
+			);
+		data.m_faces = faces;
+
+		// Set face data
+		for (Uint32 f = 0; f < faceInfo.size(); ++f)
+		{
+			faces[f].indexBase = faceInfo[f].m_index;
+			faces[f].nbVertices = faceInfo[f].m_numVertices;
+		}
+
+		// Create vertex array
+		reactphysics3d::PolygonVertexArray* vertexArray = new reactphysics3d::PolygonVertexArray(
+			merged.size(),
+			data.m_vertices,
+			sizeof(Vector3f),
+			data.m_indices,
+			sizeof(Uint32),
+			faceInfo.size(),
+			faces,
+			reactphysics3d::PolygonVertexArray::VertexDataType::VERTEX_FLOAT_TYPE,
+			reactphysics3d::PolygonVertexArray::IndexDataType::INDEX_INTEGER_TYPE
+		);
+		data.m_vertexArray = vertexArray;
+
+		// Create mesh
+		reactphysics3d::PolyhedronMesh* mesh = g_common.createPolyhedronMesh(vertexArray);
+
+		// Create shape
+		data.m_shape = rp3d = g_common.createConvexMeshShape(mesh);
+	}
+	else
+		rp3d = it.value().m_shape;
+
+	return rp3d;
 }
 
 

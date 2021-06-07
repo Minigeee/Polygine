@@ -133,6 +133,7 @@ private:
 		~ConvexMeshData();
 
 		void* m_shape;
+		Vector3f* m_vertices;
 		Uint32* m_indices;
 		void* m_faces;
 		void* m_vertexArray;
