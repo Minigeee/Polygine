@@ -54,6 +54,16 @@ if(NOT DEFINED freetype_FOUND)
     install(TARGETS freetype DESTINATION "${CMAKE_INSTALL_LIBDIR}" EXPORT polygine-export)
 endif()
 
+# SFML
+CPMAddPackage("gh:SFML/SFML#master")
+set(SFML_BUILD_GRAPHICS FALSE)
+set(SFML_BUILD_WINDOW FALSE)
+target_link_libraries(polygine sfml-system sfml-audio sfml-network)
+target_include_directories(polygine PRIVATE ${SFML_SOURCE_DIR}/include)
+if(NOT DEFINED SFML_FOUND)
+    install(TARGETS sfml-system sfml-audio sfml-network DESTINATION "${CMAKE_INSTALL_LIBDIR}" EXPORT polygine-export)
+endif()
+
 # Stb
 CPMAddPackage("gh:nothings/stb#master")
 target_include_directories(polygine PRIVATE ${stb_SOURCE_DIR})

@@ -1,6 +1,8 @@
 #ifndef POLY_BUTTON_H
 #define POLY_BUTTON_H
 
+#include <poly/Core/Utf.h>
+
 #include <poly/UI/UIElement.h>
 
 namespace poly
@@ -48,6 +50,14 @@ public:
 	void setString(const std::string& string);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Set the text string
+	///
+	/// \param string The string to display on the button
+	///
+	///////////////////////////////////////////////////////////
+	void setString(const Utf32String& string);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Set the text alignment
 	///
 	/// \param align The position to align the text. By default
@@ -82,7 +92,7 @@ public:
 	/// \return Te text string
 	///
 	///////////////////////////////////////////////////////////
-	const std::string& getString();
+	const Utf32String& getString();
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the text alignment

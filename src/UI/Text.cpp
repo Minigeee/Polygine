@@ -4,6 +4,8 @@
 #include <poly/UI/Text.h>
 #include <poly/UI/UIParser.h>
 
+#include <SFML/System/Utf.hpp>
+
 namespace poly
 {
 
@@ -99,6 +101,14 @@ void Text::setFont(Font* font)
 ///////////////////////////////////////////////////////////
 void Text::setString(const std::string& string)
 {
+	m_string = Utf32::fromUtf8(string);
+	m_stringChanged = true;
+}
+
+
+///////////////////////////////////////////////////////////
+void Text::setString(const Utf32String& string)
+{
 	m_string = string;
 	m_stringChanged = true;
 }
@@ -164,7 +174,7 @@ Font* Text::getFont() const
 
 
 ///////////////////////////////////////////////////////////
-const std::string& Text::getString() const
+const Utf32String& Text::getString() const
 {
 	return m_string;
 }

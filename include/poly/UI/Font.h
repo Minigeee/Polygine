@@ -93,6 +93,14 @@ public:
 	bool load(const std::string& fname, const std::vector<Uint32>& set);
 
 	///////////////////////////////////////////////////////////
+	///////////////////////////////////////////////////////////
+	void addCharacter(Uint32 c);
+
+	///////////////////////////////////////////////////////////
+	///////////////////////////////////////////////////////////
+	void addCharacters(const std::string& chars);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get a character glyph for a certain font size
 	///
 	/// The glyph will be generated into the font object.
@@ -140,6 +148,7 @@ private:
 
 	ObjectPool m_pool;
 	std::vector<Uint32> m_characters;
+	HashSet<Uint32> m_characterSet;
 	HashMap<Uint32, Page*> m_pages;
 	Uint32 m_characterSize;
 };

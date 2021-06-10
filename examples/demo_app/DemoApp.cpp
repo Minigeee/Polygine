@@ -1,4 +1,4 @@
-#include <poly/Core/Allocate.h>
+﻿#include <poly/Core/Allocate.h>
 #include <poly/Core/Clock.h>
 #include <poly/Core/Logger.h>
 #include <poly/Core/Profiler.h>
@@ -73,6 +73,8 @@ void onSubmit(const std::string& text)
 
 int main()
 {
+    std::string test = u8"おはよう名字名前休み一ニ三四";
+
     Logger::init("game.log");
     srand(time(NULL));
 
@@ -148,6 +150,11 @@ int main()
     camera.setRotation(0.0f, 0.0f);
 
     // UI
+    Font font;
+    font.load("examples/fonts/NotoSansCJKjp/NotoSansCJKjp-Regular.otf");
+    font.addCharacters(test);
+    Text::setDefaultFont(&font);
+
     UI_XML_CALLBACK(onTestPress);
     UI_XML_CALLBACK(onSubmit);
 

@@ -143,7 +143,7 @@ void TextInput::parse(XmlNode node, const UITemplateMap& templates)
 	XmlAttribute onValueChangeAttr = node.getFirstAttribute("on_value_change");
 	if (onValueChangeAttr.exists())
 	{
-		std::function<void(const std::string&)> func;
+		std::function<void(const Utf32String&)> func;
 		if (UIParser::parse(onValueChangeAttr, this, func))
 			onValueChange(func);
 	}
@@ -170,7 +170,7 @@ void TextInput::parse(XmlNode node, const UITemplateMap& templates)
 	XmlAttribute onSubmitAttr = node.getFirstAttribute("on_submit");
 	if (onSubmitAttr.exists())
 	{
-		std::function<void(const std::string&)> func;
+		std::function<void(const Utf32String&)> func;
 		if (UIParser::parse(onSubmitAttr, this, func))
 			onSubmit(func);
 	}
@@ -198,12 +198,14 @@ void TextInput::submit()
 ///////////////////////////////////////////////////////////
 void TextInput::setValue(const std::string& value, bool callFunc)
 {
-	if (value != m_text->getString())
+	Utf32String utf32 = Utf32::fromUtf8(value);
+
+	if (utf32 != m_text->getString())
 	{
 		m_text->setString(value);
 
 		if (callFunc && m_onValueChanged)
-			m_onValueChanged(value);
+			m_onValueChanged(utf32);
 	}
 }
 
@@ -347,7 +349,7 @@ void TextInput::setVisible(bool visible, bool recursive)
 
 
 ///////////////////////////////////////////////////////////
-const std::string& TextInput::getValue() const
+const Utf32String& TextInput::getValue() const
 {
 	return m_text->getString();
 }
@@ -424,7 +426,7 @@ Text* TextInput::getText()
 
 
 ///////////////////////////////////////////////////////////
-void TextInput::onValueChange(const std::function<void(const std::string&)>& func)
+void TextInput::onValueChange(const std::function<void(const Utf32String&)>& func)
 {
 	m_onValueChanged = func;
 }
@@ -445,7 +447,7 @@ void TextInput::onLoseFocus(const std::function<void()>& func)
 
 
 ///////////////////////////////////////////////////////////
-void TextInput::onSubmit(const std::function<void(const std::string&)>& func)
+void TextInput::onSubmit(const std::function<void(const Utf32String&)>& func)
 {
 	m_onSubmit = func;
 }
@@ -466,7 +468,7 @@ void TextInput::onMouseButton(const E_MouseButton& e)
 		Vector2f p = m_text->getLocalCoordinate(window->getCursorPos());
 
 		// Find correct index in string
-		const std::string& value = m_text->getString();
+		const Utf32String& value = m_text->getString();
 		Uint32 i = 0;
 		for (; i < value.size() && p.x > m_text->getCharacterOffset(i).x; ++i);
 
@@ -516,7 +518,7 @@ void TextInput::onMouseMove(const E_MouseMove& e)
 		Vector2f p = m_text->getLocalCoordinate(Vector2f(e.m_x, e.m_y));
 
 		// Find correct index in string
-		const std::string& value = m_text->getString();
+		const Utf32String& value = m_text->getString();
 		Uint32 i = 0;
 		for (; i < value.size() && p.x > m_text->getCharacterOffset(i).x; ++i);
 
@@ -621,16 +623,16 @@ void TextInput::onKeyEvent(const E_KeyEvent& e)
 		{
 			if (m_textSelection.y - m_textSelection.x > 0)
 				// Copy to clipboard
-				window->setClipboard(m_text->getString().substr(m_textSelection.x, m_textSelection.y - m_textSelection.x));
+				window->setClipboard(Utf8::fromUtf32(m_text->getString().substr(m_textSelection.x, m_textSelection.y - m_textSelection.x)));
 		}
 
 		// Handle paste
 		else if (e.m_key == Keyboard::V)
 		{
 			// Update string
-			const std::string& oldValue = m_text->getString();
+			const Utf32String& oldValue = m_text->getString();
 			std::string clipboard = window->getClipboard();
-			std::string newValue = oldValue.substr(0, m_textSelection.x) + clipboard + oldValue.substr(m_textSelection.y);
+			Utf32String newValue = oldValue.substr(0, m_textSelection.x) + Utf32::fromUtf8(clipboard) + oldValue.substr(m_textSelection.y);
 
 			// Set new string
 			m_text->setString(newValue);
@@ -648,11 +650,11 @@ void TextInput::onKeyEvent(const E_KeyEvent& e)
 			if (m_textSelection.y - m_textSelection.x > 0)
 			{
 				// Copy to clipboard
-				window->setClipboard(m_text->getString().substr(m_textSelection.x, m_textSelection.y - m_textSelection.x));
+				window->setClipboard(Utf8::fromUtf32(m_text->getString().substr(m_textSelection.x, m_textSelection.y - m_textSelection.x)));
 
 				// Update string
-				const std::string& oldValue = m_text->getString();
-				std::string newValue = oldValue.substr(0, m_textSelection.x) + oldValue.substr(m_textSelection.y);
+				const Utf32String& oldValue = m_text->getString();
+				Utf32String newValue = oldValue.substr(0, m_textSelection.x) + oldValue.substr(m_textSelection.y);
 
 				// Set new string
 				m_text->setString(newValue);
@@ -688,8 +690,8 @@ void TextInput::onKeyEvent(const E_KeyEvent& e)
 
 		else if (e.m_key == Keyboard::Backspace)
 		{
-			const std::string& oldValue = m_text->getString();
-			std::string newValue;
+			const Utf32String& oldValue = m_text->getString();
+			Utf32String newValue;
 
 			// Handle backspace
 			if (m_cursorCharPos > 0 && m_textSelection.y - m_textSelection.x == 0)
@@ -720,8 +722,8 @@ void TextInput::onKeyEvent(const E_KeyEvent& e)
 
 		else if (e.m_key == Keyboard::Delete)
 		{
-			const std::string& oldValue = m_text->getString();
-			std::string newValue;
+			const Utf32String& oldValue = m_text->getString();
+			Utf32String newValue;
 
 			// Handle delete
 			if (m_cursorCharPos < oldValue.size() && m_textSelection.y - m_textSelection.x == 0)
@@ -754,8 +756,8 @@ void TextInput::onKeyEvent(const E_KeyEvent& e)
 void TextInput::onTextInput(const E_TextInput& e)
 {
 	// Update string
-	const std::string& oldValue = m_text->getString();
-	std::string newValue = oldValue.substr(0, m_textSelection.x) + (char)e.m_char + oldValue.substr(m_textSelection.y);
+	const Utf32String& oldValue = m_text->getString();
+	Utf32String newValue = oldValue.substr(0, m_textSelection.x) + e.m_char + oldValue.substr(m_textSelection.y);
 
 	// Set new string
 	m_text->setString(newValue);

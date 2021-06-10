@@ -1,4 +1,5 @@
 #include <poly/Core/Logger.h>
+#include <poly/Core/Utf.h>
 
 #include <poly/UI/Font.h>
 
@@ -75,6 +76,9 @@ bool Font::load(const std::string& fname, CharacterSet set)
         return load(fname, m_characters);
     }
 
+    for (Uint32 i = 0; i < m_characters.size(); ++i)
+        m_characterSet.insert(m_characters[i]);
+
     return false;
 }
 
@@ -102,9 +106,39 @@ bool Font::load(const std::string& fname, const std::vector<Uint32>& set)
 
     // Set character set
     m_characters = set;
+    for (Uint32 i = 0; i < m_characters.size(); ++i)
+        m_characterSet.insert(m_characters[i]);
 
     LOG("Loaded font: %s", fname.c_str());
     return true;
+}
+
+
+///////////////////////////////////////////////////////////
+void Font::addCharacter(Uint32 c)
+{
+    if (m_characterSet.find(c) == m_characterSet.end())
+    {
+        m_characters.push_back(c);
+        m_characterSet.insert(c);
+    }
+}
+
+
+///////////////////////////////////////////////////////////
+void Font::addCharacters(const std::string& chars)
+{
+    Utf32String str = Utf32::fromUtf8(chars);
+
+    for (Uint32 i = 0; i < str.size(); ++i)
+    {
+        Uint32 c = str[i];
+        if (m_characterSet.find(c) == m_characterSet.end())
+        {
+            m_characters.push_back(c);
+            m_characterSet.insert(c);
+        }
+    }
 }
 
 

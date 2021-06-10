@@ -1,6 +1,8 @@
 #ifndef POLY_TEXT_H
 #define POLY_TEXT_H
 
+#include <poly/Core/Utf.h>
+
 #include <poly/UI/UIElement.h>
 
 namespace poly
@@ -60,6 +62,19 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	void setString(const std::string& string);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the text string
+	///
+	/// Changing the text string will cause the pixel size of the
+	/// element to be changed to match the bounds of the new
+	/// string. Changing the text string will also reset any
+	/// characters with a different color.
+	///
+	/// \param string The string to render
+	///
+	///////////////////////////////////////////////////////////
+	void setString(const Utf32String& string);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the text character size
@@ -149,7 +164,7 @@ public:
 	/// \return The display string
 	///
 	///////////////////////////////////////////////////////////
-	const std::string& getString() const;
+	const Utf32String& getString() const;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the text character size
@@ -215,7 +230,7 @@ private:
 
 private:
 	Font* m_font;								//!< A text font
-	std::string m_string;						//!< The string to render
+	Utf32String m_string;						//!< The string to render
 	Uint32 m_characterSize;						//!< The character size
 	float m_characterSpacing;					//!< The character spacing
 	float m_lineSpacing;						//!< The line spacing

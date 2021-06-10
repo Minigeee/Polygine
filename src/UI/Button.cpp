@@ -137,6 +137,14 @@ void Button::setString(const std::string& string)
 
 
 ///////////////////////////////////////////////////////////
+void Button::setString(const Utf32String& string)
+{
+	if (!m_text) createText();
+	m_text->setString(string);
+}
+
+
+///////////////////////////////////////////////////////////
 void Button::setTextAlign(UIPosition align)
 {
 	if (!m_text)
@@ -169,7 +177,7 @@ void Button::setTextOffset(float x, float y)
 
 
 ///////////////////////////////////////////////////////////
-const std::string& Button::getString()
+const Utf32String& Button::getString()
 {
 	if (!m_text) createText();
 	return m_text->getString();
