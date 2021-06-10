@@ -689,6 +689,3 @@ int main()
 
 // TODO : Move Grass to game project and document it
 // TODO : Make everything UTF-encoded compatible (UI XML parsing, etc...)
-// TODO : Add light documentation to ECS.h
-// TODO : Fix shadow artifacts
-// TODO : Merge octree cells that can be merged (for more efficiency when moving around the world, as some entities will be unloaded at far distances)

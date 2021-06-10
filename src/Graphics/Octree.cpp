@@ -644,6 +644,40 @@ void Octree::remove(Entity::Id entity)
 		}
 	}
 
+	// Check if the parent node will have a small enough number of entities to merge
+	if (node->m_parent)
+	{
+		// Count the number of entities
+		Uint32 numEntities = 0;
+		for (Uint32 i = 0; i < 8; ++i)
+			numEntities += node->m_parent->m_children[i]->m_data.size();
+
+		if (numEntities < (Uint32)(0.7f * m_maxPerCell))
+		{
+			// Merge
+			Node* parent = node->m_parent;
+			std::vector<EntityData*>& parentData = parent->m_data;
+
+			for (Uint32 i = 0; i < 8; ++i)
+			{
+				// Append all child node data
+				std::vector<EntityData*>& childData = parent->m_children[i]->m_data;
+				parentData.insert(parentData.end(), childData.begin(), childData.end());
+			}
+
+			// Update the containing node of each entity
+			for (Uint32 i = 0; i < parentData.size(); ++i)
+				parentData[i]->m_node = parent;
+
+			// Remove the children node
+			for (Uint32 i = 0; i < 8; ++i)
+			{
+				m_nodePool.free(parent->m_children[i]);
+				parent->m_children[i] = 0;
+			}
+		}
+	}
+
 	// Remove from pool
 	m_dataPool.free(data);
 }

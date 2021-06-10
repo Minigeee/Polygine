@@ -200,7 +200,7 @@ private:
 	Uint32 getRenderGroup(Renderable* renderable, Skeleton* skeleton);
 
 private:
-	ObjectPool m_nodePool;								//!< The object pool that holds node data
+	TypePool<Node> m_nodePool;							//!< The object pool that holds node data
 	ObjectPool m_dataPool;								//!< The object pool that holds render data
 
 	Node* m_root;										//!< A pointer to the root node
