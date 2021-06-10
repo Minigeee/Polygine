@@ -734,79 +734,55 @@ Collider Physics::createCollider(const Entity& entity, const PhysicsShape& shape
 
 
 ///////////////////////////////////////////////////////////
-Collider Physics::addCollider(const Entity& entity, const BoxShape& shape)
+Collider Physics::addCollider(const Entity& entity, const PhysicsShape& shape, float bounciness, float friction)
 {
 	ASSERT(entity.has<RigidBodyComponent>() || entity.has<CollisionBodyComponent>(), "A collider can only be added to an entity with a rigid body or a collision body");
 
-	// Get a box shape
-	reactphysics3d::CollisionShape* rp3dShape = (reactphysics3d::BoxShape*)getBoxShape(shape.m_dimensions);
+	const BoxShape* box = 0;
+	const CapsuleShape* capsule = 0;
+	const ConcaveMeshShape* concave = 0;
+	const ConvexMeshShape* convex = 0;
+	const HeightMapShape* hmap = 0;
+	const SphereShape* sphere = 0;
 
-	return createCollider(entity, shape, rp3dShape);
-}
+	reactphysics3d::CollisionShape* rp3dShape = 0;
 
+	// Create the collider shape
+	if (box = dynamic_cast<const BoxShape*>(&shape))
+		rp3dShape = (reactphysics3d::BoxShape*)getBoxShape(box->m_dimensions);
 
-///////////////////////////////////////////////////////////
-Collider Physics::addCollider(const Entity& entity, const CapsuleShape& shape)
-{
-	ASSERT(entity.has<RigidBodyComponent>() || entity.has<CollisionBodyComponent>(), "A collider can only be added to an entity with a rigid body or a collision body");
+	else if (capsule = dynamic_cast<const CapsuleShape*>(&shape))
+		rp3dShape = (reactphysics3d::CapsuleShape*)getCapsuleShape(Vector2f(capsule->m_radius, capsule->m_height));
+	
+	else if (concave = dynamic_cast<const ConcaveMeshShape*>(&shape))
+		rp3dShape = (reactphysics3d::ConcaveMeshShape*)getConcaveMeshShape(*concave);
 
-	// Get a capsule shape
-	reactphysics3d::CollisionShape* rp3dShape =
-		(reactphysics3d::CapsuleShape*)getCapsuleShape(Vector2f(shape.m_radius, shape.m_height));
+	else if (convex = dynamic_cast<const ConvexMeshShape*>(&shape))
+		rp3dShape = (reactphysics3d::ConvexMeshShape*)getConvexMeshShape(*convex);
 
-	return createCollider(entity, shape, rp3dShape);
-}
+	else if (hmap = dynamic_cast<const HeightMapShape*>(&shape))
+	{
+		// Create a height field shape
+		reactphysics3d::CollisionShape* rp3dShape = (reactphysics3d::HeightFieldShape*)getHeightMapShape(*hmap);
 
+		// Adjust y-position of height shape
+		HeightMapShape newShape(*hmap);
+		newShape.m_position.y += 0.5f * hmap->m_dimensions.y;
 
-///////////////////////////////////////////////////////////
-Collider Physics::addCollider(const Entity& entity, const ConcaveMeshShape& shape)
-{
-	ASSERT(entity.has<RigidBodyComponent>() || entity.has<CollisionBodyComponent>(), "A collider can only be added to an entity with a rigid body or a collision body");
+		Collider collider = createCollider(entity, newShape, rp3dShape);
+		collider.setBounciness(bounciness);
+		collider.setFrictionCoefficient(friction);
+		return collider;
+	}
 
-	// Get a concave mesh shape
-	reactphysics3d::CollisionShape* rp3dShape = (reactphysics3d::ConcaveMeshShape*)getConcaveMeshShape(shape);
+	else if (sphere = dynamic_cast<const SphereShape*>(&shape))
+		rp3dShape = (reactphysics3d::SphereShape*)getSphereShape(sphere->m_radius);
 
-	return createCollider(entity, shape, rp3dShape);
-}
-
-
-///////////////////////////////////////////////////////////
-Collider Physics::addCollider(const Entity& entity, const ConvexMeshShape& shape)
-{
-	ASSERT(entity.has<RigidBodyComponent>() || entity.has<CollisionBodyComponent>(), "A collider can only be added to an entity with a rigid body or a collision body");
-
-	// Get a convex mesh shape
-	reactphysics3d::CollisionShape* rp3dShape = (reactphysics3d::ConvexMeshShape*)getConvexMeshShape(shape);
-
-	return createCollider(entity, shape, rp3dShape);
-}
-
-
-///////////////////////////////////////////////////////////
-Collider Physics::addCollider(const Entity& entity, const HeightMapShape& shape)
-{
-	ASSERT(entity.has<RigidBodyComponent>() || entity.has<CollisionBodyComponent>(), "A collider can only be added to an entity with a rigid body or a collision body");
-
-	// Create a height field shape
-	reactphysics3d::CollisionShape* rp3dShape = (reactphysics3d::HeightFieldShape*)getHeightMapShape(shape);
-
-	// Adjust y-position of height shape
-	HeightMapShape newShape(shape);
-	newShape.m_position.y += 0.5f * shape.m_dimensions.y;
-
-	return createCollider(entity, newShape, rp3dShape);
-}
-
-
-///////////////////////////////////////////////////////////
-Collider Physics::addCollider(const Entity& entity, const SphereShape& shape)
-{
-	ASSERT(entity.has<RigidBodyComponent>() || entity.has<CollisionBodyComponent>(), "A collider can only be added to an entity with a rigid body or a collision body");
-
-	// Get a sphere shape
-	reactphysics3d::CollisionShape* rp3dShape = (reactphysics3d::SphereShape*)getSphereShape(shape.m_radius);
-
-	return createCollider(entity, shape, rp3dShape);
+	// Create collider
+	Collider collider = createCollider(entity, shape, rp3dShape);
+	collider.setBounciness(bounciness);
+	collider.setFrictionCoefficient(friction);
+	return collider;
 }
 
 

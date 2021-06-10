@@ -22,6 +22,7 @@ enum class RigidBodyType
 
 ///////////////////////////////////////////////////////////
 /// \brief A component containing properties for a rigid body
+/// \ingroup Components
 ///
 /// Rigid bodies are bodies that will be simulated by the laws
 /// of physics during each update. They have mass, inertia, velocity,
@@ -79,6 +80,7 @@ struct RigidBodyComponent
 
 ///////////////////////////////////////////////////////////
 /// \brief A component containing properties for a collision body
+/// \ingroup Components
 ///
 /// A collision body can detect any collisions that occur with itself,
 /// but it is not affected by collisions. It has no mass, inertia,
@@ -89,6 +91,10 @@ struct RigidBodyComponent
 ///////////////////////////////////////////////////////////
 struct CollisionBodyComponent
 {
+	///////////////////////////////////////////////////////////
+	/// \brief Default constructor
+	///
+	///////////////////////////////////////////////////////////
 	CollisionBodyComponent();
 
 	Vector3f m_position;			//!< The position
