@@ -1,5 +1,6 @@
 
 #include "common.glsl"
+#include "lighting.glsl"
 #include "noise.glsl"
 #include "shadows.glsl"
 
@@ -14,7 +15,7 @@ uniform sampler2D u_shadowMaps[MAX_NUM_SHADOW_MAPS];
 
 
 ///////////////////////////////////////////////////////////
-float getShadowFactor(int lightNum, int kernelSize)
+float getShadowFactor(int lightNum, vec3 normal, int kernelSize)
 {
     int lightIndex = lightNum * MAX_NUM_SHADOW_CASCADES;
 
@@ -33,7 +34,7 @@ float getShadowFactor(int lightNum, int kernelSize)
     if (regionNum >= numCascades)
         return 1.0f;
 
-    int mapIndex = lightNum * MAX_NUM_SHADOW_CASCADES + regionNum;
+    int mapIndex = lightIndex + regionNum;
     vec3 projCoords = v_lightClipSpacePos[mapIndex].xyz / v_lightClipSpacePos[mapIndex].w;
     projCoords = projCoords * 0.5f + 0.5f;
 
@@ -51,7 +52,8 @@ float getShadowFactor(int lightNum, int kernelSize)
             texCoords += (offset - 0.5f);
 
             float mapDepth = texture(u_shadowMaps[mapIndex], texCoords * texelSize).r;
-            shadow += mapDepth < projCoords.z - 0.0001f ? 1.0f : 0.0f;
+            float shadowBias = 0.0001f * (u_shadowDists[mapIndex] / u_shadowDists[lightIndex]) * (2.0f - dot(normal, -u_dirLights[lightNum].direction));
+            shadow += mapDepth < projCoords.z - shadowBias ? 1.0f : 0.0f;
         }
     }
 

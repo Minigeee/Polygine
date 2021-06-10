@@ -103,7 +103,7 @@ void main()
     // Calculate directional lighting
     for (int i = 0; i < u_numDirLights; ++i)
     {
-        float shadowFactor = getShadowFactor(i, 0);
+        float shadowFactor = getShadowFactor(i, g_normal, 0);
         result += calcDirLightGrass(u_dirLights[i], frontNormal, mixFactor, viewDir, g_color.rgb, shadowFactor);
     }
     
