@@ -23,6 +23,7 @@ Text::Text() :
 	m_characterSize		(12),
 	m_characterSpacing	(0.0f),
 	m_lineSpacing		(3.0f),
+	m_textureHeight		(0),
 	m_stringChanged		(false),
 	m_isCentered		(false)
 {
@@ -242,13 +243,16 @@ void Text::updateQuads()
 	// Quit early if no font
 	if (!m_font) return;
 
-	if (m_stringChanged)
+	Texture* texture = m_font->getTexture(m_characterSize);
+	if (m_stringChanged || (texture && texture->getHeight() != m_textureHeight))
 	{
+		// Get height before updating quads
+		if (texture)
+			m_textureHeight = texture->getHeight();
+
+		// Resize arrays
 		m_quads.resize(m_string.size());
 		m_characterOffsets.resize(m_string.size() + 1);
-
-		// Set texture
-		m_texture = &m_font->getTexture(m_characterSize);
 
 		// Keep track of x position
 		Vector2f currentPos(0.0f);
@@ -282,7 +286,7 @@ void Text::updateQuads()
 			m_quads[i].m_size.y = glyph.m_glyphRect.w;
 
 			// Set texture rectangle
-			m_quads[i].m_textureRect = glyph.m_textureRect;
+			m_quads[i].m_textureRect = glyph.m_textureRectf;
 
 			// Set character offsets
 			m_characterOffsets[i].x = currentPos.x + glyph.m_glyphRect.x;
@@ -302,6 +306,9 @@ void Text::updateQuads()
 				maxWidth = currentPos.x;
 		}
 
+		// Set texture (this has to be after the glyph loop to ensure the texture has been generated)
+		m_texture = m_font->getTexture(m_characterSize);
+
 		// Update character y-offsets
 		for (Uint32 i = 0; i < m_string.size(); ++i)
 			m_characterOffsets[i].y += m_glyphYMax;
@@ -315,6 +322,14 @@ void Text::updateQuads()
 
 		// The size probably changed, so mark transforms dirty
 		markTransformDirty();
+
+		// Check if height changed during the time the quad update occured
+		if (texture && m_textureHeight != m_texture->getHeight())
+			// If it did, need to update again
+			updateQuads();
+
+		// Update texture height;
+		m_textureHeight = m_texture->getHeight();
 
 		m_stringChanged = false;
 	}

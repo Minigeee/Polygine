@@ -237,8 +237,9 @@ private:
 
 	std::vector<UIQuad> m_quads;				//!< A cache of UI quads
 	std::vector<Vector2f> m_characterOffsets;	//!< A list of character offsets
-	float m_glyphYMax;							//!< The clyph's y-max
-	float m_glyphYMin;							//!< The clyph's y-min
+	float m_glyphYMax;							//!< The glyph's y-max
+	float m_glyphYMin;							//!< The glyph's y-min
+	Uint32 m_textureHeight;						//!< Keep track of the font's texture height to know when to update quads
 	bool m_stringChanged;						//!< True if the string was changed
 	bool m_isCentered;							//!< True if the text is vertically centered
 };

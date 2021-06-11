@@ -6,6 +6,8 @@
 #include <freetype/freetype.h>
 #include FT_BITMAP_H
 
+#define MAX_TEXTURE_WIDTH 2048
+
 namespace poly
 {
 
@@ -31,7 +33,8 @@ struct FTGlyph
 Font::Glyph::Glyph() :
     m_advance       (0.0f),
     m_glyphRect     (0.0f),
-    m_textureRect   (0.0f)
+    m_textureRecti  (0),
+    m_textureRectf  (0.0f)
 {
 
 }
@@ -41,7 +44,8 @@ Font::Glyph::Glyph() :
 Font::Font() :
     m_library       (0),
     m_face          (0),
-    m_pool          (sizeof(Page), 4),
+    m_pagePool      (4),
+    m_texturePool   (4),
     m_characterSize (0)
 {
 
@@ -65,26 +69,7 @@ Font::~Font()
 
 
 ///////////////////////////////////////////////////////////
-bool Font::load(const std::string& fname, CharacterSet set)
-{
-    if (set == CharacterSet::English)
-    {
-        m_characters.reserve(128 - 32);
-        for (Uint32 i = 32; i < 127; ++i)
-            m_characters.push_back(i);
-
-        return load(fname, m_characters);
-    }
-
-    for (Uint32 i = 0; i < m_characters.size(); ++i)
-        m_characterSet.insert(m_characters[i]);
-
-    return false;
-}
-
-
-///////////////////////////////////////////////////////////
-bool Font::load(const std::string& fname, const std::vector<Uint32>& set)
+bool Font::load(const std::string& fname)
 {
     // Initialize library
     FT_Library ft;
@@ -104,184 +89,195 @@ bool Font::load(const std::string& fname, const std::vector<Uint32>& set)
     }
     m_face = face;
 
-    // Set character set
-    m_characters = set;
-    for (Uint32 i = 0; i < m_characters.size(); ++i)
-        m_characterSet.insert(m_characters[i]);
-
     LOG("Loaded font: %s", fname.c_str());
     return true;
 }
 
 
 ///////////////////////////////////////////////////////////
-void Font::addCharacter(Uint32 c)
-{
-    if (m_characterSet.find(c) == m_characterSet.end())
-    {
-        m_characters.push_back(c);
-        m_characterSet.insert(c);
-    }
-}
-
-
-///////////////////////////////////////////////////////////
-void Font::addCharacters(const std::string& chars)
-{
-    Utf32String str = Utf32::fromUtf8(chars);
-
-    for (Uint32 i = 0; i < str.size(); ++i)
-    {
-        Uint32 c = str[i];
-        if (m_characterSet.find(c) == m_characterSet.end())
-        {
-            m_characters.push_back(c);
-            m_characterSet.insert(c);
-        }
-    }
-}
-
-
-///////////////////////////////////////////////////////////
 const Font::Glyph& Font::getGlyph(Uint32 c, Uint32 size)
 {
-    // Load the glyphs if it isn't loaded yet
-    auto it = m_pages.find(size);
-    if (it == m_pages.end())
+    // Try to find the glyph page
+    auto it1 = m_pages.find(size);
+    if (it1 == m_pages.end())
     {
-        loadGlyphs(size);
-        it = m_pages.find(size);
+        // If the page wasn't created load the glyph and return a ref
+        loadGlyph(c, size);
+        return m_pages[size]->m_glyphs[c];
     }
 
-    // Return the glyph
-    return it.value()->m_glyphs[c];
+    Page* page = it1.value();
+
+    // Try to find the glyph within the page
+    auto it2 = page->m_glyphs.find(c);
+    if (it2 == page->m_glyphs.end())
+    {
+        loadGlyph(c, size);
+        return page->m_glyphs[c];
+    }
+    else
+        return it2->second;
 }
 
 
 ///////////////////////////////////////////////////////////
-Texture& Font::getTexture(Uint32 size)
+Texture* Font::getTexture(Uint32 size) const
 {
-    // Load the glyphs if it isn't loaded yet
     auto it = m_pages.find(size);
-    if (it == m_pages.end())
-    {
-        loadGlyphs(size);
-        it = m_pages.find(size);
-    }
-
-    // Return the texture
-    return it.value()->m_texture;
+    return it == m_pages.end() ? 0 : it->second->m_texture;
 }
 
 
 ///////////////////////////////////////////////////////////
-void Font::loadGlyphs(Uint32 size)
+void Font::loadGlyph(Uint32 c, Uint32 size)
 {
     FT_Library library = (FT_Library)m_library;
     FT_Face face = (FT_Face)m_face;
 
+    // Find or create a page
+    Page* page = 0;
+    Vector2u textureSize;
+
+    auto it = m_pages.find(size);
+    if (it == m_pages.end())
+    {
+        // Create a new page
+        page = m_pagePool.alloc();
+
+        // Allocate texture space
+        // Allocate twice as much height, just in case some characters are larger
+        textureSize = Vector2u(MAX_TEXTURE_WIDTH, 2 * size);
+        page->m_textureData = (Uint8*)MALLOC_DBG(textureSize.x * textureSize.y * 3);
+        memset(page->m_textureData, 0, textureSize.x * textureSize.y * 3);
+
+        // Create the initial texture
+        page->m_texture = m_texturePool.alloc();
+        page->m_texture->create(page->m_textureData, PixelFormat::Rgb, textureSize.x, textureSize.y);
+
+        // Add to map
+        m_pages[size] = page;
+    }
+    else
+    {
+        // Get page
+        page = it->second;
+        textureSize = Vector2u(page->m_texture->getWidth(), page->m_texture->getHeight());
+    }
+
+    // Set the character size
     if (m_characterSize != size)
     {
         FT_Set_Pixel_Sizes(face, 0, size);
         m_characterSize = size;
     }
 
-    // A vector of glyphs
-    std::vector<priv::FTGlyph> glyphData(m_characters.size());
-
-    // Keep track of overall size of texture
-    Vector2u textureSize;
-
-    // Load the set of glyphs
-    for (Uint32 i = 0; i < m_characters.size(); ++i)
+    // Load the glyph
+    if (FT_Load_Char(face, c, FT_LOAD_DEFAULT))
     {
-        // Get character
-        Uint32 c = m_characters[i];
-
-        // Load the glyph
-        if (FT_Load_Char(face, c, FT_LOAD_DEFAULT))
-        {
-            LOG_WARNING("Failed to load character: %d", c);
-            continue;
-        }
-
-        // Render the glyph
-        if (FT_Render_Glyph(face->glyph, FT_RENDER_MODE_LCD))
-        {
-            LOG_WARNING("Failed to render character: %d", c);
-            continue;
-        }
-
-        // Create the glyph object
-        priv::FTGlyph& glyph = glyphData[i];
-        glyph.m_rect.x = face->glyph->bitmap_left;
-        glyph.m_rect.y = face->glyph->bitmap_top;
-        glyph.m_rect.z = face->glyph->bitmap.width;
-        glyph.m_rect.w = face->glyph->bitmap.rows;
-        glyph.m_advance = (float)(face->glyph->advance.x >> 6);
-        glyph.m_pitch = face->glyph->bitmap.pitch;
-        if (glyph.m_pitch < 0)
-            glyph.m_pitch = -glyph.m_pitch;
-
-        // Allocate space for glyph
-        Uint32 numPixels = glyph.m_pitch * glyph.m_rect.w;
-        glyph.m_data = (Uint8*)MALLOC_DBG(numPixels);
-        memcpy(glyph.m_data, face->glyph->bitmap.buffer, numPixels);
-
-        // Keep track of texture size
-        textureSize.x += face->glyph->bitmap.width + 3;
-        if (face->glyph->bitmap.rows > textureSize.y)
-            textureSize.y = face->glyph->bitmap.rows;
+        LOG_WARNING("Failed to load character: %d", c);
+        return;
     }
 
-    // Create a page
-    Page* page = (Page*)m_pool.alloc();
-    new(page)Page();
-
-    // Create a texture
-    Uint8* data = (Uint8*)MALLOC_DBG(textureSize.x * textureSize.y);
-    memset(data, 0, textureSize.x * textureSize.y);
-    Uint32 currentX = 0;
-
-    for (Uint32 i = 0; i < m_characters.size(); ++i)
+    // Render the glyph
+    if (FT_Render_Glyph(face->glyph, FT_RENDER_MODE_LCD))
     {
-        priv::FTGlyph& ftGlyph = glyphData[i];
-
-        // Copy the data from the glyph
-        for (Uint32 r = 0; r < (Uint32)ftGlyph.m_rect.w; ++r)
-        {
-            Uint8* dstRow = data + r * textureSize.x + currentX;
-            Uint8* srcRow = ftGlyph.m_data + r * ftGlyph.m_pitch;
-            memcpy(dstRow, srcRow, ftGlyph.m_rect.z);
-        }
-
-        // Free the glyph memory
-        FREE_DBG(ftGlyph.m_data);
-
-        // Create an actual glyph object
-        Glyph& glyph = page->m_glyphs[m_characters[i]];
-        glyph.m_advance = ftGlyph.m_advance;
-        glyph.m_glyphRect = ftGlyph.m_rect;
-        glyph.m_glyphRect.z /= 3.0f;
-
-        // Texture rectangle
-        glyph.m_textureRect.x = (float)currentX / textureSize.x;
-        glyph.m_textureRect.y = 0.0f;
-        glyph.m_textureRect.z = (float)ftGlyph.m_rect.z / textureSize.x;
-        glyph.m_textureRect.w = (float)ftGlyph.m_rect.w / textureSize.y;
-
-        // Update current x
-        currentX += ftGlyph.m_rect.z + 3;
+        LOG_WARNING("Failed to render character: %d", c);
+        return;
     }
 
-    // Upload data to the texture
-    page->m_texture.create(data, PixelFormat::Rgb, textureSize.x / 3, textureSize.y);
+    // Create the glyph object
+    Glyph& glyph = page->m_glyphs[c];
 
-    // Add page to pages
-    m_pages[size] = page;
+    // Get data
+    Uint8* data = face->glyph->bitmap.buffer;
 
-    // Free texture data
-    FREE_DBG(data);
+    // Get the glyph rectangle
+    glyph.m_glyphRect.x = (float)face->glyph->bitmap_left;
+    glyph.m_glyphRect.y = (float)face->glyph->bitmap_top;
+    glyph.m_glyphRect.z = (float)face->glyph->bitmap.width / 3.0f;
+    glyph.m_glyphRect.w = (float)face->glyph->bitmap.rows;
+
+    // Get the texture dimensions (not position yet because this can change)
+    glyph.m_textureRecti.z = face->glyph->bitmap.width / 3;
+    glyph.m_textureRecti.w = face->glyph->bitmap.rows;
+
+    // The advance
+    glyph.m_advance = (float)(face->glyph->advance.x >> 6);
+
+    // Get the pitch value (the bitmap row size in bytes)
+    int pitch = face->glyph->bitmap.pitch;
+    if (pitch < 0)
+        pitch = -pitch;
+
+    // Check if the current texture coords have to be updated
+    if (page->m_currentLoc.x + glyph.m_textureRecti.z > MAX_TEXTURE_WIDTH)
+    {
+        // Go down one row
+        page->m_currentLoc.x = 0;
+        page->m_currentLoc.y += page->m_currentRowSize + 1;
+
+        // Reset the row size
+        page->m_currentRowSize = 0;
+
+        // Update texture size
+        Uint32 oldHeight = textureSize.y;
+        textureSize.y = page->m_currentLoc.y + 2 * size;
+
+        // Allocate new data
+        Uint8* newData = (Uint8*)MALLOC_DBG(textureSize.x * textureSize.y * 3);
+
+        // Copy old data and free old data
+        memcpy(newData, page->m_textureData, textureSize.x * oldHeight * 3);
+        memset(newData + textureSize.x * oldHeight * 3, 0, textureSize.x * (textureSize.y - oldHeight) * 3);
+        FREE_DBG(page->m_textureData);
+        page->m_textureData = newData;
+
+        // Recreate the texture with the new size
+        page->m_texture->create(page->m_textureData, PixelFormat::Rgb, textureSize.x, textureSize.y);
+
+        // Update the texture rectangles of each glyph
+        HashMap<Uint32, Glyph>& glyphs = page->m_glyphs;
+        for (auto it = glyphs.begin(); it != glyphs.end(); ++it)
+        {
+            Glyph& g = it.value();
+            g.m_textureRectf.y = (float)g.m_textureRecti.y / textureSize.y;
+            g.m_textureRectf.w = (float)g.m_textureRecti.w / textureSize.y;
+            Uint32 a = 0;
+        }
+    }
+
+    // Set texture rectangle pixel location
+    glyph.m_textureRecti.x = page->m_currentLoc.x;
+    glyph.m_textureRecti.y = page->m_currentLoc.y;
+    if (glyph.m_textureRecti.w > page->m_currentRowSize)
+        page->m_currentRowSize = glyph.m_textureRecti.w;
+
+    // Set the texture rectangle in texture coords
+    glyph.m_textureRectf.x = (float)glyph.m_textureRecti.x / textureSize.x;
+    glyph.m_textureRectf.y = (float)glyph.m_textureRecti.y / textureSize.y;
+    glyph.m_textureRectf.z = (float)glyph.m_textureRecti.z / textureSize.x;
+    glyph.m_textureRectf.w = (float)glyph.m_textureRecti.w / textureSize.y;
+
+    // Copy the data from the bitmap to the texture
+    Uint8* tempData = (Uint8*)MALLOC_DBG(glyph.m_textureRecti.z * glyph.m_textureRecti.w * 3);
+    for (Uint32 r = 0; r < (Uint32)glyph.m_textureRecti.w; ++r)
+    {
+        // Copy to the texture data
+        Uint8* dstRow = page->m_textureData + (page->m_currentLoc.y + r) * textureSize.x * 3 + page->m_currentLoc.x * 3;
+        Uint8* srcRow = data + r * pitch;
+        memcpy(dstRow, srcRow, glyph.m_textureRecti.z * 3);
+
+        // Copy to temporary data
+        dstRow = tempData + r * glyph.m_textureRecti.z * 3;
+        memcpy(dstRow, srcRow, glyph.m_textureRecti.z * 3);
+    }
+
+    // Update a subsection of the texture
+    page->m_texture->update(tempData, page->m_currentLoc, Vector2u(glyph.m_textureRecti.z, glyph.m_textureRecti.w));
+    FREE_DBG(tempData);
+
+    // Update current location
+    page->m_currentLoc.x += glyph.m_textureRecti.z + 1;
 }
 
 
@@ -308,6 +304,26 @@ float Font::getKerning(Uint32 c1, Uint32 c2, Uint32 size)
     }
 
     return 0.0f;
+}
+
+
+///////////////////////////////////////////////////////////
+Font::Page::Page() :
+    m_currentLoc        (0),
+    m_currentRowSize    (0),
+    m_textureData       (0)
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
+Font::Page::~Page()
+{
+    if (m_textureData)
+        FREE_DBG(m_textureData);
+
+    m_textureData = 0;
 }
 
 

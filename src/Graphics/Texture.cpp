@@ -318,7 +318,10 @@ void Texture::update(void* data, const Vector2u& pos, const Vector2u& size)
 	bind();
 
 	// Update the subregion
-	glCheck(glTexSubImage2D(GL_TEXTURE_2D, 0, (int)pos.x, (int)pos.y, (int)size.x, (int)size.y, (GLenum)m_format, (GLenum)m_dataType, data));
+	glTexSubImage2D(GL_TEXTURE_2D, 0, (int)pos.x, (int)pos.y, (int)size.x, (int)size.y, (GLenum)m_format, (GLenum)m_dataType, data);
+	Uint32 err = glGetError();
+	if (err != GL_NO_ERROR && glfwGetCurrentContext())
+		Uint32 a = 0;
 }
 
 

@@ -73,8 +73,6 @@ void onSubmit(const std::string& text)
 
 int main()
 {
-    std::string test = u8"おはよう名字名前休み一ニ三四";
-
     Logger::init("game.log");
     srand(time(NULL));
 
@@ -152,7 +150,6 @@ int main()
     // UI
     Font font;
     font.load("examples/fonts/NotoSansCJKjp/NotoSansCJKjp-Regular.otf");
-    font.addCharacters(test);
     Text::setDefaultFont(&font);
 
     UI_XML_CALLBACK(onTestPress);
@@ -690,9 +687,12 @@ int main()
         const ProfilerData& data = Profiler::getData("poly::Physics::update");
         std::cout << "Physics update: " << data.mean().toMicroseconds() << '\n';
     }
+    {
+        const ProfilerData& data = Profiler::getData("poly::UISystem::render");
+        std::cout << "UISystem render: " << data.mean().toMicroseconds() << '\n';
+    }
 
     return 0;
 }
 
 // TODO : Move Grass to game project and document it
-// TODO : Make everything UTF-encoded compatible (UI XML parsing, etc...)

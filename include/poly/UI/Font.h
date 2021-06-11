@@ -13,15 +13,6 @@
 namespace poly
 {
 
-///////////////////////////////////////////////////////////
-/// \brief Predefined character sets
-///
-///////////////////////////////////////////////////////////
-enum class CharacterSet
-{
-	English
-};
-
 
 ///////////////////////////////////////////////////////////
 /// \brief A class for loading and handling font faces
@@ -38,9 +29,10 @@ public:
 	{
 		Glyph();
 
-		float m_advance;		//!< The number of pixels between the start of this character and the next character
-		Vector4f m_textureRect;	//!< The texture rectangle that determines which part of the texture to display
-		Vector4f m_glyphRect;	//!< The rectangle describing the relative position and size of the character in pixels
+		float m_advance;			//!< The number of pixels between the start of this character and the next character
+		Vector4i m_textureRecti;	//!< The texture rectangle that determines which part of the texture to display (in pixels)
+		Vector4f m_textureRectf;	//!< The texture rectangle that determines which part of the texture to display (in texture coordinates)
+		Vector4f m_glyphRect;		//!< The rectangle describing the relative position and size of the character in pixels
 	};
 
 public:
@@ -61,44 +53,14 @@ public:
 	~Font();
 
 	///////////////////////////////////////////////////////////
-	/// \brief Load a set of glyphs from a font file
-	///
-	/// This function loads a set of characters from a font file,
-	/// using predefined character sets (English, Spanish, Japanese,
-	/// etc...). If the font file fails to load, this function will
-	/// return false.
+	/// \brief 
 	///
 	/// \param fname The file name of the font file
-	/// \param set A predefined character set
 	///
 	/// \return True if the file loads successfully
 	///
 	///////////////////////////////////////////////////////////
-	bool load(const std::string& fname, CharacterSet set = CharacterSet::English);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Load a set of glyphs from a font file
-	///
-	/// This function loads a set of characters from a font file,
-	/// using a list of characters. For example, to load the English
-	/// character set (ASCII), \a set should be a list of integers
-	/// in the range 32 to 128.
-	///
-	/// \param fname The file name of the font file
-	/// \param set A list of characters to load from the font file
-	///
-	/// \return True if the file loads successfully
-	///
-	///////////////////////////////////////////////////////////
-	bool load(const std::string& fname, const std::vector<Uint32>& set);
-
-	///////////////////////////////////////////////////////////
-	///////////////////////////////////////////////////////////
-	void addCharacter(Uint32 c);
-
-	///////////////////////////////////////////////////////////
-	///////////////////////////////////////////////////////////
-	void addCharacters(const std::string& chars);
+	bool load(const std::string& fname);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get a character glyph for a certain font size
@@ -118,10 +80,10 @@ public:
 	///
 	/// \param size The font size to retrieve a texture atlas for
 	///
-	/// \return A reference to the texture
+	/// \return A pointer to the texture
 	///
 	///////////////////////////////////////////////////////////
-	Texture& getTexture(Uint32 size);
+	Texture* getTexture(Uint32 size) const;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the extra offset between two specific characters
@@ -136,19 +98,25 @@ public:
 private:
 	struct Page
 	{
-		Texture m_texture;
-		HashMap<Uint32, Glyph> m_glyphs;
+		Page();
+
+		~Page();
+
+		Vector2u m_currentLoc;				//!< The current location in the texture, the location to add the next glyph
+		Uint32 m_currentRowSize;			//!< The height of the current row
+		Texture* m_texture;					//!< The font page texture
+		Uint8* m_textureData;				//!< Texture data
+		HashMap<Uint32, Glyph> m_glyphs;	//!< Map of codepoints to their glyph information
 	};
 
-	void loadGlyphs(Uint32 size);
+	void loadGlyph(Uint32 c, Uint32 size);
 
 private:
 	void* m_library;
 	void* m_face;
 
-	ObjectPool m_pool;
-	std::vector<Uint32> m_characters;
-	HashSet<Uint32> m_characterSet;
+	TypePool<Page> m_pagePool;
+	TypePool<Texture> m_texturePool;
 	HashMap<Uint32, Page*> m_pages;
 	Uint32 m_characterSize;
 };

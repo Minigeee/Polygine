@@ -418,21 +418,10 @@ bool UIParser::parse(XmlAttribute attr, Vector4f& out)
 bool UIParser::parse(XmlNode node, Font*& out)
 {
 	std::string fname;
-	CharacterSet charSet = CharacterSet::English;
 
 	XmlAttribute fileAttr = node.getFirstAttribute("file");
 	if (fileAttr.exists())
 		fname = fileAttr.getValue();
-
-	XmlAttribute charSetAttr = node.getFirstAttribute("character_set");
-	if (charSetAttr.exists())
-	{
-		char* c = charSetAttr.getValue();
-
-		// Character sets
-		if (strcmp(c, "english") == 0)
-			charSet = CharacterSet::English;
-	}
 
 	// A file name must exist
 	if (!fname.size())
@@ -443,7 +432,7 @@ bool UIParser::parse(XmlNode node, Font*& out)
 	if (it == s_fonts.end())
 	{
 		Font* font = Pool<Font>::alloc();
-		if (font->load(fname, charSet))
+		if (font->load(fname))
 		{
 			out = font;
 
