@@ -1,4 +1,7 @@
-﻿#include <poly/Core/Allocate.h>
+﻿#include <poly/Audio/Music.h>
+#include <poly/Audio/Sound.h>
+
+#include <poly/Core/Allocate.h>
 #include <poly/Core/Clock.h>
 #include <poly/Core/Logger.h>
 #include <poly/Core/Profiler.h>
@@ -66,7 +69,7 @@ void onTestPress(UIElement* elem)
     std::cout << btn->getString().c_str() << '\n';
 }
 
-void onSubmit(const std::string& text)
+void onSubmit(const Utf32String& text)
 {
     std::cout << text.c_str() << '\n';
 }
@@ -160,6 +163,11 @@ int main()
     ui.load("examples/ui.xml");
 
     Text* fpsCounter = (Text*)ui.getElement("fps_counter");
+
+    // Load audio
+    Music music;
+    music.open("examples/audio/Haru Wa Yuku.wav");
+    music.play();
 
     // Setup scene
     Scene scene;
@@ -696,3 +704,4 @@ int main()
 }
 
 // TODO : Move Grass to game project and document it
+// TODO : Make everything thread safe

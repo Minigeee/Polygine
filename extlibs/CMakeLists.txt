@@ -33,9 +33,12 @@ install(DIRECTORY ${hopscotch-map_SOURCE_DIR}/include DESTINATION ${CMAKE_INSTAL
 # GLFW
 CPMAddPackage("gh:glfw/glfw#master")
 target_link_libraries(polygine glfw)
-target_include_directories(polygine PRIVATE ${glfw_SOURCE_DIR}/include)
+target_include_directories(polygine PUBLIC
+    $<BUILD_INTERFACE:${glfw_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>)
 if(NOT DEFINED glfw_FOUND)
     install(TARGETS glfw DESTINATION "${CMAKE_INSTALL_LIBDIR}" EXPORT polygine-export)
+    install(DIRECTORY ${glfw_SOURCE_DIR}/include DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 endif()
 
 # Assimp
@@ -59,9 +62,12 @@ CPMAddPackage("gh:SFML/SFML#master")
 set(SFML_BUILD_GRAPHICS FALSE)
 set(SFML_BUILD_WINDOW FALSE)
 target_link_libraries(polygine sfml-system sfml-audio sfml-network)
-target_include_directories(polygine PRIVATE ${SFML_SOURCE_DIR}/include)
+target_include_directories(polygine PUBLIC
+    $<BUILD_INTERFACE:${SFML_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>)
 if(NOT DEFINED SFML_FOUND)
     install(TARGETS sfml-system sfml-audio sfml-network DESTINATION "${CMAKE_INSTALL_LIBDIR}" EXPORT polygine-export)
+    install(DIRECTORY ${SFML_SOURCE_DIR}/include DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 endif()
 
 # Stb
@@ -77,7 +83,7 @@ target_include_directories(polygine PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/extlibs/glad/include>
     $<INSTALL_INTERFACE:include>)
 target_sources(polygine PRIVATE ${CMAKE_SOURCE_DIR}/extlibs/glad/src/glad.c)
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/extlibs/glad/include/glad DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/extlibs/glad/include DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 # RapidXML
 target_include_directories(polygine PUBLIC
