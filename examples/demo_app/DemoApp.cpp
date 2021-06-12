@@ -165,9 +165,6 @@ int main()
     Text* fpsCounter = (Text*)ui.getElement("fps_counter");
 
     // Load audio
-    Music music;
-    music.open("examples/audio/Haru Wa Yuku.wav");
-    music.play();
 
     // Setup scene
     Scene scene;
