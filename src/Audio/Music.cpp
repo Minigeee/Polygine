@@ -1,5 +1,7 @@
 #include <poly/Audio/Music.h>
 
+#include <poly/Core/Allocate.h>
+
 namespace poly
 {
 
@@ -37,17 +39,17 @@ bool Music::open(const std::string& fname)
 
 
 ///////////////////////////////////////////////////////////
-Uint32 Music::read(Int16* samples, Uint32 max)
+Uint32 Music::read(void* samples, Uint32 max)
 {
 	// Read from buffer first
-	Uint32 numRead = AudioStream::read(samples, max);
+	Uint32 numRead = BufferStream::read(samples, max);
 	Uint32 numToFill = max - numRead;
 
 	if (!numToFill)
 		return numRead;
 
 	// Read the remaining from the file
-	numRead += (Uint32)m_file.read(samples + numRead, numToFill);
+	numRead += (Uint32)m_file.read((Int16*)samples + numRead / 2, numToFill / 2) * 2;
 
 	return numRead;
 }

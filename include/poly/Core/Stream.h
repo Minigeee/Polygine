@@ -22,29 +22,29 @@ public:
 
 	virtual Uint32 read(void* buffer, Uint32 max) = 0;
 
-	virtual void pipe(WriteStream* stream) = 0;
+	void pipe(WriteStream* output);
 
-	virtual void unpipe() = 0;
-
-	void onReadData(const std::function<void(void*, Uint32)>& func);
+	void unpipe(WriteStream* output);
 
 protected:
-	std::function<void(void*, Uint32)> m_onReadData;
+	std::vector<WriteStream*> m_outputs;
 };
 
 
 ///////////////////////////////////////////////////////////
 class WriteStream
 {
+	friend ReadStream;
+
 public:
+	WriteStream();
+
 	virtual ~WriteStream();
 
 	virtual Uint32 write(void* data, Uint32 size) = 0;
 
-	void onWriteData(const std::function<void(void*, Uint32)>& func);
-
 protected:
-	std::function<void(void*, Uint32)> m_onWriteData;
+	std::vector<ReadStream*> m_inputs;
 };
 
 
@@ -62,10 +62,6 @@ public:
 
 	virtual Uint32 write(void* data, Uint32 size) override;
 
-	virtual void pipe(WriteStream* stream) override;
-
-	virtual void unpipe() override;
-
 	virtual void flush();
 
 	Uint32 size() const;
@@ -77,7 +73,6 @@ protected:
 	void* m_front;
 	Uint32 m_size;
 	Uint32 m_capacity;
-	WriteStream* m_pipe;
 };
 
 

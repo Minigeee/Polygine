@@ -1,8 +1,6 @@
 #ifndef POLY_AUDIO_RECORDER_H
 #define POLY_AUDIO_RECORDER_H
 
-#include <poly/Audio/AudioData.h>
-
 #include <poly/Core/Stream.h>
 
 #include <SFML/Audio/SoundRecorder.hpp>
@@ -35,7 +33,6 @@ private:
 
 ///////////////////////////////////////////////////////////
 class AudioRecorder :
-	public AudioData,
 	public BufferStream
 {
 	friend priv::SfmlAudioRecorder;
@@ -44,8 +41,6 @@ public:
 	AudioRecorder();
 
 	virtual ~AudioRecorder();
-
-	virtual Uint32 read(Int16* sampels, Uint32 max) override;
 
 	bool start(Uint32 sampleRate = 44100);
 
@@ -58,6 +53,10 @@ public:
 	bool isRecording() const;
 
 	const std::string& getDevice() const;
+
+	Uint32 getNumChannels() const;
+
+	Uint32 getSampleRate() const;
 
 	static bool isAvailable();
 

@@ -1,7 +1,6 @@
 #ifndef POLY_AUDIO_STREAM_H
 #define POLY_AUDIO_STREAM_H
 
-#include <poly/Audio/AudioData.h>
 #include <poly/Audio/AudioSource.h>
 
 #include <poly/Core/Stream.h>
@@ -45,7 +44,6 @@ private:
 
 ///////////////////////////////////////////////////////////
 class AudioStream :
-	public AudioData,
 	public AudioSource,
 	public BufferStream
 {
@@ -56,15 +54,15 @@ public:
 
 	virtual ~AudioStream();
 
-	virtual Uint32 read(Int16* samples, Uint32 max) override;
-
-	virtual void pipe(WriteStream* stream) override;
-
 	virtual void play() override;
 
 	virtual void pause();
 
 	virtual void stop() override;
+
+	void setNumChannels(Uint32 channels);
+
+	void setSampleRate(Uint32 rate);
 
 	void setPitch(float pitch) override;
 
@@ -90,10 +88,16 @@ public:
 
 	float getAttenuation() const override;
 
+	Uint32 getNumChannels() const;
+
+	Uint32 getSampleRate() const;
+
 protected:
 	virtual void onSeek(Time offset);
 
 protected:
+	Uint32 m_numChannels;
+	Uint32 m_sampleRate;
 	priv::SfmlAudioStream m_stream;
 };
 

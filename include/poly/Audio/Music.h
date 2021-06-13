@@ -21,7 +21,7 @@ public:
 
 	bool open(const std::string& fname);
 
-	Uint32 read(Int16* read, Uint32 max) override;
+	Uint32 read(void* read, Uint32 max) override;
 
 	void setPlayingOffset(Time offset);
 

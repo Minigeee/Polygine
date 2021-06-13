@@ -624,7 +624,7 @@ int main()
         // Copy position and rotation
         scene.system<RigidBodyComponent, TransformComponent>(
             [&](const Entity::Id& id, const RigidBodyComponent& rbody, TransformComponent& t)
-             {
+            {
                 t.m_position = rbody.m_position;
                 t.m_rotation = rbody.m_rotation;
             }

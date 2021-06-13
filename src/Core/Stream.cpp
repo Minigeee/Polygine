@@ -20,9 +20,41 @@ ReadStream::~ReadStream()
 
 
 ///////////////////////////////////////////////////////////
-void ReadStream::onReadData(const std::function<void(void*, Uint32)>& func)
+void ReadStream::pipe(WriteStream* output)
 {
-	m_onReadData = func;
+	m_outputs.push_back(output);
+	output->m_inputs.push_back(this);
+}
+
+
+///////////////////////////////////////////////////////////
+void ReadStream::unpipe(WriteStream* output)
+{
+	std::vector<ReadStream*> inputs = output->m_inputs;
+	for (auto it = inputs.begin(); it != inputs.end(); ++it)
+	{
+		if (*it == this)
+		{
+			inputs.erase(it);
+			break;
+		}
+	}
+
+	for (auto it = m_outputs.begin(); it != m_outputs.end(); ++it)
+	{
+		if (*it == output)
+		{
+			m_outputs.erase(it);
+			break;
+		}
+	}
+}
+
+
+///////////////////////////////////////////////////////////
+WriteStream::WriteStream()
+{
+
 }
 
 
@@ -34,19 +66,11 @@ WriteStream::~WriteStream()
 
 
 ///////////////////////////////////////////////////////////
-void WriteStream::onWriteData(const std::function<void(void*, Uint32)>& func)
-{
-	m_onWriteData = func;
-}
-
-
-///////////////////////////////////////////////////////////
 BufferStream::BufferStream() :
 	m_buffer		(0),
 	m_front			(0),
 	m_size			(0),
-	m_capacity		(0),
-	m_pipe			(0)
+	m_capacity		(0)
 {
 
 }
@@ -66,60 +90,66 @@ BufferStream::~BufferStream()
 ///////////////////////////////////////////////////////////
 Uint32 BufferStream::read(void* buffer, Uint32 max)
 {
+	Uint32 numRead = 0;
+
 	// Return null if the buffer doesn't exist or size is 0
-	if (!m_buffer || !m_size)
-		return 0;
-
-	if (max > m_size)
-		max = m_size;
-
-	// Read the desired amount of data into the output buffer
-	Uint32 roffset = m_capacity - ((Uint8*)m_front - (Uint8*)m_buffer);
-	if (roffset < max)
+	if (m_buffer && m_size)
 	{
-		// The data loops around, 2 copy operations are needed
-		memcpy(buffer, m_front, roffset);
-		memcpy((Uint8*)buffer + roffset, m_buffer, max - roffset);
+		numRead = max > m_size ? m_size : max;
+
+		// Read the desired amount of data into the output buffer
+		Uint32 roffset = m_capacity - ((Uint8*)m_front - (Uint8*)m_buffer);
+		if (roffset < numRead)
+		{
+			// The data loops around, 2 copy operations are needed
+			memcpy(buffer, m_front, roffset);
+			memcpy((Uint8*)buffer + roffset, m_buffer, numRead - roffset);
+		}
+		else
+			// The data does not loop around, the read can be performed with a single copy
+			memcpy(buffer, m_front, numRead);
+
+		// Update the size of the data in the buffer
+		m_size -= numRead;
+
+		// Advance the front pointer
+		if (m_size == 0)
+			// Reset the front pointer if the size is 0
+			m_front = m_buffer;
+
+		else
+		{
+			Uint32 offset = (Uint8*)m_front - (Uint8*)m_buffer;
+			offset = (offset + numRead) % m_capacity;
+			m_front = (Uint8*)m_buffer + offset;
+		}
 	}
-	else
-		// The data does not loop around, the read can be performed with a single copy
-		memcpy(buffer, m_front, max);
 
-	// Update the size of the data in the buffer
-	m_size -= max;
-
-	// Advance the front pointer
-	if (m_size == 0)
-		// Reset the front pointer if the size is 0
-		m_front = m_buffer;
-
-	else
+	for (Uint32 i = 0; i < m_inputs.size(); ++i)
 	{
-		Uint32 offset = (Uint8*)m_front - (Uint8*)m_buffer;
-		offset = (offset + max) % m_capacity;
-		m_front = (Uint8*)m_buffer + offset;
-	}
+		if (numRead >= max)
+			break;
 
-	// Callback
-	if (m_onReadData)
-		m_onReadData(buffer, max);
+		// If there is an input pipe, and there is still some data that needs to be read, read from input streams
+		numRead += m_inputs[i]->read((Uint8*)buffer + numRead, max - numRead);
+	}
 
 	// Return the amount of data that was read
-	return max;
+	return numRead;
 }
 
 
 ///////////////////////////////////////////////////////////
 Uint32 BufferStream::write(void* data, Uint32 size)
 {
-	if (m_pipe)
+	if (m_outputs.size())
 	{
-		// Call the read callback
-		if (m_onReadData)
-			m_onReadData(data, size);
+		Uint32 numBytesWrote = 0;
 
-		// Pipe data directly through
-		m_pipe->write(data, size);
+		for (Uint32 i = 0; i < m_outputs.size(); ++i)
+			numBytesWrote += m_outputs[i]->write(data, size);
+
+		return numBytesWrote;
 	}
 	else
 	{
@@ -163,53 +193,8 @@ Uint32 BufferStream::write(void* data, Uint32 size)
 			// The data does not loop around, the read can be performed with a single copy
 			memcpy((Uint8*)m_buffer + backOffset, data, size);
 
-		// Callback
-		if (m_onWriteData)
-			m_onWriteData(data, size);
+		return size;
 	}
-
-	return size;
-}
-
-
-///////////////////////////////////////////////////////////
-void BufferStream::pipe(WriteStream* stream)
-{
-	m_pipe = stream;
-
-	if (m_size)
-	{
-		// Write all data currently in the buffer
-		Uint32 roffset = m_capacity - ((Uint8*)m_front - (Uint8*)m_buffer);
-		if (roffset < m_size)
-		{
-			stream->write(m_front, roffset);
-			stream->write(m_buffer, m_size - roffset);
-
-			if (m_onReadData)
-			{
-				m_onReadData(m_front, roffset);
-				m_onReadData(m_buffer, m_size - roffset);
-			}
-		}
-		else
-		{
-			stream->write(m_front, m_size);
-			if (m_onReadData)
-				m_onReadData(m_front, m_size);
-		}
-
-		// Reset properties
-		m_size = 0;
-		m_front = m_buffer;
-	}
-}
-
-
-///////////////////////////////////////////////////////////
-void BufferStream::unpipe()
-{
-	m_pipe = 0;
 }
 
 
