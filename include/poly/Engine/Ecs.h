@@ -22,8 +22,16 @@ class Scene;
 namespace priv
 {
 
-///////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////
+template <typename C>
+struct ComponentMutex
+{
+	static std::mutex s_mutex;
+};
+
+
+///////////////////////////////////////////////////////////
 template <typename C>
 class ComponentData
 {
@@ -46,8 +54,8 @@ private:
 	static std::vector<Data> m_data;
 };
 
-///////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////
 class ComponentCleanup
 {
 public:
@@ -60,8 +68,8 @@ private:
 	static HashMap<Uint32, std::function<void(Uint16)>> m_cleanupFuncs;
 };
 
-///////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////
 class EntityGroup
 {
 public:
@@ -112,6 +120,24 @@ private:
 }
 
 #endif
+
+
+///////////////////////////////////////////////////////////
+/// \brief Lock the mutexes associated with each component type
+///
+/// This function locks the mutexes associated with each component
+/// type, and returns a list of lock objects. This function should
+/// be used when accessing components through one of the component
+/// getter functions through a scene (only needed for multithreaded
+/// programs). Locking mutexes is not needed when calling Scene::system()
+/// because the system function locks these components internally.
+///
+/// \return A list of lock objects that own the component mutexes
+///
+///////////////////////////////////////////////////////////
+template <typename... Cs>
+std::vector<std::unique_lock<std::mutex>> lockComponents();
+
 
 ///////////////////////////////////////////////////////////
 /// \brief Data structure class that holds references to component

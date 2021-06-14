@@ -3,6 +3,8 @@
 
 #include <poly/Core/DataTypes.h>
 
+#include <mutex>
+
 namespace poly
 {
 
@@ -397,6 +399,7 @@ private:
         ~PoolWrapper();
 
         TypePool<T> m_pool;
+        std::mutex m_mutex;
     };
 
 private:

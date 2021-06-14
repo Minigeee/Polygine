@@ -11,6 +11,10 @@ namespace priv
 
 ///////////////////////////////////////////////////////////
 template <typename C>
+std::mutex ComponentMutex<C>::s_mutex;
+
+///////////////////////////////////////////////////////////
+template <typename C>
 std::vector<typename ComponentData<C>::Data> ComponentData<C>::m_data;
 
 
@@ -80,6 +84,7 @@ inline void EntityGroup::removeEntitiesImpl(const std::vector<Entity>& entities)
 	}
 
 	// Remove components
+	std::unique_lock<std::mutex> locks[] = { std::unique_lock<std::mutex>(priv::ComponentMutex<Cs>::s_mutex)... };
 	PARAM_EXPAND(ComponentData<Cs>::removeComponents(m_sceneId, m_groupId, indices));
 }
 
@@ -205,6 +210,20 @@ inline void ComponentCleanup::registerType()
 		m_cleanupFuncs[typeId] = ComponentData<C>::cleanup;
 }
 
+}
+
+
+///////////////////////////////////////////////////////////
+template <typename... Cs>
+inline std::vector<std::unique_lock<std::mutex>> lockComponents()
+{
+	std::vector<std::unique_lock<std::mutex>> locks;
+	locks.reserve(sizeof(Cs...));
+
+	// Lock mutexes
+	PARAM_EXPAND(locks.push_back(std::unique_lock<std::mutex>(priv::ComponentMutex<Cs>::s_mutex)));
+
+	return locks;
 }
 
 

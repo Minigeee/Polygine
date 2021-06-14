@@ -328,7 +328,7 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	template <typename C>
-	C* getComponent(Entity::Id id) const;
+	C* getComponent(Entity::Id id);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get a tuple of pointers to component data associated with a certain entity
@@ -347,7 +347,7 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	template <typename... Cs>
-	Tuple<Cs*...> getComponents(Entity::Id id) const;
+	Tuple<Cs*...> getComponents(Entity::Id id);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get component data for entities contain the specified component types

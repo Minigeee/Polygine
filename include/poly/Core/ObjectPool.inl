@@ -194,7 +194,13 @@ template <typename T>
 inline T* Pool<T>::alloc()
 {
 	// Allocate the object
-	return s_isInitialized ? s_wrapper.m_pool.alloc() : 0;
+	if (s_isInitialized)
+	{
+		std::unique_lock<std::mutex> lock(s_wrapper.m_mutex);
+		return s_wrapper.m_pool.alloc();
+	}
+
+	return 0;
 }
 
 
@@ -204,7 +210,10 @@ inline void Pool<T>::free(T* ptr)
 {
 	// Free from pool
 	if (s_isInitialized)
+	{
+		std::unique_lock<std::mutex> lock(s_wrapper.m_mutex);
 		s_wrapper.m_pool.free(ptr);
+	}
 }
 
 

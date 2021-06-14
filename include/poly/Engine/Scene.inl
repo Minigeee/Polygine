@@ -3,6 +3,7 @@
 
 #include <poly/Engine/Events.h>
 
+#include <mutex>
 #include <unordered_set>
 
 namespace poly
@@ -80,22 +81,27 @@ inline std::vector<Entity> Scene::createEntities(Uint32 num, const Cs&... compon
 
 	// Find the correct group
 	priv::EntityGroup* group = 0;
-
-	// Entity creation is protected by mutex
-	std::lock_guard<std::mutex> lock(m_entityMutex);
-
-	auto it = m_entityGroups.find(groupId);
-	if (it == m_entityGroups.end())
+	std::vector<Entity> entities;
 	{
-		// Initialize group
-		group = &(m_entityGroups[groupId] = priv::EntityGroup(this, m_handle.m_index));
-		group->setComponentTypes<Cs...>(groupId);
-	}
-	else
-		group = &it.value();
+		// Lock component mutexes
+		std::unique_lock<std::mutex> locks[] = { std::unique_lock<std::mutex>(priv::ComponentMutex<Cs>::s_mutex)... };
 
-	// Create entity
-	std::vector<Entity> entities = group->createEntities(num, components...);
+		// Entity creation is protected by mutex
+		std::lock_guard<std::mutex> lock(m_entityMutex);
+
+		auto it = m_entityGroups.find(groupId);
+		if (it == m_entityGroups.end())
+		{
+			// Initialize group
+			group = &(m_entityGroups[groupId] = priv::EntityGroup(this, m_handle.m_index));
+			group->setComponentTypes<Cs...>(groupId);
+		}
+		else
+			group = &it.value();
+
+		// Create entity
+		entities = std::move(group->createEntities(num, components...));
+	}
 
 	// Send the event
 	sendEvent(E_EntitiesCreated(entities));
@@ -114,8 +120,10 @@ inline std::vector<Entity> Scene::createEntities(Uint32 num, Tuple<Cs...>& compo
 
 ///////////////////////////////////////////////////////////
 template <typename C>
-inline C* Scene::getComponent(Entity::Id id) const
+inline C* Scene::getComponent(Entity::Id id)
 {
+	std::lock_guard<std::mutex> lock(m_entityMutex);
+
 	auto it = m_entityGroups.find(id.m_group);
 	return it == m_entityGroups.end() ? 0 : it.value().getComponent<C>(id);
 }
@@ -123,8 +131,10 @@ inline C* Scene::getComponent(Entity::Id id) const
 
 ///////////////////////////////////////////////////////////
 template <typename... Cs>
-inline Tuple<Cs*...> Scene::getComponents(Entity::Id id) const
+inline Tuple<Cs*...> Scene::getComponents(Entity::Id id)
 {
+	std::lock_guard<std::mutex> lock(m_entityMutex);
+
 	auto it = m_entityGroups.find(id.m_group);
 	if (it == m_entityGroups.end())
 		return makeTuple((Cs*)(0)...);
@@ -138,6 +148,8 @@ template <typename... Cs>
 inline Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> Scene::getComponentData()
 {
 	Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> t;
+
+	std::lock_guard<std::mutex> lock(m_entityMutex);
 
 	// Iterate all groups and find which ones contain the specified types
 	for (auto it = m_entityGroups.begin(); it != m_entityGroups.end(); ++it)
@@ -169,6 +181,8 @@ template <typename... Cs>
 inline Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> Scene::getComponentData(const ComponentTypeSet& exclude)
 {
 	Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> t;
+
+	std::lock_guard<std::mutex> lock(m_entityMutex);
 
 	// Iterate all groups and find which ones contain the specified types
 	for (auto it = m_entityGroups.begin(); it != m_entityGroups.end(); ++it)
@@ -207,6 +221,8 @@ inline Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> Scene::getCompon
 template <typename... Cs, typename Func>
 inline void Scene::system(Func&& func, const ComponentTypeSet& excludes)
 {
+	std::unique_lock<std::mutex> locks[] = { std::unique_lock<std::mutex>(priv::ComponentMutex<Cs>::s_mutex)... };
+
 	// Get component data
 	Tuple<ComponentArray<Entity::Id>, ComponentArray<Cs>...> data = getComponentData<Cs...>(excludes);
 

@@ -56,10 +56,11 @@ protected:
 
 	void removeListener(Handle handle);
 
-	void sendEvent(const E& event) const;
+	void sendEvent(const E& event);
 
 private:
 	HandleArray<std::function<void(const E&)>> m_listeners;
+	std::mutex m_mutex;
 };
 
 }
@@ -133,7 +134,7 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	template <typename E>
-	void sendEvent(const E& event) const;
+	void sendEvent(const E& event);
 };
 
 ///////////////////////////////////////////////////////////

@@ -20,6 +20,47 @@ ReadStream::~ReadStream()
 
 
 ///////////////////////////////////////////////////////////
+ReadStream::ReadStream(ReadStream&& other)
+{
+	m_outputs = std::move(other.m_outputs);
+
+	// Update all pipe bindings
+	for (Uint32 i = 0; i < m_outputs.size(); ++i)
+	{
+		WriteStream* output = m_outputs[i];
+		for (Uint32 j = 0; j < output->m_inputs.size(); ++j)
+		{
+			if (output->m_inputs[j] == &other)
+				output->m_inputs[j] = this;
+		}
+	}
+}
+
+
+///////////////////////////////////////////////////////////
+ReadStream& ReadStream::operator=(ReadStream&& other)
+{
+	if (&other != this)
+	{
+		m_outputs = std::move(other.m_outputs);
+
+		// Update all pipe bindings
+		for (Uint32 i = 0; i < m_outputs.size(); ++i)
+		{
+			WriteStream* output = m_outputs[i];
+			for (Uint32 j = 0; j < output->m_inputs.size(); ++j)
+			{
+				if (output->m_inputs[j] == &other)
+					output->m_inputs[j] = this;
+			}
+		}
+	}
+
+	return *this;
+}
+
+
+///////////////////////////////////////////////////////////
 void ReadStream::pipe(WriteStream* output)
 {
 	m_outputs.push_back(output);
@@ -66,6 +107,47 @@ WriteStream::~WriteStream()
 
 
 ///////////////////////////////////////////////////////////
+WriteStream::WriteStream(WriteStream&& other)
+{
+	m_inputs = std::move(other.m_inputs);
+
+	// Update all pipe bindings
+	for (Uint32 i = 0; i < m_inputs.size(); ++i)
+	{
+		ReadStream* input = m_inputs[i];
+		for (Uint32 j = 0; j < input->m_outputs.size(); ++j)
+		{
+			if (input->m_outputs[j] == &other)
+				input->m_outputs[j] = this;
+		}
+	}
+}
+
+
+///////////////////////////////////////////////////////////
+WriteStream& WriteStream::operator=(WriteStream&& other)
+{
+	if (&other != this)
+	{
+		m_inputs = std::move(other.m_inputs);
+
+		// Update all pipe bindings
+		for (Uint32 i = 0; i < m_inputs.size(); ++i)
+		{
+			ReadStream* input = m_inputs[i];
+			for (Uint32 j = 0; j < input->m_outputs.size(); ++j)
+			{
+				if (input->m_outputs[j] == &other)
+					input->m_outputs[j] = this;
+			}
+		}
+	}
+
+	return *this;
+}
+
+
+///////////////////////////////////////////////////////////
 BufferStream::BufferStream() :
 	m_buffer		(0),
 	m_front			(0),
@@ -95,6 +177,8 @@ Uint32 BufferStream::read(void* buffer, Uint32 max)
 	// Return null if the buffer doesn't exist or size is 0
 	if (m_buffer && m_size)
 	{
+		std::unique_lock<std::mutex> lock(m_mutex);
+
 		numRead = max > m_size ? m_size : max;
 
 		// Read the desired amount of data into the output buffer
@@ -153,6 +237,8 @@ Uint32 BufferStream::write(void* data, Uint32 size)
 	}
 	else
 	{
+		std::unique_lock<std::mutex> lock(m_mutex);
+
 		// Update size of the buffer
 		m_size += size;
 
@@ -201,6 +287,8 @@ Uint32 BufferStream::write(void* data, Uint32 size)
 ///////////////////////////////////////////////////////////
 void BufferStream::flush()
 {
+	std::unique_lock<std::mutex> lock(m_mutex);
+
 	// Reset size and pointers
 	m_size = 0;
 	m_front = m_buffer;

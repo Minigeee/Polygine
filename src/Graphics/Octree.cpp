@@ -377,6 +377,8 @@ void Octree::add(Entity::Id entity)
 	data->m_group = getRenderGroup(r.m_renderable, skeleton);
 	data->m_castsShadows = r.m_castsShadows;
 
+	std::unique_lock<std::mutex> lock(m_mutex);
+
 	// Add to map
 	m_dataMap[entity] = data;
 
@@ -589,6 +591,9 @@ void Octree::update(const Entity::Id& entity, RenderComponent& r, TransformCompo
 
 	Node* node = data->m_node;
 
+	// Lock
+	std::unique_lock<std::mutex> lock(m_mutex);
+
 	// Get cell info
 	float cellSize = BASE_SIZE * powf(2.0f, (float)node->m_level - 1.0f);
 	Vector3f cellMin = node->m_boundingBox.m_min / cellSize;
@@ -627,6 +632,9 @@ void Octree::update(const Entity::Id& entity, RenderComponent& r, TransformCompo
 void Octree::remove(Entity::Id entity)
 {
 	ASSERT(m_scene, "The octree must be initialized before using, by calling the init() function");
+
+	// Lock
+	std::unique_lock<std::mutex> lock(m_mutex);
 
 	// Get node
 	EntityData* data = m_dataMap[entity];
@@ -696,7 +704,10 @@ void Octree::render(Camera& camera, RenderPass pass)
 	// Get entity data
 	std::vector<std::vector<EntityData*>> entityData(m_renderGroups.size());
 	const Frustum& frustum = camera.getFrustum();
-	getRenderData(m_root, frustum, entityData, camera.getPosition(), pass);
+	{
+		std::unique_lock<std::mutex> lock(m_mutex);
+		getRenderData(m_root, frustum, entityData, camera.getPosition(), pass);
+	}
 	
 	// Get number of visible entities
 	Uint32 numVisible = 0;

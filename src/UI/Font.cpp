@@ -249,7 +249,7 @@ void Font::loadGlyph(Uint32 c, Uint32 size)
     // Set texture rectangle pixel location
     glyph.m_textureRecti.x = page->m_currentLoc.x;
     glyph.m_textureRecti.y = page->m_currentLoc.y;
-    if (glyph.m_textureRecti.w > page->m_currentRowSize)
+    if (glyph.m_textureRecti.w > (int)page->m_currentRowSize)
         page->m_currentRowSize = glyph.m_textureRecti.w;
 
     // Set the texture rectangle in texture coords
