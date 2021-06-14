@@ -2,6 +2,7 @@
 #define POLY_STREAM_H
 
 #include <poly/Core/DataTypes.h>
+#include <poly/Core/RingBuffer.h>
 
 #include <functional>
 #include <mutex>
@@ -14,13 +15,24 @@ class WriteStream;
 
 
 ///////////////////////////////////////////////////////////
+/// \brief The base class for data stream that can be read from
+///
+///////////////////////////////////////////////////////////
 class ReadStream
 {
 	friend WriteStream;
 
 public:
+	///////////////////////////////////////////////////////////
+	/// \brief The default constructor
+	///
+	///////////////////////////////////////////////////////////
 	ReadStream();
 
+	///////////////////////////////////////////////////////////
+	/// \brief Virtual destructor
+	///
+	///////////////////////////////////////////////////////////
 	virtual ~ReadStream();
 
 #ifndef DOXYGEN_SKIP
@@ -30,17 +42,59 @@ public:
 	ReadStream& operator=(ReadStream&&);
 #endif
 
+	///////////////////////////////////////////////////////////
+	/// \brief Read data from the read stream into an output buffer
+	///
+	/// \param buffer A pointer to the output buffer to read data into
+	/// \param max The maximum number of bytes to read from the stream
+	///
+	/// \return The actual number of bytes that was read from the stream
+	///
+	///////////////////////////////////////////////////////////
 	virtual Uint32 read(void* buffer, Uint32 max) = 0;
 
+	///////////////////////////////////////////////////////////
+	/// \brief Connect this read stream to an output write stream
+	///
+	/// This function connects this read stream to a write stream,
+	/// but doesn't actuall read or write data from either streams.
+	/// It keeps track of the write stream so that data can be pushed
+	/// from this read stream into the output write stream, or so
+	/// that the write stream can pull data from this read stream
+	/// in the future.
+	///
+	/// The flow of data of streams that are piped to each other
+	/// can be controlled by the push of the read stream, or by
+	/// the pull of the write stream.
+	///
+	/// It is ok to move write and read streams after piping them,
+	/// the move functions automatically update the internal pointers
+	/// to point to the correct location.
+	///
+	/// \param output A pointer to an output stream
+	///
+	///////////////////////////////////////////////////////////
 	void pipe(WriteStream* output);
 
+	///////////////////////////////////////////////////////////
+	/// \brief Remove the specified output write stream as a pipe connection
+	///
+	/// This removes the connection between streams.
+	///
+	/// \see pipe
+	///
+	/// \param output A pointer to the write stream to remove as a connection
+	///
+	///////////////////////////////////////////////////////////
 	void unpipe(WriteStream* output);
 
 protected:
-	std::vector<WriteStream*> m_outputs;
+	std::vector<WriteStream*> m_outputs;			//!< The list of output streams
 };
 
 
+///////////////////////////////////////////////////////////
+/// \brief The base class for 
 ///////////////////////////////////////////////////////////
 class WriteStream
 {
@@ -62,35 +116,6 @@ public:
 
 protected:
 	std::vector<ReadStream*> m_inputs;
-};
-
-
-///////////////////////////////////////////////////////////
-class BufferStream :
-	public ReadStream,
-	public WriteStream
-{
-public:
-	BufferStream();
-
-	virtual ~BufferStream();
-
-	virtual Uint32 read(void* buffer, Uint32 max) override;
-
-	virtual Uint32 write(void* data, Uint32 size) override;
-
-	virtual void flush();
-
-	Uint32 size() const;
-
-	Uint32 capacity() const;
-
-protected:
-	std::mutex m_mutex;
-	void* m_buffer;
-	void* m_front;
-	Uint32 m_size;
-	Uint32 m_capacity;
 };
 
 

@@ -1,5 +1,7 @@
 #include <poly/Audio/AudioRecorder.h>
 
+#include <poly/Core/Logger.h>
+
 namespace poly
 {
 
@@ -16,10 +18,26 @@ SfmlAudioRecorder::SfmlAudioRecorder(AudioRecorder* recorder) :
 
 
 ///////////////////////////////////////////////////////////
+void SfmlAudioRecorder::setInterval(sf::Time interval)
+{
+	setProcessingInterval(interval);
+}
+
+
+///////////////////////////////////////////////////////////
 bool SfmlAudioRecorder::onProcessSamples(const Int16* samples, std::size_t num)
 {
-	// Write to stream
-	m_recorder->write(const_cast<Int16*>(samples), num * 2);
+	// Write to output streams
+	std::vector<WriteStream*>& outputs = m_recorder->m_outputs;
+	for (Uint32 i = 0; i < outputs.size(); ++i)
+		outputs[i]->write(const_cast<Int16*>(samples), num * 2);
+
+	// Write to buffer if no output streams available
+	if (!outputs.size())
+	{
+		std::unique_lock<std::mutex> lock(m_recorder->m_mutex);
+		m_recorder->m_buffer.write(const_cast<Int16*>(samples), num * 2);
+	}
 
 	return true;
 }
@@ -40,6 +58,14 @@ AudioRecorder::AudioRecorder() :
 AudioRecorder::~AudioRecorder()
 {
 
+}
+
+
+///////////////////////////////////////////////////////////
+Uint32 AudioRecorder::read(void* buffer, Uint32 max)
+{
+	std::unique_lock<std::mutex> lock(m_mutex);
+	return m_buffer.read(buffer, max);
 }
 
 
@@ -74,6 +100,14 @@ bool AudioRecorder::setDevice(const std::string& device)
 void AudioRecorder::setNumChannels(Uint32 numChannels)
 {
 	m_recorder.setChannelCount(numChannels);
+}
+
+
+///////////////////////////////////////////////////////////
+void AudioRecorder::setProcessingInterval(Time interval)
+{
+	if (m_isRecording)
+		m_recorder.setInterval(sf::microseconds(interval.toMicroseconds()));
 }
 
 

@@ -11,9 +11,9 @@ namespace priv
 
 ///////////////////////////////////////////////////////////
 SfmlAudioStream::SfmlAudioStream(AudioStream* stream) :
-	m_stream		(stream),
-	m_buffer		(0),
-	m_isInitialized	(false)
+	m_stream			(stream),
+	m_buffer			(0),
+	m_bufferSize		(0)
 {
 
 }
@@ -30,15 +30,19 @@ SfmlAudioStream::~SfmlAudioStream()
 
 
 ///////////////////////////////////////////////////////////
-void SfmlAudioStream::init(Uint32 numChannels, Uint32 sampleRate)
+void SfmlAudioStream::init(Uint32 numChannels, Uint32 sampleRate, float bufferSize)
 {
 	if (getChannelCount() != numChannels || getSampleRate() != sampleRate)
 	{
 		stop();
 		initialize(numChannels, sampleRate);
 
-		// Allocate enough space to store 1 second of audio
-		m_buffer = (Int16*)MALLOC_DBG(sampleRate * numChannels * 2);
+		// Allocate enough space to store 0.1 second of audio
+		if (m_buffer)
+			FREE_DBG(m_buffer);
+
+		m_bufferSize = (Uint32)(sampleRate * numChannels * bufferSize);
+		m_buffer = (Int16*)MALLOC_DBG(m_bufferSize);
 	}
 }
 
@@ -46,9 +50,18 @@ void SfmlAudioStream::init(Uint32 numChannels, Uint32 sampleRate)
 ///////////////////////////////////////////////////////////
 bool SfmlAudioStream::onGetData(sf::SoundStream::Chunk& chunk)
 {
-	// Read data from stream
-	Uint32 numBytes = getSampleRate() * getChannelCount() * 2;
-	numBytes = m_stream->read(m_buffer, numBytes);
+	// Read data from buffer
+	Uint32 maxBytes = m_bufferSize;
+	Uint32 numBytes = 0;
+	{
+		std::unique_lock<std::mutex> lock(m_stream->m_mutex);
+		numBytes += m_stream->m_buffer.read(m_buffer, maxBytes);
+	}
+
+	// Pull from input streams if not enough data is present in the buffer
+	std::vector<ReadStream*>& inputs = m_stream->m_inputs;
+	for (Uint32 i = 0; i < inputs.size() && numBytes < maxBytes; ++i)
+		numBytes += inputs[i]->read(m_buffer + (numBytes / 2), maxBytes - numBytes);
 
 	// Set chunk info
 	chunk.samples = m_buffer;
@@ -73,7 +86,8 @@ void SfmlAudioStream::onSeek(sf::Time offset)
 AudioStream::AudioStream() :
 	m_stream			(this),
 	m_numChannels		(1),
-	m_sampleRate		(44100)
+	m_sampleRate		(44100),
+	m_updateInterval	(Time::fromMilliseconds(100))
 {
 
 }
@@ -90,7 +104,7 @@ AudioStream::~AudioStream()
 void AudioStream::play()
 {
 	// Initialize stream before playing
-	m_stream.init(m_numChannels, m_sampleRate);
+	m_stream.init(m_numChannels, m_sampleRate, m_updateInterval.toSeconds());
 	m_stream.play();
 }
 
@@ -106,6 +120,39 @@ void AudioStream::pause()
 void AudioStream::stop()
 {
 	m_stream.stop();
+}
+
+
+///////////////////////////////////////////////////////////
+Uint32 AudioStream::write(void* data, Uint32 size)
+{
+	// Write into buffer
+	{
+		std::unique_lock<std::mutex> lock(m_mutex);
+		m_buffer.write(data, size);
+	}
+
+	// Start playing if stopped and there is enough data
+	m_stream.init(m_numChannels, m_sampleRate, m_updateInterval.toSeconds());
+	Uint32 sampleThreshold = (Uint32)(m_updateInterval.toSeconds() * m_stream.getChannelCount() * m_stream.getSampleRate());
+	if (m_stream.getStatus() == sf::SoundSource::Stopped && m_buffer.size() / 2 > sampleThreshold)
+		m_stream.play();
+
+	return size;
+}
+
+
+///////////////////////////////////////////////////////////
+void AudioStream::flush()
+{
+	m_buffer.clear();
+}
+
+
+///////////////////////////////////////////////////////////
+void AudioStream::setUpdateInterval(Time interval)
+{
+	m_updateInterval = interval;
 }
 
 

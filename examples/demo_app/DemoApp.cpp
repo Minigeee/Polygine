@@ -1,4 +1,7 @@
-﻿#include <poly/Audio/Music.h>
+﻿#include <poly/Audio/AudioFileWriter.h>
+#include <poly/Audio/AudioRecorder.h>
+#include <poly/Audio/AudioStream.h>
+#include <poly/Audio/Music.h>
 #include <poly/Audio/Sound.h>
 
 #include <poly/Core/Allocate.h>

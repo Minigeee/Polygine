@@ -2,8 +2,11 @@
 #define POLY_AUDIO_RECORDER_H
 
 #include <poly/Core/Stream.h>
+#include <poly/Core/Time.h>
 
 #include <SFML/Audio/SoundRecorder.hpp>
+
+#include <mutex>
 
 namespace poly
 {
@@ -20,6 +23,8 @@ class SfmlAudioRecorder : public sf::SoundRecorder
 public:
 	SfmlAudioRecorder(AudioRecorder* recorder);
 
+	void setInterval(sf::Time interval);
+
 private:
 	bool onProcessSamples(const Int16* samples, std::size_t num) override;
 
@@ -33,7 +38,7 @@ private:
 
 ///////////////////////////////////////////////////////////
 class AudioRecorder :
-	public BufferStream
+	public ReadStream
 {
 	friend priv::SfmlAudioRecorder;
 
@@ -42,6 +47,8 @@ public:
 
 	virtual ~AudioRecorder();
 
+	Uint32 read(void* read, Uint32 max) override;
+
 	bool start(Uint32 sampleRate = 44100);
 
 	void stop();
@@ -49,6 +56,8 @@ public:
 	bool setDevice(const std::string& device);
 
 	void setNumChannels(Uint32 numChannels);
+
+	void setProcessingInterval(Time interval);
 
 	bool isRecording() const;
 
@@ -66,6 +75,8 @@ public:
 
 private:
 	priv::SfmlAudioRecorder m_recorder;
+	RingBuffer m_buffer;
+	std::mutex m_mutex;
 	bool m_isRecording;
 };
 

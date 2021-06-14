@@ -42,6 +42,8 @@ void AudioFileWriter::close()
 Uint32 AudioFileWriter::write(void* data, Uint32 num)
 {
 	if (!m_isOpen) return 0;
+
+	std::unique_lock<std::mutex> lock(m_mutex);
 	m_file.write((Int16*)data, (Uint64)(num / 2));
 
 	return num;
@@ -52,6 +54,8 @@ Uint32 AudioFileWriter::write(void* data, Uint32 num)
 void AudioFileWriter::write(Int16* samples, Uint32 num)
 {
 	if (!m_isOpen) return;
+
+	std::unique_lock<std::mutex> lock(m_mutex);
 	m_file.write(samples, (Uint64)num);
 }
 
@@ -60,6 +64,8 @@ void AudioFileWriter::write(Int16* samples, Uint32 num)
 void AudioFileWriter::save(ReadStream* input)
 {
 	if (!m_isOpen) return;
+
+	std::unique_lock<std::mutex> lock(m_mutex);
 
 	// Read from stream in chunks of 1 sec
 	Uint32 numSamples = m_sampleRate * m_numChannels;

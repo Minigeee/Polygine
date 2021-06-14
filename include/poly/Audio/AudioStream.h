@@ -8,6 +8,8 @@
 
 #include <SFML/Audio/SoundStream.hpp>
 
+#include <mutex>
+
 namespace poly
 {
 
@@ -25,7 +27,7 @@ public:
 
 	~SfmlAudioStream();
 
-	void init(Uint32 numChannels, Uint32 sampleRate);
+	void init(Uint32 numChannels, Uint32 sampleRate, float bufferSize);
 
 private:
 	bool onGetData(Chunk& data) override;
@@ -35,7 +37,7 @@ private:
 private:
 	AudioStream* m_stream;
 	Int16* m_buffer;
-	bool m_isInitialized;
+	Uint32 m_bufferSize;
 };
 
 
@@ -45,7 +47,7 @@ private:
 ///////////////////////////////////////////////////////////
 class AudioStream :
 	public AudioSource,
-	public BufferStream
+	public WriteStream
 {
 	friend priv::SfmlAudioStream;
 
@@ -59,6 +61,12 @@ public:
 	virtual void pause();
 
 	virtual void stop() override;
+
+	virtual Uint32 write(void* data, Uint32 size) override;
+
+	void flush();
+
+	void setUpdateInterval(Time interval);
 
 	void setNumChannels(Uint32 channels);
 
@@ -99,6 +107,9 @@ protected:
 	Uint32 m_numChannels;
 	Uint32 m_sampleRate;
 	priv::SfmlAudioStream m_stream;
+	RingBuffer m_buffer;
+	Time m_updateInterval;
+	std::mutex m_mutex;
 };
 
 

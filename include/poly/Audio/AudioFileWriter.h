@@ -5,6 +5,8 @@
 
 #include <SFML/Audio/OutputSoundFile.hpp>
 
+#include <mutex>
+
 namespace poly
 {
 
@@ -32,6 +34,7 @@ private:
 	sf::OutputSoundFile m_file;
 	Uint32 m_sampleRate;
 	Uint32 m_numChannels;
+	std::mutex m_mutex;
 	bool m_isOpen;
 };
 
