@@ -25,6 +25,10 @@
 namespace poly
 {
 
+#ifndef DOXYGEN_SKIP
+namespace priv
+{
+
 
 ///////////////////////////////////////////////////////////
 class PhysicsEventHandler :
@@ -34,9 +38,9 @@ class PhysicsEventHandler :
 public:
 	///////////////////////////////////////////////////////////
 	PhysicsEventHandler(Physics* physics, Scene* scene) :
-		m_physics			(physics),
-		m_scene				(scene),
-		m_contactPoints		(10)
+		m_physics(physics),
+		m_scene(scene),
+		m_contactPoints(10)
 	{ }
 
 
@@ -198,6 +202,10 @@ private:
 };
 
 
+}
+#endif
+
+
 ///////////////////////////////////////////////////////////
 reactphysics3d::PhysicsCommon g_common;
 
@@ -239,7 +247,7 @@ Physics::RigidBodyData::RigidBodyData(const Entity::Id& id, void* body) :
 Physics::Physics(Scene* scene) :
 	Extension		(scene),
 	m_world			(g_common.createPhysicsWorld()),
-	m_eventHandler	(new PhysicsEventHandler(this, scene))
+	m_eventHandler	(new priv::PhysicsEventHandler(this, scene))
 {
 	// Add all current rigid and collision bodies
 	scene->system<RigidBodyComponent>(
@@ -1119,6 +1127,7 @@ Physics::ConvexMeshData::~ConvexMeshData()
 }
 
 
+#ifndef DOXYGEN_SKIP
 ///////////////////////////////////////////////////////////
 namespace priv
 {
@@ -1455,6 +1464,7 @@ std::vector<ConvexMeshFaceInfo> mergeFaces(std::vector<Vector3f>& vertices, std:
 
 
 }
+#endif
 
 
 ///////////////////////////////////////////////////////////

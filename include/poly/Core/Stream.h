@@ -16,6 +16,7 @@ class WriteStream;
 
 ///////////////////////////////////////////////////////////
 /// \brief The base class for data stream that can be read from
+/// \ingroup Core
 ///
 ///////////////////////////////////////////////////////////
 class ReadStream
@@ -94,15 +95,25 @@ protected:
 
 
 ///////////////////////////////////////////////////////////
-/// \brief The base class for 
+/// \brief The base class for data streams that can be written to
+/// \ingroup Core
+///
 ///////////////////////////////////////////////////////////
 class WriteStream
 {
 	friend ReadStream;
 
 public:
+	///////////////////////////////////////////////////////////
+	/// \brief Default constructor
+	///
+	///////////////////////////////////////////////////////////
 	WriteStream();
 
+	///////////////////////////////////////////////////////////
+	/// \brief Virtual destructor
+	///
+	///////////////////////////////////////////////////////////
 	virtual ~WriteStream();
 
 #ifndef DOXYGEN_SKIP
@@ -112,10 +123,19 @@ public:
 	WriteStream& operator=(WriteStream&&);
 #endif
 
+	///////////////////////////////////////////////////////////
+	/// \brief Write data into the stream
+	///
+	/// \param data A pointer to the data to write into the stream
+	/// \param size The size of the data to write into the stream in bytes
+	///
+	/// \return The actual number of bytes written into the stream
+	///
+	///////////////////////////////////////////////////////////
 	virtual Uint32 write(void* data, Uint32 size) = 0;
 
 protected:
-	std::vector<ReadStream*> m_inputs;
+	std::vector<ReadStream*> m_inputs;		//!< The list of input read streams
 };
 
 

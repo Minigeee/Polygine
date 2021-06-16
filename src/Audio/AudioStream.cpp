@@ -30,18 +30,19 @@ SfmlAudioStream::~SfmlAudioStream()
 
 
 ///////////////////////////////////////////////////////////
-void SfmlAudioStream::init(Uint32 numChannels, Uint32 sampleRate, float bufferSize)
+void SfmlAudioStream::init(Uint32 numChannels, Uint32 sampleRate, Time interval)
 {
-	if (getChannelCount() != numChannels || getSampleRate() != sampleRate)
+	if (getChannelCount() != numChannels || getSampleRate() != sampleRate || interval != m_updateInterval)
 	{
 		stop();
 		initialize(numChannels, sampleRate);
 
-		// Allocate enough space to store 0.1 second of audio
+		// Allocate enough space to store audio
 		if (m_buffer)
 			FREE_DBG(m_buffer);
 
-		m_bufferSize = (Uint32)(sampleRate * numChannels * bufferSize);
+		m_updateInterval = interval;
+		m_bufferSize = (Uint32)(sampleRate * numChannels * interval.toSeconds());
 		m_buffer = (Int16*)MALLOC_DBG(m_bufferSize);
 	}
 }
@@ -104,7 +105,7 @@ AudioStream::~AudioStream()
 void AudioStream::play()
 {
 	// Initialize stream before playing
-	m_stream.init(m_numChannels, m_sampleRate, m_updateInterval.toSeconds());
+	m_stream.init(m_numChannels, m_sampleRate, m_updateInterval);
 	m_stream.play();
 }
 
@@ -133,8 +134,8 @@ Uint32 AudioStream::write(void* data, Uint32 size)
 	}
 
 	// Start playing if stopped and there is enough data
-	m_stream.init(m_numChannels, m_sampleRate, m_updateInterval.toSeconds());
-	Uint32 sampleThreshold = (Uint32)(m_updateInterval.toSeconds() * m_stream.getChannelCount() * m_stream.getSampleRate());
+	m_stream.init(m_numChannels, m_sampleRate, m_updateInterval);
+	Uint32 sampleThreshold = (Uint32)(1.1f * m_updateInterval.toSeconds() * m_stream.getChannelCount() * m_stream.getSampleRate());
 	if (m_stream.getStatus() == sf::SoundSource::Stopped && m_buffer.size() / 2 > sampleThreshold)
 		m_stream.play();
 

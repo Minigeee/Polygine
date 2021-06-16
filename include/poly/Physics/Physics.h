@@ -14,8 +14,12 @@
 namespace poly
 {
 
-
+#ifndef DOXYGEN_SKIP
+namespace priv
+{
 class PhysicsEventHandler;
+}
+#endif
 
 
 ///////////////////////////////////////////////////////////
@@ -38,7 +42,7 @@ struct RaycastInfo
 ///////////////////////////////////////////////////////////
 class Physics : public Extension
 {
-	friend PhysicsEventHandler;
+	friend priv::PhysicsEventHandler;
 
 public:
 	///////////////////////////////////////////////////////////
@@ -354,7 +358,7 @@ private:
 
 private:
 	void* m_world;																//!< The RP3D physics world pointer
-	PhysicsEventHandler* m_eventHandler;										//!< The RP3D event handler
+	priv::PhysicsEventHandler* m_eventHandler;									//!< The RP3D event handler
 	Vector3f m_gravity;															//!< The gravity acceleration vector
 
 	HashMap<Entity::Id, BodyData> m_rigidBodies;								//!< Map entity id to physics body data (rigid bodies)

@@ -90,6 +90,13 @@ void AudioRecorder::stop()
 
 
 ///////////////////////////////////////////////////////////
+void AudioRecorder::flush()
+{
+	m_buffer.clear();
+}
+
+
+///////////////////////////////////////////////////////////
 bool AudioRecorder::setDevice(const std::string& device)
 {
 	return m_recorder.setDevice(device);

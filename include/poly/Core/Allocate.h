@@ -53,6 +53,8 @@ private:
 };
 
 
+#ifndef DOXYGEN_SKIP
+
 ///////////////////////////////////////////////////////////
 extern Allocate* g_allocate;
 
@@ -72,6 +74,8 @@ private:
 
 ///////////////////////////////////////////////////////////
 static AllocateInit g_allocateInit;
+
+#endif
 
 
 }

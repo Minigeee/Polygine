@@ -17,7 +17,7 @@ AudioFileWriter::AudioFileWriter() :
 
 
 ///////////////////////////////////////////////////////////
-bool AudioFileWriter::open(const std::string& fname, Uint32 sampleRate, Uint32 numChannels)
+bool AudioFileWriter::open(const std::string& fname, Uint32 numChannels, Uint32 sampleRate)
 {
 	if (!m_file.openFromFile(fname, sampleRate, numChannels))
 		return false;

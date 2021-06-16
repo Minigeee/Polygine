@@ -5,15 +5,23 @@ namespace poly
 
 
 ///////////////////////////////////////////////////////////
+AudioBuffer::AudioBuffer() :
+	m_offset		(0)
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
 Uint32 AudioBuffer::read(void* data, Uint32 max)
 {
 	// Get number of bytes
-	Uint32 numBytes = (Uint32)m_buffer.getSampleCount() * 2;
+	Uint32 numBytes = (Uint32)m_buffer.getSampleCount() * 2 - m_offset * 2;
 	if (numBytes > max)
 		numBytes = max;
 
 	// Always return data starting from the beggining
-	memcpy(data, m_buffer.getSamples(), numBytes);
+	memcpy(data, m_buffer.getSamples() + m_offset, numBytes);
 
 	// Return number of bytes copied
 	return numBytes;
@@ -21,9 +29,17 @@ Uint32 AudioBuffer::read(void* data, Uint32 max)
 
 
 ///////////////////////////////////////////////////////////
-Uint32 AudioBuffer::read(Int16* samples, Uint32 max)
+Uint32 AudioBuffer::read(Int16* samples, Uint32 max, Uint32 offset)
 {
-	return ReadStream::read(samples, max * 2);
+	seek(offset);
+	return ReadStream::read(samples, max * 2) / 2;
+}
+
+
+///////////////////////////////////////////////////////////
+void AudioBuffer::seek(Uint32 offset)
+{
+	m_offset = 0;
 }
 
 

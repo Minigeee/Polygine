@@ -7,9 +7,15 @@
 namespace poly
 {
 
+#ifndef DOXYGEN_SKIP
+namespace priv
+{
+class PhysicsEventHandler;
+}
+#endif
+
 
 class Physics;
-class PhysicsEventHandler;
 
 
 ///////////////////////////////////////////////////////////
@@ -19,7 +25,7 @@ class PhysicsEventHandler;
 class Collider
 {
 	friend Physics;
-	friend PhysicsEventHandler;
+	friend priv::PhysicsEventHandler;
 
 public:
 	///////////////////////////////////////////////////////////
