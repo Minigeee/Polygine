@@ -193,9 +193,47 @@ public:
 	///////////////////////////////////////////////////////////
 	static const ProfilerData& getData(const std::string& func, const std::string& label = "");
 
+	///////////////////////////////////////////////////////////
+	/// \brief Get the entire map of profiler data
+	///
+	/// The key of each map entry is the name of the marker, which
+	/// is equal to '[func]:[label]' based on where the marker was
+	/// placed, and the label it was given. The value of each entry
+	/// is the profiler data, which contains the entire history of
+	/// execution times, and convenience mean and standard deviation
+	/// functions.
+	///
+	/// \return The entire map of profiler data
+	///
+	///////////////////////////////////////////////////////////
+	static const HashMap<std::string, ProfilerData>& getData();
+
+	///////////////////////////////////////////////////////////
+	/// \brief Save all profiling information in a CSV file
+	///
+	/// This file will contain a line for every profiler marker that
+	/// was added to the profiler, where the first value is
+	/// '[func]:[label]'. The second value is the overall mean
+	/// of the execution time, the third value is the overall
+	/// standard deviation, then the rest of the following values
+	/// in the line are the blocked average execution times
+	/// in milliseconds.
+	///
+	/// Profiler entries can be excluded from being outputted to
+	/// the file by adding marker '[func]:[label]' to the \a exclude
+	/// set.
+	///
+	/// \param fname The name of the file to save data into
+	/// \param exclude The set of markers to exclude
+	///
+	/// \return True if the file was successfully saved
+	///
+	///////////////////////////////////////////////////////////
+	static bool save(const std::string& fname, const HashSet<std::string>& exclude = HashSet<std::string>());
+
 private:
-	static HashMap<std::string, ProfilerData> m_data; //!< Map used to store the data
-	static std::mutex m_mutex;									 //!< Mutex to protect access to profiler data
+	static HashMap<std::string, ProfilerData> m_data;	//!< Map used to store the data
+	static std::mutex m_mutex;							//!< Mutex to protect access to profiler data
 };
 
 #ifdef ENABLE_PROFILING

@@ -706,4 +706,3 @@ int main()
 }
 
 // TODO : Move Grass to game project and document it
-// TODO : Make everything thread safe
