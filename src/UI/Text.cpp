@@ -104,6 +104,9 @@ void Text::setString(const std::string& string)
 {
 	m_string = Utf32::fromUtf8(string);
 	m_stringChanged = true;
+
+	// Resize the character colors array
+	m_characterColors.resize(m_string.size(), Vector3f(m_color));
 }
 
 
@@ -112,6 +115,9 @@ void Text::setString(const Utf32String& string)
 {
 	m_string = string;
 	m_stringChanged = true;
+
+	// Resize the character colors array
+	m_characterColors.resize(m_string.size(), Vector3f(m_color));
 }
 
 
@@ -168,6 +174,25 @@ void Text::setOrigin(UIPosition origin)
 
 
 ///////////////////////////////////////////////////////////
+void Text::setCharacterColors(const Vector3f& color, Uint32 offset, Uint32 num)
+{
+	// The string and colors array will always have the same size
+
+	Uint32 end = offset + num;
+	if (end > m_string.size())
+		end = m_string.size();
+
+	// Update colors
+	for (Uint32 i = offset; i < end; ++i)
+	{
+		m_characterColors[i] = color;
+		if (i < m_quads.size())
+			m_quads[i].m_color = Vector4f(color, 1.0f);
+	}
+}
+
+
+///////////////////////////////////////////////////////////
 Font* Text::getFont() const
 {
 	return m_font;
@@ -207,6 +232,13 @@ const Vector2f& Text::getCharacterOffset(Uint32 index)
 {
 	updateQuads();
 	return m_characterOffsets[index];
+}
+
+
+///////////////////////////////////////////////////////////
+const Vector3f& Text::getCharacterColor(Uint32 index) const
+{
+	return m_characterColors[index];
 }
 
 
@@ -279,7 +311,7 @@ void Text::updateQuads()
 
 			// Set quad properties
 			m_quads[i].m_origin = Vector2f(0.0f);
-			m_quads[i].m_color = m_color;
+			m_quads[i].m_color = Vector4f(m_characterColors[i], 1.0f);
 
 			// Set size
 			m_quads[i].m_size.x = glyph.m_glyphRect.z;
