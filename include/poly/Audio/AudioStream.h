@@ -122,7 +122,7 @@ public:
 	/// \return The number of bytes that was actually written into the stream
 	///
 	///////////////////////////////////////////////////////////
-	virtual Uint32 write(void* data, Uint32 size) override;
+	virtual Uint32 write(const void* data, Uint32 size) override;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Clear all data from the internal ring buffer

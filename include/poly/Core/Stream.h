@@ -132,7 +132,7 @@ public:
 	/// \return The actual number of bytes written into the stream
 	///
 	///////////////////////////////////////////////////////////
-	virtual Uint32 write(void* data, Uint32 size) = 0;
+	virtual Uint32 write(const void* data, Uint32 size) = 0;
 
 protected:
 	std::vector<ReadStream*> m_inputs;		//!< The list of input read streams

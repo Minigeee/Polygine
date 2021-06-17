@@ -69,7 +69,7 @@ Uint32 RingBuffer::read(void* buffer, Uint32 max)
 
 
 ///////////////////////////////////////////////////////////
-void RingBuffer::write(void* data, Uint32 size)
+void RingBuffer::write(const void* data, Uint32 size)
 {
 	// Update size of the buffer
 	m_size += size;

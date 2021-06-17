@@ -125,7 +125,7 @@ void AudioStream::stop()
 
 
 ///////////////////////////////////////////////////////////
-Uint32 AudioStream::write(void* data, Uint32 size)
+Uint32 AudioStream::write(const void* data, Uint32 size)
 {
 	// Write into buffer
 	{

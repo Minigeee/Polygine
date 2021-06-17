@@ -42,6 +42,10 @@
 #include <poly/Math/Noise.h>
 #include <poly/Math/Transform.h>
 
+#include <poly/Network/Packet.h>
+#include <poly/Network/TcpSocket.h>
+#include <poly/Network/UdpSocket.h>
+
 #include <poly/Physics/Components.h>
 #include <poly/Physics/Events.h>
 #include <poly/Physics/Physics.h>
@@ -79,6 +83,12 @@ void onSubmit(const Utf32String& text)
 
 int main()
 {
+    TcpSocket socket;
+    socket.connect("localhost", 50000);
+    socket.send("Hello World!", 13);
+
+    return 0;
+
     Logger::init("game.log");
     srand(time(NULL));
 

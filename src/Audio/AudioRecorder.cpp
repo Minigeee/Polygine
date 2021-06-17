@@ -30,13 +30,13 @@ bool SfmlAudioRecorder::onProcessSamples(const Int16* samples, std::size_t num)
 	// Write to output streams
 	std::vector<WriteStream*>& outputs = m_recorder->m_outputs;
 	for (Uint32 i = 0; i < outputs.size(); ++i)
-		outputs[i]->write(const_cast<Int16*>(samples), num * 2);
+		outputs[i]->write(samples, num * 2);
 
 	// Write to buffer if no output streams available
 	if (!outputs.size())
 	{
 		std::unique_lock<std::mutex> lock(m_recorder->m_mutex);
-		m_recorder->m_buffer.write(const_cast<Int16*>(samples), num * 2);
+		m_recorder->m_buffer.write(samples, num * 2);
 	}
 
 	return true;

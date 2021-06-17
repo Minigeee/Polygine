@@ -58,7 +58,7 @@ public:
 	/// \return The number of bytes that was actually written
 	///
 	///////////////////////////////////////////////////////////
-	Uint32 write(void* data, Uint32 size) override;
+	Uint32 write(const void* data, Uint32 size) override;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Write data into an opened file
@@ -70,7 +70,7 @@ public:
 	/// \param size The number of samples to write into the file
 	///
 	///////////////////////////////////////////////////////////
-	void write(Int16* samples, Uint32 num);
+	void write(const Int16* samples, Uint32 num);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Save data from an input read stream into an open file

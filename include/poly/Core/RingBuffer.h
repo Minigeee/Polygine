@@ -62,7 +62,7 @@ public:
 	/// \param size The number of bytes to write into the buffer
 	///
 	///////////////////////////////////////////////////////////
-	void write(void* data, Uint32 size);
+	void write(const void* data, Uint32 size);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Clear the ring buffer
