@@ -65,8 +65,6 @@
 
 #include <iostream>
 
-#include <reactphysics3d/reactphysics3d.h>
-
 using namespace poly;
 
 
@@ -83,12 +81,6 @@ void onSubmit(const Utf32String& text)
 
 int main()
 {
-    TcpSocket socket;
-    socket.connect("localhost", 50000);
-    socket.send("Hello World!", 13);
-
-    return 0;
-
     Logger::init("game.log");
     srand(time(NULL));
 

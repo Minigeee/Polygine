@@ -764,6 +764,7 @@ void Octree::render(Camera& camera, RenderPass pass)
 				data.m_vertexArray = &mesh->m_vertexArray;
 				data.m_material = &mesh->m_material;
 				data.m_shader = mesh->m_shader;
+				data.m_transparent = data.m_material->isTransparent();
 				renderData.push_back(data);
 			}
 		}
@@ -772,6 +773,7 @@ void Octree::render(Camera& camera, RenderPass pass)
 			data.m_vertexArray = &billboard->getVertexArray();
 			data.m_material = billboard->getMaterial();
 			data.m_shader = billboard->getShader();
+			data.m_transparent = data.m_material->isTransparent();
 			renderData.push_back(data);
 		}
 		else
@@ -794,7 +796,9 @@ void Octree::render(Camera& camera, RenderPass pass)
 	std::sort(renderData.begin(), renderData.end(),
 		[](const RenderData& a, const RenderData& b) -> bool
 		{
-			if (a.m_shader == b.m_shader)
+			if (a.m_transparent && !b.m_transparent)
+				return true;
+			else if (a.m_shader == b.m_shader)
 				return a.m_offset < b.m_offset;
 			else
 				return a.m_shader < b.m_shader;
@@ -804,10 +808,6 @@ void Octree::render(Camera& camera, RenderPass pass)
 
 	// Enable depth testing
 	glCheck(glEnable(GL_DEPTH_TEST));
-
-	// Single side render
-	glCheck(glEnable(GL_CULL_FACE));
-	glCheck(glCullFace(GL_BACK));
 
 	// Enable alpha blending
 	glCheck(glEnable(GL_BLEND));

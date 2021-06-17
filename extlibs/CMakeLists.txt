@@ -13,9 +13,7 @@ configure_file("${CMAKE_SOURCE_DIR}/extlibs/reactphysics3d/ColliderComponents.h"
 configure_file("${CMAKE_SOURCE_DIR}/extlibs/reactphysics3d/CollisionBodyComponents.h" "${reactphysics3d_SOURCE_DIR}/include/reactphysics3d/components/CollisionBodyComponents.h")
 configure_file("${CMAKE_SOURCE_DIR}/extlibs/reactphysics3d/RigidBodyComponents.h" "${reactphysics3d_SOURCE_DIR}/include/reactphysics3d/components/RigidBodyComponents.h")
 configure_file("${CMAKE_SOURCE_DIR}/extlibs/reactphysics3d/TransformComponents.h" "${reactphysics3d_SOURCE_DIR}/include/reactphysics3d/components/TransformComponents.h")
-target_include_directories(polygine PUBLIC
-    $<BUILD_INTERFACE:${reactphysics3d_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>)
+target_include_directories(polygine PRIVATE ${reactphysics3d_SOURCE_DIR}/include)
 if(NOT DEFINED reactphysics3d_FOUND)
     install(TARGETS reactphysics3d DESTINATION "${CMAKE_INSTALL_LIBDIR}" EXPORT polygine-export)
 endif()

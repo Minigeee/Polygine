@@ -1,3 +1,4 @@
+#include <poly/Graphics/GLCheck.h>
 #include <poly/Graphics/Material.h>
 #include <poly/Graphics/Shader.h>
 #include <poly/Graphics/Texture.h>
@@ -15,6 +16,7 @@ Material::Material() :
 	m_diffuse		(1.0f),
 	m_specular		(0.1f),
 	m_shininess		(16.0f),
+	m_cullFace		(true),
 	m_diffTexture	(0),
 	m_specTexture	(0),
 	m_normalTexture	(0)
@@ -67,6 +69,20 @@ void Material::setSpecular(float r, float g, float b)
 void Material::setShininess(float shininess)
 {
 	m_shininess = shininess;
+}
+
+
+///////////////////////////////////////////////////////////
+void Material::setTransparent(bool transparent)
+{
+	m_isTransparent = transparent;
+}
+
+
+///////////////////////////////////////////////////////////
+void Material::setCullFace(bool cull)
+{
+	m_cullFace = cull;
 }
 
 
@@ -142,6 +158,20 @@ float Material::getShininess() const
 
 
 ///////////////////////////////////////////////////////////
+bool Material::isTransparent() const
+{
+	return m_isTransparent;
+}
+
+
+///////////////////////////////////////////////////////////
+bool Material::getCullFace() const
+{
+	return m_cullFace;
+}
+
+
+///////////////////////////////////////////////////////////
 Texture* Material::getTexture(const std::string& uniform) const
 {
 	// Find texture
@@ -189,6 +219,15 @@ void Material::apply(Shader* shader) const
 		// Set sampler index
 		shader->setUniform(it->first, i);
 	}
+
+	// Cull face
+	if (m_cullFace)
+	{
+		glCheck(glEnable(GL_CULL_FACE));
+		glCheck(glCullFace(GL_BACK));
+	}
+	else
+		glCheck(glDisable(GL_CULL_FACE));
 
 	// Apply function callback
 	if (m_applyFunc)

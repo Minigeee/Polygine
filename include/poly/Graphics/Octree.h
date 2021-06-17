@@ -187,6 +187,7 @@ private:
 		Skeleton* m_skeleton;
 		Uint32 m_offset;
 		Uint32 m_instances;
+		bool m_transparent;
 	};
 
 	void expand();

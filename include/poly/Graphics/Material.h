@@ -124,6 +124,26 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	void setShininess(float shininess);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set whether the material diffuse texture contains transparent pixels
+	///
+	/// This applies to diffuse textures with transparency of any
+	/// level. The renderer needs to know this information so that it
+	/// can render objects in the correct order.
+	///
+	/// \param transparent Whether the diffuse texture contains transparent pixels
+	///
+	///////////////////////////////////////////////////////////
+	void setTransparent(bool transparent);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get whether faces pointing away from the camera should be culled
+	///
+	/// \param cull True if faces pointing away from the camera should be culled
+	///
+	///////////////////////////////////////////////////////////
+	void setCullFace(bool cull);
 	
 	///////////////////////////////////////////////////////////
 	/// \brief Set the material diffuse texture
@@ -231,6 +251,24 @@ public:
 	float getShininess() const;
 
 	///////////////////////////////////////////////////////////
+	/// \brief Check if the diffuse texture contains transparent pixels
+	///
+	/// This value must be set manually
+	///
+	/// \return True if the diffuse texture contains transparent pixels
+	///
+	///////////////////////////////////////////////////////////
+	bool isTransparent() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Check whether faces pointing away from the camera should be culled
+	///
+	/// \return True if faces pointing away from the camera should be culled
+	///
+	///////////////////////////////////////////////////////////
+	bool getCullFace() const;
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the texture bound to the specified uniform
 	///
 	/// \param The name of the uniform to retrieve a texture from
@@ -284,6 +322,8 @@ private:
 	Vector3f m_diffuse;							//!< The diffuse color
 	Vector3f m_specular;						//!< The specular color
 	float m_shininess;							//!< The shininess value
+	bool m_isTransparent;
+	bool m_cullFace;							//!< Should this material allow face culling
 
 	Texture* m_diffTexture;						//!< The diffuse texture
 	Texture* m_specTexture;						//!< The specular texture
