@@ -4,6 +4,7 @@
 #include <poly/UI/Dropdown.h>
 #include <poly/UI/Font.h>
 #include <poly/UI/ListView.h>
+#include <poly/UI/ProgressBar.h>
 #include <poly/UI/ScrollView.h>
 #include <poly/UI/Slider.h>
 #include <poly/UI/Text.h>
@@ -231,6 +232,9 @@ bool UIParser::parse(XmlNode node, UIElement*& out)
 
 	else if (strcmp(node.getName(), "text_input") == 0)
 		out = Pool<TextInput>::alloc();
+
+	else if (strcmp(node.getName(), "progress_bar") == 0)
+		out = Pool<ProgressBar>::alloc();
 
 	else
 		return false;

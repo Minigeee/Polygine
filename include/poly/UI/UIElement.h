@@ -938,34 +938,34 @@ protected:
 	virtual void getQuads(std::vector<UIQuad>& quads);
 
 protected:
-	std::string m_id;
-	UIElement* m_parent;
-	std::vector<UIElement*> m_children;
+	std::string m_id;						//!< The string id of the element
+	UIElement* m_parent;					//!< A pointer to the parent element
+	std::vector<UIElement*> m_children;		//!< A list of children elements
 
-	Vector2f m_relPosition;
-	Vector2f m_absPosition;
-	float m_relRotation;
-	float m_absRotation;
-	Vector2f m_relSize;
-	Vector2f m_pixelSize;
-	Vector2b m_useRelSize;
-	Vector2f m_origin;
-	Vector2f m_anchor;
-	Vector4f m_color;
-	Texture* m_texture;
-	Vector4f m_textureRect;
-	BlendFactor m_srcBlend;
-	BlendFactor m_dstBlend;
-	Shader* m_shader;
-	bool m_hasFlippedUv;
-	bool m_isVisible;
-	bool m_isColorTransparent;
-	bool m_isTextureTransparent;
+	Vector2f m_relPosition;					//!< The position relative to the parent element
+	Vector2f m_absPosition;					//!< The absolute position
+	float m_relRotation;					//!< The rotation relative to the parent element
+	float m_absRotation;					//!< The absolute rotation
+	Vector2f m_relSize;						//!< The size of the element as a percentage of the parent element
+	Vector2f m_pixelSize;					//!< The size of the element in pixels
+	Vector2b m_useRelSize;					//!< A boolean vector indicating if the edge uses relative size or pixel size
+	Vector2f m_origin;						//!< The origin of the element as a percentage of the size
+	Vector2f m_anchor;						//!< The anchor of the element as a percentage of the parent element size
+	Vector4f m_color;						//!< The color of the element
+	Texture* m_texture;						//!< A pointer to the element texture
+	Vector4f m_textureRect;					//!< The subrectangle of the texture to display
+	BlendFactor m_srcBlend;					//!< The source color blend mode
+	BlendFactor m_dstBlend;					//!< The destination color blend mode
+	Shader* m_shader;						//!< A pointer to the shader that should be used to render the element
+	bool m_hasFlippedUv;					//!< True if the V axis is flipped
+	bool m_isVisible;						//!< True if this element is visible
+	bool m_isColorTransparent;				//!< True if the color contains an alpha value less than one
+	bool m_isTextureTransparent;			//!< True if the texture contains a pixel alpha value less than zero
 
-	Uint32 m_index;
-	bool m_transformChanged;
-	bool m_hasHover;
-	bool m_hasFocus;
+	Uint32 m_index;							//!< The z-index of the element
+	bool m_transformChanged;				//!< This is set to true if the elemnt transform changed
+	bool m_hasHover;						//!< This is true if the mouse is hovering over the element (assuming it handles mouse events)
+	bool m_hasFocus;						//!< This is true if the element has focus
 
 private:
 	Shader* getDefaultShader();

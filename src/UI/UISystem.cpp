@@ -11,6 +11,7 @@
 #include <poly/UI/Dropdown.h>
 #include <poly/UI/Font.h>
 #include <poly/UI/ListView.h>
+#include <poly/UI/ProgressBar.h>
 #include <poly/UI/ScrollView.h>
 #include <poly/UI/Slider.h>
 #include <poly/UI/Text.h>
@@ -474,6 +475,9 @@ bool UISystem::load(const std::string& fname)
 
 				else if (dynamic_cast<TextInput*>(element))
 					Pool<TextInput>::free(dynamic_cast<TextInput*>(element));
+
+				else if (dynamic_cast<ProgressBar*>(element))
+					Pool<ProgressBar>::free(dynamic_cast<ProgressBar*>(element));
 
 				else
 					Pool<UIElement>::free(element);

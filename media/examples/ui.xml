@@ -22,5 +22,7 @@
         <dropdown_item template="num_dropdown_btn" value="四" />
     </dropdown>
 
+    <progress_bar position="5 80" size="200 15" padding="1 1" fill_color="salmon" value="0.7" />
+
     <text id="fps_counter" origin="top_right" anchor="top_right" position="-5,5" />
 </ui>
