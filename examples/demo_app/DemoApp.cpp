@@ -19,7 +19,6 @@
 #include <poly/Graphics/Components.h>
 #include <poly/Graphics/FrameBuffer.h>
 
-#include <poly/Graphics/Grass.h>
 #include <poly/Graphics/Image.h>
 #include <poly/Graphics/Lighting.h>
 #include <poly/Graphics/Model.h>
@@ -218,10 +217,6 @@ int main()
     skybox.setHorizonColor(Vector3f(0.6f, 0.8f, 0.6f));
     scene.addRenderSystem(&skybox);
     scene.getExtension<Lighting>()->setAmbientColor(0.3f * skybox.getAmbientColor());
-
-    Grass grass;
-    grass.setTerrain(&terrain);
-    scene.addRenderSystem(&grass);
 
     DirLightComponent sun;
     // sun.m_diffuse = Vector3f(0.08f, 0.15f, 0.25f) * 0.4f;
@@ -704,5 +699,3 @@ int main()
 
     return 0;
 }
-
-// TODO : Move Grass to game project and document it
