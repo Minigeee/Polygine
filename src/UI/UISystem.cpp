@@ -11,6 +11,7 @@
 #include <poly/UI/Dropdown.h>
 #include <poly/UI/Font.h>
 #include <poly/UI/ListView.h>
+#include <poly/UI/ProgressBar.h>
 #include <poly/UI/ScrollView.h>
 #include <poly/UI/Slider.h>
 #include <poly/UI/Text.h>
@@ -378,20 +379,70 @@ void UISystem::getRenderQuads(
 			// Get quads
 			element->getQuads(transparentQuads);
 
-			// Add transparent render data
-			transparentRenderData.push_back(UIRenderData
+			// Handle text differently
+			Text* text = 0;
+			if (text = dynamic_cast<Text*>(element))
+			{
+				// Add a new group every time the text changes color
+				Vector4f color = transparentQuads[start].m_color;
+				Uint32 prevGroupStart = start;
+
+				for (Uint32 i = start + 1; i < transparentQuads.size(); ++i)
 				{
-					element->getTexture(),
-					element->getSrcBlend(),
-					element->getDstBlend(),
-					element->getColor(),
-					element->getShader(),
-					clipRect,
-					start,
-					transparentQuads.size() - start,
-					false,
-					element->hasFlippedUv()
-				});
+					// If the colors don't match, end the previous group
+					if (transparentQuads[i].m_color != color)
+					{
+						transparentRenderData.push_back(UIRenderData
+							{
+								element->getTexture(),
+								element->getSrcBlend(),
+								element->getDstBlend(),
+								color,
+								element->getShader(),
+								clipRect,
+								prevGroupStart,
+								i - prevGroupStart,
+								true,
+								element->hasFlippedUv()
+							});
+
+						color = transparentQuads[i].m_color;
+						prevGroupStart = i;
+					}
+				}
+
+				// Add the last group
+				transparentRenderData.push_back(UIRenderData
+					{
+						element->getTexture(),
+						element->getSrcBlend(),
+						element->getDstBlend(),
+						color,
+						element->getShader(),
+						clipRect,
+						prevGroupStart,
+						transparentQuads.size() - prevGroupStart,
+						true,
+						element->hasFlippedUv()
+					});
+			}
+			else
+			{
+				// Add transparent render data
+				transparentRenderData.push_back(UIRenderData
+					{
+						element->getTexture(),
+						element->getSrcBlend(),
+						element->getDstBlend(),
+						element->getColor(),
+						element->getShader(),
+						clipRect,
+						start,
+						transparentQuads.size() - start,
+						true,
+						element->hasFlippedUv()
+					});
+			}
 
 			// Set index
 			for (Uint32 i = start; i < transparentQuads.size(); ++i)
@@ -474,6 +525,9 @@ bool UISystem::load(const std::string& fname)
 
 				else if (dynamic_cast<TextInput*>(element))
 					Pool<TextInput>::free(dynamic_cast<TextInput*>(element));
+
+				else if (dynamic_cast<ProgressBar*>(element))
+					Pool<ProgressBar>::free(dynamic_cast<ProgressBar*>(element));
 
 				else
 					Pool<UIElement>::free(element);

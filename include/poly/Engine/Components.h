@@ -1,6 +1,7 @@
 #ifndef POLY_ENGINE_COMPONENTS_H
 #define POLY_ENGINE_COMPONENTS_H
 
+#include <poly/Math/Quaternion.h>
 #include <poly/Math/Vector3.h>
 
 namespace poly
@@ -20,12 +21,11 @@ struct TransformComponent
 	///////////////////////////////////////////////////////////
 	TransformComponent() :
 		m_position	(0.0f),
-		m_rotation	(0.0f),
 		m_scale		(1.0f)
 	{ }
 
 	Vector3f m_position;	// The position
-	Vector3f m_rotation;	// The rotation
+	Quaternion m_rotation;	// The rotation
 	Vector3f m_scale;		// The scale
 };
 

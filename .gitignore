@@ -12,7 +12,9 @@ _deps
 
 # Ignore build files
 build/
+extlibs/cache
 *.log
+*.dll
 
 # Ignore documentation files
 generated_docs/

@@ -4,6 +4,8 @@
 #include <poly/UI/Text.h>
 #include <poly/UI/UIParser.h>
 
+#include <SFML/System/Utf.hpp>
+
 namespace poly
 {
 
@@ -21,6 +23,7 @@ Text::Text() :
 	m_characterSize		(12),
 	m_characterSpacing	(0.0f),
 	m_lineSpacing		(3.0f),
+	m_textureHeight		(0),
 	m_stringChanged		(false),
 	m_isCentered		(false)
 {
@@ -99,8 +102,22 @@ void Text::setFont(Font* font)
 ///////////////////////////////////////////////////////////
 void Text::setString(const std::string& string)
 {
+	m_string = Utf32::fromUtf8(string);
+	m_stringChanged = true;
+
+	// Resize the character colors array
+	m_characterColors.resize(m_string.size(), Vector3f(m_color));
+}
+
+
+///////////////////////////////////////////////////////////
+void Text::setString(const Utf32String& string)
+{
 	m_string = string;
 	m_stringChanged = true;
+
+	// Resize the character colors array
+	m_characterColors.resize(m_string.size(), Vector3f(m_color));
 }
 
 
@@ -157,6 +174,25 @@ void Text::setOrigin(UIPosition origin)
 
 
 ///////////////////////////////////////////////////////////
+void Text::setCharacterColors(const Vector3f& color, Uint32 offset, Uint32 num)
+{
+	// The string and colors array will always have the same size
+
+	Uint32 end = offset + num;
+	if (end > m_string.size())
+		end = m_string.size();
+
+	// Update colors
+	for (Uint32 i = offset; i < end; ++i)
+	{
+		m_characterColors[i] = color;
+		if (i < m_quads.size())
+			m_quads[i].m_color = Vector4f(color, 1.0f);
+	}
+}
+
+
+///////////////////////////////////////////////////////////
 Font* Text::getFont() const
 {
 	return m_font;
@@ -164,7 +200,7 @@ Font* Text::getFont() const
 
 
 ///////////////////////////////////////////////////////////
-const std::string& Text::getString() const
+const Utf32String& Text::getString() const
 {
 	return m_string;
 }
@@ -196,6 +232,13 @@ const Vector2f& Text::getCharacterOffset(Uint32 index)
 {
 	updateQuads();
 	return m_characterOffsets[index];
+}
+
+
+///////////////////////////////////////////////////////////
+const Vector3f& Text::getCharacterColor(Uint32 index) const
+{
+	return m_characterColors[index];
 }
 
 
@@ -232,13 +275,16 @@ void Text::updateQuads()
 	// Quit early if no font
 	if (!m_font) return;
 
-	if (m_stringChanged)
+	Texture* texture = m_font->getTexture(m_characterSize);
+	if (m_stringChanged || (texture && texture->getHeight() != m_textureHeight))
 	{
+		// Get height before updating quads
+		if (texture)
+			m_textureHeight = texture->getHeight();
+
+		// Resize arrays
 		m_quads.resize(m_string.size());
 		m_characterOffsets.resize(m_string.size() + 1);
-
-		// Set texture
-		m_texture = &m_font->getTexture(m_characterSize);
 
 		// Keep track of x position
 		Vector2f currentPos(0.0f);
@@ -265,14 +311,14 @@ void Text::updateQuads()
 
 			// Set quad properties
 			m_quads[i].m_origin = Vector2f(0.0f);
-			m_quads[i].m_color = m_color;
+			m_quads[i].m_color = Vector4f(m_characterColors[i], 1.0f);
 
 			// Set size
 			m_quads[i].m_size.x = glyph.m_glyphRect.z;
 			m_quads[i].m_size.y = glyph.m_glyphRect.w;
 
 			// Set texture rectangle
-			m_quads[i].m_textureRect = glyph.m_textureRect;
+			m_quads[i].m_textureRect = glyph.m_textureRectf;
 
 			// Set character offsets
 			m_characterOffsets[i].x = currentPos.x + glyph.m_glyphRect.x;
@@ -292,6 +338,9 @@ void Text::updateQuads()
 				maxWidth = currentPos.x;
 		}
 
+		// Set texture (this has to be after the glyph loop to ensure the texture has been generated)
+		m_texture = m_font->getTexture(m_characterSize);
+
 		// Update character y-offsets
 		for (Uint32 i = 0; i < m_string.size(); ++i)
 			m_characterOffsets[i].y += m_glyphYMax;
@@ -305,6 +354,14 @@ void Text::updateQuads()
 
 		// The size probably changed, so mark transforms dirty
 		markTransformDirty();
+
+		// Check if height changed during the time the quad update occured
+		if (texture && m_textureHeight != m_texture->getHeight())
+			// If it did, need to update again
+			updateQuads();
+
+		// Update texture height;
+		m_textureHeight = m_texture->getHeight();
 
 		m_stringChanged = false;
 	}

@@ -4,7 +4,7 @@ project(polygine)
 # Version numbers
 set(VERSION_MAJOR 0)
 set(VERSION_MINOR 0)
-set(VERSION_PATCH 4)
+set(VERSION_PATCH 5)
 set(VERSION_STR "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 
 set(POLY_BUILD_EXAMPLES FALSE CACHE BOOL "Set TRUE to build Polygine examples")
@@ -36,31 +36,18 @@ add_subdirectory(src)
 add_subdirectory(extlibs)
 
 # Install
-install(TARGETS polygine DESTINATION "${CMAKE_INSTALL_LIBDIR}" EXPORT polygine)
+install(TARGETS polygine DESTINATION "${CMAKE_INSTALL_LIBDIR}" EXPORT polygine-export)
 install(DIRECTORY "${PROJECT_SOURCE_DIR}/include/poly" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
 
 install(FILES license.md DESTINATION "share/doc/polygine")
 install(FILES readme.md DESTINATION "share/doc/polygine")
 
-# Setup for find_package
-# set(POLY_INCLUDE_DIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}")
-# set(POLY_LIB_DIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
-# configure_file(
-#     cmake/polygine-config.cmake.in
-#     "${PROJECT_BINARY_DIR}/polygine-config.cmake" @ONLY)
-# install(
-#     FILES "${PROJECT_BINARY_DIR}/polygine-config.cmake"
-#     DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/polygine")
-
-# configure_file(
-#     cmake/polygine-config-version.cmake.in
-#     "${PROJECT_BINARY_DIR}/polygine-config-version.cmake" @ONLY)
-# install(
-#     FILES "${PROJECT_BINARY_DIR}/polygine-config-version.cmake"
-#     DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/polygine")
-
-# Export
-# install(EXPORT polygine DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/polygine")
+install(EXPORT polygine-export
+    FILE PolygineTargets.cmake
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/polygine)
+install(
+    FILES ${CMAKE_SOURCE_DIR}/cmake/PolygineConfig.cmake
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/polygine)
 
 
 # Build examples

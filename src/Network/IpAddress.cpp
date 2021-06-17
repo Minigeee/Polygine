@@ -1,0 +1,87 @@
+#include <poly/Network/IpAddress.h>
+
+namespace poly
+{
+
+
+///////////////////////////////////////////////////////////
+const IpAddress IpAddress::None;
+
+///////////////////////////////////////////////////////////
+const IpAddress IpAddress::Any(0, 0, 0, 0);
+
+///////////////////////////////////////////////////////////
+const IpAddress IpAddress::LocalHost(127, 0, 0, 1);
+
+///////////////////////////////////////////////////////////
+const IpAddress IpAddress::Broadcast(255, 255, 255, 255);
+
+
+///////////////////////////////////////////////////////////
+IpAddress::IpAddress()
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
+IpAddress::IpAddress(const std::string& address) :
+	m_address			(address)
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
+IpAddress::IpAddress(const char* address) :
+	m_address			(address)
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
+IpAddress::IpAddress(Uint8 byte1, Uint8 byte2, Uint8 byte3, Uint8 byte4) :
+	m_address			(byte1, byte2, byte3, byte4)
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
+IpAddress::IpAddress(Uint32 address) :
+	m_address			(address)
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
+std::string IpAddress::toString() const
+{
+	return m_address.toString();
+}
+
+
+///////////////////////////////////////////////////////////
+Uint32 IpAddress::toInteger() const
+{
+	return m_address.toInteger();
+}
+
+
+///////////////////////////////////////////////////////////
+IpAddress IpAddress::getLocalAddress()
+{
+	return IpAddress(sf::IpAddress::getLocalAddress().toInteger());
+}
+
+
+///////////////////////////////////////////////////////////
+IpAddress IpAddress::getPublicAddress(Time timeout)
+{
+	return IpAddress(sf::IpAddress::getPublicAddress(sf::microseconds(timeout.toMicroseconds())).toInteger());
+}
+
+
+}

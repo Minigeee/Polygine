@@ -1,6 +1,8 @@
 #ifndef POLY_TEXT_H
 #define POLY_TEXT_H
 
+#include <poly/Core/Utf.h>
+
 #include <poly/UI/UIElement.h>
 
 namespace poly
@@ -60,6 +62,19 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	void setString(const std::string& string);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the text string
+	///
+	/// Changing the text string will cause the pixel size of the
+	/// element to be changed to match the bounds of the new
+	/// string. Changing the text string will also reset any
+	/// characters with a different color.
+	///
+	/// \param string The string to render
+	///
+	///////////////////////////////////////////////////////////
+	void setString(const Utf32String& string);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the text character size
@@ -136,6 +151,26 @@ public:
 	void setOrigin(UIPosition origin);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Set the character colors of a character range
+	///
+	/// Setting the range of characters to a different color will
+	/// cause the text element to be rendered in more than a single
+	/// render call, as a single render call is required for each
+	/// text color. This is because the text uses subpixel rendering,
+	/// the color can't be changed mid render.
+	///
+	/// If the given range is out of bounds, only the characters that
+	/// are in the valid range of the string will have their colors
+	/// changed. Using setColor() will override all character colors.
+	///
+	/// \param color The color to assign to the characters
+	/// \param offset The character offset of the range to change
+	/// \param num The number of characters in the range to change
+	///
+	///////////////////////////////////////////////////////////
+	void setCharacterColors(const Vector3f& color, Uint32 offset, Uint32 num);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the text font
 	///
 	/// \return A pointer to the text font
@@ -149,7 +184,7 @@ public:
 	/// \return The display string
 	///
 	///////////////////////////////////////////////////////////
-	const std::string& getString() const;
+	const Utf32String& getString() const;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the text character size
@@ -186,6 +221,16 @@ public:
 	const Vector2f& getCharacterOffset(Uint32 index);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Get the color of a text character
+	///
+	/// \param index The index of the character color to retreive
+	///
+	/// \return The RGB color of a character color
+	///
+	///////////////////////////////////////////////////////////
+	const Vector3f& getCharacterColor(Uint32 index) const;
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the maximum height of all characters in the string, starting from the baseline of the glyph
 	///
 	/// \return The maximum glyph y-value
@@ -215,15 +260,17 @@ private:
 
 private:
 	Font* m_font;								//!< A text font
-	std::string m_string;						//!< The string to render
+	Utf32String m_string;						//!< The string to render
 	Uint32 m_characterSize;						//!< The character size
 	float m_characterSpacing;					//!< The character spacing
 	float m_lineSpacing;						//!< The line spacing
 
 	std::vector<UIQuad> m_quads;				//!< A cache of UI quads
 	std::vector<Vector2f> m_characterOffsets;	//!< A list of character offsets
-	float m_glyphYMax;							//!< The clyph's y-max
-	float m_glyphYMin;							//!< The clyph's y-min
+	std::vector<Vector3f> m_characterColors;	//!< A list of character colors
+	float m_glyphYMax;							//!< The glyph's y-max
+	float m_glyphYMin;							//!< The glyph's y-min
+	Uint32 m_textureHeight;						//!< Keep track of the font's texture height to know when to update quads
 	bool m_stringChanged;						//!< True if the string was changed
 	bool m_isCentered;							//!< True if the text is vertically centered
 };

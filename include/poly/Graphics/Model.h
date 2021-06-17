@@ -169,6 +169,14 @@ public:
 	const std::vector<Vertex>& getVertices() const;
 
 	///////////////////////////////////////////////////////////
+	/// \brief Get the list of vertex indices
+	///
+	/// \return The list of vertex indices
+	///
+	///////////////////////////////////////////////////////////
+	const std::vector<Uint32>& getIndices() const;
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the number of meshes contained within the model
 	///
 	/// \return The number of meshes in the model

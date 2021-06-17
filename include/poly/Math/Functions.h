@@ -4,7 +4,7 @@
 namespace poly
 {
 
-#define PI 3.14159265f
+constexpr float PI = 3.14159265f;
 
 float rad(float deg);
 

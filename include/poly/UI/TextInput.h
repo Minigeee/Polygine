@@ -215,7 +215,7 @@ public:
 	/// \return The text value of the input
 	///
 	///////////////////////////////////////////////////////////
-	const std::string& getValue() const;
+	const Utf32String& getValue() const;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the key designated as the submit key
@@ -306,7 +306,7 @@ public:
 	/// \param func The callback function
 	///
 	///////////////////////////////////////////////////////////
-	void onValueChange(const std::function<void(const std::string&)>& func);
+	void onValueChange(const std::function<void(const Utf32String&)>& func);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the callback function that gets called when the element gains focus
@@ -330,7 +330,7 @@ public:
 	/// \param func The callback function
 	///
 	///////////////////////////////////////////////////////////
-	void onSubmit(const std::function<void(const std::string&)>& func);
+	void onSubmit(const std::function<void(const Utf32String&)>& func);
 
 private:
 	void onMouseButton(const E_MouseButton& e) override;
@@ -366,10 +366,10 @@ private:
 	Uint32 m_selectStart;		//!< The start position of the text selection (mostly used for UI purposes)
 	bool m_isPressed;			//!< This is true if the element is pressed
 
-	std::function<void(const std::string&)> m_onValueChanged;
+	std::function<void(const Utf32String&)> m_onValueChanged;
 	std::function<void()> m_onGainFocus;
 	std::function<void()> m_onLoseFocus;
-	std::function<void(const std::string&)> m_onSubmit;
+	std::function<void(const Utf32String&)> m_onSubmit;
 };
 
 }

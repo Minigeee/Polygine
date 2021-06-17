@@ -1,5 +1,7 @@
 #include <poly/Core/Profiler.h>
 
+#include <fstream>
+
 namespace poly
 {
 
@@ -150,7 +152,7 @@ void Profiler::addMarker(const ProfilerMarker& marker)
 	ProfilerData* data;
 
 	// Construct marker name
-	std::string name = marker.getLabel() + ':' + marker.getFunc();
+	std::string name = marker.getFunc() + ':' + marker.getLabel();
 
 	// Data is accessed from here on
 	std::lock_guard<std::mutex> lock(m_mutex);
@@ -196,7 +198,7 @@ const ProfilerData& Profiler::getData(const std::string& func, const std::string
 	ProfilerData* data;
 
 	// Try to find data, if can't find, create new entry
-	std::string name = label + ':' + func;
+	std::string name = func + ':' + label;
 
 	// Get access to data
 	std::lock_guard<std::mutex> lock(m_mutex);
@@ -216,6 +218,42 @@ const ProfilerData& Profiler::getData(const std::string& func, const std::string
 		data = &it.value();
 
 	return *data;
+}
+
+
+///////////////////////////////////////////////////////////
+const HashMap<std::string, ProfilerData>& Profiler::getData()
+{
+	return m_data;
+}
+
+
+///////////////////////////////////////////////////////////
+bool Profiler::save(const std::string& fname, const HashSet<std::string>& exclude)
+{
+	std::ofstream file(fname);
+	if (!file.is_open())
+		return false;
+
+	for (auto it = m_data.begin(); it != m_data.end(); ++it)
+	{
+		if (exclude.find(it->first) != exclude.end())
+			continue;
+
+		const ProfilerData& data = it->second;
+		float mean = data.mean().toMicroseconds() * 0.001f;
+		float stdDev = data.stdDev().toMicroseconds() * 0.001f;
+		const std::vector<Time> averages = data.m_averages;
+
+		file << it->first << ',' << mean << ',' << stdDev;
+		for (Uint32 i = 0; i < averages.size(); ++i)
+			file << ',' << (averages[i].toMicroseconds() * 0.001f);
+		file << '\n';
+	}
+
+	file.close();
+
+	return true;
 }
 
 

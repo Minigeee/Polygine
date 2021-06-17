@@ -173,6 +173,20 @@ Quaternion Quaternion::operator*(const Quaternion& q) const
 
 
 ///////////////////////////////////////////////////////////
+bool Quaternion::operator==(const Quaternion& q) const
+{
+	return x == q.x && y == q.y && z == q.z && w == q.w;
+}
+
+
+///////////////////////////////////////////////////////////
+bool Quaternion::operator!=(const Quaternion& q) const
+{
+	return x != q.x || y != q.y || z != q.z || w != q.w;
+}
+
+
+///////////////////////////////////////////////////////////
 Quaternion Quaternion::operator-() const
 {
 	return Quaternion(-x, -y, -z, -w);

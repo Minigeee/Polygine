@@ -1,103 +1,89 @@
-function(add_dependency name target src)
-    # Find package
-    find_package(${name} QUIET)
+include(${CMAKE_SOURCE_DIR}/cmake/CPM.cmake)
 
-    # If not found, get submodule
-    if (NOT &{name}_FOUND AND NOT EXISTS "${PROJECT_SOURCE_DIR}/extlibs/${src}/CMakeLists.txt")
-        message(STATUS "Getting ${name}...")
+set(CPM_SOURCE_CACHE "${CMAKE_SOURCE_DIR}/extlibs/cache")
 
-        # Get submodule
-        execute_process(COMMAND git submodule update --init -- "${PROJECT_SOURCE_DIR}/extlibs/${src}"
-                        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-    else()
-        message(STATUS "Found ${name}")
-    endif()
+# ReactPhysics3D
+CPMAddPackage("gh:DanielChappuis/reactphysics3d#master")
+target_link_libraries(polygine reactphysics3d)
+configure_file("${CMAKE_SOURCE_DIR}/extlibs/reactphysics3d/PhysicsWorld.h" "${reactphysics3d_SOURCE_DIR}/include/reactphysics3d/engine/PhysicsWorld.h")
+configure_file("${CMAKE_SOURCE_DIR}/extlibs/reactphysics3d/CollisionBody.h" "${reactphysics3d_SOURCE_DIR}/include/reactphysics3d/body/CollisionBody.h")
+configure_file("${CMAKE_SOURCE_DIR}/extlibs/reactphysics3d/RigidBody.h" "${reactphysics3d_SOURCE_DIR}/include/reactphysics3d/body/RigidBody.h")
+configure_file("${CMAKE_SOURCE_DIR}/extlibs/reactphysics3d/Components.h" "${reactphysics3d_SOURCE_DIR}/include/reactphysics3d/components/Components.h")
+configure_file("${CMAKE_SOURCE_DIR}/extlibs/reactphysics3d/ColliderComponents.h" "${reactphysics3d_SOURCE_DIR}/include/reactphysics3d/components/ColliderComponents.h")
+configure_file("${CMAKE_SOURCE_DIR}/extlibs/reactphysics3d/CollisionBodyComponents.h" "${reactphysics3d_SOURCE_DIR}/include/reactphysics3d/components/CollisionBodyComponents.h")
+configure_file("${CMAKE_SOURCE_DIR}/extlibs/reactphysics3d/RigidBodyComponents.h" "${reactphysics3d_SOURCE_DIR}/include/reactphysics3d/components/RigidBodyComponents.h")
+configure_file("${CMAKE_SOURCE_DIR}/extlibs/reactphysics3d/TransformComponents.h" "${reactphysics3d_SOURCE_DIR}/include/reactphysics3d/components/TransformComponents.h")
+target_include_directories(polygine PRIVATE ${reactphysics3d_SOURCE_DIR}/include)
+if(NOT DEFINED reactphysics3d_FOUND)
+    install(TARGETS reactphysics3d DESTINATION "${CMAKE_INSTALL_LIBDIR}" EXPORT polygine-export)
+endif()
 
-    if (NOT &{name}_FOUND)
-        set(${name}_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/extlibs/${src}/include")
-    endif()
-    
-    # Add project
-    add_subdirectory("${src}")
+# Use local packages if available
+set(CPM_USE_LOCAL_PACKAGES)
 
-    # Link
-    target_link_libraries(polygine PUBLIC ${target})
+# Hopscotch Map
+CPMAddPackage("gh:Tessil/hopscotch-map#master")
+target_include_directories(polygine PUBLIC
+    $<BUILD_INTERFACE:${hopscotch-map_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>)
+install(DIRECTORY ${hopscotch-map_SOURCE_DIR}/include DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
-    # Export
-    # install(TARGETS ${target} EXPORT polygine)
-endfunction()
+# GLFW
+CPMAddPackage("gh:glfw/glfw#master")
+target_link_libraries(polygine glfw)
+target_include_directories(polygine PUBLIC
+    $<BUILD_INTERFACE:${glfw_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>)
+if(NOT DEFINED glfw_FOUND)
+    install(TARGETS glfw DESTINATION "${CMAKE_INSTALL_LIBDIR}" EXPORT polygine-export)
+    install(DIRECTORY ${glfw_SOURCE_DIR}/include DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+endif()
 
-function(add_dependency_headers name src include_dir)
-    # If not found, get submodule
-    if (NOT EXISTS "${PROJECT_SOURCE_DIR}/extlibs/${src}")
-        message(STATUS "Getting ${name}...")
+# Assimp
+CPMAddPackage("gh:assimp/assimp#v5.0.1")
+target_link_libraries(polygine assimp)
+target_include_directories(polygine PRIVATE ${assimp_SOURCE_DIR}/include)
+if(NOT DEFINED assimp_FOUND)
+    install(TARGETS zlibstatic IrrXML assimp DESTINATION "${CMAKE_INSTALL_LIBDIR}" EXPORT polygine-export)
+endif()
 
-        # Get submodule
-        execute_process(COMMAND git submodule update --init -- "${PROJECT_SOURCE_DIR}/extlibs/${src}"
-                        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-    else()
-        message(STATUS "Found ${name}")
-    endif()
-    
-    # Add includes
-    target_include_directories(polygine PUBLIC
-        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extlibs/${src}/include>
-        $<INSTALL_INTERFACE:include>)
+# Freetype
+CPMAddPackage("gh:freetype/freetype#master")
+target_link_libraries(polygine freetype)
+target_include_directories(polygine PRIVATE ${freetype_SOURCE_DIR}/include)
+if(NOT DEFINED freetype_FOUND)
+    install(TARGETS freetype DESTINATION "${CMAKE_INSTALL_LIBDIR}" EXPORT polygine-export)
+endif()
 
-    # Install headers
-    install(DIRECTORY "${PROJECT_SOURCE_DIR}/extlibs/${src}/include/${include_dir}" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
-endfunction()
+# SFML
+CPMAddPackage("gh:SFML/SFML#master")
+set(SFML_BUILD_GRAPHICS FALSE)
+set(SFML_BUILD_WINDOW FALSE)
+target_link_libraries(polygine sfml-system sfml-audio sfml-network)
+target_include_directories(polygine PUBLIC
+    $<BUILD_INTERFACE:${SFML_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>)
+if(NOT DEFINED SFML_FOUND)
+    install(TARGETS sfml-system sfml-audio sfml-network DESTINATION "${CMAKE_INSTALL_LIBDIR}" EXPORT polygine-export)
+    install(DIRECTORY ${SFML_SOURCE_DIR}/include DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+endif()
 
-# Cmake dependencies
-add_dependency_headers(tsl-hopscotch-map hopscotch-map tsl)
+# Stb
+CPMAddPackage("gh:nothings/stb#master")
+target_include_directories(polygine PRIVATE ${stb_SOURCE_DIR})
 
-add_dependency(glfw glfw glfw)
-add_dependency(assimp assimp assimp)
-add_dependency(freetype freetype freetype)
+# Fastnoise
+CPMAddPackage("gh:Auburn/FastNoiseLite#master")
+target_include_directories(polygine PRIVATE ${FastNoiseLite_SOURCE_DIR}/Cpp)
 
 # Glad
 target_include_directories(polygine PUBLIC
-    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extlibs/glad/include>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/extlibs/glad/include>
     $<INSTALL_INTERFACE:include>)
-target_sources(polygine PRIVATE "${PROJECT_SOURCE_DIR}/extlibs/glad/src/glad.c")
-install(DIRECTORY "${PROJECT_SOURCE_DIR}/extlibs/glad/include/glad" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+target_sources(polygine PRIVATE ${CMAKE_SOURCE_DIR}/extlibs/glad/src/glad.c)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/extlibs/glad/include DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
-# stb_image
-if (NOT EXISTS "${PROJECT_SOURCE_DIR}/extlibs/stb/stb_image.h")
-    message(STATUS "Getting stb_image.h...")
-
-    # Get submodule
-    execute_process(COMMAND git submodule update --init -- "${PROJECT_SOURCE_DIR}/extlibs/stb"
-                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-else()
-    message(STATUS "Found stb_image.h")
-endif()
-
+# RapidXML
 target_include_directories(polygine PUBLIC
-    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extlibs/stb>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/extlibs/rapidxml/include>
     $<INSTALL_INTERFACE:include>)
-install(DIRECTORY "${PROJECT_SOURCE_DIR}/extlibs/stb" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
-
-# FastNoise
-if (NOT EXISTS "${PROJECT_SOURCE_DIR}/extlibs/FastNoise/Cpp/FastNoiseLite.h")
-    message(STATUS "Getting FastNoiseLite.h...")
-
-    # Get submodule
-    execute_process(COMMAND git submodule update --init -- "${PROJECT_SOURCE_DIR}/extlibs/FastNoise"
-                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-else()
-    message(STATUS "Found FastNoiseLite.h")
-endif()
-
-target_include_directories(polygine PUBLIC
-    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extlibs/FastNoise/Cpp>
-    $<INSTALL_INTERFACE:include>)
-install(FILES "${PROJECT_SOURCE_DIR}/extlibs/FastNoise/Cpp/FastNoiseLite.h" TYPE INCLUDE)
-
-# RapidXml
-target_include_directories(polygine PUBLIC
-    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extlibs/rapidxml/include>
-    $<INSTALL_INTERFACE:include>)
-
-# Install headers
-install(DIRECTORY "${PROJECT_SOURCE_DIR}/extlibs/rapidxml/include" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")

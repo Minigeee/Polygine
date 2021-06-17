@@ -17,6 +17,8 @@
 
 #include <poly/Math/Transform.h>
 
+#include <iostream>
+
 #define BASE_SIZE 16.0f
 
 namespace poly
@@ -288,6 +290,9 @@ void Octree::split(Node* node)
 		{
 			EntityData* data = child->m_data[j];
 			priv::updateBoundingBox(child->m_boundingBox, data->m_boundingBox);
+
+			// Also update the data's containing node reference
+			data->m_node = child;
 		}
 
 		// Update parent bounding box
@@ -371,6 +376,8 @@ void Octree::add(Entity::Id entity)
 	data->m_transform = transform;
 	data->m_group = getRenderGroup(r.m_renderable, skeleton);
 	data->m_castsShadows = r.m_castsShadows;
+
+	std::unique_lock<std::mutex> lock(m_mutex);
 
 	// Add to map
 	m_dataMap[entity] = data;
@@ -584,11 +591,14 @@ void Octree::update(const Entity::Id& entity, RenderComponent& r, TransformCompo
 
 	Node* node = data->m_node;
 
+	// Lock
+	std::unique_lock<std::mutex> lock(m_mutex);
+
 	// Get cell info
 	float cellSize = BASE_SIZE * powf(2.0f, (float)node->m_level - 1.0f);
 	Vector3f cellMin = node->m_boundingBox.m_min / cellSize;
-	Vector3f cellMax = cellMin + Vector3f(cellSize);
 	cellMin = Vector3f(roundf(cellMin.x), roundf(cellMin.y), roundf(cellMin.z)) * cellSize;
+	Vector3f cellMax = cellMin + Vector3f(cellSize);
 
 	// Check if the bounding box is still inside correct area
 	Vector3f pos = bbox.getCenter();
@@ -623,6 +633,9 @@ void Octree::remove(Entity::Id entity)
 {
 	ASSERT(m_scene, "The octree must be initialized before using, by calling the init() function");
 
+	// Lock
+	std::unique_lock<std::mutex> lock(m_mutex);
+
 	// Get node
 	EntityData* data = m_dataMap[entity];
 	Node* node = data->m_node;
@@ -636,6 +649,40 @@ void Octree::remove(Entity::Id entity)
 			// Remove it
 			nodeData[i] = nodeData.back();
 			nodeData.pop_back();
+		}
+	}
+
+	// Check if the parent node will have a small enough number of entities to merge
+	if (node->m_parent)
+	{
+		// Count the number of entities
+		Uint32 numEntities = 0;
+		for (Uint32 i = 0; i < 8; ++i)
+			numEntities += node->m_parent->m_children[i]->m_data.size();
+
+		if (numEntities < (Uint32)(0.7f * m_maxPerCell))
+		{
+			// Merge
+			Node* parent = node->m_parent;
+			std::vector<EntityData*>& parentData = parent->m_data;
+
+			for (Uint32 i = 0; i < 8; ++i)
+			{
+				// Append all child node data
+				std::vector<EntityData*>& childData = parent->m_children[i]->m_data;
+				parentData.insert(parentData.end(), childData.begin(), childData.end());
+			}
+
+			// Update the containing node of each entity
+			for (Uint32 i = 0; i < parentData.size(); ++i)
+				parentData[i]->m_node = parent;
+
+			// Remove the children node
+			for (Uint32 i = 0; i < 8; ++i)
+			{
+				m_nodePool.free(parent->m_children[i]);
+				parent->m_children[i] = 0;
+			}
 		}
 	}
 
@@ -657,7 +704,10 @@ void Octree::render(Camera& camera, RenderPass pass)
 	// Get entity data
 	std::vector<std::vector<EntityData*>> entityData(m_renderGroups.size());
 	const Frustum& frustum = camera.getFrustum();
-	getRenderData(m_root, frustum, entityData, camera.getPosition(), pass);
+	{
+		std::unique_lock<std::mutex> lock(m_mutex);
+		getRenderData(m_root, frustum, entityData, camera.getPosition(), pass);
+	}
 	
 	// Get number of visible entities
 	Uint32 numVisible = 0;
@@ -714,6 +764,7 @@ void Octree::render(Camera& camera, RenderPass pass)
 				data.m_vertexArray = &mesh->m_vertexArray;
 				data.m_material = &mesh->m_material;
 				data.m_shader = mesh->m_shader;
+				data.m_transparent = data.m_material->isTransparent();
 				renderData.push_back(data);
 			}
 		}
@@ -722,6 +773,7 @@ void Octree::render(Camera& camera, RenderPass pass)
 			data.m_vertexArray = &billboard->getVertexArray();
 			data.m_material = billboard->getMaterial();
 			data.m_shader = billboard->getShader();
+			data.m_transparent = data.m_material->isTransparent();
 			renderData.push_back(data);
 		}
 		else
@@ -744,7 +796,9 @@ void Octree::render(Camera& camera, RenderPass pass)
 	std::sort(renderData.begin(), renderData.end(),
 		[](const RenderData& a, const RenderData& b) -> bool
 		{
-			if (a.m_shader == b.m_shader)
+			if (a.m_transparent && !b.m_transparent)
+				return true;
+			else if (a.m_shader == b.m_shader)
 				return a.m_offset < b.m_offset;
 			else
 				return a.m_shader < b.m_shader;
@@ -754,10 +808,6 @@ void Octree::render(Camera& camera, RenderPass pass)
 
 	// Enable depth testing
 	glCheck(glEnable(GL_DEPTH_TEST));
-
-	// Single side render
-	glCheck(glEnable(GL_CULL_FACE));
-	glCheck(glCullFace(GL_BACK));
 
 	// Enable alpha blending
 	glCheck(glEnable(GL_BLEND));

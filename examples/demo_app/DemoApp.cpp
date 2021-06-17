@@ -1,3 +1,9 @@
+﻿#include <poly/Audio/AudioFileWriter.h>
+#include <poly/Audio/AudioRecorder.h>
+#include <poly/Audio/AudioStream.h>
+#include <poly/Audio/Music.h>
+#include <poly/Audio/Sound.h>
+
 #include <poly/Core/Allocate.h>
 #include <poly/Core/Clock.h>
 #include <poly/Core/Logger.h>
@@ -13,7 +19,6 @@
 #include <poly/Graphics/Components.h>
 #include <poly/Graphics/FrameBuffer.h>
 
-#include <poly/Graphics/Grass.h>
 #include <poly/Graphics/Image.h>
 #include <poly/Graphics/Lighting.h>
 #include <poly/Graphics/Model.h>
@@ -35,6 +40,15 @@
 #include <poly/Math/Functions.h>
 #include <poly/Math/Noise.h>
 #include <poly/Math/Transform.h>
+
+#include <poly/Network/Packet.h>
+#include <poly/Network/TcpSocket.h>
+#include <poly/Network/UdpSocket.h>
+
+#include <poly/Physics/Components.h>
+#include <poly/Physics/Events.h>
+#include <poly/Physics/Physics.h>
+#include <poly/Physics/Shapes.h>
 
 #include <poly/UI/Button.h>
 #include <poly/UI/Dropdown.h>
@@ -59,7 +73,7 @@ void onTestPress(UIElement* elem)
     std::cout << btn->getString().c_str() << '\n';
 }
 
-void onSubmit(const std::string& text)
+void onSubmit(const Utf32String& text)
 {
     std::cout << text.c_str() << '\n';
 }
@@ -73,25 +87,78 @@ int main()
 
     // Create a new window
     window.create(1280, 720, "My Game");
-    // window.setVsyncEnabled(false);
+    window.setVsyncEnabled(false);
+
+    std::vector<Vertex> vertices =
+    {
+        // Front
+        Vertex(Vector3f(-0.5f, 0.5f, 0.5f), Vector3f(0.0f, 0.0f, 1.0f)),
+        Vertex(Vector3f(-0.5f, -0.5f, 0.5f), Vector3f(0.0f, 0.0f, 1.0f)),
+        Vertex(Vector3f(0.5f, 0.5f, 0.5f), Vector3f(0.0f, 0.0f, 1.0f)),
+        Vertex(Vector3f(-0.5f, -0.5f, 0.5f), Vector3f(0.0f, 0.0f, 1.0f)),
+        Vertex(Vector3f(0.5f, -0.5f, 0.5f), Vector3f(0.0f, 0.0f, 1.0f)),
+        Vertex(Vector3f(0.5f, 0.5f, 0.5f), Vector3f(0.0f, 0.0f, 1.0f)),
+
+        // Back
+        Vertex(Vector3f(0.5f, 0.5f, -0.5f), Vector3f(0.0f, 0.0f, -1.0f)),
+        Vertex(Vector3f(0.5f, -0.5f, -0.5f), Vector3f(0.0f, 0.0f, -1.0f)),
+        Vertex(Vector3f(-0.5f, 0.5f, -0.5f), Vector3f(0.0f, 0.0f, -1.0f)),
+        Vertex(Vector3f(0.5f, -0.5f, -0.5f), Vector3f(0.0f, 0.0f, -1.0f)),
+        Vertex(Vector3f(-0.5f, -0.5f, -0.5f), Vector3f(0.0f, 0.0f, -1.0f)),
+        Vertex(Vector3f(-0.5f, 0.5f, -0.5f), Vector3f(0.0f, 0.0f, -1.0f)),
+
+        // Right
+        Vertex(Vector3f(0.5f, 0.5f, 0.5f), Vector3f(1.0f, 0.0f, 0.0f)),
+        Vertex(Vector3f(0.5f, -0.5f, 0.5f), Vector3f(1.0f, 0.0f, 0.0f)),
+        Vertex(Vector3f(0.5f, 0.5f, -0.5f), Vector3f(1.0f, 0.0f, 0.0f)),
+        Vertex(Vector3f(0.5f, -0.5f, 0.5f), Vector3f(1.0f, 0.0f, 0.0f)),
+        Vertex(Vector3f(0.5f, -0.5f, -0.5f), Vector3f(1.0f, 0.0f, 0.0f)),
+        Vertex(Vector3f(0.5f, 0.5f, -0.5f), Vector3f(1.0f, 0.0f, 0.0f)),
+
+        // Right
+        Vertex(Vector3f(-0.5f, 0.5f, -0.5f), Vector3f(-1.0f, 0.0f, 0.0f)),
+        Vertex(Vector3f(-0.5f, -0.5f, -0.5f), Vector3f(-1.0f, 0.0f, 0.0f)),
+        Vertex(Vector3f(-0.5f, 0.5f, 0.5f), Vector3f(-1.0f, 0.0f, 0.0f)),
+        Vertex(Vector3f(-0.5f, -0.5f, -0.5f), Vector3f(-1.0f, 0.0f, 0.0f)),
+        Vertex(Vector3f(-0.5f, -0.5f, 0.5f), Vector3f(-1.0f, 0.0f, 0.0f)),
+        Vertex(Vector3f(-0.5f, 0.5f, 0.5f), Vector3f(-1.0f, 0.0f, 0.0f)),
+
+        // Top
+        Vertex(Vector3f(-0.5f, 0.5f, -0.5f), Vector3f(0.0f, 1.0f, 0.0f)),
+        Vertex(Vector3f(-0.5f, 0.5f, 0.5f), Vector3f(0.0f, 1.0f, 0.0f)),
+        Vertex(Vector3f(0.5f, 0.5f, -0.5f), Vector3f(0.0f, 1.0f, 0.0f)),
+        Vertex(Vector3f(-0.5f, 0.5f, 0.5f), Vector3f(0.0f, 1.0f, 0.0f)),
+        Vertex(Vector3f(0.5f, 0.5f, 0.5f), Vector3f(0.0f, 1.0f, 0.0f)),
+        Vertex(Vector3f(0.5f, 0.5f, -0.5f), Vector3f(0.0f, 1.0f, 0.0f)),
+
+        // Bottom
+        Vertex(Vector3f(0.5f, -0.5f, -0.5f), Vector3f(0.0f, -1.0f, 0.0f)),
+        Vertex(Vector3f(0.5f, -0.5f, 0.5f), Vector3f(0.0f, -1.0f, 0.0f)),
+        Vertex(Vector3f(-0.5f, -0.5f, -0.5f), Vector3f(0.0f, -1.0f, 0.0f)),
+        Vertex(Vector3f(0.5f, -0.5f, 0.5f), Vector3f(0.0f, -1.0f, 0.0f)),
+        Vertex(Vector3f(-0.5f, -0.5f, 0.5f), Vector3f(0.0f, -1.0f, 0.0f)),
+        Vertex(Vector3f(-0.5f, -0.5f, -0.5f), Vector3f(0.0f, -1.0f, 0.0f))
+    };
+
+    Model box;
+    box.addMesh(vertices);
 
     Model model("examples/models/character/character_flat.dae");
 
-    Skeleton skeletons[3];
+    Skeleton skeleton;
     Animation animation("examples/models/character/character_flat.dae", "Armature");
-    skeletons[0].load("examples/models/character/character_flat.dae");
-    skeletons[0].setAnimation(&animation);
-    skeletons[1] = skeletons[0];
-    skeletons[1].setAnimationTime(0.5f);
-    skeletons[2] = skeletons[0];
-    skeletons[2].setAnimationTime(0.5f);
-    skeletons[2].setAnimationSpeed(1.5f);
+    skeleton.load("examples/models/character/character_flat.dae");
+    skeleton.setAnimation(&animation);
 
     Camera camera;
     camera.setPosition(0.0f, 50.0f, 0.0f);
     camera.setRotation(0.0f, 0.0f);
 
     // UI
+    Font font;
+    font.load("examples/fonts/NotoSansCJKjp/NotoSansCJKjp-Regular.otf");
+    Text::setDefaultFont(&font);
+
     UI_XML_CALLBACK(onTestPress);
     UI_XML_CALLBACK(onSubmit);
 
@@ -100,6 +167,8 @@ int main()
     ui.load("examples/ui.xml");
 
     Text* fpsCounter = (Text*)ui.getElement("fps_counter");
+
+    // Load audio
 
     // Setup scene
     Scene scene;
@@ -117,6 +186,7 @@ int main()
     Image heightMap;
     float* heightMapData = (float*)MALLOC_DBG(1024 * 1024 * sizeof(float));
     noise.generateImage(heightMapData, 1024, 1024);
+
     heightMap.create(heightMapData, 1024, 1024, 1, GLType::Float, true);
     terrain.setHeightMap(heightMap);
 
@@ -135,8 +205,8 @@ int main()
             colorMapData[i] = Vector3<Uint8>(color * 255.0f);
         }
     }
-    heightMap.create(colorMapData, 1024, 1024, 3, GLType::Uint8, true);
-    terrain.setColorMap(heightMap);
+    colorMap.create(colorMapData, 1024, 1024, 3, GLType::Uint8, true);
+    terrain.setColorMap(colorMap);
 
     Octree octree;
     octree.create();
@@ -147,10 +217,6 @@ int main()
     skybox.setHorizonColor(Vector3f(0.6f, 0.8f, 0.6f));
     scene.addRenderSystem(&skybox);
     scene.getExtension<Lighting>()->setAmbientColor(0.3f * skybox.getAmbientColor());
-
-    Grass grass;
-    grass.setTerrain(&terrain);
-    scene.addRenderSystem(&grass);
 
     DirLightComponent sun;
     // sun.m_diffuse = Vector3f(0.08f, 0.15f, 0.25f) * 0.4f;
@@ -167,16 +233,42 @@ int main()
     lightT.m_position.y = 55.0f;
     scene.createEntity(lightT, light);
 
+    // Activate physics extension
+    Physics* physics = scene.getExtension<Physics>();
+    physics->setGravity(0.0f, -12.0f, 0.0f);
+
     TransformComponent t;
     t.m_position.y = 52.0f;
     t.m_scale = Vector3f(0.25f);
     RenderComponent r(&model);
     r.m_castsShadows = true;
-    scene.createEntity(t, r, AnimationComponent(&skeletons[0]), DynamicTag());
-    t.m_position.x = 5.0f;
-    scene.createEntity(t, r, AnimationComponent(&skeletons[1]), DynamicTag());
-    t.m_position.x = -5.0f;
-    scene.createEntity(t, r, AnimationComponent(&skeletons[2]), DynamicTag());
+    RigidBodyComponent rbody;
+    rbody.m_position.y = 55.0f;
+    rbody.m_mass = 65.0f;
+    rbody.m_inertiaTensor = Vector3f(INFINITY);
+    Entity player = scene.createEntity(t, r, AnimationComponent(&skeleton), rbody, DynamicTag());
+    CapsuleShape capsule(0.4f, 1.0f);
+    capsule.m_position = Vector3f(0.0f, 0.9f, 0.0f);
+    Collider playerCollider = physics->addCollider(player, capsule);
+    playerCollider.setFrictionCoefficient(1.0f);
+
+    t.m_scale = Vector3f(1.0f);
+
+    for (Uint32 i = 0; i < 10; ++i)
+    {
+        RigidBodyComponent rbody;
+        rbody.m_position = Vector3f(0.0f, 60.0f + 2 * i, -5.0f);
+        rbody.m_mass = 10.0f;
+        Entity boxEntity1 = scene.createEntity(t, RenderComponent(&box), rbody, DynamicTag());
+        physics->addCollider(boxEntity1, BoxShape(1.0f, 1.0f, 1.0f));
+    }
+
+    rbody.m_position = Vector3f(0.0f, 0.0f, 0.0f);
+    rbody.m_type = RigidBodyType::Static;
+    Entity terrainEntity = scene.createEntity(t, rbody, DynamicTag());
+    HeightMapShape terrainShape(heightMap, Vector3f(4000.0f, 200.0f, 4000.0f));
+    Collider terrainCollider = physics->addCollider(terrainEntity, terrainShape);
+    terrainCollider.setFrictionCoefficient(2.0f);
 
 
     Clock clock;
@@ -261,6 +353,53 @@ int main()
     };
 
 
+    HashSet<Entity::Id> touchingFeet;
+    bool onGround = false;
+    bool usedDoubleJump = false;
+    Clock leftGroundClock;
+    Clock dashClock;
+    const float jumpSpeed = 6.0f;
+
+    scene.addListener<E_PhysicsCollision>(
+        [&](const E_PhysicsCollision& e)
+        {
+            int playerIndex = -1;
+            if (e.m_entities[0] == player.getId())
+                playerIndex = 0;
+            else if (e.m_entities[1] == player.getId())
+                playerIndex = 1;
+            else
+                return;
+
+            if (e.m_type == CollisionEventType::Start)
+            {
+                for (Uint32 i = 0; i < e.m_numContacts; ++i)
+                {
+                    const ContactPoint& point = e.m_contacts[i];
+                    if (point.m_pointOnColliders[playerIndex].y < -0.8f)
+                    {
+                        touchingFeet.insert(e.m_entities[(playerIndex + 1) % 2]);
+                        onGround = true;
+                        usedDoubleJump = false;
+                    }
+                }
+            }
+            else
+            {
+                auto it = touchingFeet.find(e.m_entities[(playerIndex + 1) % 2]);
+                if (it != touchingFeet.end())
+                    touchingFeet.erase(it);
+
+                if (touchingFeet.size() == 0)
+                {
+                    leftGroundClock.restart();
+                    onGround = false;
+                }
+            }
+        }
+    );
+
+
     // Add an event listener
     HashMap<Keyboard, bool> keyMap;
     window.addListener<E_KeyEvent>(
@@ -280,9 +419,30 @@ int main()
                         fpsCounter = (Text*)ui.getElement("fps_counter");
                     }
                 }
+
+                if (e.m_key == Keyboard::Space)
+                {
+                    if (onGround || leftGroundClock.getElapsedTime().toSeconds() < 0.2f)
+                    {
+                        player.get<RigidBodyComponent>()->m_linearVelocity.y = jumpSpeed;
+                    }
+                    else if (!usedDoubleJump)
+                    {
+                        player.get<RigidBodyComponent>()->m_linearVelocity.y = jumpSpeed;
+                        usedDoubleJump = true;
+                    }
+                }
+
+                if (e.m_key == Keyboard::LeftShift)
+                {
+                    if (dashClock.getElapsedTime() > 5.0f)
+                        dashClock.restart();
+                }
             }
             else if (e.m_action == InputAction::Release)
+            {
                 keyMap[e.m_key] = false;
+            }
         }
     );
 
@@ -338,6 +498,7 @@ int main()
                     cameraRot.x = -89.0f;
 
                 camera.setRotation(cameraRot);
+                player.get<RigidBodyComponent>()->m_rotation = Quaternion(0.0f, -cameraRot.y + 180.0f, 0.0f);
             }
             else if (rightDown)
             {
@@ -419,29 +580,58 @@ int main()
         float elapsed = clock.restart().toSeconds();
         time += elapsed;
 
-        scene.system<TransformComponent>(
-            [&](const Entity::Id& id, TransformComponent& t)
-            {
-                t.m_rotation.y = 0.0f;
-            }
-        );
-
-        Vector3f move;
+        // Get lateral movement vector
+        Vector3f move(0.0f);
         if (keyMap[Keyboard::W])
             move += camera.getDirection();
         if (keyMap[Keyboard::S])
             move -= camera.getDirection();
-        if (keyMap[Keyboard::A])
-            move -= camera.getRightDir();
         if (keyMap[Keyboard::D])
             move += camera.getRightDir();
-        if (keyMap[Keyboard::Space])
-            move.y += 1.0f;
-        if (keyMap[Keyboard::LeftShift])
-            move.y -= 1.0f;
+        if (keyMap[Keyboard::A])
+            move -= camera.getRightDir();
 
-        if (length(move) != 0.0f)
-            camera.move(normalize(move) * elapsed * 3.4f);
+        const float maxVelocity = 5.0f;
+
+        // Get velocity
+        RigidBodyComponent* body = player.get<RigidBodyComponent>();
+        Vector3f velocity = body->m_linearVelocity * Vector3f(1, 0, 1);
+        float velocityMag = length(velocity);
+        Vector3f velocityDir = velocityMag == 0.0f ? Vector3f(0.0f) : velocity / velocityMag;
+
+        // Calculate drag factor
+        float coefficient = onGround ? 1000.0f : 50.0f;
+        Vector3f drag = -velocityDir * 0.5f * coefficient * velocityMag * velocityMag;
+
+        body->m_force += drag;
+
+        if (length(move) > 0.0f)
+        {
+            // Reduce friction while moving
+            playerCollider.setFrictionCoefficient(0.0f);
+
+            // Get lateral direction
+            move = normalize(Vector3f(move.x, 0.0f, move.z));
+
+            Vector3f force = move * 0.5f * coefficient * maxVelocity * maxVelocity;
+            body->m_force += force;
+        }
+        else
+            playerCollider.setFrictionCoefficient(1.0f);
+
+        scene.getExtension<Physics>()->update(elapsed);
+
+        // Copy position and rotation
+        scene.system<RigidBodyComponent, TransformComponent>(
+            [&](const Entity::Id& id, const RigidBodyComponent& rbody, TransformComponent& t)
+            {
+                t.m_position = rbody.m_position;
+                t.m_rotation = rbody.m_rotation;
+            }
+        );
+
+        TransformComponent* t = player.get<TransformComponent>();
+        camera.setPosition(t->m_position - 3.0f * camera.getDirection() + Vector3f(0.0f, 2.0f, 0.0f));
 
         const ProfilerData& data = Profiler::getData("main", "GameLoop");
 
@@ -466,11 +656,9 @@ int main()
         ui.update(elapsed);
 
         // Render scene
-        skeletons[0].update(elapsed);
-        // skeletons[1].update(elapsed);
-        // skeletons[2].update(elapsed);
-        scene.getExtension<Shadows>()->render(camera);
+        skeleton.update(elapsed);
         octree.update();
+        scene.getExtension<Shadows>()->render(camera);
         scene.render(camera, framebuffers[0]);
 
         ssao.render(framebuffers[0], framebuffers[1]);
@@ -488,11 +676,26 @@ int main()
         window.display();
     }
 
-    const ProfilerData& data = Profiler::getData("main", "GameLoop");
-    std::cout << data.mean().toMicroseconds() << '\n';
+    {
+        const ProfilerData& data = Profiler::getData("main", "GameLoop");
+        std::cout << "Game loop: " << data.mean().toMicroseconds() << '\n';
+    }
+    {
+        const ProfilerData& data = Profiler::getData("poly::Physics::update", "copyToEngine");
+        std::cout << "Copy to physics engine: " << data.mean().toMicroseconds() << '\n';
+    }
+    {
+        const ProfilerData& data = Profiler::getData("poly::Physics::update", "copyFromEngine");
+        std::cout << "Copy from physics engine: " << data.mean().toMicroseconds() << '\n';
+    }
+    {
+        const ProfilerData& data = Profiler::getData("poly::Physics::update");
+        std::cout << "Physics update: " << data.mean().toMicroseconds() << '\n';
+    }
+    {
+        const ProfilerData& data = Profiler::getData("poly::UISystem::render");
+        std::cout << "UISystem render: " << data.mean().toMicroseconds() << '\n';
+    }
 
     return 0;
 }
-
-// TODO : Move Grass to game project and document it
-// TODO : Make everything UTF-encoded compatible (UI XML parsing, etc...)

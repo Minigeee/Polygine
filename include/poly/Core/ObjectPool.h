@@ -3,6 +3,8 @@
 
 #include <poly/Core/DataTypes.h>
 
+#include <mutex>
+
 namespace poly
 {
 
@@ -378,6 +380,17 @@ public:
     ///////////////////////////////////////////////////////////
     static void free(T* ptr);
 
+    ///////////////////////////////////////////////////////////
+    /// \brief Check if the object pool has been initialized
+    ///
+    /// This will return false before the object pool has been
+    /// constructed, and after the object pool has been destroyed.
+    ///
+    /// \return True if the object pool is initialized and valid to use
+    ///
+    ///////////////////////////////////////////////////////////
+    static bool isInitialized();
+
 private:
     struct PoolWrapper
     {
@@ -386,6 +399,7 @@ private:
         ~PoolWrapper();
 
         TypePool<T> m_pool;
+        std::mutex m_mutex;
     };
 
 private:

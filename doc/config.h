@@ -4,10 +4,18 @@
 ///////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////
+/// \defgroup Audio Audio
+/// \brief Audio input and output classes
+///
+/// Sounds, music, audio streams, recording, 3D spatial sounds, etc.
+///
+///////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////
 /// \defgroup Core Core
 /// \brief Core utility classes
 ///
-/// Includes data structures, time utilities, logging, profiling,
+/// Data structures, memory management, time utilities, logging, profiling,
 /// multithreading, type reflection, etc.
 ///
 ///////////////////////////////////////////////////////////
@@ -16,8 +24,7 @@
 /// \defgroup Components Components
 /// \brief Built in ECS components
 ///
-/// Includes all the basic components needed for spatial, graphics,
-/// and physics entities.
+/// Basic components needed for spatial, graphics, and physics entities.
 ///
 ///////////////////////////////////////////////////////////
 
@@ -25,7 +32,7 @@
 /// \defgroup Engine Engine
 /// \brief Provides game engine specific features
 ///
-/// Includes ECS, event systems, scenes, user input, etc.
+/// ECS, event systems, scenes, user input, etc.
 ///
 ///////////////////////////////////////////////////////////
 
@@ -39,8 +46,8 @@
 /// \defgroup Graphics Graphics
 /// \brief Provides graphics and rendering related features
 ///
-/// Includes windows, meshes, shaders, materials, framebuffers,
-/// lighting, camera, shadows, etc.
+/// Windows, meshes, shaders, materials, framebuffers,
+/// lighting, camera, shadows, render systems, etc.
 ///
 ///////////////////////////////////////////////////////////
 
@@ -48,8 +55,25 @@
 /// \defgroup Math Math
 /// \brief Math related features
 ///
-/// Includes vectors, matrices, quaternions, geometry,
+/// Vectors, matrices, quaternions, geometry shapes,
 /// transforms, math functions, etc.
+///
+///////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////
+/// \defgroup Network Network
+/// \brief Network utility features
+///
+/// Ip addresses, sockets, TCP and UDP protocols
+///
+///////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////
+/// \defgroup Physics Physics
+/// \brief Provides physics simulation related features
+///
+/// Physics scene components and events, colliders
+/// with collision shapes, joints, and rigid body simulations.
 ///
 ///////////////////////////////////////////////////////////
 
@@ -57,6 +81,6 @@
 /// \defgroup UI UI
 /// \brief User interface related features
 ///
-/// Includes buttons, labels, scroll view, sliders, etc.
+/// UI elements: buttons, labels, scroll view, sliders, etc.
 ///
 ///////////////////////////////////////////////////////////

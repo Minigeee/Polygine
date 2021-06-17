@@ -6,8 +6,8 @@
 namespace poly
 {
 
-///////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////
 Scheduler::Scheduler() :
 	m_numBusy		(0),
 	m_numStopped	(0),
@@ -27,6 +27,8 @@ Scheduler::Scheduler() :
 	}
 }
 
+
+///////////////////////////////////////////////////////////
 Scheduler::Scheduler(Uint32 numWorkers) :
 	m_numBusy		(0),
 	m_shouldStop	(false)
@@ -35,14 +37,16 @@ Scheduler::Scheduler(Uint32 numWorkers) :
 		m_threads.push_back(std::thread(&Scheduler::workerLoop, this, i));
 }
 
+
+///////////////////////////////////////////////////////////
 Scheduler::~Scheduler()
 {
 	// Automatically stop on destructor
 	stop();
 }
 
-///////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////
 void Scheduler::workerLoop(Uint32 id)
 {
 	Logger::setThreadName("Worker #" + std::to_string(id + 1));
@@ -100,8 +104,8 @@ void Scheduler::workerLoop(Uint32 id)
 	++m_numStopped;
 }
 
-///////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////
 void Scheduler::finish()
 {
 	std::unique_lock<std::mutex> lock(m_mutex);
@@ -111,6 +115,8 @@ void Scheduler::finish()
 		m_fcv.wait(lock);
 }
 
+
+///////////////////////////////////////////////////////////
 void Scheduler::stop()
 {
 	{
@@ -149,6 +155,5 @@ void Scheduler::stop()
 	}
 }
 
-///////////////////////////////////////////////////////////
 
 }
