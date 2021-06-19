@@ -6,35 +6,16 @@
 
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
+#include <assimp/scene.h>
 
 #include <set>
 
 namespace poly
 {
 
+#ifndef DOXYGEN_SKIP
 namespace priv
 {
-
-
-///////////////////////////////////////////////////////////
-Matrix4f aiMatrixToMatrix4f(const aiMatrix4x4& t)
-{
-#ifdef USE_COLUMN_MAJOR
-	return Matrix4f(
-		t.a1, t.b1, t.c1, t.d1,
-		t.a2, t.b2, t.c2, t.d2,
-		t.a3, t.b3, t.c3, t.d3,
-		t.a4, t.b4, t.c4, t.d4
-	);
-#else
-	return Matrix4f(
-		t.a1, t.a2, t.a3, t.a4,
-		t.b1, t.b2, t.b3, t.b4,
-		t.c1, t.c2, t.c3, t.c4,
-		t.d1, t.d2, t.d3, t.d4
-	);
-#endif
-}
 
 
 ///////////////////////////////////////////////////////////
@@ -65,7 +46,10 @@ void getBoneTransforms(aiNode* node, const aiScene* scene, HashMap<std::string, 
 	// If the node name matches a bone name, set the id
 	auto it = transforms.find(node->mName.C_Str());
 	if (it != transforms.end())
-		it.value() = aiMatrixToMatrix4f(node->mTransformation);
+	{
+		const aiMatrix4x4& t = node->mTransformation;
+		it.value() = ASSIMP_TO_POLY_MAT4(t);
+	}
 
 	// Process all children nodes
 	for (Uint32 i = 0; i < node->mNumChildren; ++i)
@@ -74,6 +58,7 @@ void getBoneTransforms(aiNode* node, const aiScene* scene, HashMap<std::string, 
 
 
 }
+#endif
 
 
 ///////////////////////////////////////////////////////////

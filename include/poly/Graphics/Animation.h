@@ -7,8 +7,6 @@
 #include <poly/Math/Quaternion.h>
 #include <poly/Math/Vector3.h>
 
-#include <assimp/scene.h>
-
 #include <string>
 #include <vector>
 
@@ -16,12 +14,21 @@ namespace poly
 {
 
 #ifndef DOXYGEN_SKIP
-namespace priv
-{
-
-Matrix4f aiMatrixToMatrix4f(const aiMatrix4x4& t);
-
-}
+#ifdef USE_COLUMN_MAJOR
+#define ASSIMP_TO_POLY_MAT4(t) Matrix4f( \
+	t.a1, t.b1, t.c1, t.d1, \
+	t.a2, t.b2, t.c2, t.d2, \
+	t.a3, t.b3, t.c3, t.d3, \
+	t.a4, t.b4, t.c4, t.d4 \
+);
+#else
+#define ASSIMP_TO_POLY_MAT4(t) Matrix4f( \
+	t.a1, t.a2, t.a3, t.a4, \
+	t.b1, t.b2, t.b3, t.b4, \
+	t.c1, t.c2, t.c3, t.c4, \
+	t.d1, t.d2, t.d3, t.d4 \
+);
+#endif
 #endif
 
 

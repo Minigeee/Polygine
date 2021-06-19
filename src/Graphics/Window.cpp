@@ -2,8 +2,21 @@
 
 #include <poly/Graphics/FrameBuffer.h>
 #include <poly/Graphics/GLCheck.h>
+#include <poly/Graphics/Image.h>
 #include <poly/Graphics/Window.h>
 
+// Tell GLFW to not include opengl
+#define GLFW_INCLUDE_NONE
+#include <GLFW/glfw3.h>
+
+#ifdef WIN32
+#define GLFW_EXPOSE_NATIVE_WIN32
+#include <Windows.h>
+#endif
+#include <GLFW/glfw3native.h>
+
+#define WINDOW_CAST(x) reinterpret_cast<GLFWwindow*>(x)
+#define CURSOR_CAST(x) reinterpret_cast<GLFWcursor*>(x)
 
 namespace poly
 {
@@ -16,7 +29,7 @@ Window* Window::s_current = 0;
 Uint32 Window::numWindows = 0;
 
 ///////////////////////////////////////////////////////////
-GLFWcursor* Window::s_standardCursors[6] = { 0, 0, 0, 0, 0, 0 };
+void* Window::s_standardCursors[6] = { 0, 0, 0, 0, 0, 0 };
 
 
 ///////////////////////////////////////////////////////////
@@ -116,7 +129,7 @@ Window::Window(Window&& other) :
 	other.m_window = 0;
 
 	// Update window pointer
-	glfwSetWindowUserPointer(m_window, this);
+	glfwSetWindowUserPointer(WINDOW_CAST(m_window), this);
 }
 
 
@@ -132,7 +145,7 @@ Window& Window::operator=(Window&& other)
 		other.m_window = 0;
 
 		// Update window pointer
-		glfwSetWindowUserPointer(m_window, this);
+		glfwSetWindowUserPointer(WINDOW_CAST(m_window), this);
 
 		glfwSwapInterval(m_isVsyncEnabled ? 1 : 0);
 	}
@@ -179,7 +192,8 @@ bool Window::create(Uint32 w, Uint32 h, const std::string& title, bool fullscree
 
 	// Create window
 	GLFWmonitor* monitor = fullscreen ? glfwGetPrimaryMonitor() : 0;
-	m_window = glfwCreateWindow(w, h, title.c_str(), monitor, 0);
+	GLFWwindow* window = glfwCreateWindow(w, h, title.c_str(), monitor, 0);
+	m_window = window;
 	if (!m_window)
 	{
 		LOG_ERROR("Failed to create window");
@@ -190,7 +204,7 @@ bool Window::create(Uint32 w, Uint32 h, const std::string& title, bool fullscree
 
 		return false;
 	}
-	glfwMakeContextCurrent(m_window);
+	glfwMakeContextCurrent(window);
 
 	// Initialize GLAD
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
@@ -216,13 +230,13 @@ bool Window::create(Uint32 w, Uint32 h, const std::string& title, bool fullscree
 	glCheck(glViewport(0, 0, w, h));
 
 	// Setup input callbacks
-	glfwSetWindowUserPointer(m_window, this);
-	glfwSetKeyCallback(m_window, onKeyEvent);
-	glfwSetMouseButtonCallback(m_window, onMouseButton);
-	glfwSetCursorPosCallback(m_window, onMouseMove);
-	glfwSetScrollCallback(m_window, onMouseScroll);
-	glfwSetCharCallback(m_window, onTextInput);
-	glfwSetWindowSizeCallback(m_window, onWindowResize);
+	glfwSetWindowUserPointer(window, this);
+	glfwSetKeyCallback(window, onKeyEvent);
+	glfwSetMouseButtonCallback(window, onMouseButton);
+	glfwSetCursorPosCallback(window, onMouseMove);
+	glfwSetScrollCallback(window, onMouseScroll);
+	glfwSetCharCallback(window, onTextInput);
+	glfwSetWindowSizeCallback(window, onWindowResize);
 
 	// glfwGetCursorPos() is buggy
 	addListener<E_MouseMove>([&](const E_MouseMove& e) { m_cursorPos = Vector2f(e.m_x, e.m_y); });
@@ -244,7 +258,7 @@ bool Window::create(Uint32 w, Uint32 h, const std::string& title, bool fullscree
 bool Window::isOpen() const
 {
 	// The pointer exists, the window is open
-	return (bool)m_window && !glfwWindowShouldClose(m_window);
+	return (bool)m_window && !glfwWindowShouldClose(WINDOW_CAST(m_window));
 }
 
 
@@ -254,7 +268,7 @@ void Window::close()
 	if (m_window)
 	{
 		// Destroy window
-		glfwDestroyWindow(m_window);
+		glfwDestroyWindow(WINDOW_CAST(m_window));
 
 		// Reset pointer
 		m_window = 0;
@@ -275,7 +289,7 @@ void Window::display()
 	// Check if window is open
 	if (!m_window) return;
 
-	glfwSwapBuffers(m_window);
+	glfwSwapBuffers(WINDOW_CAST(m_window));
 }
 
 
@@ -285,7 +299,7 @@ void Window::setResolution(Uint32 w, Uint32 h)
 	// Check if window is open
 	if (!m_window) return;
 
-	glfwSetWindowSize(m_window, w, h);
+	glfwSetWindowSize(WINDOW_CAST(m_window), w, h);
 }
 
 
@@ -295,7 +309,7 @@ void Window::setResolution(const Vector2u& resolution)
 	// Check if window is open
 	if (!m_window) return;
 
-	glfwSetWindowSize(m_window, resolution.x, resolution.y);
+	glfwSetWindowSize(WINDOW_CAST(m_window), resolution.x, resolution.y);
 }
 
 
@@ -306,7 +320,25 @@ void Window::setTitle(const std::string& title)
 	if (!m_window) return;
 
 	m_title = title;
-	glfwSetWindowTitle(m_window, title.c_str());
+	glfwSetWindowTitle(WINDOW_CAST(m_window), title.c_str());
+}
+
+
+///////////////////////////////////////////////////////////
+void Window::setIcon(Image* icon)
+{
+	if (!icon)
+		glfwSetWindowIcon(WINDOW_CAST(m_window), 0, 0);
+
+	else
+	{
+		GLFWimage image;
+		image.width = icon->getWidth();
+		image.height = icon->getHeight();
+		image.pixels = (Uint8*)icon->getData();
+
+		glfwSetWindowIcon(WINDOW_CAST(m_window), 1, &image);
+	}
 }
 
 
@@ -314,13 +346,13 @@ void Window::setTitle(const std::string& title)
 void Window::setCursor(Cursor cursor)
 {
 	// Check if the cursor has been loaded yet
-	GLFWcursor*& loadedCursor = s_standardCursors[(int)cursor - (int)Cursor::Arrow];
+	void*& loadedCursor = s_standardCursors[(int)cursor - (int)Cursor::Arrow];
 	if (cursor != Cursor::Arrow && !loadedCursor)
 		loadedCursor = glfwCreateStandardCursor((int)cursor);
 
 	// Set cursor
 	m_cursor = loadedCursor;
-	glfwSetCursor(m_window, m_cursor);
+	glfwSetCursor(WINDOW_CAST(m_window), CURSOR_CAST(m_cursor));
 }
 
 
@@ -328,14 +360,14 @@ void Window::setCursor(Cursor cursor)
 void Window::setCursorMode(CursorMode mode)
 {
 	// Change input mode
-	glfwSetInputMode(m_window, GLFW_CURSOR, (int)mode);
+	glfwSetInputMode(WINDOW_CAST(m_window), GLFW_CURSOR, (int)mode);
 }
 
 
 ///////////////////////////////////////////////////////////
 void Window::setClipboard(const std::string& str)
 {
-	glfwSetClipboardString(m_window, str.c_str());
+	glfwSetClipboardString(WINDOW_CAST(m_window), str.c_str());
 }
 
 
@@ -348,13 +380,22 @@ void Window::setVsyncEnabled(bool enabled)
 
 
 ///////////////////////////////////////////////////////////
+WindowHandle Window::getNativeHandle() const
+{
+#ifdef WIN32
+	return glfwGetWin32Window(WINDOW_CAST(m_window));
+#endif
+}
+
+
+///////////////////////////////////////////////////////////
 Vector2u Window::getResolution() const
 {
 	// Check if window is open
 	if (!m_window) return Vector2u(0);
 
 	int w, h;
-	glfwGetWindowSize(m_window, &w, &h);
+	glfwGetWindowSize(WINDOW_CAST(m_window), &w, &h);
 	return Vector2u(w, h);
 }
 
@@ -369,7 +410,7 @@ const std::string& Window::getTitle() const
 ///////////////////////////////////////////////////////////
 std::string Window::getClipboard() const
 {
-	return std::string(glfwGetClipboardString(m_window));
+	return std::string(glfwGetClipboardString(WINDOW_CAST(m_window)));
 }
 
 
@@ -390,7 +431,7 @@ Vector2f Window::getCursorPos() const
 ///////////////////////////////////////////////////////////
 bool Window::isKeyPressed(Keyboard key) const
 {
-	int state = glfwGetKey(m_window, (int)key);
+	int state = glfwGetKey(WINDOW_CAST(m_window), (int)key);
 	return state != GLFW_RELEASE;
 }
 
@@ -406,6 +447,13 @@ void Window::setCurrent(Window* window)
 Window* Window::getCurrent()
 {
 	return s_current;
+}
+
+
+///////////////////////////////////////////////////////////
+bool Window::hasContext()
+{
+	return (bool)glfwGetCurrentContext();
 }
 
 

@@ -8,14 +8,20 @@
 
 #include <poly/Math/Vector2.h>
 
-// Tell GLFW to not include opengl
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
-
 #include <string>
 
 namespace poly
 {
+
+
+class Image;
+
+
+#ifdef WIN32
+///////////////////////////////////////////////////////////
+typedef void* WindowHandle;
+#endif
+
 
 ///////////////////////////////////////////////////////////
 /// \brief An enum defining the standard cursor types
@@ -206,6 +212,24 @@ public:
 	void setTitle(const std::string& title);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Set the window icon image
+	///
+	/// This function sets the window icon image that gets displayed
+	/// in the task bar, the title bar, or wherever else the icon would
+	/// normally be displayed. The given image \a must use the
+	/// RGBA pixel format, and each pixel must be 32-bits, with
+	/// 8-bits per color channel. Set the image pointer to NULL
+	/// to reset the icon image to the system default.
+	///
+	/// Image sizes are recommended to be small and square (i.e.
+	/// 16x16, 32x32, 48x48, 64x64, etc.)
+	///
+	/// \param icon A pointer to the image to use for the window icon
+	///
+	///////////////////////////////////////////////////////////
+	void setIcon(Image* icon);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Set the cursor type to one of the standard types for thiw window
 	///
 	/// \param cursor A standard system cursor type
@@ -239,6 +263,17 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	void setVsyncEnabled(bool enabled);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the native window handle
+	///
+	/// The return type will vary based on OS type: for Windows the
+	/// type is HWND. More to come.
+	///
+	/// \return The native window handle
+	///
+	///////////////////////////////////////////////////////////
+	WindowHandle getNativeHandle() const;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the window resolution
@@ -290,9 +325,17 @@ public:
 	///////////////////////////////////////////////////////////
 	bool isKeyPressed(Keyboard key) const;
 
+	///////////////////////////////////////////////////////////
+	/// \brief Check if an the calling thread contains an active OpenGL context
+	///
+	/// \return True if the calling thread contains an active OpenGL context
+	///
+	///////////////////////////////////////////////////////////
+	static bool hasContext();
+
 private:
-	GLFWwindow* m_window;						//!< GLFW window pointer
-	GLFWcursor* m_cursor;						//!< The current cursor
+	void* m_window;						//!< GLFW window pointer
+	void* m_cursor;						//!< The current cursor
 	std::string m_title;						//!< Window title
 	Vector2f m_cursorPos;						//!< glfwGetCursorPos() is buggy
 	Uint32 m_framerate;							//!< 
@@ -300,7 +343,7 @@ private:
 
 	static Window* s_current;					//!< The current window
 	static Uint32 numWindows;					//!< The number of existing windows
-	static GLFWcursor* s_standardCursors[6];	//!< The standard cursors
+	static void* s_standardCursors[6];	//!< The standard cursors
 };
 
 }
