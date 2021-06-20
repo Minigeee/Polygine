@@ -389,6 +389,13 @@ WindowHandle Window::getNativeHandle() const
 
 
 ///////////////////////////////////////////////////////////
+void* Window::getGlfwHandle() const
+{
+	return m_window;
+}
+
+
+///////////////////////////////////////////////////////////
 Vector2u Window::getResolution() const
 {
 	// Check if window is open

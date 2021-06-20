@@ -276,6 +276,17 @@ public:
 	WindowHandle getNativeHandle() const;
 
 	///////////////////////////////////////////////////////////
+	/// \brief Get the GLFW window handle
+	///
+	/// The return type is a void* that should be casted to a
+	/// GLFWwindow*.
+	///
+	/// \return The GLFW window handle
+	///
+	///////////////////////////////////////////////////////////
+	void* getGlfwHandle() const;
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the window resolution
 	///
 	/// \return The window resolution

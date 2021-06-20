@@ -113,7 +113,7 @@ typedef Uint32 StringHash;
 /// \brief A compile-time string hash macro
 ///
 ///////////////////////////////////////////////////////////
-#define STR_HASH(x) (priv::crc32<sizeof(x) - 2>(x) ^ 0xFFFFFFFF)
+#define STR_HASH(x) (poly::priv::crc32<sizeof(x) - 2>(x) ^ 0xFFFFFFFF)
 
 }
 

@@ -42,6 +42,7 @@ if (glfw3_FOUND)
 elseif (POLY_DOWNLOAD_MISSING_DEPS)
     CPMAddPackage("gh:glfw/glfw#master")
     target_link_libraries(polygine PRIVATE glfw)
+    install(DIRECTORY ${glfw_SOURCE_DIR}/include/GLFW DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
     install(TARGETS glfw EXPORT polygine-export)
 else()
     message("GLFW not found")
@@ -74,6 +75,10 @@ else()
 endif()
 
 # Glad
+add_library(glad INTERFACE)
+target_include_directories(glad INTERFACE $<INSTALL_INTERFACE:include>)
+install(TARGETS glad EXPORT polygine-export)
+
 target_include_directories(polygine PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/extlibs/glad/include>
     $<INSTALL_INTERFACE:include>)
