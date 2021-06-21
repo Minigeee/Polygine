@@ -132,6 +132,30 @@ public:
 	bool load(const std::string& fname, Type type);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Load a shader of a specific type from a shader code string
+	///
+	/// This will load from a string and compile the specified shader, but does
+	/// not link the shader to the shader program. This shader program
+	/// will still be invalid until compile() is successfully called.
+	/// By specifying a string id, the shader created
+	/// from this shader code will be cached and stored so that
+	/// it may be loaded without compiling again. Note that the
+	/// shaders loaded by string are cached in the same data structure
+	/// as shaders loaded by file. So a shader with the same id as a
+	/// shader loaded from a file will interfere with each other
+	///
+	/// \param code The shader code string
+	/// \param type The type of shader being loaded
+	/// \param id The shader code id
+	///
+	/// \return True if the shader was successfully loaded and compiled
+	///
+	/// \see compile
+	///
+	///////////////////////////////////////////////////////////
+	bool load(const std::string& id, const std::string& code, Type type);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Link all shaders that have been loaded
 	///
 	/// Linking the loaded shaders is necessary for this shader program

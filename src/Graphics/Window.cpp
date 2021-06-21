@@ -380,6 +380,17 @@ void Window::setVsyncEnabled(bool enabled)
 
 
 ///////////////////////////////////////////////////////////
+void Window::setContextActive(bool active)
+{
+	if (active)
+		glfwMakeContextCurrent(WINDOW_CAST(m_window));
+
+	else if (m_window == glfwGetCurrentContext())
+		glfwMakeContextCurrent(0);
+}
+
+
+///////////////////////////////////////////////////////////
 WindowHandle Window::getNativeHandle() const
 {
 #ifdef WIN32

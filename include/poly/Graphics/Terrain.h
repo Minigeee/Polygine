@@ -95,6 +95,14 @@ public:
 	void render(Camera& camera, RenderPass pass) override;
 
 	///////////////////////////////////////////////////////////
+	/// \brief Set the shader used to render the terrain
+	///
+	/// \param A pointer to the terrain shader
+	///
+	///////////////////////////////////////////////////////////
+	void setShader(Shader* shader);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Set the size of the terrain
 	///
 	/// The size of the terrain is the length of one of its sides
@@ -213,6 +221,14 @@ public:
 	void updateColorMap(const Image& map, const Vector2i& pos = Vector2i(0), const Vector2u& size = Vector2u(0));
 
 	///////////////////////////////////////////////////////////
+	/// \brief Get the terrain shader
+	///
+	/// \return A pointer to the terrain shader
+	///
+	///////////////////////////////////////////////////////////
+	Shader* getShader() const;
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get terrain size
 	///
 	/// \return Terrain size
@@ -292,8 +308,8 @@ public:
 	///////////////////////////////////////////////////////////
 	const Vector3f& getAmbientColor() const;
 
-private:
-	static Shader& getShader();
+protected:
+	static Shader& getDefaultShader();
 
 	struct TerrainTile
 	{
@@ -309,6 +325,18 @@ private:
 		float m_lodDist;
 		Matrix4f m_transform;
 	};
+
+	///////////////////////////////////////////////////////////
+	/// \brief Apply terrain setting uniforms to shader
+	///
+	/// This is called before every terrain render to bind textures
+	/// to the shader. The terrain uniform block is binded outside
+	/// this function.
+	///
+	/// \param shader A pointer to the terrain shader
+	///
+	///////////////////////////////////////////////////////////
+	virtual void applyTextures(Shader* shader);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Create ring layout of terrain, depends on tile scale, lod scale, and max distance
@@ -328,7 +356,7 @@ private:
 	///////////////////////////////////////////////////////////
 	void updateNormalMap(const Vector3f& scale);
 
-private:
+protected:
 	float m_size;							//!< Terrain size
 	float m_height;							//!< Maximume terrain height
 	float m_tileScale;						//!< Tile scale
@@ -336,6 +364,7 @@ private:
 	float m_maxDist;						//!< Maximum view distance
 	bool m_useFlatShading;					//!< Controls if the terrain should be rendered using flat shading
 
+	Shader* m_shader;						//!< The shader used to render the terrain
 	Texture m_heightMap;					//!< Height map texture
 	Texture m_normalMap;					//!< Normal map texture
 	Texture m_colorMap;						//!< Color map texture

@@ -207,6 +207,24 @@ bool Shader::load(const std::string& fname, Shader::Type type)
 	HashSet<std::string> loadedFiles;
 	std::string code = priv::readShaderFile(fname, loadedFiles);
 
+	return load(fname, code, type);
+}
+
+
+///////////////////////////////////////////////////////////
+bool Shader::load(const std::string& id, const std::string& code, Shader::Type type)
+{
+	// First check if the id has already been loaded
+	{
+		auto it = loadedShaders.find(id);
+		if (it != loadedShaders.end())
+		{
+			// Add the shader object
+			m_shaders.push_back(it->second);
+
+			return true;
+		}
+	}
 
 	// Create shader
 	Uint32 shader = 0;
@@ -222,7 +240,7 @@ bool Shader::load(const std::string& fname, Shader::Type type)
 	if (!success)
 	{
 		glCheck(glGetShaderInfoLog(shader, 512, NULL, infoLog));
-		LOG_ERROR("Failed to compile %s:\n%s", fname.c_str(), infoLog);
+		LOG_ERROR("Failed to compile %s:\n%s", id.c_str(), infoLog);
 		glCheck(glDeleteShader(shader));
 		return false;
 	}
@@ -231,9 +249,9 @@ bool Shader::load(const std::string& fname, Shader::Type type)
 	m_shaders.push_back(shader);
 
 	// Add to loaded map
-	loadedShaders[fname] = shader;
+	loadedShaders[id] = shader;
 
-	LOG("Loaded shader: %s", fname.c_str());
+	LOG("Loaded shader: %s", id.c_str());
 	return true;
 }
 

@@ -6,6 +6,16 @@
 #include <poly/Graphics/GLCheck.h>
 #include <poly/Graphics/PostProcess.h>
 
+#include <poly/Graphics/Shaders/postprocess/quad.vert.h>
+#include <poly/Graphics/Shaders/postprocess/color_adjust.frag.h>
+#include <poly/Graphics/Shaders/postprocess/fog.frag.h>
+#include <poly/Graphics/Shaders/postprocess/fxaa.frag.h>
+#include <poly/Graphics/Shaders/postprocess/blur.frag.h>
+#include <poly/Graphics/Shaders/postprocess/threshold.frag.h>
+#include <poly/Graphics/Shaders/postprocess/add.frag.h>
+#include <poly/Graphics/Shaders/postprocess/ssao.frag.h>
+#include <poly/Graphics/Shaders/postprocess/lens_flare.frag.h>
+
 namespace poly
 {
 
@@ -117,8 +127,8 @@ Shader& ColorAdjust::getShader()
 	if (!s_shader.getId())
 	{
 		// Load shader
-		s_shader.load("shaders/postprocess/quad.vert", Shader::Vertex);
-		s_shader.load("shaders/postprocess/color_adjust.frag", Shader::Fragment);
+		s_shader.load("poly/postprocess/quad.vert", SHADER_POSTPROCESS_QUAD_VERT, Shader::Vertex);
+		s_shader.load("poly/postprocess/color_adjust.frag", SHADER_POSTPROCESS_COLOR_ADJUST_FRAG, Shader::Fragment);
 		s_shader.compile();
 	}
 
@@ -288,8 +298,8 @@ Shader& Fog::getShader()
 	if (!s_shader.getId())
 	{
 		// Load shader
-		s_shader.load("shaders/postprocess/quad.vert", Shader::Vertex);
-		s_shader.load("shaders/postprocess/fog.frag", Shader::Fragment);
+		s_shader.load("poly/postprocess/quad.vert", SHADER_POSTPROCESS_QUAD_VERT, Shader::Vertex);
+		s_shader.load("poly/postprocess/fog.frag", SHADER_POSTPROCESS_FOG_FRAG, Shader::Fragment);
 		s_shader.compile();
 	}
 
@@ -353,8 +363,8 @@ Shader& Fxaa::getShader()
 	if (!s_shader.getId())
 	{
 		// Load shader
-		s_shader.load("shaders/postprocess/quad.vert", Shader::Vertex);
-		s_shader.load("shaders/postprocess/fxaa.frag", Shader::Fragment);
+		s_shader.load("poly/postprocess/quad.vert", SHADER_POSTPROCESS_QUAD_VERT, Shader::Vertex);
+		s_shader.load("poly/postprocess/fxaa.frag", SHADER_POSTPROCESS_FXAA_FRAG, Shader::Fragment);
 		s_shader.compile();
 	}
 
@@ -530,8 +540,8 @@ Shader& Blur::getShader()
 	if (!s_shader.getId())
 	{
 		// Load shader
-		s_shader.load("shaders/postprocess/quad.vert", Shader::Vertex);
-		s_shader.load("shaders/postprocess/blur.frag", Shader::Fragment);
+		s_shader.load("poly/postprocess/quad.vert", SHADER_POSTPROCESS_QUAD_VERT, Shader::Vertex);
+		s_shader.load("poly/postprocess/blur.frag", SHADER_POSTPROCESS_BLUR_FRAG, Shader::Fragment);
 		s_shader.compile();
 	}
 
@@ -711,8 +721,8 @@ Shader& Bloom::getThresholdShader()
 {
 	if (!s_thresholdShader.getId())
 	{
-		s_thresholdShader.load("shaders/postprocess/quad.vert", Shader::Vertex);
-		s_thresholdShader.load("shaders/postprocess/threshold.frag", Shader::Fragment);
+		s_thresholdShader.load("poly/postprocess/quad.vert", SHADER_POSTPROCESS_QUAD_VERT, Shader::Vertex);
+		s_thresholdShader.load("poly/postprocess/threshold.frag", SHADER_POSTPROCESS_THRESHOLD_FRAG, Shader::Fragment);
 		s_thresholdShader.compile();
 	}
 
@@ -725,8 +735,8 @@ Shader& Bloom::getAddShader()
 {
 	if (!s_addShader.getId())
 	{
-		s_addShader.load("shaders/postprocess/quad.vert", Shader::Vertex);
-		s_addShader.load("shaders/postprocess/add.frag", Shader::Fragment);
+		s_addShader.load("poly/postprocess/quad.vert", SHADER_POSTPROCESS_QUAD_VERT, Shader::Vertex);
+		s_addShader.load("poly/postprocess/add.frag", SHADER_POSTPROCESS_ADD_FRAG, Shader::Fragment);
 		s_addShader.compile();
 	}
 
@@ -891,8 +901,8 @@ Shader& Ssao::getShader()
 	if (!s_shader.getId())
 	{
 		// Load shader
-		s_shader.load("shaders/postprocess/quad.vert", Shader::Vertex);
-		s_shader.load("shaders/postprocess/ssao.frag", Shader::Fragment);
+		s_shader.load("poly/postprocess/quad.vert", SHADER_POSTPROCESS_QUAD_VERT, Shader::Vertex);
+		s_shader.load("poly/postprocess/ssao.frag", SHADER_POSTPROCESS_SSAO_FRAG, Shader::Fragment);
 		s_shader.compile();
 	}
 
@@ -1053,8 +1063,8 @@ Shader& LensFlare::getShader()
 	if (!s_shader.getId())
 	{
 		// Load shader
-		s_shader.load("shaders/postprocess/quad.vert", Shader::Vertex);
-		s_shader.load("shaders/postprocess/lens_flare.frag", Shader::Fragment);
+		s_shader.load("poly/postprocess/quad.vert", SHADER_POSTPROCESS_QUAD_VERT, Shader::Vertex);
+		s_shader.load("poly/postprocess/lens_flare.frag", SHADER_POSTPROCESS_LENS_FLARE_FRAG, Shader::Fragment);
 		s_shader.compile();
 	}
 

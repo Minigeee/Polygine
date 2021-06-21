@@ -9,6 +9,9 @@
 #include <poly/Graphics/Shadows.h>
 #include <poly/Graphics/Terrain.h>
 
+#include <poly/Graphics/Shaders/terrain.vert.h>
+#include <poly/Graphics/Shaders/terrain.frag.h>
+
 #include <poly/Math/Transform.h>
 #include <poly/Math/Vector2.h>
 #include <poly/Math/Vector4.h>
@@ -61,12 +64,12 @@ Shader Terrain::s_shader;
 
 
 ///////////////////////////////////////////////////////////
-Shader& Terrain::getShader()
+Shader& Terrain::getDefaultShader()
 {
 	if (!s_shader.getId())
 	{
-		s_shader.load("shaders/terrain.vert", Shader::Vertex);
-		s_shader.load("shaders/terrain.frag", Shader::Fragment);
+		s_shader.load("poly/terrain.vert", SHADER_TERRAIN_VERT, Shader::Vertex);
+		s_shader.load("poly/terrain.frag", SHADER_TERRAIN_FRAG, Shader::Fragment);
 		s_shader.compile();
 	}
 
@@ -76,6 +79,7 @@ Shader& Terrain::getShader()
 
 ///////////////////////////////////////////////////////////
 Terrain::Terrain() :
+	m_shader				(0),
 	m_size					(0.0f),
 	m_height				(0.0f),
 	m_tileScale				(0.0f),
@@ -436,6 +440,10 @@ void Terrain::render(Camera& camera, RenderPass pass)
 
 	ASSERT(m_scene, "The terrain must be initialized before using, by calling the init() function");
 
+	// Load shader if none given yet
+	if (!m_shader)
+		m_shader = &getDefaultShader();
+
 	START_PROFILING_FUNC;
 
 	std::vector<TerrainTile*> normalTiles, edgeTiles;
@@ -556,26 +564,20 @@ void Terrain::render(Camera& camera, RenderPass pass)
 
 
 	// Bind shader and set uniforms
-	Shader& shader = getShader();
-	shader.bind();
+	m_shader->bind();
 
 	// Terrain
-	shader.bindUniformBlock("Terrain", m_uniformBuffer);
+	m_shader->bindUniformBlock("Terrain", m_uniformBuffer);
 
 	// Camera
-	camera.apply(&shader);
+	camera.apply(m_shader);
 
 	// Lighting
-	m_scene->getExtension<Lighting>()->apply(&shader);
-	m_scene->getExtension<Shadows>()->apply(&shader);
+	m_scene->getExtension<Lighting>()->apply(m_shader);
+	m_scene->getExtension<Shadows>()->apply(m_shader);
 
-	// Terrain maps
-	if (m_heightMap.getId())
-		shader.setUniform("u_heightMap", m_heightMap);
-	if (m_normalMap.getId())
-		shader.setUniform("u_normalMap", m_normalMap);
-	if (m_colorMap.getId())
-		shader.setUniform("u_colorMap", m_colorMap);
+	// Apply textures
+	applyTextures(m_shader);
 
 	// Enable depth testing
 	glCheck(glEnable(GL_DEPTH_TEST));
@@ -612,6 +614,26 @@ void Terrain::render(Camera& camera, RenderPass pass)
 
 	// Update buffer offset
 	m_instanceBufferOffset += size;
+}
+
+
+///////////////////////////////////////////////////////////
+void Terrain::applyTextures(Shader* shader)
+{
+	// Terrain maps
+	if (m_heightMap.getId())
+		m_shader->setUniform("u_heightMap", m_heightMap);
+	if (m_normalMap.getId())
+		m_shader->setUniform("u_normalMap", m_normalMap);
+	if (m_colorMap.getId())
+		m_shader->setUniform("u_colorMap", m_colorMap);
+}
+
+
+///////////////////////////////////////////////////////////
+void Terrain::setShader(Shader* shader)
+{
+	m_shader = shader;
 }
 
 
@@ -835,6 +857,13 @@ void Terrain::updateColorMap(const Image& map, const Vector2i& pos, const Vector
 	// Push data
 	m_colorMap.update(data, pos, rectSize);
 	FREE_DBG(data);
+}
+
+
+///////////////////////////////////////////////////////////
+Shader* Terrain::getShader() const
+{
+	return m_shader;
 }
 
 

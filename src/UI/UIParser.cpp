@@ -186,8 +186,6 @@ bool getNamedColor(const std::string& color, Vector4f& out)
 		g_namedColors["sienna"]						= Vector3u(160, 82, 45);
 		g_namedColors["brown"]						= Vector3u(165, 42, 42);
 		g_namedColors["maroon"]						= Vector3u(128, 0, 0);
-
-		LOG("%d", g_namedColors.size());
 	}
 
 	auto it = g_namedColors.find(color);

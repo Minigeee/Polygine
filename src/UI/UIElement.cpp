@@ -1,3 +1,8 @@
+#include <poly/Graphics/Window.h>
+
+#include <poly/Graphics/Shaders/ui.vert.h>
+#include <poly/Graphics/Shaders/ui.geom.h>
+#include <poly/Graphics/Shaders/ui.frag.h>
 
 #include <poly/Math/Functions.h>
 
@@ -1006,11 +1011,11 @@ bool UIElement::handlesMouseEvents() const
 ///////////////////////////////////////////////////////////
 Shader* UIElement::getDefaultShader()
 {
-	if (!s_shader.getId())
+	if (!s_shader.getId() && Window::hasContext())
 	{
-		s_shader.load("shaders/ui.vert", Shader::Vertex);
-		s_shader.load("shaders/ui.geom", Shader::Geometry);
-		s_shader.load("shaders/ui.frag", Shader::Fragment);
+		s_shader.load("poly/ui.vert", SHADER_UI_VERT, Shader::Vertex);
+		s_shader.load("poly/ui.geom", SHADER_UI_GEOM, Shader::Geometry);
+		s_shader.load("poly/ui.frag", SHADER_UI_FRAG, Shader::Fragment);
 		s_shader.compile();
 	}
 

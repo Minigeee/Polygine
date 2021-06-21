@@ -5,6 +5,10 @@
 #include <poly/Graphics/Image.h>
 #include <poly/Graphics/Skybox.h>
 
+#include <poly/Graphics/Shaders/cubemap.vert.h>
+#include <poly/Graphics/Shaders/skybox.frag.h>
+#include <poly/Graphics/Shaders/procedural_skybox.frag.h>
+
 #include <poly/Math/Functions.h>
 
 namespace poly
@@ -118,8 +122,8 @@ Shader& Skybox::getShader()
 {
     if (!s_shader.getId())
     {
-        s_shader.load("shaders/cubemap.vert", Shader::Vertex);
-        s_shader.load("shaders/skybox.frag", Shader::Fragment);
+        s_shader.load("poly/cubemap.vert", SHADER_CUBEMAP_VERT, Shader::Vertex);
+        s_shader.load("poly/skybox.frag", SHADER_SKYBOX_FRAG, Shader::Fragment);
         s_shader.compile();
     }
 
@@ -290,8 +294,8 @@ Shader& ProceduralSkybox::getShader()
 {
     if (!s_shader.getId())
     {
-        s_shader.load("shaders/cubemap.vert", Shader::Vertex);
-        s_shader.load("shaders/procedural_skybox.frag", Shader::Fragment);
+        s_shader.load("poly/cubemap.vert", SHADER_CUBEMAP_VERT, Shader::Vertex);
+        s_shader.load("poly/procedural_skybox.frag", SHADER_PROCEDURAL_SKYBOX_FRAG, Shader::Fragment);
         s_shader.compile();
     }
 

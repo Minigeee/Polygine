@@ -265,6 +265,18 @@ public:
 	void setVsyncEnabled(bool enabled);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Set whether the OpenGL context should be active on the calling thread
+	///
+	/// When moving OpenGL contexts between threads, the thread with
+	/// the active context must be deactived before activating the
+	/// context on the other thread.
+	///
+	/// \param active Whether the context should be active on the calling thread
+	///
+	///////////////////////////////////////////////////////////
+	void setContextActive(bool active);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the native window handle
 	///
 	/// The return type will vary based on OS type: for Windows the

@@ -8,6 +8,7 @@
 #include <poly/Math/Ray.h>
 
 #include <poly/Physics/Collider.h>
+#include <poly/Physics/Components.h>
 #include <poly/Physics/Joints.h>
 #include <poly/Physics/Shapes.h>
 

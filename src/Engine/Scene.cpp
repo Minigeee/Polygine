@@ -55,8 +55,7 @@ E_EntitiesRemoved::E_EntitiesRemoved(std::vector<Entity>& entities) :
 Scene::Scene() :
 	m_handle				(s_idArray.add(true))
 {
-	// Default extensions
-	getExtension<Lighting>();
+
 }
 
 

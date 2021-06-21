@@ -196,7 +196,7 @@ void Logger::logAsync()
 		lock.unlock();
 
 		// Use synchronous log
-		logMsg(msg.m_type, msg.m_msg, msg.m_threadId);
+		logMsg(msg.m_type, msg.m_msg, msg.m_threadId, msg.m_loc);
 
 		lock.lock();
 	}

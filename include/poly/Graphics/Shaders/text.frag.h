@@ -1,0 +1,3 @@
+#ifndef SHADER_TEXT_FRAG
+#define SHADER_TEXT_FRAG "#version 330 core\n\nin vec2 g_texCoord;\nin vec4 g_color;\n\nout vec4 f_color;\n\nuniform sampler2D u_texture;\nuniform bool u_hasTexture;\n\n\n///////////////////////////////////////////////////////////\nvoid main()\n{\n    if (u_hasTexture)\n    {\n        vec4 texColor = texture(u_texture, g_texCoord);\n        f_color = texColor;\n    }\n}"
+#endif

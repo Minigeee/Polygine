@@ -1,0 +1,3 @@
+#ifndef SHADER_POSTPROCESS_COLOR_ADJUST_FRAG
+#define SHADER_POSTPROCESS_COLOR_ADJUST_FRAG "#version 330 core\n\n///////////////////////////////////////////////////////////////////////////////\n\nin vec2 v_texCoord;\n\nout vec4 f_color;\n\nuniform sampler2D u_texture;\nuniform float u_gamma;\n\n///////////////////////////////////////////////////////////////////////////////\n\nvoid main()\n{\n    vec4 result = texture(u_texture, v_texCoord);\n\n    // Hdr and gamma correction\n    f_color.rgb = pow(vec3(1.0f) - exp(-result.rgb), vec3(1.0f / u_gamma));\n    f_color.a = result.a;\n}"
+#endif
