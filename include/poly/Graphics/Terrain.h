@@ -92,7 +92,7 @@ public:
 	/// \param pass The render pass that is being executed
 	///
 	///////////////////////////////////////////////////////////
-	void render(Camera& camera, RenderPass pass) override;
+	virtual void render(Camera& camera, RenderPass pass) override;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the shader used to render the terrain

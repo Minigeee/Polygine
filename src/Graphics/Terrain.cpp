@@ -91,7 +91,7 @@ Terrain::Terrain() :
 	m_ambientColor			(0.02f),
 	m_isUniformDirty		(true)
 {
-	m_uniformBuffer.create(sizeof(UniformBlock_Terrain), BufferUsage::Static);
+
 }
 
 
@@ -117,6 +117,9 @@ void Terrain::create(float size, float height, float tileScale, float lodScale, 
 {
 	// Only create once
 	if (m_instanceBuffer.getId()) return;
+
+	// Uniform buffer
+	m_uniformBuffer.create(sizeof(UniformBlock_Terrain), BufferUsage::Static);
 
 	m_size = size;
 	m_height = height;

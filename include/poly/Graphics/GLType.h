@@ -4,6 +4,7 @@
 namespace poly
 {
 
+
 ///////////////////////////////////////////////////////////
 /// \brief An enum describing OpenGL data types
 ///
@@ -21,6 +22,11 @@ enum class GLType
 	Double	= 0x140A
 };
 
+
+///////////////////////////////////////////////////////////
+/// \brief An enum containing the types of alpha blending modes
+///
+///////////////////////////////////////////////////////////
 enum class BlendFactor
 {
 	Zero				= 0,
@@ -36,6 +42,7 @@ enum class BlendFactor
 	ConstColor			= 0x8001,
 	OneMinusConstColor	= 0x8002
 };
+
 
 }
 

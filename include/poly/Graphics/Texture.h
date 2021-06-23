@@ -2,6 +2,7 @@
 #define POLY_TEXTURE_H
 
 #include <poly/Core/DataTypes.h>
+#include <poly/Core/NonCopyable.h>
 
 #include <poly/Graphics/GLType.h>
 #include <poly/Graphics/Image.h>
@@ -36,17 +37,9 @@ enum class PixelFormat
 /// \brief A class that creates renderable images on the GPU
 ///
 ///////////////////////////////////////////////////////////
-class Texture
+class Texture : public NonMoveable
 {
 public:
-
-#ifndef DOXYGEN_SKIP
-	Texture(const Texture&) = delete;
-	Texture& operator=(const Texture&) = delete;
-	Texture(Texture&&) = default;
-	Texture& operator=(Texture&&) = default;
-#endif
-
 	///////////////////////////////////////////////////////////
 	/// \brief Default constructor
 	///

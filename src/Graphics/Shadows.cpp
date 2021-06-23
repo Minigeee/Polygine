@@ -90,6 +90,15 @@ void Shadows::render(Camera& camera)
 					info->m_shadowDists.push_back(0.0f);
 				}
 
+				// Resize framebuffers if needed
+				if (light.m_shadowResolution != info->m_shadowMaps[cascade]->getWidth())
+				{
+					FrameBuffer* shadowMap = info->m_shadowMaps[cascade];
+					shadowMap->reset();
+					shadowMap->create(light.m_shadowResolution, light.m_shadowResolution);
+					shadowMap->attachDepth(shadowMap->getDepthTexture());
+				}
+
 				// Calculate vertices
 				float xn = near * tanHalfFovH;
 				float yn = near * tanHalfFovV;

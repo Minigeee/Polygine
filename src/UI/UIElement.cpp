@@ -1011,7 +1011,7 @@ bool UIElement::handlesMouseEvents() const
 ///////////////////////////////////////////////////////////
 Shader* UIElement::getDefaultShader()
 {
-	if (!s_shader.getId() && Window::hasContext())
+	if (!s_shader.getId())
 	{
 		s_shader.load("poly/ui.vert", SHADER_UI_VERT, Shader::Vertex);
 		s_shader.load("poly/ui.geom", SHADER_UI_GEOM, Shader::Geometry);

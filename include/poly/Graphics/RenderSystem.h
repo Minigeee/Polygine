@@ -1,6 +1,8 @@
 #ifndef POLY_RENDER_SYSTEM_H
 #define POLY_RENDER_SYSTEM_H
 
+#include <poly/Core/NonCopyable.h>
+
 #include <poly/Graphics/Camera.h>
 #include <poly/Graphics/FrameBuffer.h>
 
@@ -62,7 +64,7 @@ RenderPass operator~(RenderPass a);
 /// \brief The base class for all rendering procedure classes
 ///
 ///////////////////////////////////////////////////////////
-class RenderSystem
+class RenderSystem : public NonMoveable
 {
 public:
 	///////////////////////////////////////////////////////////

@@ -28,17 +28,17 @@ if (MSVC)
     add_definitions(-D_CRT_SECURE_NO_DEPRECATE -D_SCL_SECURE_NO_WARNINGS)
 endif()
 
-if (POLY_ENABLE_PROFILING)
-    add_definitions(-DENABLE_PROFILING)
-endif()
-
-if (POLY_COLUMN_MAJOR)
-    add_definitions(-DUSE_COLUMN_MAJOR)
-endif()
-
 # Build
 add_subdirectory(src)
 add_subdirectory(extlibs)
+
+if (POLY_ENABLE_PROFILING)
+    target_compile_definitions(polygine PUBLIC ENABLE_PROFILING)
+endif()
+
+if (POLY_COLUMN_MAJOR)
+    target_compile_definitions(polygine PUBLIC USE_COLUMN_MAJOR)
+endif()
 
 # Install
 install(TARGETS polygine DESTINATION "${CMAKE_INSTALL_LIBDIR}" EXPORT polygine-export)

@@ -37,7 +37,7 @@ VertexArray& Billboard::getVertexArray()
 ///////////////////////////////////////////////////////////
 Shader& Billboard::getDefaultShader()
 {
-	if (!s_shader.getId() && Window::hasContext())
+	if (!s_shader.getId())
 	{
 		s_shader.load("poly/billboard.vert", SHADER_BILLBOARD_VERT, Shader::Vertex);
 		s_shader.load("poly/billboard.geom", SHADER_BILLBOARD_GEOM, Shader::Geometry);

@@ -24,7 +24,7 @@ do \
 { \
 	expr; \
 	Uint32 err = glGetError(); \
-	if (err != GL_NO_ERROR && Window::hasContext()) \
+	if (err != GL_NO_ERROR && Window::isContextActive()) \
 		LOG_ERROR("[%s] - %s", STR(expr), poly::priv::getGLErrorMsg(err).c_str()); \
 } while (false)
 #else

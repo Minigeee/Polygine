@@ -42,7 +42,7 @@ Mesh::Mesh() :
 ///////////////////////////////////////////////////////////
 Shader& Model::getDefaultShader()
 {
-	if (!s_defaultShader.getId() && Window::hasContext())
+	if (!s_defaultShader.getId())
 	{
 		s_defaultShader.load("poly/default.vert", SHADER_DEFAULT_VERT, Shader::Vertex);
 		s_defaultShader.load("poly/default.frag", SHADER_DEFAULT_FRAG, Shader::Fragment);
@@ -56,7 +56,7 @@ Shader& Model::getDefaultShader()
 ///////////////////////////////////////////////////////////
 Shader& Model::getAnimatedShader()
 {
-	if (!s_animatedShader.getId() && Window::hasContext())
+	if (!s_animatedShader.getId())
 	{
 		s_animatedShader.load("poly/animated.vert", SHADER_ANIMATED_VERT, Shader::Vertex);
 		s_animatedShader.load("poly/default.frag", SHADER_DEFAULT_FRAG, Shader::Fragment);

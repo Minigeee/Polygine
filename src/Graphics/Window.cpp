@@ -130,6 +130,10 @@ Window::Window(Window&& other) :
 
 	// Update window pointer
 	glfwSetWindowUserPointer(WINDOW_CAST(m_window), this);
+
+	// Update current window
+	if (s_current = &other)
+		s_current = this;
 }
 
 
@@ -146,6 +150,10 @@ Window& Window::operator=(Window&& other)
 
 		// Update window pointer
 		glfwSetWindowUserPointer(WINDOW_CAST(m_window), this);
+
+		// Update current window
+		if (s_current = &other)
+			s_current = this;
 
 		glfwSwapInterval(m_isVsyncEnabled ? 1 : 0);
 	}
@@ -212,6 +220,9 @@ bool Window::create(Uint32 w, Uint32 h, const std::string& title, bool fullscree
 		LOG_ERROR("Failed to initalize GLAD");
 		return false;
 	}
+
+	// Set current window
+	s_current = this;
 
 	// Enable vsync by default
 	glfwSwapInterval(1);
@@ -380,17 +391,6 @@ void Window::setVsyncEnabled(bool enabled)
 
 
 ///////////////////////////////////////////////////////////
-void Window::setContextActive(bool active)
-{
-	if (active)
-		glfwMakeContextCurrent(WINDOW_CAST(m_window));
-
-	else if (m_window == glfwGetCurrentContext())
-		glfwMakeContextCurrent(0);
-}
-
-
-///////////////////////////////////////////////////////////
 WindowHandle Window::getNativeHandle() const
 {
 #ifdef WIN32
@@ -469,7 +469,18 @@ Window* Window::getCurrent()
 
 
 ///////////////////////////////////////////////////////////
-bool Window::hasContext()
+void Window::setContextActive(bool active)
+{
+	if (active)
+		glfwMakeContextCurrent(WINDOW_CAST(s_current->m_window));
+
+	else
+		glfwMakeContextCurrent(0);
+}
+
+
+///////////////////////////////////////////////////////////
+bool Window::isContextActive()
 {
 	return (bool)glfwGetCurrentContext();
 }
