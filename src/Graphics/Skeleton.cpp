@@ -259,9 +259,10 @@ void Skeleton::update(float dt)
 	{
 		// Update animation time
 		float duration = m_animation->getDuration() / m_animation->getTicksPerSecond();
-		m_animTime += fmodf(dt * m_animSpeed, duration);
+		m_animTime += dt * m_animSpeed;
 		if (m_animTime < 0.0f)
 			m_animTime += duration;
+		m_animTime = fmodf(m_animTime, duration);
 
 		// Recursively apply animation
 		priv::applyAnimation(m_root, m_animation, m_animTime);

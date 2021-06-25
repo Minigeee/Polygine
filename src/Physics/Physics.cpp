@@ -253,12 +253,18 @@ Physics::Physics(Scene* scene) :
 	scene->system<RigidBodyComponent>(
 		[&](const Entity::Id& id, RigidBodyComponent& body)
 		{
+			// Lock mutex
+			std::unique_lock<std::mutex> lock(m_mutex);
+
 			addRigidBody(id);
 		}
 	);
 	scene->system<CollisionBodyComponent>(
 		[&](const Entity::Id& id, CollisionBodyComponent& body)
 		{
+			// Lock mutex
+			std::unique_lock<std::mutex> lock(m_mutex);
+
 			addCollisionBody(id);
 		}
 	);
@@ -267,6 +273,9 @@ Physics::Physics(Scene* scene) :
 	scene->addListener<E_EntitiesCreated>(
 		[&](const E_EntitiesCreated& e)
 		{
+			// Lock mutex
+			std::unique_lock<std::mutex> lock(m_mutex);
+
 			if (e.m_entities->has<RigidBodyComponent>())
 			{
 				for (Uint32 i = 0; i < e.m_numEntities; ++i)
@@ -283,6 +292,9 @@ Physics::Physics(Scene* scene) :
 	scene->addListener<E_EntitiesRemoved>(
 		[&](const E_EntitiesRemoved& e)
 		{
+			// Lock mutex
+			std::unique_lock<std::mutex> lock(m_mutex);
+
 			if (e.m_entities->has<RigidBodyComponent>())
 			{
 				for (Uint32 i = 0; i < e.m_numEntities; ++i)
@@ -592,8 +604,11 @@ void Physics::update(float dt)
 	STOP_PROFILING(copyToEngine);
 
 
-	// Do the physics update
-	world->update(dt);
+	{
+		std::unique_lock<std::mutex> lock(m_mutex);
+		// Do the physics update
+		world->update(dt);
+	}
 
 
 	// Copy the data back from the physics engine
@@ -657,6 +672,9 @@ std::vector<RaycastInfo>& Physics::raycast(const Ray& ray, float dist, Uint16 ma
 	m_maxRaycastIntersects = maxIntersects;
 	m_raycastInfo.clear();
 
+	// Lock mutex
+	std::unique_lock<std::mutex> lock(m_mutex);
+
 	// Raycast test
 	WORLD_CAST(m_world)->raycast(rp3dRay, m_eventHandler, mask);
 
@@ -667,6 +685,9 @@ std::vector<RaycastInfo>& Physics::raycast(const Ray& ray, float dist, Uint16 ma
 ///////////////////////////////////////////////////////////
 void Physics::setGravity(const Vector3f& gravity)
 {
+	// Lock mutex
+	std::unique_lock<std::mutex> lock(m_mutex);
+
 	m_gravity = gravity;
 	WORLD_CAST(m_world)->setGravity(RP3D_VEC3(m_gravity));
 }
@@ -675,6 +696,9 @@ void Physics::setGravity(const Vector3f& gravity)
 ///////////////////////////////////////////////////////////
 void Physics::setGravity(float x, float y, float z)
 {
+	// Lock mutex
+	std::unique_lock<std::mutex> lock(m_mutex);
+
 	m_gravity = Vector3f(x, y, z);
 	WORLD_CAST(m_world)->setGravity(RP3D_VEC3(m_gravity));
 }
@@ -691,6 +715,9 @@ void Physics::setSleepAllowed(const Entity& entity, bool allowed)
 		else
 			return;
 	}
+
+	// Lock mutex
+	std::unique_lock<std::mutex> lock(m_mutex);
 
 	// Change option in engine
 	reactphysics3d::RigidBody* body = RBODY_CAST(data->m_body);
@@ -754,6 +781,9 @@ Collider Physics::addCollider(const Entity& entity, const PhysicsShape& shape, f
 	const SphereShape* sphere = 0;
 
 	reactphysics3d::CollisionShape* rp3dShape = 0;
+
+	// Lock mutex
+	std::unique_lock<std::mutex> lock(m_mutex);
 
 	// Create the collider shape
 	if (box = dynamic_cast<const BoxShape*>(&shape))
@@ -819,6 +849,9 @@ void Physics::removeCollider(const Entity& entity, Uint32 index)
 		}
 	}
 
+	// Lock mutex
+	std::unique_lock<std::mutex> lock(m_mutex);
+
 	// Remove the collider
 	reactphysics3d::Collider* collider = body->getCollider(index);
 	body->removeCollider(collider);
@@ -849,6 +882,9 @@ void Physics::removeCollider(const Entity& entity, const Collider& collider)
 				return;
 		}
 	}
+
+	// Lock mutex
+	std::unique_lock<std::mutex> lock(m_mutex);
 
 	// Remove the collider
 	body->removeCollider(reinterpret_cast<reactphysics3d::Collider*>(collider.m_collider));
@@ -1016,6 +1052,9 @@ Joint Physics::addJoint(const Entity& e1, const Entity& e2, Joint::Type type, co
 	reactphysics3d::RigidBody* b1 = RBODY_CAST(m_rigidBodies[e1.getId()].m_body);
 	reactphysics3d::RigidBody* b2 = RBODY_CAST(m_rigidBodies[e2.getId()].m_body);
 
+	// Lock mutex
+	std::unique_lock<std::mutex> lock(m_mutex);
+
 	if (type == Joint::BallAndSocket)
 	{
 		reactphysics3d::BallAndSocketJointInfo info(b1, b2, RP3D_VEC3(point));
@@ -1048,6 +1087,9 @@ Joint Physics::addJoint(const Entity& e1, const Entity& e2, Joint::Type type, co
 ///////////////////////////////////////////////////////////
 void Physics::removeJoint(const Joint& joint)
 {
+	// Lock mutex
+	std::unique_lock<std::mutex> lock(m_mutex);
+
 	if (joint.m_type == Joint::BallAndSocket)
 	{
 		auto rp3d = reinterpret_cast<reactphysics3d::BallAndSocketJoint*>(joint.m_joint);

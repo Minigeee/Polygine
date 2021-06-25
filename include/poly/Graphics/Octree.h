@@ -17,8 +17,15 @@ namespace poly
 {
 
 class Camera;
+class Material;
 class Model;
+class Renderable;
 class Shader;
+class Skeleton;
+
+struct RenderComponent;
+struct TransformComponent;
+
 
 ///////////////////////////////////////////////////////////
 /// \brief A class that spatially organizes entities into a dynamic octree structure

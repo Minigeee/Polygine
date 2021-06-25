@@ -12,6 +12,8 @@
 #include <poly/Physics/Joints.h>
 #include <poly/Physics/Shapes.h>
 
+#include <mutex>
+
 namespace poly
 {
 
@@ -358,6 +360,7 @@ private:
 	void* getSphereShape(float radius);
 
 private:
+	std::mutex m_mutex;															//!< Mutex to protect multithread access to main physics engine
 	void* m_world;																//!< The RP3D physics world pointer
 	priv::PhysicsEventHandler* m_eventHandler;									//!< The RP3D event handler
 	Vector3f m_gravity;															//!< The gravity acceleration vector

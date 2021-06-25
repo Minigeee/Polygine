@@ -36,6 +36,14 @@ Quaternion::Quaternion(const Vector3f& a, float r) :
 
 
 ///////////////////////////////////////////////////////////
+Quaternion::Quaternion(const Vector3f& rot) :
+	Quaternion(rot.x, rot.y, rot.z)
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
 Quaternion::Quaternion(float _x, float _y, float _z) :
 	x(0.0f),
 	y(0.0f),
@@ -46,10 +54,10 @@ Quaternion::Quaternion(float _x, float _y, float _z) :
 	Vector3f c(cos(rot.x), cos(rot.y), cos(rot.z));
 	Vector3f s(sin(rot.x), sin(rot.y), sin(rot.z));
 
-	x = s.y * s.z * c.x + c.y * c.z * s.x;
-	y = s.y * c.z * c.x + c.y * s.z * s.x;
-	z = c.y * s.z * c.x - s.y * c.z * s.x;
-	w = c.y * c.z * c.x - s.y * s.z * s.x;
+	x = s.x * c.y * c.z - c.x * s.y * s.z;
+	y = c.x * s.y * c.z + s.x * c.y * s.z;
+	z = c.x * c.y * s.z - s.x * s.y * c.z;
+	w = c.x * c.y * c.z + s.x * s.y * s.z;
 }
 
 
@@ -138,6 +146,40 @@ Quaternion::Quaternion(const Matrix4f& matrix) :
 
 
 ///////////////////////////////////////////////////////////
+Quaternion::operator Vector3f() const
+{
+	Vector3f v;
+
+	// Pitch
+	float _y = 2.0f * (y * z + w * x);
+	float _x = w * w - x * x - y * y + z * z;
+
+	if (fabsf(_x) <= FLT_EPSILON && fabsf(_y) <= FLT_EPSILON)
+		v.x = 2.0f * atan2(x, w);
+	else
+		v.x = atan2(_y, _x);
+
+	// Roll
+	_y = 2.0f * (x * y + w * z);
+	_x = w * w + x * x - y * y - z * z;
+
+	if (fabsf(_x) <= FLT_EPSILON && fabsf(_y) <= FLT_EPSILON)
+		v.z = 0.0f;
+	else
+		v.z = atan2(_y, _x);
+
+	// Yaw
+	v.y = asin(-2.0f * (x * z - w * y));
+
+	v.x = deg(v.x);
+	v.y = deg(v.y);
+	v.z = deg(v.z);
+
+	return v;
+}
+
+
+///////////////////////////////////////////////////////////
 Quaternion& Quaternion::operator+=(const Quaternion& x)
 {
 	return (*this = *this + x);
@@ -190,6 +232,16 @@ bool Quaternion::operator!=(const Quaternion& q) const
 Quaternion Quaternion::operator-() const
 {
 	return Quaternion(-x, -y, -z, -w);
+}
+
+
+///////////////////////////////////////////////////////////
+void toAxisAngle(const Quaternion& q, Vector3f& axis, float& rotation)
+{
+	float angle = 2.0f * acos(q.w);
+	float denom = sin(angle * 0.5f);
+	axis = (fabsf(denom) <= FLT_EPSILON ? Vector3f(0.0f, 1.0f, 0.0f) : Vector3f(q.x, q.y, q.z) / denom);
+	rotation = deg(angle);
 }
 
 

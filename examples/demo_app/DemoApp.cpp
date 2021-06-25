@@ -80,6 +80,9 @@ void onSubmit(const Utf32String& text)
 
 int main()
 {
+    Quaternion q(0.0f, 95.0f, 0.0f);
+    Vector3f rot = q;
+
     Logger::init("game.log");
     srand(time(NULL));
 
@@ -223,6 +226,7 @@ int main()
     sun.m_diffuse = Vector3f(0.9f, 0.8f, 0.45f);
     sun.m_specular = sun.m_diffuse * 0.2f;
     sun.m_direction.z = 2.0f;
+    // sun.m_shadowDistance = 150.0f;
     // sun.m_shadowsEnabled = false;
     Entity sunEntity = scene.createEntity(sun);
 

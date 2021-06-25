@@ -81,7 +81,7 @@ static AllocateInit g_allocateInit;
 }
 
 
-#ifdef _DEBUG
+#ifdef NDEBUG
 #define MALLOC_DBG(size) poly::priv::g_allocate->alloc(size, __FILE__, __LINE__)
 #define FREE_DBG(ptr) poly::priv::g_allocate->free(ptr)
 #define ALIGNED_MALLOC_DBG(size, align) poly::priv::g_allocate->alignedAlloc(size, align, __FILE__, __LINE__)

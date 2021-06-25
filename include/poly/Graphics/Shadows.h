@@ -91,6 +91,7 @@ private:
 		std::vector<float> m_shadowDists;			//!< The cascade distances
 		Matrix4f m_cameraProj;						//!< The (normal) camera projection matrix
 		float m_shadowStrength;						//!< The blocking strength of the shadows
+		bool m_isActive;							//!< This is true when shadows are active for the light
 	};
 
 private:
