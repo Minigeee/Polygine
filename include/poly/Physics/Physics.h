@@ -2,6 +2,7 @@
 #define POLY_PHYSICS_H
 
 #include <poly/Core/DataTypes.h>
+#include <poly/Core/ObjectPool.h>
 
 #include <poly/Engine/Extension.h>
 
@@ -11,6 +12,13 @@
 #include <poly/Physics/Components.h>
 #include <poly/Physics/Joints.h>
 #include <poly/Physics/Shapes.h>
+
+#include <poly/Physics/BoxCollider.h>
+#include <poly/Physics/CapsuleCollider.h>
+#include <poly/Physics/ConcaveMeshCollider.h>
+#include <poly/Physics/ConvexMeshCollider.h>
+#include <poly/Physics/HeightMapCollider.h>
+#include <poly/Physics/SphereCollider.h>
 
 #include <mutex>
 
@@ -180,52 +188,85 @@ public:
 	/// doesn't make sense though). If both components exist in the
 	/// entity, the the collider will only be added to the RigidBodyComponent.
 	///
-	/// Any of the following physics collider shapes can be used:
-	/// \li BoxShape
-	/// \li CapsuleShape
-	/// \li ConcaveMeshShape
-	/// \li ConvexMeshShape
-	/// \li HeightMapShape
-	/// \li SphereShape
-	///
-	/// Each physics shape has a position and a rotation quaternion.
-	/// Use these properties to set the transform orientation of each
+	/// Use the position and rotation parameters to set the transform orientation of each
 	/// collider in the local space of the physics body. This transform
 	/// orientation exists because multiple colliders can be added to
 	/// entities with physics bodies, and using multiple colliders,
 	/// each with their own shape and orientation, can be used to make
 	/// more complex collision shapes.
 	///
-	/// The initial bounciness and friction coefficient of the collider
-	/// can be set using this function, but they can also be changed
-	/// later using the returned Collider object.
+	/// The bounciness, friction coefficient, and other material properties
+	/// of the collider can be changed using the returned collider object
 	///
 	/// \param entity The entity to add a collider to
-	/// \param shape Any shape that inherits from PhysicsShape
-	/// \param bounciness The intial bounciness of the collider
-	/// \param friction The initial friction coefficient of the collider
+	/// \param shape A physics shape
+	/// \param position The intial position of the collider
+	/// \param rotation The initial rotation of the collider
 	///
-	/// \return A Collider object that can be used to control the properties of the collider
+	/// \return A Collider derived object that can be used to control the properties of the collider
 	///
 	///////////////////////////////////////////////////////////
-	Collider addCollider(
+	BoxCollider addCollider(
 		const Entity& entity,
-		const PhysicsShape& shape,
-		float bounciness = 0.1f,
-		float friction = 0.2f
+		const BoxShape& shape,
+		const Vector3f& position = Vector3f(0.0f),
+		const Quaternion& rotation = Quaternion::Identity
 	);
 
 	///////////////////////////////////////////////////////////
-	/// \brief Remove a collider from an entity with a physics body
-	///
-	/// Remove a collider from an entity with a physics body, using
-	/// the index of the collider.
-	///
-	/// \param entity The entity to remove the collider from
-	/// \param index The index of the collider to remove
+	/// \copydoc addCollider(const Entity&,const BoxShape&,const Vector3f&,const Quaternion&)
 	///
 	///////////////////////////////////////////////////////////
-	void removeCollider(const Entity& entity, Uint32 index);
+	CapsuleCollider addCollider(
+		const Entity& entity,
+		const CapsuleShape& shape,
+		const Vector3f& position = Vector3f(0.0f),
+		const Quaternion& rotation = Quaternion::Identity
+	);
+
+	///////////////////////////////////////////////////////////
+	/// \copydoc addCollider(const Entity&,const BoxShape&,const Vector3f&,const Quaternion&)
+	///
+	///////////////////////////////////////////////////////////
+	ConcaveMeshCollider addCollider(
+		const Entity& entity,
+		const ConcaveMeshShape& shape,
+		const Vector3f& position = Vector3f(0.0f),
+		const Quaternion& rotation = Quaternion::Identity
+	);
+
+	///////////////////////////////////////////////////////////
+	/// \copydoc addCollider(const Entity&,const BoxShape&,const Vector3f&,const Quaternion&)
+	///
+	///////////////////////////////////////////////////////////
+	ConvexMeshCollider addCollider(
+		const Entity& entity,
+		const ConvexMeshShape& shape,
+		const Vector3f& position = Vector3f(0.0f),
+		const Quaternion& rotation = Quaternion::Identity
+	);
+
+	///////////////////////////////////////////////////////////
+	/// \copydoc addCollider(const Entity&,const BoxShape&,const Vector3f&,const Quaternion&)
+	///
+	///////////////////////////////////////////////////////////
+	HeightMapCollider addCollider(
+		const Entity& entity,
+		const HeightMapShape& shape,
+		const Vector3f& position = Vector3f(0.0f),
+		const Quaternion& rotation = Quaternion::Identity
+	);
+
+	///////////////////////////////////////////////////////////
+	/// \copydoc addCollider(const Entity&,const BoxShape&,const Vector3f&,const Quaternion&)
+	///
+	///////////////////////////////////////////////////////////
+	SphereCollider addCollider(
+		const Entity& entity,
+		const SphereShape& shape,
+		const Vector3f& position = Vector3f(0.0f),
+		const Quaternion& rotation = Quaternion::Identity
+	);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Remove a collider from an entity with a physics body
@@ -289,6 +330,7 @@ private:
 		void* m_body;
 		Uint32 m_group;
 		Uint32 m_index;
+		std::vector<Collider> m_colliders;
 	};
 
 	struct RigidBodyData
@@ -345,22 +387,23 @@ private:
 
 	void removeCollisionBody(Entity::Id id);
 
-	Collider createCollider(const Entity& entity, const PhysicsShape& shape, void* rp3dShape);
+	void createCollider(Collider& collider, const Entity& entity, void* rp3dShape, const Vector3f& pos, const Quaternion& rot);
 
-	void* getBoxShape(const Vector3f& dims);
+	void* createBoxShape(const Vector3f& dims);
 
-	void* getCapsuleShape(const Vector2f& dims);
+	void* createCapsuleShape(const Vector2f& dims);
 
-	void* getConcaveMeshShape(const ConcaveMeshShape& shape);
+	void* createConcaveMeshShape(const ConcaveMeshShape& shape);
 
-	void* getConvexMeshShape(const ConvexMeshShape& shape);
+	void* createConvexMeshShape(const ConvexMeshShape& shape);
 
-	void* getHeightMapShape(const HeightMapShape& shape);
+	void* createHeightMapShape(const HeightMapShape& shape);
 
-	void* getSphereShape(float radius);
+	void* createSphereShape(float radius);
 
 private:
 	std::mutex m_mutex;															//!< Mutex to protect multithread access to main physics engine
+	std::mutex m_dataMutex;														//!< Mutex to protect data structures
 	void* m_world;																//!< The RP3D physics world pointer
 	priv::PhysicsEventHandler* m_eventHandler;									//!< The RP3D event handler
 	Vector3f m_gravity;															//!< The gravity acceleration vector
@@ -375,12 +418,9 @@ private:
 	Uint32 m_maxRaycastIntersects;												//!< The max number of raycast intersects allowed for the current raycast query
 	std::vector<poly::RaycastInfo> m_raycastInfo;								//!< The temp storage for storing raycast results
 
-	static HashMap<float, void*> s_boxShapes;
-	static HashMap<float, void*> s_capsuleShapes;
 	static HashMap<void*, ConcaveMeshData> s_concaveMeshShapes;
 	static HashMap<void*, ConvexMeshData> s_convexMeshShapes;
 	static HashMap<float*, void*> s_heightMapShapes;
-	static HashMap<float, void*> s_sphereShapes;
 };
 
 
@@ -471,6 +511,15 @@ private:
 /// while (true)
 /// {
 ///		...
+///
+///		// Make sure to mark any changes that occur outside the physics engine, or else they will be overriden
+///		scene.system<RigidBodyComponent>(
+///			[&](const Entity::Id& id, RigidBodyComponent& rbody)
+///			{
+///				rbody.m_linearVelocity.y -= 0.01f;
+///				rbody.m_hasExternalChange = true;
+///			}
+///		);
 ///
 ///		// Do the physics update
 ///		physics->update(1.0f / 60.0f);

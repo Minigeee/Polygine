@@ -35,6 +35,38 @@ public:
 	Collider();
 
 	///////////////////////////////////////////////////////////
+	/// \brief Virtual destructor
+	///
+	///////////////////////////////////////////////////////////
+	virtual ~Collider();
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the position of the collider in the local space of the collision body
+	///
+	/// \param pos The new position of the collider in the local space of the collision body
+	///
+	///////////////////////////////////////////////////////////
+	void setPosition(const Vector3f& pos);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the position of the collider in the local space of the collision body
+	///
+	/// \param x The x-component of the position
+	/// \param y The y-component of the position
+	/// \param z The z-component of the position
+	///
+	///////////////////////////////////////////////////////////
+	void setPosition(float x, float y, float z);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the rotation of the collider in the local space of the collision body
+	///
+	/// \param pos The new rotation of the collider in the local space of the collision body
+	///
+	///////////////////////////////////////////////////////////
+	void setRotation(const Quaternion& quat);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Set the bounciness of the collider
 	///
 	/// Setting this property will only take affect if the collider
@@ -189,17 +221,13 @@ public:
 	///////////////////////////////////////////////////////////
 	bool isTrigger() const;
 
-private:
-	void setCollider(void* collider);
+protected:
+	void init(void* collider);
 
-private:
+protected:
 	void* m_collider;				//!< A pointer to the internal collider object
-	float m_bounciness;				//!< The bounciness
-	float m_frictionCoefficient;	//!< The friction coefficient
-	float m_rollingResistance;		//!< The rolling resistance
-	Uint16 m_collisionCategory;		//!< The collision category bitfield
-	Uint16 m_collisionMask;			//!< The collision mask bitfield
-	bool m_isTrigger;				//!< The trigger flag
+	void* m_material;				//!< A pointer to the internal material object
+	void* m_shape;					//!< A pointer to the internal shape object
 };
 
 
@@ -218,6 +246,8 @@ private:
 /// by the Physics extension using Physics::addCollider(), and
 /// the collider object can be used to change its properties or
 /// change its collision mask after the initial collider was created.
+/// It is not possible to use the collider class by itself, instead,
+/// one of its subclasses will always be returned.
 ///
 /// Usage example:
 /// \code
@@ -240,7 +270,7 @@ private:
 ///		Entity e = scene.createEntity(TransformComponent(), rbody, RenderComponent(&model), DynamicTag());
 ///
 ///		// Create a collider
-///		Collider collider = physics->addCollider(e, BoxShape(1.0f, 1.0f, 1.0f));
+///		BoxCollider collider = physics->addCollider(e, BoxShape(1.0f, 1.0f, 1.0f));
 ///		// Set properties
 ///		collider.setRollingResistance(0.1f);
 ///		collider.setCollisionCategory(2);

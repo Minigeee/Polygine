@@ -18,7 +18,9 @@ RigidBodyComponent::RigidBodyComponent() :
 	m_angularDamping	(0.0f),
 	m_force				(0.0f),
 	m_torque			(0.0f),
-	m_type				(RigidBodyType::Dynamic)
+	m_type				(RigidBodyType::Dynamic),
+	m_colliders			(0),
+	m_numColliders		(0)
 {
 
 }
@@ -50,7 +52,9 @@ void RigidBodyComponent::addForceAtWorldPos(const Vector3f& force, const Vector3
 
 ///////////////////////////////////////////////////////////
 CollisionBodyComponent::CollisionBodyComponent() :
-	m_position			(0.0f)
+	m_position			(0.0f),
+	m_colliders			(0),
+	m_numColliders		(0)
 {
 
 }

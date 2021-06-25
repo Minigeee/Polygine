@@ -45,6 +45,7 @@
 #include <poly/Network/TcpSocket.h>
 #include <poly/Network/UdpSocket.h>
 
+#include <poly/Physics/BoxCollider.h>
 #include <poly/Physics/Components.h>
 #include <poly/Physics/Events.h>
 #include <poly/Physics/Physics.h>
@@ -252,8 +253,7 @@ int main()
     rbody.m_inertiaTensor = Vector3f(INFINITY);
     Entity player = scene.createEntity(t, r, AnimationComponent(&skeleton), rbody, DynamicTag());
     CapsuleShape capsule(0.4f, 1.0f);
-    capsule.m_position = Vector3f(0.0f, 0.9f, 0.0f);
-    Collider playerCollider = physics->addCollider(player, capsule);
+    Collider playerCollider = physics->addCollider(player, capsule, Vector3f(0.0f, 0.9f, 0.0f));
     playerCollider.setFrictionCoefficient(1.0f);
 
     t.m_scale = Vector3f(1.0f);

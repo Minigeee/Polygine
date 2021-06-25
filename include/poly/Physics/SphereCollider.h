@@ -1,0 +1,40 @@
+#ifndef POLY_SPHERE_COLLIDER_H
+#define POLY_SPHERE_COLLIDER_H
+
+#include <poly/Physics/Collider.h>
+
+namespace poly
+{
+
+
+///////////////////////////////////////////////////////////
+/// \brief A collider object that uses a sphere shape
+/// \ingroup Physics
+///
+/// See Collider to see a short usage example for colliders.
+///
+///////////////////////////////////////////////////////////
+class SphereCollider : public Collider
+{
+public:
+	///////////////////////////////////////////////////////////
+	/// \brief Set sphere radius
+	///
+	/// \param radius The radius of the capsule
+	///
+	///////////////////////////////////////////////////////////
+	void setRadius(float radius);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the radius of the capsule
+	///
+	/// \return The radius of the capsule
+	///
+	///////////////////////////////////////////////////////////
+	float getRadius() const;
+};
+
+
+}
+
+#endif

@@ -87,6 +87,8 @@ public:
 	bool operator!=(const Quaternion& q) const;
 
 	float x, y, z, w;
+
+	static Quaternion Identity;		//!< The identity quaternion
 };
 
 

@@ -30,15 +30,14 @@ struct PhysicsShape
 	///
 	///////////////////////////////////////////////////////////
 	virtual ~PhysicsShape();
-
-	Vector3f m_position;		//!< The position of the physics shape in the local space of the physics body
-	Quaternion m_rotation;		//!< The orientation of the physics shape in the local space of the physics body
 };
 
 
 ///////////////////////////////////////////////////////////
 /// \brief A box collider physics shape
 /// \ingroup Physics
+///
+/// The origin of the box is always at the center.
 ///
 ///////////////////////////////////////////////////////////
 struct BoxShape : public PhysicsShape
@@ -74,6 +73,10 @@ struct BoxShape : public PhysicsShape
 ///////////////////////////////////////////////////////////
 /// \brief A capsule collider physics shape
 /// \ingroup Physics
+///
+/// The origin of the capsule is always at the center, and its
+/// initial orientation is always a vertical capsule (vertical
+/// along the y-axis).
 ///
 ///////////////////////////////////////////////////////////
 struct CapsuleShape : public PhysicsShape
@@ -156,6 +159,9 @@ struct ConvexMeshShape : public PhysicsShape
 /// \brief A height map physics shape
 /// \ingroup Physics
 ///
+/// The origin of the height map is always at the center, even along
+/// the y-axis.
+///
 ///////////////////////////////////////////////////////////
 struct HeightMapShape : public PhysicsShape
 {
@@ -183,6 +189,8 @@ struct HeightMapShape : public PhysicsShape
 ///////////////////////////////////////////////////////////
 /// \brief A sphere physics shape
 /// \ingroup Physics
+///
+/// The origin of the sphere is always at the center.
 ///
 ///////////////////////////////////////////////////////////
 struct SphereShape : public PhysicsShape
