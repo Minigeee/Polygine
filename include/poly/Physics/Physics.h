@@ -387,7 +387,7 @@ private:
 
 	void removeCollisionBody(Entity::Id id);
 
-	void createCollider(Collider& collider, const Entity& entity, void* rp3dShape, const Vector3f& pos, const Quaternion& rot);
+	void createCollider(Collider& collider, const Entity& entity, void* rp3dShape, const Vector3f& pos, const Quaternion& rot, Collider::Type type);
 
 	void* createBoxShape(const Vector3f& dims);
 

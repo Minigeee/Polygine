@@ -29,6 +29,21 @@ class Collider
 
 public:
 	///////////////////////////////////////////////////////////
+	/// \brief Colider type enum for collider shapes
+	///
+	///////////////////////////////////////////////////////////
+	enum Type
+	{
+		Box,			//!< A box collider
+		Capsule,		//!< A cpasule collider
+		ConcaveMesh,	//!< A concave mesh collider
+		ConvexMesh,		//!< A convex mesh collider
+		HeightMap,		//!< A height map collider
+		Sphere			//!< A sphere collider
+	};
+
+public:
+	///////////////////////////////////////////////////////////
 	/// \brief The default constructor
 	///
 	///////////////////////////////////////////////////////////
@@ -174,6 +189,35 @@ public:
 	void setIsTrigger(bool trigger);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Get the collider shape type
+	///
+	/// This can be used to infer which collider subtype this collider
+	/// is. This should be used when accessing colliders from physics body,
+	/// as the way the colliders are stored remove their ability to be
+	/// dynamically casted.
+	///
+	/// \return The collider shape type
+	///
+	///////////////////////////////////////////////////////////
+	Type getType() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the collider position in the local space of the physics body
+	///
+	/// \return The collider position
+	///
+	///////////////////////////////////////////////////////////
+	Vector3f getPosition() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the collider rotation in the local space of the physics body
+	///
+	/// \return The collider rotation
+	///
+	///////////////////////////////////////////////////////////
+	Quaternion getRotation() const;
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the collider bounciness value
 	///
 	/// \return The bounciness value
@@ -224,7 +268,14 @@ public:
 protected:
 	void init(void* collider);
 
+	///////////////////////////////////////////////////////////
+	/// \brief Awaken collider body if asleep
+	///
+	///////////////////////////////////////////////////////////
+	void awakenBody();
+
 protected:
+	Type m_type;					//!< The collider shape type
 	void* m_collider;				//!< A pointer to the internal collider object
 	void* m_material;				//!< A pointer to the internal material object
 	void* m_shape;					//!< A pointer to the internal shape object

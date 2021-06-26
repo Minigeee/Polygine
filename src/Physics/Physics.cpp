@@ -414,10 +414,10 @@ void Physics::update(float dt)
 	Uint32 groupId = 0;
 	Uint32 localIndex = 0;
 
-	START_PROFILING(copyToEngine);
-
 	// Rigid bodies
 	std::unique_lock<std::mutex> lock1(m_dataMutex);
+	std::unique_lock<std::mutex> lock2(m_mutex);
+
 	m_scene->system<RigidBodyComponent>(
 		[&](const Entity::Id& id, RigidBodyComponent& body)
 		{
@@ -454,8 +454,6 @@ void Physics::update(float dt)
 			{
 				body.m_linearVelocity = Vector3f(0.0f);
 				body.m_angularVelocity = Vector3f(0.0f);
-				body.m_inertiaTensor = Vector3f(INFINITY);
-				body.m_mass = INFINITY;
 				invInertiaTensor = Vector3f(0.0f);
 				invMass = 0.0f;
 
@@ -463,8 +461,6 @@ void Physics::update(float dt)
 			}
 			else if (body.m_type == RigidBodyType::Kinematic)
 			{
-				body.m_inertiaTensor = Vector3f(INFINITY);
-				body.m_mass = INFINITY;
 				invInertiaTensor = Vector3f(0.0f);
 				invMass = 0.0f;
 
@@ -555,10 +551,13 @@ void Physics::update(float dt)
 			data.m_linearVelocity = body.m_linearVelocity;
 			data.m_angularVelocity = body.m_angularVelocity;
 
+			// Forces are reset to zero
+			body.m_force = Vector3f(0.0f);
+			body.m_torque = Vector3f(0.0f);
+
 			++localIndex;
 		}
 	);
-	lock1.unlock();
 
 	// Collision bodies
 	std::vector<CollisionBodyData>* cbodyGroup = 0;
@@ -588,18 +587,19 @@ void Physics::update(float dt)
 		}
 	);
 
-	STOP_PROFILING(copyToEngine);
+	lock1.unlock();
+	lock2.unlock();
 
 
-	{
-		std::unique_lock<std::mutex> lock2(m_mutex);
-		// Do the physics update
-		world->update(dt);
-	}
+	// Do the physics update
+	lock2.lock();
+	world->update(dt);
+	lock2.unlock();
 
 
 	// Copy the data back from the physics engine
 	lock1.lock();
+	lock2.lock();
 
 	// Rigid bodies
 	group = 0;
@@ -635,10 +635,6 @@ void Physics::update(float dt)
 				body.m_linearVelocity = POLY_VEC3(rbodyComponents.mLinearVelocities[bodyIndex]);
 			if (body.m_angularVelocity == data.m_angularVelocity)
 				body.m_angularVelocity = POLY_VEC3(rbodyComponents.mAngularVelocities[bodyIndex]);
-
-			// Forces are reset to zero
-			body.m_force = Vector3f(0.0f);
-			body.m_torque = Vector3f(0.0f);
 
 			++localIndex;
 		}
@@ -727,10 +723,13 @@ const Vector3f& Physics::getGravity() const
 
 
 ///////////////////////////////////////////////////////////
-void Physics::createCollider(Collider& collider, const Entity& entity, void* rp3dShape, const Vector3f& pos, const Quaternion& rot)
+void Physics::createCollider(Collider& collider, const Entity& entity, void* rp3dShape, const Vector3f& pos, const Quaternion& rot, Collider::Type type)
 {
 	// Create transform
 	reactphysics3d::Transform transform(RP3D_VEC3(pos), RP3D_QUAT(rot));
+
+	// Set type
+	collider.m_type = type;
 
 	// Lock mutex
 	std::unique_lock<std::mutex> lock(m_dataMutex);
@@ -794,7 +793,7 @@ BoxCollider Physics::addCollider(const Entity& entity, const BoxShape& shape, co
 
 	// Create collider
 	BoxCollider collider;
-	createCollider(collider, entity, rp3dShape, position, rotation);
+	createCollider(collider, entity, rp3dShape, position, rotation, Collider::Box);
 
 	return collider;
 }
@@ -813,7 +812,7 @@ CapsuleCollider Physics::addCollider(const Entity& entity, const CapsuleShape& s
 
 	// Create collider
 	CapsuleCollider collider;
-	createCollider(collider, entity, rp3dShape, position, rotation);
+	createCollider(collider, entity, rp3dShape, position, rotation, Collider::Capsule);
 
 	return collider;
 }
@@ -832,7 +831,7 @@ ConcaveMeshCollider Physics::addCollider(const Entity& entity, const ConcaveMesh
 
 	// Create collider
 	ConcaveMeshCollider collider;
-	createCollider(collider, entity, rp3dShape, position, rotation);
+	createCollider(collider, entity, rp3dShape, position, rotation, Collider::ConcaveMesh);
 
 	return collider;
 }
@@ -851,7 +850,7 @@ ConvexMeshCollider Physics::addCollider(const Entity& entity, const ConvexMeshSh
 
 	// Create collider
 	ConvexMeshCollider collider;
-	createCollider(collider, entity, rp3dShape, position, rotation);
+	createCollider(collider, entity, rp3dShape, position, rotation, Collider::ConvexMesh);
 
 	return collider;
 }
@@ -872,7 +871,7 @@ HeightMapCollider Physics::addCollider(const Entity& entity, const HeightMapShap
 
 	// Create collider
 	HeightMapCollider collider;
-	createCollider(collider, entity, rp3dShape, newPos, rotation);
+	createCollider(collider, entity, rp3dShape, newPos, rotation, Collider::HeightMap);
 
 	return collider;
 }
@@ -891,7 +890,7 @@ SphereCollider Physics::addCollider(const Entity& entity, const SphereShape& sha
 
 	// Create collider
 	SphereCollider collider;
-	createCollider(collider, entity, rp3dShape, position, rotation);
+	createCollider(collider, entity, rp3dShape, position, rotation, Collider::Sphere);
 
 	return collider;
 }

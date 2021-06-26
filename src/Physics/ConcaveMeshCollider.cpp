@@ -20,6 +20,8 @@ void ConcaveMeshCollider::setScale(const Vector3f& scale)
 {
 	ASSERT(m_shape, "The collider must be created using the physics scene extension");
 	SHAPE_CAST(m_shape)->setScale(RP3D_VEC3(scale));
+
+	awakenBody();
 }
 
 

@@ -22,6 +22,8 @@ void BoxCollider::setDimensions(const Vector3f& dims)
 
 	Vector3f halfExtents = 0.5f * dims;
 	SHAPE_CAST(m_shape)->setHalfExtents(RP3D_VEC3(halfExtents));
+
+	awakenBody();
 }
 
 

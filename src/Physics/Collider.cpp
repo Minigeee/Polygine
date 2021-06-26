@@ -75,6 +75,8 @@ void Collider::setFrictionCoefficient(float coefficient)
 {
 	ASSERT(m_material, "The collider must be created using the physics scene extension");
 	MATERIAL_CAST(m_material)->setFrictionCoefficient(coefficient);
+
+	awakenBody();
 }
 
 
@@ -83,6 +85,8 @@ void Collider::setRollingResistance(float resistance)
 {
 	ASSERT(m_material, "The collider must be created using the physics scene extension");
 	MATERIAL_CAST(m_material)->setRollingResistance(resistance);
+
+	awakenBody();
 }
 
 
@@ -91,6 +95,8 @@ void Collider::setCollisionCategory(Uint16 category)
 {
 	ASSERT(m_collider, "The collider must be created using the physics scene extension");
 	COLLIDER_CAST(m_collider)->setCollisionCategoryBits(category);
+
+	awakenBody();
 }
 
 
@@ -99,6 +105,8 @@ void Collider::setCollisionMask(Uint16 mask)
 {
 	ASSERT(m_collider, "The collider must be created using the physics scene extension");
 	COLLIDER_CAST(m_collider)->setCollideWithMaskBits(mask);
+
+	awakenBody();
 }
 
 
@@ -107,6 +115,33 @@ void Collider::setIsTrigger(bool trigger)
 {
 	ASSERT(m_collider, "The collider must be created using the physics scene extension");
 	COLLIDER_CAST(m_collider)->setIsTrigger(trigger);
+
+	awakenBody();
+}
+
+
+///////////////////////////////////////////////////////////
+Collider::Type Collider::getType() const
+{
+	return m_type;
+}
+
+
+///////////////////////////////////////////////////////////
+Vector3f Collider::getPosition() const
+{
+	ASSERT(m_material, "The collider must be created using the physics scene extension");
+	const reactphysics3d::Vector3& pos = COLLIDER_CAST(m_collider)->getLocalToBodyTransform().getPosition();
+	return POLY_VEC3(pos);
+}
+
+
+///////////////////////////////////////////////////////////
+Quaternion Collider::getRotation() const
+{
+	ASSERT(m_material, "The collider must be created using the physics scene extension");
+	const reactphysics3d::Quaternion& rot = COLLIDER_CAST(m_collider)->getLocalToBodyTransform().getOrientation();
+	return POLY_QUAT(rot);
 }
 
 
@@ -167,6 +202,15 @@ void Collider::init(void* collider)
 
 	MATERIAL_CAST(m_material)->setBounciness(0.1f);
 	MATERIAL_CAST(m_material)->setFrictionCoefficient(0.2f);
+}
+
+
+///////////////////////////////////////////////////////////
+void Collider::awakenBody()
+{
+	reactphysics3d::RigidBody* body = dynamic_cast<reactphysics3d::RigidBody*>(COLLIDER_CAST(m_collider)->getBody());
+	if (body && body->isSleeping())
+		body->setIsSleeping(false);
 }
 
 

@@ -20,6 +20,8 @@ void SphereCollider::setRadius(float radius)
 {
 	ASSERT(m_shape, "The collider must be created using the physics scene extension");
 	SHAPE_CAST(m_shape)->setRadius(radius);
+
+	awakenBody();
 }
 
 
