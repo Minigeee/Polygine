@@ -6,6 +6,12 @@
 
 #include <poly/Engine/Extension.h>
 
+#include <poly/Graphics/Camera.h>
+#include <poly/Graphics/FrameBuffer.h>
+#include <poly/Graphics/Shader.h>
+#include <poly/Graphics/VertexArray.h>
+#include <poly/Graphics/VertexBuffer.h>
+
 #include <poly/Math/Ray.h>
 
 #include <poly/Physics/Collider.h>
@@ -324,6 +330,40 @@ public:
 	///////////////////////////////////////////////////////////
 	void removeJoint(const Joint& joint);
 
+	///////////////////////////////////////////////////////////
+	/// \brief Set whether debug rendering should be enabled or not
+	///
+	/// Enabling debug rendering will force lines and triangles of
+	/// physics geometries to be generated during update(), so it will
+	/// benefit performance to disable this if not using debug rendering.
+	/// To render physics geometries, use render(), which will automatically
+	/// enable debug rendering.
+	///
+	/// \param enabled True if debug rendering should be enabled
+	///
+	///////////////////////////////////////////////////////////
+	void setDebugRenderEnabled(bool enabled);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Check if debug rendering is enabled
+	///
+	/// \return A boolean indicating whether debug rendering is enabled
+	///
+	///////////////////////////////////////////////////////////
+	bool isDebugRenderEnabled();
+
+	///////////////////////////////////////////////////////////
+	/// \brief Render the debug geometries of physics objects
+	///
+	/// This must be called in the rendering thread if using a
+	/// multithreaded application.
+	///
+	/// \param camera The camera to render geomtries from the perspective of
+	/// \param target The framebuffer to render pixels into
+	///
+	///////////////////////////////////////////////////////////
+	void render(Camera& camera, FrameBuffer& target = FrameBuffer::Default);
+
 private:
 	struct BodyData
 	{
@@ -379,6 +419,12 @@ private:
 		void* m_vertexArray;
 	};
 
+	struct DebugRenderPoint
+	{
+		Vector3f m_point;
+		Vector3f m_color;
+	};
+
 	void addRigidBody(Entity::Id id);
 
 	void addCollisionBody(Entity::Id id);
@@ -401,6 +447,8 @@ private:
 
 	void* createSphereShape(float radius);
 
+	static Shader& getDebugShader();
+
 private:
 	std::mutex m_mutex;															//!< Mutex to protect multithread access to main physics engine
 	std::mutex m_dataMutex;														//!< Mutex to protect data structures
@@ -418,9 +466,14 @@ private:
 	Uint32 m_maxRaycastIntersects;												//!< The max number of raycast intersects allowed for the current raycast query
 	std::vector<poly::RaycastInfo> m_raycastInfo;								//!< The temp storage for storing raycast results
 
+	VertexArray m_debugRenderArray;												//!< VAO for debug render
+	VertexBuffer m_debugRenderBuffer;											//!< VBO for debug render
+	Uint32 m_debugBufferOffset;													//!< The current render offset in the debug buffer
+
 	static HashMap<void*, ConcaveMeshData> s_concaveMeshShapes;
 	static HashMap<void*, ConvexMeshData> s_convexMeshShapes;
 	static HashMap<float*, void*> s_heightMapShapes;
+	static Shader s_debugShader;
 };
 
 
@@ -480,6 +533,7 @@ private:
 ///
 /// // Create the scene and create a few physics objects
 /// Scene scene;
+///	Camera camera;
 ///
 /// // Add an octree for rendering objects
 /// Octree octree;
@@ -512,15 +566,6 @@ private:
 /// {
 ///		...
 ///
-///		// Make sure to mark any changes that occur outside the physics engine, or else they will be overriden
-///		scene.system<RigidBodyComponent>(
-///			[&](const Entity::Id& id, RigidBodyComponent& rbody)
-///			{
-///				rbody.m_linearVelocity.y -= 0.01f;
-///				rbody.m_hasExternalChange = true;
-///			}
-///		);
-///
 ///		// Do the physics update
 ///		physics->update(1.0f / 60.0f);
 ///
@@ -535,6 +580,11 @@ private:
 ///
 ///		// Update dynamic objects in the octree
 ///		octree.update();
+///
+///		...
+///
+///		// Render debug physics geometry
+///		physics->render(camera);
 ///
 ///		...
 /// }

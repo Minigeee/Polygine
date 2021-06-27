@@ -241,6 +241,7 @@ int main()
     // Activate physics extension
     Physics* physics = scene.getExtension<Physics>();
     physics->setGravity(0.0f, -12.0f, 0.0f);
+    physics->setDebugRenderEnabled(true);
 
     TransformComponent t;
     t.m_position.y = 52.0f;
@@ -664,6 +665,7 @@ int main()
         octree.update();
         scene.getExtension<Shadows>()->render(camera);
         scene.render(camera, framebuffers[0]);
+        physics->render(camera, framebuffers[0]);
 
         ssao.render(framebuffers[0], framebuffers[1]);
         fog.render(framebuffers[1], framebuffers[0]);

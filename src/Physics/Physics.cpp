@@ -3,6 +3,7 @@
 
 #include <poly/Engine/Scene.h>
 
+#include <poly/Graphics/GLCheck.h>
 #include <poly/Graphics/Model.h>
 
 #include <poly/Math/Functions.h>
@@ -10,6 +11,9 @@
 #include <poly/Physics/Components.h>
 #include <poly/Physics/Events.h>
 #include <poly/Physics/Physics.h>
+
+#include <poly/Graphics/Shaders/debug_physics.vert.h>
+#include <poly/Graphics/Shaders/debug_physics.frag.h>
 
 #include <reactphysics3d/reactphysics3d.h>
 
@@ -208,6 +212,9 @@ HashMap<void*, Physics::ConvexMeshData> Physics::s_convexMeshShapes;
 ///////////////////////////////////////////////////////////
 HashMap<float*, void*> Physics::s_heightMapShapes;
 
+///////////////////////////////////////////////////////////
+Shader Physics::s_debugShader;
+
 
 ///////////////////////////////////////////////////////////
 Physics::RigidBodyData::RigidBodyData(const Entity::Id& id, void* body) :
@@ -226,10 +233,13 @@ Physics::RigidBodyData::RigidBodyData(const Entity::Id& id, void* body) :
 
 ///////////////////////////////////////////////////////////
 Physics::Physics(Scene* scene) :
-	Extension		(scene),
-	m_world			(g_common.createPhysicsWorld()),
-	m_eventHandler	(new priv::PhysicsEventHandler(this, scene))
+	Extension				(scene),
+	m_world					(g_common.createPhysicsWorld()),
+	m_eventHandler			(new priv::PhysicsEventHandler(this, scene)),
+	m_debugBufferOffset		(0)
 {
+	setDebugRenderEnabled(false);
+
 	// Add all current rigid and collision bodies
 	scene->system<RigidBodyComponent>(
 		[&](const Entity::Id& id, RigidBodyComponent& body)
@@ -1640,6 +1650,219 @@ void* Physics::createConvexMeshShape(const ConvexMeshShape& shape)
 		rp3d = it.value().m_shape;
 
 	return rp3d;
+}
+
+
+///////////////////////////////////////////////////////////
+void Physics::setDebugRenderEnabled(bool enabled)
+{
+	// Lock mutex
+	std::unique_lock<std::mutex> lock(m_mutex);
+
+	WORLD_CAST(m_world)->setIsDebugRenderingEnabled(enabled);
+
+	if (enabled)
+	{
+		reactphysics3d::DebugRenderer& debugRenderer = WORLD_CAST(m_world)->getDebugRenderer();
+		debugRenderer.setIsDebugItemDisplayed(reactphysics3d::DebugRenderer::DebugItem::COLLIDER_AABB, true);
+		debugRenderer.setIsDebugItemDisplayed(reactphysics3d::DebugRenderer::DebugItem::COLLISION_SHAPE, true);
+		debugRenderer.setIsDebugItemDisplayed(reactphysics3d::DebugRenderer::DebugItem::CONTACT_NORMAL, true);
+
+		if (!m_debugRenderArray.getId())
+		{
+			// Create vertex buffer
+			m_debugRenderBuffer.create((float*)0, 100 * 1024, BufferUsage::Stream);
+
+			// Create vao
+			m_debugRenderArray.bind();
+		}
+	}
+}
+
+
+///////////////////////////////////////////////////////////
+bool Physics::isDebugRenderEnabled()
+{
+	// Lock mutex
+	std::unique_lock<std::mutex> lock(m_mutex);
+	return WORLD_CAST(m_world)->getIsDebugRenderingEnabled();
+}
+
+
+///////////////////////////////////////////////////////////
+void Physics::render(Camera& camera, FrameBuffer& target)
+{
+	START_PROFILING_FUNC;
+
+	// Enable debug rendering
+	if (!isDebugRenderEnabled())
+		setDebugRenderEnabled(true);
+
+	reactphysics3d::PhysicsWorld* world = WORLD_CAST(m_world);
+	reactphysics3d::DebugRenderer& debugRenderer = WORLD_CAST(m_world)->getDebugRenderer();
+
+	// Cull and decide which geometries are in the frustum
+	const Frustum& frustum = camera.getFrustum();
+
+	std::vector<DebugRenderPoint> triangles, lines;
+	triangles.reserve(debugRenderer.getNbTriangles() * 3);
+	lines.reserve(debugRenderer.getNbLines() * 2);
+
+	{
+		std::unique_lock<std::mutex> lock(m_mutex);
+
+		// Lines
+		for (Uint32 i = 0; i < debugRenderer.getNbLines(); ++i)
+		{
+			const reactphysics3d::DebugRenderer::DebugLine& line = debugRenderer.getLinesArray()[i];
+
+			DebugRenderPoint p1, p2;
+			p1.m_point = POLY_VEC3(line.point1);
+			p2.m_point = POLY_VEC3(line.point2);
+
+			BoundingBox box;
+			box.m_min.x = std::min(p1.m_point.x, p2.m_point.x);
+			box.m_min.y = std::min(p1.m_point.y, p2.m_point.y);
+			box.m_min.z = std::min(p1.m_point.z, p2.m_point.z);
+			box.m_max.x = std::max(p1.m_point.x, p2.m_point.x);
+			box.m_max.y = std::max(p1.m_point.y, p2.m_point.y);
+			box.m_max.z = std::max(p1.m_point.z, p2.m_point.z);
+
+			// Only add to list if the line is in frustum
+			if (frustum.contains(box))
+			{
+				p1.m_color = Vector3f((line.color1 >> 16) & 0xFF, (line.color1 >> 8) & 0xFF, (line.color1 >> 0) & 0xFF) / 255.0f;
+				p2.m_color = Vector3f((line.color2 >> 16) & 0xFF, (line.color2 >> 8) & 0xFF, (line.color2 >> 0) & 0xFF) / 255.0f;
+
+				lines.push_back(p1);
+				lines.push_back(p2);
+			}
+		}
+
+		// Triangles
+		for (Uint32 i = 0; i < debugRenderer.getNbTriangles(); ++i)
+		{
+			const reactphysics3d::DebugRenderer::DebugTriangle& triangle = debugRenderer.getTrianglesArray()[i];
+
+			DebugRenderPoint p[3];
+			p[0].m_point = POLY_VEC3(triangle.point1);
+			p[1].m_point = POLY_VEC3(triangle.point2);
+			p[2].m_point = POLY_VEC3(triangle.point3);
+
+			BoundingBox box;
+			box.m_min = p[0].m_point;
+			box.m_max = p[0].m_point;
+			for (Uint32 i = 1; i < 3; ++i)
+			{
+				if (p[i].m_point.x < box.m_min.x)
+					box.m_min.x = p[i].m_point.x;
+				else if (p[i].m_point.x > box.m_max.x)
+					box.m_max.x = p[i].m_point.x;
+
+				if (p[i].m_point.y < box.m_min.y)
+					box.m_min.y = p[i].m_point.y;
+				else if (p[i].m_point.y > box.m_max.y)
+					box.m_max.y = p[i].m_point.y;
+
+				if (p[i].m_point.z < box.m_min.z)
+					box.m_min.z = p[i].m_point.z;
+				else if (p[i].m_point.z > box.m_max.z)
+					box.m_max.z = p[i].m_point.z;
+			}
+
+			// Only add to list if the line is in frustum
+			if (frustum.contains(box))
+			{
+				p[0].m_color = Vector3f((triangle.color1 >> 16) & 0xFF, (triangle.color1 >> 8) & 0xFF, (triangle.color1 >> 0) & 0xFF) / 255.0f;
+				p[1].m_color = Vector3f((triangle.color2 >> 16) & 0xFF, (triangle.color2 >> 8) & 0xFF, (triangle.color2 >> 0) & 0xFF) / 255.0f;
+				p[2].m_color = Vector3f((triangle.color3 >> 16) & 0xFF, (triangle.color3 >> 8) & 0xFF, (triangle.color3 >> 0) & 0xFF) / 255.0f;
+
+				triangles.push_back(p[0]);
+				triangles.push_back(p[1]);
+				triangles.push_back(p[2]);
+			}
+		}
+	}
+
+	if (lines.size() + triangles.size() == 0)
+		return;
+
+
+	// Stream instance data
+	Uint32 size = (lines.size() + triangles.size()) * sizeof(DebugRenderPoint);
+	MapBufferFlags flags = MapBufferFlags::Write | MapBufferFlags::Unsynchronized;
+
+	// Choose different flags based on how much space is left
+	if (m_debugBufferOffset + size > m_debugRenderBuffer.getSize())
+	{
+		flags |= MapBufferFlags::InvalidateBuffer;
+		m_debugBufferOffset = 0;
+	}
+
+	// Map the buffer
+	DebugRenderPoint* buffer = (DebugRenderPoint*)m_debugRenderBuffer.map(m_debugBufferOffset, size, flags);
+
+	Uint32 lineOffset = m_debugBufferOffset;
+	for (Uint32 i = 0; i < lines.size(); ++i)
+		buffer[i] = lines[i];
+	m_debugBufferOffset += lines.size() * sizeof(DebugRenderPoint);
+
+	Uint32 triangleOffset = m_debugBufferOffset;
+	for (Uint32 i = 0; i < triangles.size(); ++i)
+		buffer[i + lines.size()] = triangles[i];
+	m_debugBufferOffset += triangles.size() * sizeof(DebugRenderPoint);
+
+	// After pushing all instance data, unmap the buffer
+	m_debugRenderBuffer.unmap();
+
+
+	// Bind target
+	target.bind();
+
+	// Get shader and bind
+	Shader& shader = getDebugShader();
+	shader.bind();
+
+	camera.apply(&shader);
+
+	// Enable depth testing
+	glCheck(glEnable(GL_DEPTH_TEST));
+
+	// Use wireframe mode
+	glCheck(glPolygonMode(GL_FRONT_AND_BACK, GL_LINE));
+
+	m_debugRenderArray.bind();
+
+	// Lines
+	m_debugRenderArray.addBuffer(m_debugRenderBuffer, 0, 3, sizeof(DebugRenderPoint), lineOffset);
+	m_debugRenderArray.addBuffer(m_debugRenderBuffer, 1, 3, sizeof(DebugRenderPoint), lineOffset + sizeof(Vector3f));
+	m_debugRenderArray.setNumVertices(lines.size());
+	m_debugRenderArray.setDrawMode(DrawMode::Lines);
+	m_debugRenderArray.draw();
+
+	// Triangles
+	m_debugRenderArray.addBuffer(m_debugRenderBuffer, 0, 3, sizeof(DebugRenderPoint), triangleOffset);
+	m_debugRenderArray.addBuffer(m_debugRenderBuffer, 1, 3, sizeof(DebugRenderPoint), triangleOffset + sizeof(Vector3f));
+	m_debugRenderArray.setNumVertices(triangles.size());
+	m_debugRenderArray.setDrawMode(DrawMode::Triangles);
+	m_debugRenderArray.draw();
+
+	// Change back to fill mode
+	glCheck(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));
+}
+
+
+///////////////////////////////////////////////////////////
+Shader& Physics::getDebugShader()
+{
+	if (!s_debugShader.getId())
+	{
+		s_debugShader.load("poly/debug_physics.vert", SHADER_DEBUG_PHYSICS_VERT, Shader::Vertex);
+		s_debugShader.load("poly/debug_physics.frag", SHADER_DEBUG_PHYSICS_FRAG, Shader::Fragment);
+		s_debugShader.compile();
+	}
+
+	return s_debugShader;
 }
 
 

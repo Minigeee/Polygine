@@ -102,6 +102,7 @@ target_include_directories(polygine PRIVATE ${CMAKE_SOURCE_DIR}/extlibs/rapidxml
 CPMAddPackage("gh:DanielChappuis/reactphysics3d#master")
 target_link_libraries(polygine PRIVATE reactphysics3d)
 configure_file("${CMAKE_SOURCE_DIR}/extlibs/reactphysics3d/Collider.cpp" "${reactphysics3d_SOURCE_DIR}/src/collision/Collider.cpp")
+configure_file("${CMAKE_SOURCE_DIR}/extlibs/reactphysics3d/DebugRenderer.cpp" "${reactphysics3d_SOURCE_DIR}/src/utils/DebugRenderer.cpp")
 configure_file("${CMAKE_SOURCE_DIR}/extlibs/reactphysics3d/PhysicsWorld.h" "${reactphysics3d_SOURCE_DIR}/include/reactphysics3d/engine/PhysicsWorld.h")
 configure_file("${CMAKE_SOURCE_DIR}/extlibs/reactphysics3d/CollisionBody.h" "${reactphysics3d_SOURCE_DIR}/include/reactphysics3d/body/CollisionBody.h")
 configure_file("${CMAKE_SOURCE_DIR}/extlibs/reactphysics3d/RigidBody.h" "${reactphysics3d_SOURCE_DIR}/include/reactphysics3d/body/RigidBody.h")
