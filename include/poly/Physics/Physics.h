@@ -80,6 +80,12 @@ public:
 	~Physics();
 
 	///////////////////////////////////////////////////////////
+	/// \brief Lock the physics engine with a mutex for multithread use
+	///
+	///////////////////////////////////////////////////////////
+	std::unique_lock<std::mutex> lock();
+
+	///////////////////////////////////////////////////////////
 	/// \brief Do a physics simulation step
 	///
 	/// This function will simulate a physics step, using the elapsed

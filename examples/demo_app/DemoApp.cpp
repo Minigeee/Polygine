@@ -230,6 +230,10 @@ int main()
     // sun.m_shadowDistance = 150.0f;
     // sun.m_shadowsEnabled = false;
     Entity sunEntity = scene.createEntity(sun);
+    skybox.setDirLight(sunEntity);
+
+    sun.m_direction = Vector3f(-1.0f, -1.0f, 0.0f);
+    Entity sunEntity2 = scene.createEntity(sun);
 
     PointLightComponent light;
     light.m_diffuse = Vector3f(1.0f, 0.95f, 0.85f);
@@ -293,10 +297,9 @@ int main()
     ColorAdjust colorAdjust;
     Fog fog;
     fog.setCamera(&camera);
-    fog.setScene(&scene);
     fog.setDepthTexture(framebuffers[0].getDepthTexture());
+    fog.setDirLight(sunEntity);
     fog.setColor(0.25f, 0.5f, 0.9f);
-    fog.setScatterStrength(0.5f);
     fog.setSkyboxFog(false);
 
     Ssao ssao;
@@ -306,7 +309,6 @@ int main()
     Bloom bloom;
     bloom.setRadius(0.2f);
     bloom.setNumBlurs(3);
-    bloom.setIntensity(2.5f);
     bloom.setThresholdInterval(0.5f);
 
     Fxaa fxaa;
@@ -675,6 +677,8 @@ int main()
         fxaa.render(framebuffers[1]);
 
         ui.render();
+
+        // sunEntity.get<DirLightComponent>()->m_shadowsEnabled = false;
 
         STOP_PROFILING(GameLoop);
 

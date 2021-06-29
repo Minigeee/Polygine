@@ -126,20 +126,23 @@ public:
 	void render(FrameBuffer& input, FrameBuffer& output = FrameBuffer::Default) override;
 
 	///////////////////////////////////////////////////////////
-	/// \brief Set the scene pointer for directional light effects
-	///
-	/// \param scene A scene pointer
-	///
-	///////////////////////////////////////////////////////////
-	void setScene(Scene* scene);
-
-	///////////////////////////////////////////////////////////
 	/// \brief Set the camera pointer for directional light effects
 	///
 	/// \param scene A camera pointer
 	///
 	///////////////////////////////////////////////////////////
 	void setCamera(Camera* camera);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the entity containing the main directional light component
+	///
+	/// This directional light will be used to render the light scattering
+	/// effect.
+	///
+	/// \param entity The entity containing the directional light component
+	///
+	///////////////////////////////////////////////////////////
+	void setDirLight(Entity entity);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the depth texture to be used to apply the depth fog effect
@@ -174,7 +177,7 @@ public:
 	/// \brief Set the fog light scatter strength
 	///
 	/// The scatter strength determines how bright the light
-	/// scattering from a directional light is. By default,
+	/// scattering from the directional light is. By default,
 	/// this value is 0.
 	///
 	/// \param strength The scattering strength
@@ -189,6 +192,14 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	void setSkyboxFog(bool applyFog);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the entity used to render the light scattering effect
+	///
+	/// \return The entity containing a directional light used to render the scattering effect
+	///
+	///////////////////////////////////////////////////////////
+	Entity getDirLight() const;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the fog color
@@ -220,9 +231,9 @@ private:
 	static Shader& getShader();
 
 private:
-	Scene* m_scene;				//!< A scene pointer to access lights
 	Camera* m_camera;			//!< A camera pointer for calculating depth information
 	Texture* m_depthTexture;	//!< The depth texture used for the depth fog effect
+	Entity m_dirLight;			//!< An entity containing the directional light
 
 	Vector3f m_color;			//!< The color of the fog
 	float m_density;			//!< The density of the fog

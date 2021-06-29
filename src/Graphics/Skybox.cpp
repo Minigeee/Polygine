@@ -198,8 +198,8 @@ ProceduralSkybox::ProceduralSkybox() :
 	m_zenithColor		(0.172f, 0.448f, 0.775f),
 	m_horizonColor		(0.9f, 1.0f, 0.75f),
     m_groundColor       (0.12f, 0.22f, 0.25f),
-	m_bloomColor		(0.8f, 0.75f, 0.5f),
-	m_bloomSize 		(0.8f),
+    m_scatterStrength   (2.5f),
+	m_scatterFactor 	(0.6f),
 	m_lightStrength		(12.0f),
     m_topRadius         (6420.0f),
     m_botRadius         (6360.0f),
@@ -216,8 +216,8 @@ ProceduralSkybox::ProceduralSkybox() :
 	m_zenithColor		(0.12f, 0.2f, 0.5f),
 	m_horizonColor		(0.05f, 0.15f, 0.25f),
     m_groundColor       (0.12f, 0.22f, 0.25f),
-	m_bloomColor		(0.05f, 0.05f, 0.06f),
-	m_bloomSize 		(0.0f),
+	m_scatterColor		(0.05f, 0.05f, 0.06f),
+	m_scatterFactor 		(0.0f),
 	m_lightStrength		(0.5f),
     m_topRadius         (6420.0f),
     m_botRadius         (6360.0f),
@@ -252,23 +252,18 @@ void ProceduralSkybox::render(Camera& camera, RenderPass pass)
     shader.setUniform("u_projView", camera.getProjMatrix() * view);
 
     // Set light directions
-    int i = 0;
-    m_scene->system<DirLightComponent>(
-        [&](const Entity::Id id, DirLightComponent& light)
-        {
-            if (i++ == 0)
-            {
-                shader.setUniform("u_lightDir", normalize(light.m_direction));
-                shader.setUniform("u_bloomColor", light.m_diffuse);
-            }
-        }
-    );
+    DirLightComponent* light = m_dirLight.get<DirLightComponent>();
+    if (light)
+    {
+        shader.setUniform("u_lightDir", normalize(light->m_direction));
+        shader.setUniform("u_scatterColor", light->m_diffuse * m_scatterStrength);
+    }
 
     // Skybox parameters
     shader.setUniform("u_zenithColor", m_zenithColor);
     shader.setUniform("u_horizonColor", m_horizonColor);
     shader.setUniform("u_groundColor", m_groundColor);
-    shader.setUniform("u_bloomSize", m_bloomSize);
+    shader.setUniform("u_scatterFactor", m_scatterFactor);
     shader.setUniform("u_lightStrength", m_lightStrength);
     shader.setUniform("u_topRadius", m_topRadius);
     shader.setUniform("u_botRadius", m_botRadius);
@@ -304,6 +299,13 @@ Shader& ProceduralSkybox::getShader()
 
 
 ///////////////////////////////////////////////////////////
+void ProceduralSkybox::setDirLight(Entity light)
+{
+    m_dirLight = light;
+}
+
+
+///////////////////////////////////////////////////////////
 void ProceduralSkybox::setZenithColor(const Vector3f& color)
 {
     m_zenithColor = color;
@@ -327,16 +329,16 @@ void ProceduralSkybox::setGroundColor(const Vector3f& color)
 
 
 ///////////////////////////////////////////////////////////
-void ProceduralSkybox::setBloomColor(const Vector3f& color)
+void ProceduralSkybox::setScatterStrength(float strength)
 {
-    m_bloomColor = color;
+    m_scatterStrength = strength;
 }
 
 
 ///////////////////////////////////////////////////////////
-void ProceduralSkybox::setBloomSize(float size)
+void ProceduralSkybox::setScatterFactor(float size)
 {
-    m_bloomSize = size;
+    m_scatterFactor = size;
 }
 
 
@@ -369,6 +371,13 @@ void ProceduralSkybox::setAltitude(float alt)
 
 
 ///////////////////////////////////////////////////////////
+Entity ProceduralSkybox::getDirLight() const
+{
+    return m_dirLight;
+}
+
+
+///////////////////////////////////////////////////////////
 const Vector3f& ProceduralSkybox::getZenithColor() const
 {
     return m_zenithColor;
@@ -390,16 +399,16 @@ const Vector3f& ProceduralSkybox::getGroundColor() const
 
 
 ///////////////////////////////////////////////////////////
-const Vector3f& ProceduralSkybox::getBloomColor() const
+float ProceduralSkybox::getScatterStrength() const
 {
-    return m_bloomColor;
+    return m_scatterStrength;
 }
 
 
 ///////////////////////////////////////////////////////////
-float ProceduralSkybox::getBloomSize() const
+float ProceduralSkybox::getScatterFactor() const
 {
-    return m_bloomSize;
+    return m_scatterFactor;
 }
 
 

@@ -23,7 +23,7 @@ struct UniformBlock_Shadows
 	UniformBufferType<float, 4>		m_shadowDists[6];
 	UniformBufferType<float, 4>		m_shadowStrengths[2];
 	UniformBufferType<int, 4>		m_numShadowCascades[2];
-	UniformBufferType<int>			m_numShadows;
+	UniformBufferType<int, 4>		m_shadowsEnabled[2];
 };
 
 #endif
@@ -91,6 +91,7 @@ private:
 		std::vector<float> m_shadowDists;			//!< The cascade distances
 		Matrix4f m_cameraProj;						//!< The (normal) camera projection matrix
 		float m_shadowStrength;						//!< The blocking strength of the shadows
+		Uint32 m_lightIndex;						//!< The index of the light
 		bool m_isActive;							//!< This is true when shadows are active for the light
 	};
 

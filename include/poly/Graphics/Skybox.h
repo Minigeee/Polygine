@@ -114,7 +114,7 @@ public:
 	/// \brief Initialize the skybox
 	///
 	/// The skybox uses the scene to get the first directional light
-	/// to calculate where in the sky to apply the sun bloom effect.
+	/// to calculate where in the sky to apply the light scatter effect.
 	///
 	/// \param scene A pointer to a scene
 	///
@@ -129,6 +129,16 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	void render(Camera& camera, RenderPass pass) override;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the entity containing the main directional light component
+	///
+	/// This directional light will be used to render the skybox.
+	///
+	/// \param entity The entity containing the directional light component
+	///
+	///////////////////////////////////////////////////////////
+	void setDirLight(Entity entity);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the zenith color
@@ -160,25 +170,26 @@ public:
 	void setGroundColor(const Vector3f& color);
 
 	///////////////////////////////////////////////////////////
-	/// \brief Set the sun bloom color
+	/// \brief Set the brightness of Mie scattered light
 	///
-	/// This is the color of the area surrounding the direction
-	/// of the incoming light. This effect is normally caused by
-	/// the mie scattering because this type of scattering scatters
-	/// light in the forward direction more than any other direction.
+	/// This can be used to set the g-factor of the scatter effect.
+	/// This factor is the g value used in the Mie phase function.
 	///
-	/// \param color The sun bloom color
+	/// \param factor The scatter factor
 	///
 	///////////////////////////////////////////////////////////
-	void setBloomColor(const Vector3f& color);
+	void setScatterStrength(float factor);
 
 	///////////////////////////////////////////////////////////
-	/// \brief Set the size and relative brightness of the sun bloom effect
+	/// \brief Set the g-factor of the light scatter effect
 	///
-	/// \param size The size and relative size of the bloom factor
+	/// This can be used to set the g-factor of the scatter effect.
+	/// This factor is the g value used in the Mie phase function.
+	///
+	/// \param factor The scatter factor
 	///
 	///////////////////////////////////////////////////////////
-	void setBloomSize(float size);
+	void setScatterFactor(float factor);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set light strength
@@ -218,6 +229,14 @@ public:
 	void setAltitude(float alt);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Get the entity used to render the skybox
+	///
+	/// \return The entity containing a directional ligth used to render the skybox
+	///
+	///////////////////////////////////////////////////////////
+	Entity getDirLight() const;
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the zenith color
 	///
 	/// \return The zenith color
@@ -242,20 +261,20 @@ public:
 	const Vector3f& getGroundColor() const;
 
 	///////////////////////////////////////////////////////////
-	/// \brief Get the sun bloom color
+	/// \brief Get the brightness of Mie scattered light
 	///
-	/// \return The sun bloom color
+	/// \return The brightness of scattered light
 	///
 	///////////////////////////////////////////////////////////
-	const Vector3f& getBloomColor() const;
+	float getScatterStrength() const;
 
 	///////////////////////////////////////////////////////////
-	/// \brief Get the sun bloom size and brightness
+	/// \brief Get the light scatter factor
 	///
-	/// \return The sun bloom size and brightness
+	/// \return The light scatter factor
 	///
 	///////////////////////////////////////////////////////////
-	float getBloomSize() const;
+	float getScatterFactor() const;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the light strength multiplier
@@ -306,12 +325,13 @@ private:
 
 private:
 	Scene* m_scene;				//!< A pointer to a scene
+	Entity m_dirLight;			//!< The directional light entity
 
 	Vector3f m_zenithColor;		//!< The zenith color
 	Vector3f m_horizonColor;	//!< The horizon color
 	Vector3f m_groundColor;		//!< The ground color
-	Vector3f m_bloomColor;		//!< The sun bloom color
-	float m_bloomSize;			//!< Mie phase function "g" factor
+	float m_scatterStrength;	//!< Scatter brightness
+	float m_scatterFactor;		//!< Mie phase function "g" factor
 	float m_lightStrength;		//!< Color multiplier
 
 	float m_topRadius;			//!< Atmosphere radius

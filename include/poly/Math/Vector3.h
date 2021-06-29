@@ -976,6 +976,25 @@ template <typename T>
 Vector3<T> cross(const Vector3<T>& a, const Vector3<T>& b);
 
 ///////////////////////////////////////////////////////////
+/// \relates Vector3
+/// \brief Linearly interpolate between two vectors
+///
+/// When interpolating, using a \a factor of 0.0 will return
+/// the first parameter, using a \a factor of 1.0 will return
+/// the second parameter, and a value in between will mix
+/// the values.
+///
+/// \param a The first vector to interpolate
+/// \param b The second vector to interpolate
+/// \param factor The interpolation factor
+///
+/// \return The interpolated vector
+///
+///////////////////////////////////////////////////////////
+template <typename T>
+Vector3<T> mix(const Vector3<T>& a, const Vector3<T>& b, float factor);
+
+///////////////////////////////////////////////////////////
 // Typedefs
 ///////////////////////////////////////////////////////////
 

@@ -54,8 +54,11 @@ void Shadows::render(Camera& camera)
 	m_scene->system<DirLightComponent>(
 		[&](const Entity::Id& id, const DirLightComponent& light)
 		{
+			// Add number of lights used (even if shadows are disabled)
+			++lightNum;
+
 			// Skip if disabled, or if 2 lights already enabled
-			if (!light.m_shadowsEnabled || lightNum >= 2)
+			if (!light.m_shadowsEnabled || lightNum > 2)
 			{
 				auto it = m_shadowInfo.find(id);
 				if (it != m_shadowInfo.end())
@@ -64,9 +67,6 @@ void Shadows::render(Camera& camera)
 
 				return;
 			}
-
-			// Add number of lights used
-			++lightNum;
 
 			// Create light camera
 			Camera lightCamera;
@@ -87,6 +87,7 @@ void Shadows::render(Camera& camera)
 			ShadowInfo* info = &m_shadowInfo[id];
 			info->m_shadowStrength = light.m_shadowStrength;
 			info->m_cameraProj = camera.getProjMatrix();
+			info->m_lightIndex = lightNum - 1;
 			info->m_isActive = true;
 
 			for (Uint32 cascade = 0; cascade < light.m_shadowCascades; ++cascade)
@@ -167,14 +168,17 @@ void Shadows::render(Camera& camera)
 		UniformBlock_Shadows block;
 
 		// Apply shadow maps to shader
-		Uint32 i = 0;
-		for (auto it = m_shadowInfo.begin(); it != m_shadowInfo.end(); ++it, ++i)
+		for (auto it = m_shadowInfo.begin(); it != m_shadowInfo.end(); ++it)
 		{
 			ShadowInfo& info = it.value();
+			Uint32 i = info.m_lightIndex;
 
 			// Skip if inactive
 			if (!info.m_isActive)
+			{
+				block.m_shadowsEnabled[i] = false;
 				continue;
+			}
 
 			for (Uint32 cascade = 0; cascade < info.m_shadowMaps.size(); ++cascade)
 			{
@@ -187,9 +191,8 @@ void Shadows::render(Camera& camera)
 
 			block.m_shadowStrengths[i] = info.m_shadowStrength;
 			block.m_numShadowCascades[i] = (int)info.m_shadowMaps.size();
+			block.m_shadowsEnabled[i] = true;
 		}
-
-		block.m_numShadows = (int)lightNum;
 
 		// Push data
 		m_uniformBuffer.pushData(block);
@@ -204,10 +207,10 @@ void Shadows::apply(Shader* shader)
 	shader->bindUniformBlock("Shadows", m_uniformBuffer);
 
 	// Apply shadow maps to shader
-	Uint32 i = 0;
-	for (auto it = m_shadowInfo.begin(); it != m_shadowInfo.end(); ++it, ++i)
+	for (auto it = m_shadowInfo.begin(); it != m_shadowInfo.end(); ++it)
 	{
 		ShadowInfo& info = it.value();
+		Uint32 i = info.m_lightIndex;
 
 		// Skip if inactive
 		if (!info.m_isActive)

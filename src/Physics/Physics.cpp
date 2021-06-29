@@ -409,6 +409,13 @@ void Physics::removeCollisionBody(Entity::Id id)
 
 
 ///////////////////////////////////////////////////////////
+std::unique_lock<std::mutex> Physics::lock()
+{
+	return std::unique_lock<std::mutex>(m_mutex);
+}
+
+
+///////////////////////////////////////////////////////////
 void Physics::update(float dt)
 {
 	START_PROFILING_FUNC;

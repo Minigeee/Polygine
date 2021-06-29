@@ -17,10 +17,14 @@ uniform sampler2D u_shadowMaps[MAX_NUM_SHADOW_MAPS];
 ///////////////////////////////////////////////////////////
 float getShadowFactor(int lightNum, vec3 normal, int kernelSize)
 {
+    // Return full light if shadows disabled
+    if (!u_shadowsEnabled[lightNum])
+        return 1.0f;
+
     int lightIndex = lightNum * MAX_NUM_SHADOW_CASCADES;
 
     // Get correct light parameters
-    int numCascades = u_numShadowCascades[lightIndex];
+    int numCascades = u_numShadowCascades[lightNum];
     float clipSpaceDepth = v_clipSpacePos.z;
 
     // Find which region the pixel is in

@@ -152,12 +152,11 @@ float ColorAdjust::getGamma() const
 
 ///////////////////////////////////////////////////////////
 Fog::Fog() :
-	m_scene				(0),
 	m_camera			(0),
 	m_depthTexture		(0),
 	m_color				(0.272f, 0.548f, 0.675f),
 	m_density			(0.0005f),
-	m_scatterStrength	(0.0f),
+	m_scatterStrength	(1.0f),
 	m_applyToSkybox		(true)
 {
 
@@ -190,28 +189,18 @@ void Fog::render(FrameBuffer& input, FrameBuffer& output)
 	shader.setUniform("u_scatterStrength", m_scatterStrength);
 	shader.setUniform("u_applyToSkybox", (int)m_applyToSkybox);
 
+	shader.setUniform("u_invProjView", inverse(m_camera->getProjMatrix() * m_camera->getViewMatrix()));
+
 	m_camera->apply(&shader);
 
-	if (m_scene)
+	if (m_dirLight.isValid())
 	{
-		Vector3f lightDir(0.0);
+		DirLightComponent* light = m_dirLight.get<DirLightComponent>();
 
-		int i = 0;
-		m_scene->system<DirLightComponent>(
-			[&](const Entity::Id id, DirLightComponent& light)
-			{
-				if (i++ == 0)
-				{
-					lightDir = normalize(light.m_direction);
-					shader.setUniform("u_lightDir", lightDir);
-					shader.setUniform("u_lightColor", light.m_diffuse);
-				}
-			}
-		);
-
-		if (i > 0)
+		if (light)
 		{
-			shader.setUniform("u_invProjView", inverse(m_camera->getProjMatrix() * m_camera->getViewMatrix()));
+			shader.setUniform("u_lightDir", normalize(light->m_direction));
+			shader.setUniform("u_lightColor", light->m_diffuse);
 		}
 	}
 
@@ -219,13 +208,6 @@ void Fog::render(FrameBuffer& input, FrameBuffer& output)
 	VertexArray& vao = PostProcess::getVertexArray();
 	vao.bind();
 	vao.draw();
-}
-
-
-///////////////////////////////////////////////////////////
-void Fog::setScene(Scene* scene)
-{
-	m_scene = scene;
 }
 
 
@@ -240,6 +222,13 @@ void Fog::setCamera(Camera* camera)
 void Fog::setDepthTexture(Texture* texture)
 {
 	m_depthTexture = texture;
+}
+
+
+///////////////////////////////////////////////////////////
+void Fog::setDirLight(Entity entity)
+{
+	m_dirLight = entity;
 }
 
 
@@ -289,6 +278,13 @@ float Fog::getDensity() const
 float Fog::getScatterStrength() const
 {
 	return m_scatterStrength;
+}
+
+
+///////////////////////////////////////////////////////////
+Entity Fog::getDirLight() const
+{
+	return m_dirLight;
 }
 
 
@@ -553,9 +549,9 @@ Shader& Blur::getShader()
 Bloom::Bloom() :
 	m_blurTarget			(0),
 	m_blurTexture			(0),
-	m_intensity				(2.0f),
+	m_intensity				(1.0f),
 	m_threshold				(1.0f),
-	m_thresholdInterval		(0.8f),
+	m_thresholdInterval		(0.5f),
 	m_radius				(0.05f),
 	m_numBlurs				(3)
 {

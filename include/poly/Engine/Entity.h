@@ -86,6 +86,19 @@ public:
 	///////////////////////////////////////////////////////////
 	void remove() const;
 
+	///////////////////////////////////////////////////////////
+	/// \brief Check if the entity has been initialized properly
+	///
+	/// At the moment, this function doesn't check if the entity
+	/// has been removed or not, but that can be added in the future
+	/// if there is a need for it. This just checks if the entity
+	/// has a valid scene pointer.
+	///
+	/// \return True if the entity has been initialized properly
+	///
+	///////////////////////////////////////////////////////////
+	bool isValid() const;
+
 private:
 	Scene* m_scene;	//!< Scene pointer
 	Id m_id;		//!< The entity id

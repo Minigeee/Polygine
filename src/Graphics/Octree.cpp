@@ -85,7 +85,8 @@ void bindShader(Shader* shader, Camera& camera, Scene* scene, RenderPass pass)
 	scene->getExtension<Lighting>()->apply(shader);
 
 	// Shadows
-	scene->getExtension<Shadows>()->apply(shader);
+	if (pass != RenderPass::Shadow)
+		scene->getExtension<Shadows>()->apply(shader);
 	// shader->setUniform("u_isShadowPass", pass == RenderPass::Shadow);
 }
 

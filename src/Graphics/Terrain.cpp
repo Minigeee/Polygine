@@ -577,7 +577,8 @@ void Terrain::render(Camera& camera, RenderPass pass)
 
 	// Lighting
 	m_scene->getExtension<Lighting>()->apply(m_shader);
-	m_scene->getExtension<Shadows>()->apply(m_shader);
+	if (pass != RenderPass::Shadow)
+		m_scene->getExtension<Shadows>()->apply(m_shader);
 
 	// Apply textures
 	applyTextures(m_shader);
