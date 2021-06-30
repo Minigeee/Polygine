@@ -124,6 +124,7 @@ Octree::Octree() :
 	m_root					(0),
 	m_size					(0.0f),
 	m_maxPerCell			(0),
+	m_numEntitites			(0),
 	m_instanceBufferOffset	(0)
 {
 
@@ -383,6 +384,9 @@ void Octree::add(Entity::Id entity)
 	// Add to map
 	m_dataMap[entity] = data;
 
+	// Increment number of entities
+	++m_numEntitites;
+
 
 	// Insert into the octree
 	insert(data);
@@ -510,6 +514,40 @@ void Octree::insert(EntityData* data)
 
 
 ///////////////////////////////////////////////////////////
+void Octree::merge(Node* node)
+{
+	// Count the number of entities in children nodes
+	Uint32 numEntities = 0;
+	for (Uint32 i = 0; i < 8; ++i)
+		numEntities += node->m_children[i]->m_data.size();
+
+	// Only merge if the number of entitites is less than a certain margin
+	if (numEntities < (Uint32)(0.7f * m_maxPerCell))
+	{
+		std::vector<EntityData*>& data = node->m_data;
+
+		for (Uint32 i = 0; i < 8; ++i)
+		{
+			// Append all child node data
+			std::vector<EntityData*>& childData = node->m_children[i]->m_data;
+			data.insert(data.end(), childData.begin(), childData.end());
+		}
+
+		// Update the containing node of each entity
+		for (Uint32 i = 0; i < data.size(); ++i)
+			data[i]->m_node = node;
+
+		// Remove the children node
+		for (Uint32 i = 0; i < 8; ++i)
+		{
+			m_nodePool.free(node->m_children[i]);
+			node->m_children[i] = 0;
+		}
+	}
+}
+
+
+///////////////////////////////////////////////////////////
 void Octree::update()
 {
 	ASSERT(m_scene, "The octree must be initialized before using, by calling the init() function");
@@ -625,6 +663,10 @@ void Octree::update(const Entity::Id& entity, RenderComponent& r, TransformCompo
 
 		// Insert again
 		insert(data);
+
+		// Attempt to merge the parent cell (after inserting in case it was inserted into one of sibling nodes)
+		if (node->m_parent)
+			merge(node->m_parent);
 	}
 }
 
@@ -653,42 +695,15 @@ void Octree::remove(Entity::Id entity)
 		}
 	}
 
-	// Check if the parent node will have a small enough number of entities to merge
+	// Attempt to merge the parent cell
 	if (node->m_parent)
-	{
-		// Count the number of entities
-		Uint32 numEntities = 0;
-		for (Uint32 i = 0; i < 8; ++i)
-			numEntities += node->m_parent->m_children[i]->m_data.size();
-
-		if (numEntities < (Uint32)(0.7f * m_maxPerCell))
-		{
-			// Merge
-			Node* parent = node->m_parent;
-			std::vector<EntityData*>& parentData = parent->m_data;
-
-			for (Uint32 i = 0; i < 8; ++i)
-			{
-				// Append all child node data
-				std::vector<EntityData*>& childData = parent->m_children[i]->m_data;
-				parentData.insert(parentData.end(), childData.begin(), childData.end());
-			}
-
-			// Update the containing node of each entity
-			for (Uint32 i = 0; i < parentData.size(); ++i)
-				parentData[i]->m_node = parent;
-
-			// Remove the children node
-			for (Uint32 i = 0; i < 8; ++i)
-			{
-				m_nodePool.free(parent->m_children[i]);
-				parent->m_children[i] = 0;
-			}
-		}
-	}
+		merge(node->m_parent);
 
 	// Remove from pool
 	m_dataPool.free(data);
+
+	// Decrement the number of entities
+	--m_numEntitites;
 }
 
 
@@ -757,6 +772,9 @@ void Octree::render(Camera& camera, RenderPass pass)
 		Billboard* billboard = 0;
 		if ((model = dynamic_cast<Model*>(group.m_renderable)) != 0)
 		{
+			// Number of meshes prevented from rendering because of render mask
+			Uint32 numMasked = 0;
+
 			// Add data for every mesh in the model
 			for (Uint32 j = 0; j < model->getNumMeshes(); ++j)
 			{
@@ -766,8 +784,17 @@ void Octree::render(Camera& camera, RenderPass pass)
 				data.m_material = &mesh->m_material;
 				data.m_shader = mesh->m_shader;
 				data.m_transparent = data.m_material->isTransparent();
-				renderData.push_back(data);
+
+				// Only add the data if it isn't masked
+				if (data.m_material && !(Uint32)(data.m_material->getRenderMask() & pass))
+					++numMasked;
+				else
+					renderData.push_back(data);
 			}
+
+			// If the number of masked is equal to the number of meshes, skip this group
+			if (numMasked == model->getNumMeshes())
+				continue;
 		}
 		else if ((billboard = dynamic_cast<Billboard*>(group.m_renderable)) != 0)
 		{
@@ -775,7 +802,12 @@ void Octree::render(Camera& camera, RenderPass pass)
 			data.m_material = billboard->getMaterial();
 			data.m_shader = billboard->getShader();
 			data.m_transparent = data.m_material->isTransparent();
-			renderData.push_back(data);
+
+			// Only add the data if it isn't masked
+			if (data.m_material && !(Uint32)(data.m_material->getRenderMask() & pass))
+				continue;
+			else
+				renderData.push_back(data);
 		}
 		else
 			// Otherwise, the renderable is not a valid type, and should be skipped
@@ -875,6 +907,13 @@ void Octree::render(Camera& camera, RenderPass pass)
 			}
 		}
 	}
+}
+
+
+///////////////////////////////////////////////////////////
+Uint32 Octree::getNumEntities() const
+{
+	return m_numEntitites;
 }
 
 

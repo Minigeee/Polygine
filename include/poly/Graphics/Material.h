@@ -3,6 +3,8 @@
 
 #include <poly/Core/DataTypes.h>
 
+#include <poly/Graphics/RenderSystem.h>
+
 #include <poly/Math/Vector3.h>
 
 namespace poly
@@ -179,6 +181,17 @@ public:
 	void setNormalTexture(Texture* texture);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Set the material render mask
+	///
+	/// This mask determines which render passes the material gets
+	/// rendered in.
+	///
+	/// \param mask The render pass mask
+	///
+	///////////////////////////////////////////////////////////
+	void setRenderMask(RenderPass mask);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Set the function callback for applying a material to a shader
 	///
 	/// If the function callback exists, then it will be called
@@ -279,6 +292,14 @@ public:
 	Texture* getTexture(const std::string& uniform) const;
 
 	///////////////////////////////////////////////////////////
+	/// \brief Get the material render mask
+	///
+	/// \return The material render mask
+	///
+	///////////////////////////////////////////////////////////
+	RenderPass getRenderMask() const;
+
+	///////////////////////////////////////////////////////////
 	/// \brief Apply the material to a shader
 	///
 	/// This function sets all the required shader uniforms on the
@@ -322,7 +343,8 @@ private:
 	Vector3f m_diffuse;							//!< The diffuse color
 	Vector3f m_specular;						//!< The specular color
 	float m_shininess;							//!< The shininess value
-	bool m_isTransparent;
+	RenderPass m_renderMask;					//!< The render pass mask
+	bool m_isTransparent;						//!< This is true if the material contains transparent components
 	bool m_cullFace;							//!< Should this material allow face culling
 
 	Texture* m_diffTexture;						//!< The diffuse texture

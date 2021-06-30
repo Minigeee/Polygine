@@ -25,6 +25,9 @@ enum class RenderPass
 	Default			= 1 << 0,	//!< A default render pass
 	Shadow			= 1 << 1,	//!< A shadow render pass
 	Reflection		= 1 << 2,	//!< A reflection render pass
+	Refraction		= 1 << 3,	//!< A refraction render pass
+
+	All				= Default | Shadow | Reflection | Refraction
 };
 
 ///////////////////////////////////////////////////////////

@@ -81,9 +81,6 @@ void onSubmit(const Utf32String& text)
 
 int main()
 {
-    Quaternion q(0.0f, 95.0f, 0.0f);
-    Vector3f rot = q;
-
     Logger::init("game.log");
     srand(time(NULL));
 
@@ -146,6 +143,7 @@ int main()
 
     Model box;
     box.addMesh(vertices);
+    box.getMesh()->m_material.setRenderMask(RenderPass::All & ~RenderPass::Default);
 
     Model model("examples/models/character/character_flat.dae");
 
@@ -231,9 +229,6 @@ int main()
     // sun.m_shadowsEnabled = false;
     Entity sunEntity = scene.createEntity(sun);
     skybox.setDirLight(sunEntity);
-
-    sun.m_direction = Vector3f(-1.0f, -1.0f, 0.0f);
-    Entity sunEntity2 = scene.createEntity(sun);
 
     PointLightComponent light;
     light.m_diffuse = Vector3f(1.0f, 0.95f, 0.85f);
@@ -678,8 +673,6 @@ int main()
 
         ui.render();
 
-        // sunEntity.get<DirLightComponent>()->m_shadowsEnabled = false;
-
         STOP_PROFILING(GameLoop);
 
         // Display (swap buffers)
@@ -691,20 +684,12 @@ int main()
         std::cout << "Game loop: " << data.mean().toMicroseconds() << '\n';
     }
     {
-        const ProfilerData& data = Profiler::getData("poly::Physics::update", "copyToEngine");
-        std::cout << "Copy to physics engine: " << data.mean().toMicroseconds() << '\n';
+        const ProfilerData& data = Profiler::getData("poly::Octree::render");
+        std::cout << "Octree render: " << data.mean().toMicroseconds() << '\n';
     }
     {
-        const ProfilerData& data = Profiler::getData("poly::Physics::update", "copyFromEngine");
-        std::cout << "Copy from physics engine: " << data.mean().toMicroseconds() << '\n';
-    }
-    {
-        const ProfilerData& data = Profiler::getData("poly::Physics::update");
-        std::cout << "Physics update: " << data.mean().toMicroseconds() << '\n';
-    }
-    {
-        const ProfilerData& data = Profiler::getData("poly::UISystem::render");
-        std::cout << "UISystem render: " << data.mean().toMicroseconds() << '\n';
+        const ProfilerData& data = Profiler::getData("poly::Terrain::render");
+        std::cout << "Terrain render: " << data.mean().toMicroseconds() << '\n';
     }
 
     return 0;

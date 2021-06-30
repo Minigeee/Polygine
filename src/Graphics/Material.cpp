@@ -19,7 +19,8 @@ Material::Material() :
 	m_cullFace		(true),
 	m_diffTexture	(0),
 	m_specTexture	(0),
-	m_normalTexture	(0)
+	m_normalTexture	(0),
+	m_renderMask	(RenderPass::All)
 { }
 
 
@@ -108,6 +109,13 @@ void Material::setNormalTexture(Texture* texture)
 
 
 ///////////////////////////////////////////////////////////
+void Material::setRenderMask(RenderPass mask)
+{
+	m_renderMask = mask;
+}
+
+
+///////////////////////////////////////////////////////////
 void Material::setApplyFunc(const std::function<void(Shader*)>& func)
 {
 	m_applyFunc = func;
@@ -181,6 +189,13 @@ Texture* Material::getTexture(const std::string& uniform) const
 		texture = it->second;
 
 	return texture;
+}
+
+
+///////////////////////////////////////////////////////////
+RenderPass Material::getRenderMask() const
+{
+	return m_renderMask;
 }
 
 

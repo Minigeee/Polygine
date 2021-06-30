@@ -156,6 +156,14 @@ public:
 	///////////////////////////////////////////////////////////
 	void render(Camera& camera, RenderPass pass) override;
 
+	///////////////////////////////////////////////////////////
+	/// \brief Get the number of entities currently in the octree
+	///
+	/// \return The number of entities in the octree
+	///
+	///////////////////////////////////////////////////////////
+	Uint32 getNumEntities() const;
+
 private:
 	struct Node;
 
@@ -163,9 +171,9 @@ private:
 	{
 		Uint32 m_group;
 		Node* m_node;
-		bool m_castsShadows;
 		BoundingBox m_boundingBox;
 		Matrix4f m_transform;
+		bool m_castsShadows;
 	};
 
 	struct Node
@@ -203,6 +211,8 @@ private:
 
 	void insert(EntityData* data);
 
+	void merge(Node* node);
+
 	void update(const Entity::Id& id, RenderComponent& r, TransformComponent& t);
 
 	void getRenderData(Node* node, const Frustum& frustum, std::vector<std::vector<EntityData*>>& entityData, const Vector3f& cameraPos, RenderPass pass);
@@ -217,6 +227,7 @@ private:
 	Node* m_root;										//!< A pointer to the root node
 	float m_size;										//!< The size of the highest octree level
 	Uint32 m_maxPerCell;								//!< The max number of entities allowed per cell
+	Uint32 m_numEntitites;								//!< The total number of entitites in the octree
 	HashMap<Entity::Id, EntityData*> m_dataMap;			//!< A map of entity id to its cached data
 
 	VertexBuffer m_instanceBuffer;						//!< The instance buffer that stores instance transform data
@@ -247,7 +258,8 @@ private:
 /// destroyed. Upon adding it to the scene, all existing entities
 /// with both a TransformComponent and a RenderComponent will
 /// be added to the octree, and all future entities that match
-/// the requirement will be added as well.
+/// the requirement will be added as well. Removing an entity from
+/// the scene will also automatically remove it from the octree.
 ///
 /// If an entity has the DynamicTag component, its transform matrix
 /// and containing cell will be updated every time update() is called.
