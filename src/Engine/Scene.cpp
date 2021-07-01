@@ -3,10 +3,6 @@
 #include <poly/Engine/Components.h>
 #include <poly/Engine/Scene.h>
 
-#include <poly/Graphics/GLCheck.h>
-#include <poly/Graphics/Lighting.h>
-#include <poly/Graphics/RenderSystem.h>
-
 namespace poly
 {
 
@@ -53,7 +49,8 @@ E_EntitiesRemoved::E_EntitiesRemoved(std::vector<Entity>& entities) :
 
 ///////////////////////////////////////////////////////////
 Scene::Scene() :
-	m_handle				(s_idArray.add(true))
+	m_handle				(s_idArray.add(true)),
+	m_renderer				(this)
 {
 
 }
@@ -140,26 +137,24 @@ void Scene::addRenderSystem(RenderSystem* system)
 	// Initialize the system
 	system->init(this);
 
-	m_renderSystems.push_back(system);
+	// Add to renderer
+	m_renderer.addRenderSystem(system);
 }
 
 
 ///////////////////////////////////////////////////////////
 void Scene::render(Camera& camera, FrameBuffer& target, RenderPass pass)
 {
-	// Update lighting system
-	if (pass != RenderPass::Shadow)
-		getExtension<Lighting>()->update(camera);
-
-	// Bind framebuffer
-	target.bind();
-
-	// Clear framebuffer
-	glCheck(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
-
-	// Render all render systems
-	for (Uint32 i = 0; i < m_renderSystems.size(); ++i)
-		m_renderSystems[i]->render(camera, pass);
+	// Pass to renderer
+	m_renderer.render(camera, target, pass);
 }
+
+
+///////////////////////////////////////////////////////////
+const Renderer& Scene::getRenderer() const
+{
+	return m_renderer;
+}
+
 
 }

@@ -212,13 +212,14 @@ int main()
 
     Octree octree;
     octree.create();
-    scene.addRenderSystem(&octree);
 
     ProceduralSkybox skybox;
     skybox.setZenithColor(Vector3f(0.25f, 0.5f, 0.9f));
     skybox.setHorizonColor(Vector3f(0.6f, 0.8f, 0.6f));
-    scene.addRenderSystem(&skybox);
     scene.getExtension<Lighting>()->setAmbientColor(0.3f * skybox.getAmbientColor());
+
+    scene.addRenderSystem(&skybox);
+    scene.addRenderSystem(&octree);
 
     DirLightComponent sun;
     // sun.m_diffuse = Vector3f(0.08f, 0.15f, 0.25f) * 0.4f;
@@ -226,7 +227,7 @@ int main()
     sun.m_specular = sun.m_diffuse * 0.2f;
     sun.m_direction.z = 2.0f;
     // sun.m_shadowDistance = 150.0f;
-    // sun.m_shadowsEnabled = false;
+    sun.m_shadowsEnabled = false;
     Entity sunEntity = scene.createEntity(sun);
     skybox.setDirLight(sunEntity);
 
@@ -235,7 +236,18 @@ int main()
     light.m_specular = light.m_diffuse * 0.4f;
     TransformComponent lightT;
     lightT.m_position.y = 55.0f;
-    scene.createEntity(lightT, light);
+    Entity plEntity = scene.createEntities(196, lightT, light)[0];
+    TransformComponent* pointLightTs = plEntity.get<TransformComponent>();
+    for (Uint32 r = 0, i = 0; r < 14; ++r)
+    {
+        for (Uint32 c = 0; c < 14; ++c, ++i)
+        {
+            Vector3f& pos = pointLightTs[i].m_position;
+            pos.z = 4.0f * r - 28.0f;
+            pos.x = 4.0f * c - 28.0f;
+            pos.y = terrain.getHeightAt(pos.x, pos.z) + 1.0f;
+        }
+    }
 
     // Activate physics extension
     Physics* physics = scene.getExtension<Physics>();
@@ -696,3 +708,4 @@ int main()
 }
 
 // TODO : Consider switching to a different physics engine in the future if there are too many bugs
+// TODO : Handle rendering transparent objects in octree

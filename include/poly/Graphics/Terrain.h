@@ -90,9 +90,10 @@ public:
 	///
 	/// \param camera The camera to render from the perspective of
 	/// \param pass The render pass that is being executed
+	/// \param deferred Whether terrain should use a deferred render
 	///
 	///////////////////////////////////////////////////////////
-	virtual void render(Camera& camera, RenderPass pass) override;
+	virtual void render(Camera& camera, RenderPass pass, bool deferred) override;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the shader used to render the terrain
@@ -167,7 +168,9 @@ public:
 	/// Everytime a new height map is set, the normals are recalculated
 	/// and both the height map and the normal map are pushed
 	/// to the GPU texture. This function may take some time to
-	/// transfer data between the CPU and the GPU.
+	/// transfer data between the CPU and the GPU. The image data
+	/// pointer is used to retrieve height values, so make sure the
+	/// data exists while the terrain is active.
 	///
 	/// \param map The height map
 	///
@@ -185,14 +188,6 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	void setColorMap(const Image& map);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Set the terrain ambient color
-	///
-	/// \param color The ambient color
-	///
-	///////////////////////////////////////////////////////////
-	void setAmbientColor(const Vector3f& color);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Updates a subregion of the height map
@@ -301,12 +296,15 @@ public:
 	Texture& getNormalMap();
 
 	///////////////////////////////////////////////////////////
-	/// \brief Get terrain ambient color
+	/// \brief Get the interpolated height at the given 2d coordinates in world space
 	///
-	/// \return Terrain ambient color
+	/// \param x The x-coordinate of the point of height to retrieve
+	/// \param z The z-coordinate of the point of height to retrieve
+	///
+	/// \param height The height of the given point in world space units
 	///
 	///////////////////////////////////////////////////////////
-	const Vector3f& getAmbientColor() const;
+	float getHeightAt(float x, float z) const;
 
 protected:
 	static Shader& getDefaultShader();
@@ -368,6 +366,7 @@ protected:
 	Texture m_heightMap;					//!< Height map texture
 	Texture m_normalMap;					//!< Normal map texture
 	Texture m_colorMap;						//!< Color map texture
+	float* m_heightMapData;
 	Vector3f* m_normalMapData;				//!< Normal map texture data
 
 	UniformBuffer m_uniformBuffer;			//!< The uniform buffer used to store terrain uniform data
@@ -382,7 +381,6 @@ protected:
 	std::vector<TerrainTile> m_edgeTiles;	//!< A list of edge tiles in their default position
 	std::vector<float> m_lodDists;			//!< A list of exact lod distances
 
-	Vector3f m_ambientColor;				//!< The ambient color
 	bool m_isUniformDirty;					//!< This is true when one of the uniform parameters has changed
 
 	static Shader s_shader;

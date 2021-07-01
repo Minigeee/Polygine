@@ -27,34 +27,22 @@ public:
 	Material();
 
 	///////////////////////////////////////////////////////////
-	/// \brief Set the ambient color multiplier of the material
+	/// \brief Set the ambient multiplier factor of the material
 	///
-	/// The ambient color multiplier is the color that gets multplied
+	/// The ambient multiplier factor is the number that gets multplied
 	/// by the global ambient color when applying ambient lighting.
 	/// Ambient lighting is the lighting that comes from the environment
 	/// and is what lights up surfaces of models when there is no direct
 	/// light shining on it.
 	///
-	/// \param color The diffuse color
+	/// \note If this factor is changed for a material that uses
+	/// deferred rendering, this factor will be rounded to the nearest
+	/// 0.1 and will have a maximum value of 25.5.
+	///
+	/// \param factor The ambient multiplier factor
 	///
 	///////////////////////////////////////////////////////////
-	void setAmbient(const Vector3f& color);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Set the ambient color multiplier of the material
-	///
-	/// The ambient color multiplier is the color that gets multplied
-	/// by the global ambient color when applying ambient lighting.
-	/// Ambient lighting is the lighting that comes from the environment
-	/// and is what lights up surfaces of models when there is no direct
-	/// light shining on it.
-	///
-	/// \param r The r component of the ambient color
-	/// \param g The g component of the ambient color
-	/// \param b The b component of the ambient color
-	///
-	///////////////////////////////////////////////////////////
-	void setAmbient(float r, float g, float b);
+	void setAmbientFactor(float factor);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the diffuse color of the material
@@ -130,9 +118,13 @@ public:
 	///////////////////////////////////////////////////////////
 	/// \brief Set whether the material diffuse texture contains transparent pixels
 	///
-	/// This applies to diffuse textures with transparency of any
-	/// level. The renderer needs to know this information so that it
-	/// can render objects in the correct order.
+	/// This property should be set (manually) to true for any material
+	/// that contains a diffuse texture with partially transparent textures.
+	/// Renderables that use a material with this property set to true will
+	/// be rendered using forward rendering because rendering transparent objects
+	/// with deferred rendering will be hard. So if a custom shader is used on a
+	/// material with this property set to true, make sure it is a forward render
+	/// shader instead of a deferred render shader.
 	///
 	/// \param transparent Whether the diffuse texture contains transparent pixels
 	///
@@ -232,12 +224,12 @@ public:
 	void removeTexture(const std::string& uniform);
 
 	///////////////////////////////////////////////////////////
-	/// \brief Get the ambient color multiplier
+	/// \brief Get the ambient multiplier factor
 	///
-	/// \return The ambient color multiplier
+	/// \return The ambient multiplier factor
 	///
 	///////////////////////////////////////////////////////////
-	Vector3f& getAmbient();
+	float getAmbientFactor();
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the diffuse color
@@ -266,9 +258,11 @@ public:
 	///////////////////////////////////////////////////////////
 	/// \brief Check if the diffuse texture contains transparent pixels
 	///
-	/// This value must be set manually
+	/// This value must be set manually.
 	///
 	/// \return True if the diffuse texture contains transparent pixels
+	///
+	/// \see setTransparent
 	///
 	///////////////////////////////////////////////////////////
 	bool isTransparent() const;
@@ -339,7 +333,7 @@ public:
 	void apply(Shader* shader) const;
 
 private:
-	Vector3f m_ambient;							//!< The ambient color multiplier
+	float m_ambient;							//!< The ambient multiplier factor
 	Vector3f m_diffuse;							//!< The diffuse color
 	Vector3f m_specular;						//!< The specular color
 	float m_shininess;							//!< The shininess value

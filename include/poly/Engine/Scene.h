@@ -9,6 +9,7 @@
 
 #include <poly/Graphics/Camera.h>
 #include <poly/Graphics/FrameBuffer.h>
+#include <poly/Graphics/Renderer.h>
 #include <poly/Graphics/RenderSystem.h>
 
 namespace poly
@@ -575,31 +576,24 @@ public:
 	T* getExtension();
 
 	///////////////////////////////////////////////////////////
-	/// \brief Add a render system
-	///
-	/// Render systems define custom rendering procedures.
-	///
-	/// This function calls RenderSystem::init(), so the user
-	/// shouldn't have to initialize the system manually.
-	///
-	/// \param system A pointer to a render system
-	///
-	/// \see RenderSystem
+	/// \copydoc Renderer::addRenderSystem()
 	///
 	///////////////////////////////////////////////////////////
 	void addRenderSystem(RenderSystem* system);
 
 	///////////////////////////////////////////////////////////
-	/// \brief Render all added render systems in the order they were added
-	///
-	/// This function simply renders all render systems in the order they were added.
-	///
-	/// \param camera The camera used to render the scene
-	/// \param target The target framebuffer to render the scene to
-	/// \param pass The render pass that should be executed
+	/// \copydoc Renderer::render()
 	///
 	///////////////////////////////////////////////////////////
 	void render(Camera& camera, FrameBuffer& target = FrameBuffer::Default, RenderPass passes = RenderPass::Default);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the scene renderer
+	///
+	/// \return A reference to the scene renderer
+	///
+	///////////////////////////////////////////////////////////
+	const Renderer& getRenderer() const;
 
 private:
 	Handle m_handle;									//!< The scene handle used for scene id
@@ -608,8 +602,7 @@ private:
 	std::mutex m_entityMutex;							//!< Mutex to protect creation and removal of entities
 
 	HashMap<Uint32, Extension*> m_extensions;			//!< Map of scene extensions
-
-	std::vector<RenderSystem*> m_renderSystems;			//!< List of render systems
+	Renderer m_renderer;
 
 	static HandleArray<bool> s_idArray;					//!< HandleArray to handle scene id generation
 };

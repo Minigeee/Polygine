@@ -152,9 +152,26 @@ public:
 	///
 	/// \param camera The camera to render from the perspective of
 	/// \param pass The render pass that is being executed
+	/// \param deferred Whether terrain should use a deferred render
 	///
 	///////////////////////////////////////////////////////////
-	void render(Camera& camera, RenderPass pass) override;
+	void render(Camera& camera, RenderPass pass, bool deferred) override;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Octrees render opaque objects during the deferred render pass
+	///
+	/// \return True
+	///
+	///////////////////////////////////////////////////////////
+	bool hasDeferredPass() const override;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Octrees render transparent objects during the forward pass
+	///
+	/// \return True
+	///
+	///////////////////////////////////////////////////////////
+	bool hasForwardPass() const override;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the number of entities currently in the octree
@@ -202,7 +219,7 @@ private:
 		Skeleton* m_skeleton;
 		Uint32 m_offset;
 		Uint32 m_instances;
-		bool m_transparent;
+		bool m_isTransparent;
 	};
 
 	void expand();
@@ -233,6 +250,7 @@ private:
 	VertexBuffer m_instanceBuffer;						//!< The instance buffer that stores instance transform data
 	Uint32 m_instanceBufferOffset;						//!< The offset of the valid range of the instance buffer
 	std::vector<RenderGroup> m_renderGroups;			//!< A list of render groups
+	std::vector<RenderData> m_transparentData;			//!< Transparent render data (cached from deferred render pass)
 
 	static Vector3f nodeOffsets[8];
 };

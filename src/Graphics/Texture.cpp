@@ -35,6 +35,17 @@ Uint32 getInternalFormat(PixelFormat format, GLType dtype)
 		else if (format == PixelFormat::Rgba)
 			fmt = GL_RGBA32F;
 	}
+	else if (dtype == GLType::HalfFloat)
+	{
+		if (format == PixelFormat::R)
+			fmt = GL_R16F;
+		else if (format == PixelFormat::Rg)
+			fmt = GL_RG16F;
+		else if (format == PixelFormat::Rgb)
+			fmt = GL_RGB16F;
+		else if (format == PixelFormat::Rgba)
+			fmt = GL_RGBA16F;
+	}
 
 	return fmt;
 }

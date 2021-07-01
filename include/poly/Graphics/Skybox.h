@@ -65,9 +65,10 @@ public:
 	///
 	/// \param camera The camera to render from
 	/// \param pass The render pass that is being executed
+	/// \param deferred Whether terrain should use a deferred render
 	///
 	///////////////////////////////////////////////////////////
-	void render(Camera& camera, RenderPass pass) override;
+	void render(Camera& camera, RenderPass pass, bool deferred) override;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Load a single side of the cube map from an image file
@@ -82,6 +83,22 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	bool load(const std::string& fname, Side side);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Skyboxes can only be rendered in forward pass
+	///
+	/// \return False
+	///
+	///////////////////////////////////////////////////////////
+	bool hasDeferredPass() const override;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Skyboxes can only be rendered in forward pass
+	///
+	/// \return True
+	///
+	///////////////////////////////////////////////////////////
+	bool hasForwardPass() const override;
 
 private:
 	static VertexArray s_vertexArray;
@@ -126,9 +143,10 @@ public:
 	///
 	/// \param camera The camera to render from
 	/// \param pass The render pass that is being executed
+	/// \param deferred Whether terrain should use a deferred render
 	///
 	///////////////////////////////////////////////////////////
-	void render(Camera& camera, RenderPass pass) override;
+	void render(Camera& camera, RenderPass pass, bool deferred) override;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the entity containing the main directional light component
@@ -317,6 +335,22 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	const Vector3f& getAmbientColor();
+
+	///////////////////////////////////////////////////////////
+	/// \brief Skyboxes can only be rendered in forward pass
+	///
+	/// \return False
+	///
+	///////////////////////////////////////////////////////////
+	bool hasDeferredPass() const override;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Skyboxes can only be rendered in forward pass
+	///
+	/// \return True
+	///
+	///////////////////////////////////////////////////////////
+	bool hasForwardPass() const override;
 
 private:
 	static Shader s_shader;

@@ -8,8 +8,10 @@
 
 ///////////////////////////////////////////////////////////
 
+#ifndef DEFERRED_SHADING
 in vec4 v_clipSpacePos;
 in vec4 v_lightClipSpacePos[MAX_NUM_SHADOW_MAPS];
+#endif
 
 uniform sampler2D u_shadowMaps[MAX_NUM_SHADOW_MAPS];
 

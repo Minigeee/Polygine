@@ -37,4 +37,18 @@ RenderSystem::RenderSystem() :
 }
 
 
+///////////////////////////////////////////////////////////
+bool RenderSystem::hasDeferredPass() const
+{
+	return true;
+}
+
+
+///////////////////////////////////////////////////////////
+bool RenderSystem::hasForwardPass() const
+{
+	return false;
+}
+
+
 }

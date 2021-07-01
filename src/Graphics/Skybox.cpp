@@ -51,7 +51,7 @@ void Skybox::init(Scene* scene)
 
 
 ///////////////////////////////////////////////////////////
-void Skybox::render(Camera& camera, RenderPass pass)
+void Skybox::render(Camera& camera, RenderPass pass, bool deferred)
 {
     // The skybox shouldn't be rendered in the shadow pass
     if (pass == RenderPass::Shadow) return;
@@ -194,6 +194,20 @@ VertexArray& Skybox::getVertexArray()
 
 
 ///////////////////////////////////////////////////////////
+bool Skybox::hasDeferredPass() const
+{
+    return false;
+}
+
+
+///////////////////////////////////////////////////////////
+bool Skybox::hasForwardPass() const
+{
+    return true;
+}
+
+
+///////////////////////////////////////////////////////////
 ProceduralSkybox::ProceduralSkybox() :
 	m_zenithColor		(0.172f, 0.448f, 0.775f),
 	m_horizonColor		(0.9f, 1.0f, 0.75f),
@@ -238,7 +252,7 @@ void ProceduralSkybox::init(Scene* scene)
 
 
 ///////////////////////////////////////////////////////////
-void ProceduralSkybox::render(Camera& camera, RenderPass pass)
+void ProceduralSkybox::render(Camera& camera, RenderPass pass, bool deferred)
 {
     // The skybox shouldn't be rendered in the shadow pass
     if (pass == RenderPass::Shadow) return;
@@ -480,6 +494,20 @@ const Vector3f& ProceduralSkybox::getAmbientColor()
     }
 
     return m_ambient;
+}
+
+
+///////////////////////////////////////////////////////////
+bool ProceduralSkybox::hasDeferredPass() const
+{
+    return false;
+}
+
+
+///////////////////////////////////////////////////////////
+bool ProceduralSkybox::hasForwardPass() const
+{
+    return true;
 }
 
 

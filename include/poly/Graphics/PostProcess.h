@@ -4,8 +4,6 @@
 #include <poly/Graphics/Camera.h>
 #include <poly/Graphics/FrameBuffer.h>
 #include <poly/Graphics/Shader.h>
-#include <poly/Graphics/VertexArray.h>
-#include <poly/Graphics/VertexBuffer.h>
 
 namespace poly
 {
@@ -28,13 +26,6 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	virtual void render(FrameBuffer& input, FrameBuffer& output = FrameBuffer::Default) = 0;
-
-private:
-	static VertexArray s_quadVao;
-	static VertexBuffer s_quadVbo;
-
-protected:
-	static VertexArray& getVertexArray();
 };
 
 
@@ -667,8 +658,8 @@ private:
 
 private:
 	Blur m_blurEffect;				//!< The blur effect used to create the bleeding effect
-	FrameBuffer* m_blurTarget;		//!< An extra framebuffer to apply the blur
-	Texture* m_blurTexture;			//!< The color texture of the extra framebuffer
+	FrameBuffer* m_blurTargets[2];	//!< An extra framebuffers to apply the blur
+	Texture* m_blurTextures[2];		//!< The color textures of the extra framebuffers
 
 	float m_intensity;				//!< The intensity of the bloom effect
 	float m_threshold;				//!< The luminosity threshold above which pixels are added to the effect

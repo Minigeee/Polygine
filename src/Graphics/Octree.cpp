@@ -80,14 +80,6 @@ void bindShader(Shader* shader, Camera& camera, Scene* scene, RenderPass pass)
 
 	// Camera
 	camera.apply(shader);
-
-	// Lighting
-	scene->getExtension<Lighting>()->apply(shader);
-
-	// Shadows
-	if (pass != RenderPass::Shadow)
-		scene->getExtension<Shadows>()->apply(shader);
-	// shader->setUniform("u_isShadowPass", pass == RenderPass::Shadow);
 }
 
 }
@@ -708,14 +700,23 @@ void Octree::remove(Entity::Id entity)
 
 
 ///////////////////////////////////////////////////////////
-void Octree::render(Camera& camera, RenderPass pass)
+void Octree::render(Camera& camera, RenderPass pass, bool deferred)
 {
 	// Anything in the octree should be rendered for all passes
 
 	ASSERT(m_scene, "The octree must be initialized before using, by calling the init() function");
 
+	if (!deferred)
+	{
+		// TODO : Forward render for transparent objects
+
+		return;
+	}
+
 	START_PROFILING_FUNC;
 
+	// Reset transparent render data
+	m_transparentData.clear();
 
 	// Get entity data
 	std::vector<std::vector<EntityData*>> entityData(m_renderGroups.size());
@@ -783,11 +784,13 @@ void Octree::render(Camera& camera, RenderPass pass)
 				data.m_vertexArray = &mesh->m_vertexArray;
 				data.m_material = &mesh->m_material;
 				data.m_shader = mesh->m_shader;
-				data.m_transparent = data.m_material->isTransparent();
+				data.m_isTransparent = data.m_material->isTransparent();
 
 				// Only add the data if it isn't masked
 				if (data.m_material && !(Uint32)(data.m_material->getRenderMask() & pass))
 					++numMasked;
+				else if (data.m_isTransparent)
+					m_transparentData.push_back(data);
 				else
 					renderData.push_back(data);
 			}
@@ -801,11 +804,13 @@ void Octree::render(Camera& camera, RenderPass pass)
 			data.m_vertexArray = &billboard->getVertexArray();
 			data.m_material = billboard->getMaterial();
 			data.m_shader = billboard->getShader();
-			data.m_transparent = data.m_material->isTransparent();
+			data.m_isTransparent = data.m_material->isTransparent();
 
 			// Only add the data if it isn't masked
 			if (data.m_material && !(Uint32)(data.m_material->getRenderMask() & pass))
 				continue;
+			else if (data.m_isTransparent)
+				m_transparentData.push_back(data);
 			else
 				renderData.push_back(data);
 		}
@@ -829,9 +834,7 @@ void Octree::render(Camera& camera, RenderPass pass)
 	std::sort(renderData.begin(), renderData.end(),
 		[](const RenderData& a, const RenderData& b) -> bool
 		{
-			if (a.m_transparent && !b.m_transparent)
-				return true;
-			else if (a.m_shader == b.m_shader)
+			if (a.m_shader == b.m_shader)
 				return a.m_offset < b.m_offset;
 			else
 				return a.m_shader < b.m_shader;
@@ -842,9 +845,8 @@ void Octree::render(Camera& camera, RenderPass pass)
 	// Enable depth testing
 	glCheck(glEnable(GL_DEPTH_TEST));
 
-	// Enable alpha blending
-	glCheck(glEnable(GL_BLEND));
-	glCheck(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+	// Disable alpha blending
+	glCheck(glDisable(GL_BLEND));
 
 	// Bind the first shader
 	Shader* shader = renderData.front().m_shader;
@@ -907,6 +909,20 @@ void Octree::render(Camera& camera, RenderPass pass)
 			}
 		}
 	}
+}
+
+
+///////////////////////////////////////////////////////////
+bool Octree::hasDeferredPass() const
+{
+	return true;
+}
+
+
+///////////////////////////////////////////////////////////
+bool Octree::hasForwardPass() const
+{
+	return true;
 }
 
 

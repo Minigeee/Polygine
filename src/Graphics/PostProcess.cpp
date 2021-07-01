@@ -5,6 +5,7 @@
 #include <poly/Graphics/Components.h>
 #include <poly/Graphics/GLCheck.h>
 #include <poly/Graphics/PostProcess.h>
+#include <poly/Graphics/Renderer.h>
 
 #include <poly/Graphics/Shaders/postprocess/quad.vert.h>
 #include <poly/Graphics/Shaders/postprocess/color_adjust.frag.h>
@@ -19,12 +20,6 @@
 namespace poly
 {
 
-
-///////////////////////////////////////////////////////////
-VertexArray PostProcess::s_quadVao;
-
-///////////////////////////////////////////////////////////
-VertexBuffer PostProcess::s_quadVbo;
 
 ///////////////////////////////////////////////////////////
 Shader ColorAdjust::s_shader;
@@ -49,34 +44,6 @@ Shader Ssao::s_shader;
 
 ///////////////////////////////////////////////////////////
 Shader LensFlare::s_shader;
-
-
-///////////////////////////////////////////////////////////
-VertexArray& PostProcess::getVertexArray()
-{
-	if (!s_quadVao.getId())
-	{
-		float vertices[] =
-		{
-			-1.0f,  1.0f,
-			-1.0f, -1.0f,
-			 1.0f,  1.0f,
-
-			-1.0f, -1.0f,
-			 1.0f, -1.0f,
-			 1.0f,  1.0f,
-		};
-
-		// Create vertex buffer
-		s_quadVbo.create(vertices, 12);
-
-		// Create vertex array
-		s_quadVao.bind();
-		s_quadVao.addBuffer(s_quadVbo, 0, 2);
-	}
-
-	return s_quadVao;
-}
 
 
 ///////////////////////////////////////////////////////////
@@ -115,9 +82,7 @@ void ColorAdjust::render(FrameBuffer& input, FrameBuffer& output)
 	shader.setUniform("u_gamma", m_gamma);
 
 	// Render vertex array
-	VertexArray& vao = PostProcess::getVertexArray();
-	vao.bind();
-	vao.draw();
+	FullscreenQuad::draw();
 }
 
 
@@ -205,9 +170,7 @@ void Fog::render(FrameBuffer& input, FrameBuffer& output)
 	}
 
 	// Render vertex array
-	VertexArray& vao = PostProcess::getVertexArray();
-	vao.bind();
-	vao.draw();
+	FullscreenQuad::draw();
 }
 
 
@@ -347,9 +310,7 @@ void Fxaa::render(FrameBuffer& input, FrameBuffer& output)
 	shader.setUniform("u_lumaThreshold", m_threshold);
 
 	// Render vertex array
-	VertexArray& vao = PostProcess::getVertexArray();
-	vao.bind();
-	vao.draw();
+	FullscreenQuad::draw();
 }
 
 
@@ -437,9 +398,7 @@ void Blur::render(FrameBuffer& input, FrameBuffer& output)
 		shader.setUniform("u_weights[" + std::to_string(i) + ']', m_weights[i]);
 
 	// Render vertex array
-	VertexArray& vao = PostProcess::getVertexArray();
-	vao.bind();
-	vao.draw();
+	FullscreenQuad::draw();
 }
 
 
@@ -547,8 +506,8 @@ Shader& Blur::getShader()
 
 ///////////////////////////////////////////////////////////
 Bloom::Bloom() :
-	m_blurTarget			(0),
-	m_blurTexture			(0),
+	m_blurTargets			{ 0, 0 },
+	m_blurTextures			{ 0, 0 },
 	m_intensity				(1.0f),
 	m_threshold				(1.0f),
 	m_thresholdInterval		(0.5f),
@@ -562,14 +521,23 @@ Bloom::Bloom() :
 ///////////////////////////////////////////////////////////
 Bloom::~Bloom()
 {
-	if (m_blurTexture)
-		Pool<Texture>::free(m_blurTexture);
+	if (m_blurTextures[0])
+	{
+		Pool<Texture>::free(m_blurTextures[0]);
+		Pool<Texture>::free(m_blurTextures[1]);
 
-	if (m_blurTexture)
-		Pool<FrameBuffer>::free(m_blurTarget);
+		m_blurTextures[0] = 0;
+		m_blurTextures[1] = 0;
+	}
 
-	m_blurTexture = 0;
-	m_blurTarget = 0;
+	if (m_blurTextures[0])
+	{
+		Pool<FrameBuffer>::free(m_blurTargets[0]);
+		Pool<FrameBuffer>::free(m_blurTargets[1]);
+
+		m_blurTargets[0] = 0;
+		m_blurTargets[1] = 0;
+	}
 }
 
 
@@ -577,25 +545,28 @@ Bloom::~Bloom()
 void Bloom::render(FrameBuffer& input, FrameBuffer& output)
 {
 	// Create the blur framebuffer if it hasn't been created yet
-	if (!m_blurTarget)
+	if (!m_blurTargets[0])
 	{
-		m_blurTarget = Pool<FrameBuffer>::alloc();
-		m_blurTexture = Pool<Texture>::alloc();
+		m_blurTargets[0] = Pool<FrameBuffer>::alloc();
+		m_blurTargets[1] = Pool<FrameBuffer>::alloc();
+		m_blurTextures[0] = Pool<Texture>::alloc();
+		m_blurTextures[1] = Pool<Texture>::alloc();
 
-		m_blurTarget->create(output.getWidth(), output.getHeight());
-		m_blurTarget->attachColor(m_blurTexture, PixelFormat::Rgb, GLType::Uint16);
+		// Blur textures don't need to be big
+		// Need to keep 16-bit though for HDR rendering
+		constexpr Uint32 bloomResW = 480;
+		constexpr Uint32 bloomResH = 270;
+		m_blurTargets[0]->create(bloomResW, bloomResH);
+		m_blurTargets[0]->attachColor(m_blurTextures[0], PixelFormat::Rgb, GLType::Uint16);
+		m_blurTargets[1]->create(bloomResW, bloomResH);
+		m_blurTargets[1]->attachColor(m_blurTextures[1], PixelFormat::Rgb, GLType::Uint16);
 
 		// Update blur settings
-		float spacing = output.getHeight() * m_radius / 11.0f;
+		float spacing = bloomResH * m_radius / 11.0f;
 		m_blurEffect.setKernelSize(11);
 		m_blurEffect.setKernelSpacing(spacing);
 		m_blurEffect.setSpread(3.75f);
-	}
-	else if (m_blurTarget->getWidth() != input.getWidth() || m_blurTarget->getHeight() != input.getHeight())
-	{
-		m_blurTarget->reset();
-		m_blurTarget->create(input.getWidth(), input.getHeight());
-		m_blurTarget->attachColor(m_blurTexture, PixelFormat::Rgb, GLType::Uint16);
+		m_blurEffect.setNoiseFactor(0.1f * spacing);
 	}
 
 	// Disable depth test
@@ -604,30 +575,27 @@ void Bloom::render(FrameBuffer& input, FrameBuffer& output)
 	// Disable cull face
 	glCheck(glDisable(GL_CULL_FACE));
 
-	// Get vertex array
-	VertexArray& vao = PostProcess::getVertexArray();
-
 
 	Shader& thresholdShader = getThresholdShader();
 	Shader& addShader = getAddShader();
 	Uint32 currentTarget = 0;
 
 	// Render threshold stage
-	m_blurTarget->bind();
+	m_blurTargets[0]->bind();
 
 	thresholdShader.bind();
 	thresholdShader.setUniform("u_texture", *input.getColorTexture());
 	thresholdShader.setUniform("u_threshold", m_threshold);
 	thresholdShader.setUniform("u_interval", m_thresholdInterval);
-	vao.draw();
+	FullscreenQuad::draw();
 
 	// Blur the threshold texture
 	for (Uint32 i = 0; i < m_numBlurs; ++i)
 	{
 		m_blurEffect.setVerticalBlur(false);
-		m_blurEffect.render(*m_blurTarget, output);
+		m_blurEffect.render(*m_blurTargets[0], *m_blurTargets[1]);
 		m_blurEffect.setVerticalBlur(true);
-		m_blurEffect.render(output, *m_blurTarget);
+		m_blurEffect.render(*m_blurTargets[1], *m_blurTargets[0]);
 	}
 
 	// Render the bloom effect
@@ -635,10 +603,10 @@ void Bloom::render(FrameBuffer& input, FrameBuffer& output)
 
 	addShader.bind();
 	addShader.setUniform("u_texture1", *input.getColorTexture());
-	addShader.setUniform("u_texture2", *m_blurTarget->getColorTexture());
+	addShader.setUniform("u_texture2", *m_blurTargets[0]->getColorTexture());
 	addShader.setUniform("u_factor1", 1.0f);
 	addShader.setUniform("u_factor2", m_intensity);
-	vao.draw();
+	FullscreenQuad::draw();
 }
 
 
@@ -667,6 +635,15 @@ void Bloom::setThresholdInterval(float interaval)
 void Bloom::setRadius(float radius)
 {
 	m_radius = radius;
+
+	if (m_blurTargets[0])
+	{
+		// Update blur settings
+		float spacing = m_blurTargets[0]->getHeight() * m_radius / 11.0f;
+		m_blurEffect.setKernelSize(11);
+		m_blurEffect.setKernelSpacing(spacing);
+		m_blurEffect.setSpread(3.75f);
+	}
 }
 
 
@@ -787,9 +764,7 @@ void Ssao::render(FrameBuffer& input, FrameBuffer& output)
 	shader.setUniform("u_invProjView", inverse(m_camera->getProjMatrix() * m_camera->getViewMatrix()));
 
 	// Render vertex array
-	VertexArray& vao = PostProcess::getVertexArray();
-	vao.bind();
-	vao.draw();
+	FullscreenQuad::draw();
 }
 
 
@@ -970,9 +945,7 @@ void LensFlare::render(FrameBuffer& input, FrameBuffer& output)
 	shader.setUniform("u_luminosityFactor", m_luminosityFactor);
 
 	// Render vertex array
-	VertexArray& vao = PostProcess::getVertexArray();
-	vao.bind();
-	vao.draw();
+	FullscreenQuad::draw();
 }
 
 

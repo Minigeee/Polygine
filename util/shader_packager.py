@@ -25,7 +25,7 @@ def read_file(fname, loaded_files):
     dir_path = os.path.dirname(fname)
     
     include_idx = code.find('#include')
-    while include_idx > 0:
+    while include_idx >= 0:
         # Get the include file name
         line_end = code.find('\n', include_idx)
         include_fname = code[include_idx : line_end].split('"')[1]

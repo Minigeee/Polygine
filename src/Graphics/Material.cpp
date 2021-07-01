@@ -16,6 +16,7 @@ Material::Material() :
 	m_diffuse		(1.0f),
 	m_specular		(0.1f),
 	m_shininess		(16.0f),
+	m_isTransparent	(false),
 	m_cullFace		(true),
 	m_diffTexture	(0),
 	m_specTexture	(0),
@@ -25,16 +26,9 @@ Material::Material() :
 
 
 ///////////////////////////////////////////////////////////
-void Material::setAmbient(const Vector3f& color)
+void Material::setAmbientFactor(float factor)
 {
-	m_ambient = color;
-}
-
-
-///////////////////////////////////////////////////////////
-void Material::setAmbient(float r, float g, float b)
-{
-	m_ambient = Vector3f(r, g, b);
+	m_ambient = factor;
 }
 
 
@@ -138,7 +132,7 @@ void Material::removeTexture(const std::string& uniform)
 
 
 ///////////////////////////////////////////////////////////
-Vector3f& Material::getAmbient()
+float Material::getAmbientFactor()
 {
 	return m_ambient;
 }

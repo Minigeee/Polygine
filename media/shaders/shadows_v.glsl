@@ -6,14 +6,23 @@
 
 ///////////////////////////////////////////////////////////
 
+#ifndef DEFERRED_SHADING
 out vec4 v_clipSpacePos;
 out vec4 v_lightClipSpacePos[MAX_NUM_SHADOW_MAPS];
+#else
+vec4 v_clipSpacePos;
+vec4 v_lightClipSpacePos[MAX_NUM_SHADOW_MAPS];
+#endif
 
 
 ///////////////////////////////////////////////////////////
 void calcShadowClipSpace(vec4 worldPos)
 {
+    #ifndef DEFERRED_SHADING
     v_clipSpacePos = gl_Position;
+    #else
+    v_clipSpacePos = u_projView * worldPos;
+    #endif
 
     // Calculate light space positions
     for (int i = 0; i < MAX_NUM_DIR_LIGHTS; ++i)

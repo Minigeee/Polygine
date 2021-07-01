@@ -12,6 +12,7 @@
 #include <poly/Graphics/Shaders/terrain.vert.h>
 #include <poly/Graphics/Shaders/terrain.frag.h>
 
+#include <poly/Math/Functions.h>
 #include <poly/Math/Transform.h>
 #include <poly/Math/Vector2.h>
 #include <poly/Math/Vector4.h>
@@ -86,9 +87,9 @@ Terrain::Terrain() :
 	m_lodScale				(0.0f),
 	m_maxDist				(0.0f),
 	m_useFlatShading		(true),
+	m_heightMapData			(0),
 	m_normalMapData			(0),
 	m_instanceBufferOffset	(0),
-	m_ambientColor			(0.02f),
 	m_isUniformDirty		(true)
 {
 
@@ -437,7 +438,7 @@ void Terrain::createTileLayout()
 
 
 ///////////////////////////////////////////////////////////
-void Terrain::render(Camera& camera, RenderPass pass)
+void Terrain::render(Camera& camera, RenderPass pass, bool deferred)
 {
 	// The terrain should be rendered regardless of render pass
 
@@ -574,11 +575,6 @@ void Terrain::render(Camera& camera, RenderPass pass)
 
 	// Camera
 	camera.apply(m_shader);
-
-	// Lighting
-	m_scene->getExtension<Lighting>()->apply(m_shader);
-	if (pass != RenderPass::Shadow)
-		m_scene->getExtension<Shadows>()->apply(m_shader);
 
 	// Apply textures
 	applyTextures(m_shader);
@@ -721,6 +717,7 @@ void Terrain::setHeightMap(const Image& map)
 
 	// Upload data to texture
 	m_heightMap.create(map);
+	m_heightMapData = (float*)map.getData();
 
 	// Iterate through data and generate normals
 	Vector2u size = Vector2u(map.getWidth(), map.getHeight());
@@ -784,13 +781,6 @@ void Terrain::setColorMap(const Image& map)
 {
 	// Upload data to texture
 	m_colorMap.create(map);
-}
-
-
-///////////////////////////////////////////////////////////
-void Terrain::setAmbientColor(const Vector3f& color)
-{
-	m_ambientColor = color;
 }
 
 
@@ -935,9 +925,27 @@ Texture& Terrain::getNormalMap()
 
 
 ///////////////////////////////////////////////////////////
-const Vector3f& Terrain::getAmbientColor() const
+float Terrain::getHeightAt(float x, float z) const
 {
-	return m_ambientColor;
+	if (!m_heightMapData)
+		return 0.0f;
+
+	// Calculate pixel location
+	Vector2u texSize(m_heightMap.getWidth(), m_heightMap.getHeight());
+	Vector2f p = (Vector2f(x, z) / m_size + 0.5f) * (Vector2f)texSize;
+
+	// Get height values
+	float h00 = m_heightMapData[(Uint32)p.y * texSize.x + (Uint32)p.x];
+	float h10 = m_heightMapData[(Uint32)p.y * texSize.x + (Uint32)p.x + 1];
+	float h01 = m_heightMapData[(Uint32)(p.y + 1) * texSize.x + (Uint32)p.x];
+	float h11 = m_heightMapData[(Uint32)(p.y + 1) * texSize.x + (Uint32)p.x + 1];
+
+	// Interpolate
+	float a0 = mix(h00, h10, p.x - (Uint32)p.x);
+	float a1 = mix(h00, h10, p.x - (Uint32)p.x);
+	float h = mix(a0, a1, p.y - (Uint32)p.y);
+
+	return h * m_height;
 }
 
 

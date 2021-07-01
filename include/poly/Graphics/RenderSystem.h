@@ -88,11 +88,45 @@ public:
 	///////////////////////////////////////////////////////////
 	/// \brief Execute the rendering procedures
 	///
+	/// Render systems can optionally handle scenarios that require
+	/// deferred or forward rendering. To enable forward rendering,
+	/// override hasForwardPass() to return true, and to disable deferred
+	/// rendering, override hasDeferredPass() to return false. The
+	/// deferred render will always be executed before the forward
+	/// render.
+	///
+	/// For rendering objects with colors outside the range of 0 to 1, use forward
+	/// rendering and render into a 16-bit framebuffer because deferred
+	/// rendering only uses 8-bit color buffers for performance reasons.
+	///
 	/// \param camera The camera to render from the perspective of
 	/// \param pass The render pass that is being executed
+	/// \param deferred Determines if this system should render using deferred render or forward render
 	///
 	///////////////////////////////////////////////////////////
-	virtual void render(Camera& camera, RenderPass pass) = 0;
+	virtual void render(Camera& camera, RenderPass pass, bool deferred) = 0;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Check if the render system has a deferred render pass
+	///
+	/// Override this to return false to disable deferred rendering
+	/// for this render system.
+	///
+	/// \return True if this system handles deferred rendering
+	///
+	///////////////////////////////////////////////////////////
+	virtual bool hasDeferredPass() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Check if the render system has a forward render pass
+	///
+	/// Override this to return true to enable forward rendering
+	/// for this render system.
+	///
+	/// \return True if this system handles forward rendering
+	///
+	///////////////////////////////////////////////////////////
+	virtual bool hasForwardPass() const;
 
 protected:
 	Scene* m_scene;		//!< A pointer to the scene
