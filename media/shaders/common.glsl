@@ -9,10 +9,10 @@
 ///////////////////////////////////////////////////////////
 struct Material
 {
-    float ambient;
     vec3 diffuse;
     vec3 specular;
     float shininess;
+    float occlusion;
     bool hasDiffTexture;
     bool hasSpecTexture;
     bool hasNormalTexture;

@@ -44,6 +44,7 @@ vec3 calcDirLight(DirLight light, Material material, vec3 viewDir, vec3 normal, 
         diff = diff1;
     else
         diff = mix(diff1, diff2, shadowFactor);
+    diff = mix(1.0f, diff, material.occlusion);
         
     // Diffuse color
     vec3 diffuse = diff * light.diffuse * material.diffuse;
@@ -74,6 +75,7 @@ vec3 calcPointLight(PointLight light, Material material, vec3 viewDir, vec3 frag
     float diff1 = diffFactor * diff + diffFactor;
     float diff2 = (1.0f - diffFactor) * diff + diffFactor;
     diff = (diff < 0.0f ? diff1 : diff2);
+    diff = mix(1.0f, diff, material.occlusion);
         
     // Diffuse color
     vec3 diffuse = diff * light.diffuse * material.diffuse;

@@ -16,7 +16,7 @@ out vec4 f_color;
 uniform mat4 u_invProjView;
 
 uniform sampler2D u_normalShininess;
-uniform sampler2D u_albedoAmbient;
+uniform sampler2D u_albedoOcclusion;
 uniform sampler2D u_specular;
 uniform sampler2D u_depth;
 
@@ -41,13 +41,13 @@ void main()
     vec3 position = getFragPos(v_texCoord, depth);
 
     // Create the material
-    vec4 albedoAmbient = texture(u_albedoAmbient, v_texCoord);
+    vec4 albedoOcclusion = texture(u_albedoOcclusion, v_texCoord);
 
     Material material;
-    material.diffuse = albedoAmbient.rgb;
+    material.diffuse = albedoOcclusion.rgb;
     material.specular = texture(u_specular, v_texCoord).rgb;
-    material.ambient = albedoAmbient.a * 25.5f;
     material.shininess = normalShininess.w;
+    material.occlusion = albedoOcclusion.a;
 
 
     // Calculate view direction
@@ -58,7 +58,7 @@ void main()
     calcShadowClipSpace(vec4(position, 1.0f));
         
     // Calculate lighting
-    vec3 result = material.diffuse * material.ambient * u_ambient;
+    vec3 result = material.diffuse * u_ambient;
     
     // Calculate directional lighting
     for (int i = 0; i < u_numDirLights; ++i)

@@ -115,9 +115,9 @@ void main()
         float sampleDepth = getLinearDepth(texture(u_depthTexture, samplePosClipSpace.xy).r);
 
         float rangeCheck = smoothstep(0.0, 1.0, u_radius / abs(depth - sampleDepth));
-        occlusion += smoothstep(0.0f, TRANSITION_RANGE, getLinearDepth(samplePosClipSpace.z) + u_bias - sampleDepth) * rangeCheck * u_intensity;
+        occlusion += smoothstep(0.0f, TRANSITION_RANGE, getLinearDepth(samplePosClipSpace.z) + u_bias - sampleDepth) * rangeCheck;
     }
 
-    occlusion = 1.0f - (occlusion / samples) / (1.0f + u_falloff * depth);
+    occlusion = 1.0f - clamp(occlusion / samples * u_intensity, 0.0f, 1.0f) / (1.0f + u_falloff * depth);
     f_color.rgb *= vec3(occlusion);
 }

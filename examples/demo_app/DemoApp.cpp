@@ -143,7 +143,7 @@ int main()
 
     Model box;
     box.addMesh(vertices);
-    box.getMesh()->m_material.setRenderMask(RenderPass::All & ~RenderPass::Default);
+    // box.getMesh()->m_material.setRenderMask(RenderPass::All & ~RenderPass::Default);
 
     Model model("examples/models/character/character_flat.dae");
 
@@ -151,6 +151,8 @@ int main()
     Animation animation("examples/models/character/character_flat.dae", "Armature");
     skeleton.load("examples/models/character/character_flat.dae");
     skeleton.setAnimation(&animation);
+    // skeleton.setAnimationSpeed(0.0f);
+    // skeleton.setAnimationTime(0.5f);
 
     Camera camera;
     camera.setPosition(0.0f, 50.0f, 0.0f);
@@ -227,7 +229,7 @@ int main()
     sun.m_specular = sun.m_diffuse * 0.2f;
     sun.m_direction.z = 2.0f;
     // sun.m_shadowDistance = 150.0f;
-    sun.m_shadowsEnabled = false;
+    // sun.m_shadowsEnabled = false;
     Entity sunEntity = scene.createEntity(sun);
     skybox.setDirLight(sunEntity);
 
@@ -236,18 +238,6 @@ int main()
     light.m_specular = light.m_diffuse * 0.4f;
     TransformComponent lightT;
     lightT.m_position.y = 55.0f;
-    Entity plEntity = scene.createEntities(196, lightT, light)[0];
-    TransformComponent* pointLightTs = plEntity.get<TransformComponent>();
-    for (Uint32 r = 0, i = 0; r < 14; ++r)
-    {
-        for (Uint32 c = 0; c < 14; ++c, ++i)
-        {
-            Vector3f& pos = pointLightTs[i].m_position;
-            pos.z = 4.0f * r - 28.0f;
-            pos.x = 4.0f * c - 28.0f;
-            pos.y = terrain.getHeightAt(pos.x, pos.z) + 1.0f;
-        }
-    }
 
     // Activate physics extension
     Physics* physics = scene.getExtension<Physics>();
@@ -312,6 +302,8 @@ int main()
     Ssao ssao;
     ssao.setCamera(&camera);
     ssao.setDepthTexture(framebuffers[0].getDepthTexture());
+    ssao.setIntensity(1.0f);
+    ssao.setRadius(0.3f);
 
     Bloom bloom;
     bloom.setRadius(0.2f);
@@ -674,7 +666,7 @@ int main()
         octree.update();
         scene.getExtension<Shadows>()->render(camera);
         scene.render(camera, framebuffers[0]);
-        physics->render(camera, framebuffers[0]);
+        // physics->render(camera, framebuffers[0]);
 
         ssao.render(framebuffers[0], framebuffers[1]);
         fog.render(framebuffers[1], framebuffers[0]);

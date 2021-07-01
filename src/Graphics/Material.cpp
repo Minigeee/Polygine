@@ -12,24 +12,17 @@ namespace poly
 
 ///////////////////////////////////////////////////////////
 Material::Material() :
-	m_ambient		(1.0f),
-	m_diffuse		(1.0f),
-	m_specular		(0.1f),
-	m_shininess		(16.0f),
-	m_isTransparent	(false),
-	m_cullFace		(true),
-	m_diffTexture	(0),
-	m_specTexture	(0),
-	m_normalTexture	(0),
-	m_renderMask	(RenderPass::All)
+	m_diffuse			(1.0f),
+	m_specular			(0.1f),
+	m_shininess			(16.0f),
+	m_occlusionFactor	(1.0f),
+	m_isTransparent		(false),
+	m_cullFace			(true),
+	m_diffTexture		(0),
+	m_specTexture		(0),
+	m_normalTexture		(0),
+	m_renderMask		(RenderPass::All)
 { }
-
-
-///////////////////////////////////////////////////////////
-void Material::setAmbientFactor(float factor)
-{
-	m_ambient = factor;
-}
 
 
 ///////////////////////////////////////////////////////////
@@ -64,6 +57,13 @@ void Material::setSpecular(float r, float g, float b)
 void Material::setShininess(float shininess)
 {
 	m_shininess = shininess;
+}
+
+
+///////////////////////////////////////////////////////////
+void Material::setOcclusionFactor(float factor)
+{
+	m_occlusionFactor = factor;
 }
 
 
@@ -132,13 +132,6 @@ void Material::removeTexture(const std::string& uniform)
 
 
 ///////////////////////////////////////////////////////////
-float Material::getAmbientFactor()
-{
-	return m_ambient;
-}
-
-
-///////////////////////////////////////////////////////////
 Vector3f& Material::getDiffuse()
 {
 	return m_diffuse;
@@ -156,6 +149,13 @@ Vector3f& Material::getSpecular()
 float Material::getShininess() const
 {
 	return m_shininess;
+}
+
+
+///////////////////////////////////////////////////////////
+float Material::getOcclusionFactor() const
+{
+	return m_occlusionFactor;
 }
 
 
@@ -197,10 +197,10 @@ RenderPass Material::getRenderMask() const
 void Material::apply(Shader* shader) const
 {
 	std::string prefix = "u_material.";
-	shader->setUniform(prefix + "ambient", m_ambient);
 	shader->setUniform(prefix + "diffuse", m_diffuse);
 	shader->setUniform(prefix + "specular", m_specular);
 	shader->setUniform(prefix + "shininess", m_shininess);
+	shader->setUniform(prefix + "occlusion", m_occlusionFactor);
 	shader->setUniform(prefix + "hasDiffTexture", (int)m_diffTexture);
 	shader->setUniform(prefix + "hasSpecTexture", (int)m_specTexture);
 	shader->setUniform(prefix + "hasNormalTexture", (int)m_normalTexture);

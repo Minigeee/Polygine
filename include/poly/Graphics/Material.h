@@ -27,24 +27,6 @@ public:
 	Material();
 
 	///////////////////////////////////////////////////////////
-	/// \brief Set the ambient multiplier factor of the material
-	///
-	/// The ambient multiplier factor is the number that gets multplied
-	/// by the global ambient color when applying ambient lighting.
-	/// Ambient lighting is the lighting that comes from the environment
-	/// and is what lights up surfaces of models when there is no direct
-	/// light shining on it.
-	///
-	/// \note If this factor is changed for a material that uses
-	/// deferred rendering, this factor will be rounded to the nearest
-	/// 0.1 and will have a maximum value of 25.5.
-	///
-	/// \param factor The ambient multiplier factor
-	///
-	///////////////////////////////////////////////////////////
-	void setAmbientFactor(float factor);
-
-	///////////////////////////////////////////////////////////
 	/// \brief Set the diffuse color of the material
 	///
 	/// The diffuse color is the main color that appears on a model,
@@ -114,6 +96,21 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	void setShininess(float shininess);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the material occlusion factor
+	///
+	/// The occlusion factor determines how much the material is affected
+	/// by occluders (i.e. shadows, ambient occlusion, diffuse lighting,
+	/// etc.). The factor should be a value from 0 to 1, where 0 means that
+	/// the material won't be affected by occlusion at all and it will recieve
+	/// uniform diffuse lighting at every location, and 1 means the
+	/// material will be affected by the usual amount.
+	///
+	/// \param factor The material occlusion factor
+	///
+	///////////////////////////////////////////////////////////
+	void setOcclusionFactor(float occlusion);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set whether the material diffuse texture contains transparent pixels
@@ -224,14 +221,6 @@ public:
 	void removeTexture(const std::string& uniform);
 
 	///////////////////////////////////////////////////////////
-	/// \brief Get the ambient multiplier factor
-	///
-	/// \return The ambient multiplier factor
-	///
-	///////////////////////////////////////////////////////////
-	float getAmbientFactor();
-
-	///////////////////////////////////////////////////////////
 	/// \brief Get the diffuse color
 	///
 	/// \return The diffuse color
@@ -254,6 +243,14 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	float getShininess() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the occlusion factor
+	///
+	/// \return The occlusion factor
+	///
+	///////////////////////////////////////////////////////////
+	float getOcclusionFactor() const;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Check if the diffuse texture contains transparent pixels
@@ -333,10 +330,10 @@ public:
 	void apply(Shader* shader) const;
 
 private:
-	float m_ambient;							//!< The ambient multiplier factor
 	Vector3f m_diffuse;							//!< The diffuse color
 	Vector3f m_specular;						//!< The specular color
 	float m_shininess;							//!< The shininess value
+	float m_occlusionFactor;					//!< The occlusion factor
 	RenderPass m_renderMask;					//!< The render pass mask
 	bool m_isTransparent;						//!< This is true if the material contains transparent components
 	bool m_cullFace;							//!< Should this material allow face culling
