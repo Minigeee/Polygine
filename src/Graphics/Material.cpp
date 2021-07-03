@@ -16,6 +16,7 @@ Material::Material() :
 	m_specular			(0.1f),
 	m_shininess			(16.0f),
 	m_occlusionFactor	(1.0f),
+	m_reflectivity		(0.0f),
 	m_isTransparent		(false),
 	m_cullFace			(true),
 	m_diffTexture		(0),
@@ -64,6 +65,13 @@ void Material::setShininess(float shininess)
 void Material::setOcclusionFactor(float factor)
 {
 	m_occlusionFactor = factor;
+}
+
+
+///////////////////////////////////////////////////////////
+void Material::setReflectivity(float reflectivity)
+{
+	m_reflectivity = reflectivity;
 }
 
 
@@ -160,6 +168,13 @@ float Material::getOcclusionFactor() const
 
 
 ///////////////////////////////////////////////////////////
+float Material::getReflectivity() const
+{
+	return m_reflectivity;
+}
+
+
+///////////////////////////////////////////////////////////
 bool Material::isTransparent() const
 {
 	return m_isTransparent;
@@ -201,6 +216,7 @@ void Material::apply(Shader* shader) const
 	shader->setUniform(prefix + "specular", m_specular);
 	shader->setUniform(prefix + "shininess", m_shininess);
 	shader->setUniform(prefix + "occlusion", m_occlusionFactor);
+	shader->setUniform(prefix + "reflectivity", m_reflectivity);
 	shader->setUniform(prefix + "hasDiffTexture", (int)m_diffTexture);
 	shader->setUniform(prefix + "hasSpecTexture", (int)m_specTexture);
 	shader->setUniform(prefix + "hasNormalTexture", (int)m_normalTexture);

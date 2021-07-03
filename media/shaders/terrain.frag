@@ -37,7 +37,8 @@ void main()
     material.specular = vec3(0.2f);
     material.shininess = 20.0f;
     material.occlusion = 1.0f;
+    material.reflectivity = 0.0f;
     
     // Output to color buffers
-    output(material, normal);
+    deferred(material, normal);
 }

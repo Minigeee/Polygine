@@ -34,5 +34,5 @@ void main()
     if (material.hasNormalTexture)
         normal = normalize(v_tbnMatrix * (texture(u_normalMap, v_texCoord).rgb * 2.0f - 1.0f));
         
-    output(material, normal);
+    deferred(material, normal);
 }

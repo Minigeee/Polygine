@@ -29,5 +29,5 @@ void main()
     if (material.hasSpecTexture)
         material.specular *= texture(u_specularMap, v_texCoord).rgb;
         
-    output(material, u_lightingEnabled ? g_normal : vec3(0.0f));
+    deferred(material, u_lightingEnabled ? g_normal : vec3(0.0f));
 }

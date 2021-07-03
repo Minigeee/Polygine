@@ -149,6 +149,17 @@ public:
 	void render(Camera& camera, RenderPass pass, bool deferred) override;
 
 	///////////////////////////////////////////////////////////
+	/// \brief Apply the procedural skybox uniforms to a shader
+	///
+	/// This function can be used to render the skybox effects outside
+	/// this class (i.e. for rendering a cheap sky-only reflection).
+	///
+	/// \param shader A pointer to a shader
+	///
+	///////////////////////////////////////////////////////////
+	void apply(Shader* shader);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Set the entity containing the main directional light component
 	///
 	/// This directional light will be used to render the skybox.

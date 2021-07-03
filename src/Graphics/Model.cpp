@@ -127,7 +127,8 @@ Texture* loadMaterialTexture(aiMaterial* material, aiTextureType type, ModelLoad
 	// Create the texture
 	Texture*& texture = textureMap[path];
 	texture = (Texture*)texturePool.alloc();
-	texture->create(image);
+	// Use mipmaps because this texture will actually be used in rendering
+	texture->create(image, TextureFilter::Linear, TextureWrap::ClampToEdge, true);
 
 	return texture;
 }

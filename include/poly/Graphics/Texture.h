@@ -264,7 +264,7 @@ public:
 	///////////////////////////////////////////////////////////
 	/// \brief Get the filter sampling method
 	///
-	/// \return The filter sampling method for when sampling in between pixels
+	/// \return The filter sampling method for when sampling pixels
 	///
 	///////////////////////////////////////////////////////////
 	TextureFilter getFilter() const;

@@ -17,7 +17,7 @@ uniform mat4 u_invProjView;
 
 uniform sampler2D u_normalShininess;
 uniform sampler2D u_albedoOcclusion;
-uniform sampler2D u_specular;
+uniform sampler2D u_specularReflectivity;
 uniform sampler2D u_depth;
 
 
@@ -45,7 +45,7 @@ void main()
 
     Material material;
     material.diffuse = albedoOcclusion.rgb;
-    material.specular = texture(u_specular, v_texCoord).rgb;
+    material.specular = texture(u_specularReflectivity, v_texCoord).rgb;
     material.shininess = normalShininess.w;
     material.occlusion = albedoOcclusion.a;
 

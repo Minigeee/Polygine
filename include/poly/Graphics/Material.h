@@ -113,6 +113,22 @@ public:
 	void setOcclusionFactor(float occlusion);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Set the material reflectivity
+	///
+	/// This property determines how strongly reflections affect
+	/// the material. This property has no effect in the standard
+	/// rendering pipeline, it only comes into effect when some
+	/// type of reflective effect is applied, such as screen space
+	/// reflections (SSR). A value of 0 means the material does not
+	/// reflect any surrounding images, and a value of 1 means that
+	/// the material only reflects its surrounding images.
+	///
+	/// \param reflectivity The material reflectivity
+	///
+	///////////////////////////////////////////////////////////
+	void setReflectivity(float reflectivity);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Set whether the material diffuse texture contains transparent pixels
 	///
 	/// This property should be set (manually) to true for any material
@@ -253,6 +269,14 @@ public:
 	float getOcclusionFactor() const;
 
 	///////////////////////////////////////////////////////////
+	/// \brief Get the material reflectivity
+	///
+	/// \return The material reflectivity
+	///
+	///////////////////////////////////////////////////////////
+	float getReflectivity() const;
+
+	///////////////////////////////////////////////////////////
 	/// \brief Check if the diffuse texture contains transparent pixels
 	///
 	/// This value must be set manually.
@@ -334,6 +358,7 @@ private:
 	Vector3f m_specular;						//!< The specular color
 	float m_shininess;							//!< The shininess value
 	float m_occlusionFactor;					//!< The occlusion factor
+	float m_reflectivity;						//!< The reflectivity of the material
 	RenderPass m_renderMask;					//!< The render pass mask
 	bool m_isTransparent;						//!< This is true if the material contains transparent components
 	bool m_cullFace;							//!< Should this material allow face culling

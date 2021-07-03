@@ -265,24 +265,8 @@ void ProceduralSkybox::render(Camera& camera, RenderPass pass, bool deferred)
     Matrix4f view = Matrix4f(Matrix3f(camera.getViewMatrix()), 1.0f);
     shader.setUniform("u_projView", camera.getProjMatrix() * view);
 
-    // Set light directions
-    DirLightComponent* light = m_dirLight.get<DirLightComponent>();
-    if (light)
-    {
-        shader.setUniform("u_lightDir", normalize(light->m_direction));
-        shader.setUniform("u_scatterColor", light->m_diffuse * m_scatterStrength);
-    }
-
-    // Skybox parameters
-    shader.setUniform("u_zenithColor", m_zenithColor);
-    shader.setUniform("u_horizonColor", m_horizonColor);
-    shader.setUniform("u_groundColor", m_groundColor);
-    shader.setUniform("u_scatterFactor", m_scatterFactor);
-    shader.setUniform("u_lightStrength", m_lightStrength);
-    shader.setUniform("u_topRadius", m_topRadius);
-    shader.setUniform("u_botRadius", m_botRadius);
-    shader.setUniform("u_radius", m_altitude + m_botRadius);
-
+    // Apply the rest of the shader uniforms
+    apply(&shader);
 
     // Enable depth testing
     glCheck(glEnable(GL_DEPTH_TEST));
@@ -295,6 +279,29 @@ void ProceduralSkybox::render(Camera& camera, RenderPass pass, bool deferred)
     Skybox::getVertexArray().draw();
 
     glCheck(glDepthMask(GL_TRUE));
+}
+
+
+///////////////////////////////////////////////////////////
+void ProceduralSkybox::apply(Shader* shader)
+{
+    // Set light directions
+    DirLightComponent* light = m_dirLight.get<DirLightComponent>();
+    if (light)
+    {
+        shader->setUniform("u_lightDir", normalize(light->m_direction));
+        shader->setUniform("u_scatterColor", light->m_diffuse * m_scatterStrength);
+    }
+
+    // Skybox parameters
+    shader->setUniform("u_zenithColor", m_zenithColor);
+    shader->setUniform("u_horizonColor", m_horizonColor);
+    shader->setUniform("u_groundColor", m_groundColor);
+    shader->setUniform("u_scatterFactor", m_scatterFactor);
+    shader->setUniform("u_lightStrength", m_lightStrength);
+    shader->setUniform("u_topRadius", m_topRadius);
+    shader->setUniform("u_botRadius", m_botRadius);
+    shader->setUniform("u_radius", m_altitude + m_botRadius);
 }
 
 

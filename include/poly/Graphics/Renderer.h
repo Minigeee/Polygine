@@ -87,7 +87,7 @@ public:
 	///
 	/// * Normal + Specular power    (0)
 	/// * Diffuse + Occlusion factor (1)
-	/// * Specular                   (2)
+	/// * Specular + Reflectivity    (2)
 	/// * Depth
 	///
 	/// The first color buffer (normal + specular power) is a texture
@@ -96,12 +96,17 @@ public:
 	/// color buffer (diffuse + occlusion factor) is a texture with
 	/// 4 unsigned 8-bit components, with the diffuse color in the RGB
 	/// components and the occlusion factor in the A component. The
-	/// third color buffer (specular) is a texture with 3 unsigned
-	/// 8-bit components, and only contains the specular color. The
+	/// third color buffer (specular + reflectivity) is a texture with 3 unsigned
+	/// 8-bit components, and contains the specular color in the RGB components,
+	/// and the material reflectivity (for reflections) in the A component. The
 	/// depth buffer is a standard depth buffer accessed with
 	/// FrameBuffer::getDepthTexture(), and it a depth buffer that
 	/// is shared with the output \a target framebuffer it is associated
 	/// with.
+	///
+	/// There is no position buffer to keep the buffer as small and performant
+	/// as possible. Position data can be recalculated from the depth buffer and
+	/// inverse projection-view matrix.
 	///
 	/// \param target The framebuffer associeated with the g-buffer
 	///

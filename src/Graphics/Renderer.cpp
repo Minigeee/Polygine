@@ -91,7 +91,7 @@ void Renderer::render(Camera& camera, FrameBuffer& target, RenderPass pass)
 			buffer->create(target.getWidth(), target.getHeight());
 			buffer->attachColor(Pool<Texture>::alloc(), PixelFormat::Rgba, GLType::HalfFloat);	//!< Normal + Shininess
 			buffer->attachColor(Pool<Texture>::alloc(), PixelFormat::Rgba, GLType::Uint8);		//!< Albedo + Occlusion factor
-			buffer->attachColor(Pool<Texture>::alloc(), PixelFormat::Rgb, GLType::Uint8);		//!< Specular
+			buffer->attachColor(Pool<Texture>::alloc(), PixelFormat::Rgba, GLType::Uint8);		//!< Specular + Reflectivity
 
 			// Share depth buffer with target
 			buffer->attachDepth(target.getDepthTexture());										//!< Depth
@@ -115,7 +115,7 @@ void Renderer::render(Camera& camera, FrameBuffer& target, RenderPass pass)
 			buffer->create(target.getWidth(), target.getHeight());
 			buffer->attachColor(textures[0], PixelFormat::Rgba, GLType::HalfFloat);	//!< Normal + Shininess
 			buffer->attachColor(textures[1], PixelFormat::Rgba, GLType::Uint8);		//!< Albedo + Occlusion factor
-			buffer->attachColor(textures[2], PixelFormat::Rgb, GLType::Uint8);		//!< Specular
+			buffer->attachColor(textures[2], PixelFormat::Rgba, GLType::Uint8);		//!< Specular + Reflectivity
 			buffer->attachDepth(textures[3]);										//!< Depth
 			GL_HALF_FLOAT;
 		}
@@ -165,7 +165,7 @@ void Renderer::render(Camera& camera, FrameBuffer& target, RenderPass pass)
 	// Bind all textures
 	shader.setUniform("u_normalShininess", *buffer->getColorTexture(0));
 	shader.setUniform("u_albedoOcclusion", *buffer->getColorTexture(1));
-	shader.setUniform("u_specular", *buffer->getColorTexture(2));
+	shader.setUniform("u_specularReflectivity", *buffer->getColorTexture(2));
 	shader.setUniform("u_depth", *buffer->getDepthTexture());
 	shader.setUniform("u_invProjView", inverse(camera.getProjMatrix() * camera.getViewMatrix()));
 

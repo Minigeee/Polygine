@@ -13,6 +13,7 @@ struct Material
     vec3 specular;
     float shininess;
     float occlusion;
+    float reflectivity;
     bool hasDiffTexture;
     bool hasSpecTexture;
     bool hasNormalTexture;
