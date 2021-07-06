@@ -45,6 +45,9 @@ Shader Ssao::s_shader;
 ///////////////////////////////////////////////////////////
 Shader LensFlare::s_shader;
 
+///////////////////////////////////////////////////////////
+Shader Reflections::s_shader;
+
 
 ///////////////////////////////////////////////////////////
 ColorAdjust::ColorAdjust() :
@@ -1038,6 +1041,78 @@ Shader& LensFlare::getShader()
 	}
 
 	return s_shader;
+}
+
+
+///////////////////////////////////////////////////////////
+Reflections::Reflections() :
+	m_gBuffer			(0),
+	m_camera			(0)
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
+void Reflections::render(FrameBuffer& input, FrameBuffer& output)
+{
+	// A g-buffer and camera are needed to render reflections
+	if (!m_gBuffer || !m_camera) return;
+
+	// Bind output target
+	output.bind();
+
+	// Disable depth test
+	glCheck(glDisable(GL_DEPTH_TEST));
+
+	// Disable cull face
+	glCheck(glDisable(GL_CULL_FACE));
+
+	// Setup shader
+	Shader& shader = getShader();
+	shader.bind();
+
+	// Bind textures
+	shader.setUniform("u_color", *input.getColorTexture());
+	shader.setUniform("u_normalShininess", *m_gBuffer->getColorTexture(0));
+	shader.setUniform("u_specularReflectivity", *m_gBuffer->getColorTexture(2));
+	shader.setUniform("u_depth", *m_gBuffer->getDepthTexture());
+
+	// Inverse projection-view matrix to calculate position
+	shader.setUniform("u_invProjView", inverse(m_camera->getProjMatrix() * m_camera->getViewMatrix()));
+
+	m_camera->apply(&shader);
+
+	// Render vertex array
+	FullscreenQuad::draw();
+}
+
+
+///////////////////////////////////////////////////////////
+Shader& Reflections::getShader()
+{
+	if (!s_shader.getId())
+	{
+		s_shader.load("shaders/postprocess/quad.vert", Shader::Vertex);
+		s_shader.load("shaders/postprocess/reflections.frag", Shader::Fragment);
+		s_shader.compile();
+	}
+
+	return s_shader;
+}
+
+
+///////////////////////////////////////////////////////////
+void Reflections::setGBuffer(FrameBuffer* buffer)
+{
+	m_gBuffer = buffer;
+}
+
+
+///////////////////////////////////////////////////////////
+void Reflections::setCamera(Camera* camera)
+{
+	m_camera = camera;
 }
 
 

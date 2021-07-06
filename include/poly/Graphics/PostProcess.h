@@ -1052,6 +1052,40 @@ private:
 	Vector2f m_bounds;			//!< The screen space cutoff bounds
 };
 
+
+///////////////////////////////////////////////////////////
+/// \brief A post processing effect for screen-space reflections
+///
+///////////////////////////////////////////////////////////
+class Reflections : public PostProcess
+{
+public:
+	Reflections();
+
+	///////////////////////////////////////////////////////////
+	/// \brief Apply the lens reflection to the input framebuffer
+	///
+	/// \param input The input framebuffer
+	/// \param output The output framebuffer
+	///
+	///////////////////////////////////////////////////////////
+	void render(FrameBuffer& input, FrameBuffer& output = FrameBuffer::Default) override;
+
+	void setGBuffer(FrameBuffer* buffer);
+
+	void setCamera(Camera* camera);
+
+private:
+	static Shader& getShader();
+
+	static Shader s_shader;
+
+private:
+	FrameBuffer* m_gBuffer;
+	Camera* m_camera;
+};
+
+
 }
 
 #endif

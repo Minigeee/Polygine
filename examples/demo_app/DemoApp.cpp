@@ -316,6 +316,9 @@ int main()
     flare.setScene(&scene);
     flare.setCamera(&camera);
 
+    Reflections ssr;
+    ssr.setCamera(&camera);
+
     // Sky colors
     std::vector<float> angles =
     {
@@ -668,12 +671,15 @@ int main()
         scene.render(camera, framebuffers[0]);
         // physics->render(camera, framebuffers[0]);
 
-        ssao.render(framebuffers[0], framebuffers[1]);
-        fog.render(framebuffers[1], framebuffers[0]);
-        bloom.render(framebuffers[0], framebuffers[1]);
-        flare.render(framebuffers[1], framebuffers[0]);
-        colorAdjust.render(framebuffers[0], framebuffers[1]);
-        fxaa.render(framebuffers[1]);
+        ssr.setGBuffer(scene.getRenderer().getGBuffer(framebuffers[0]));
+
+        // ssao.render(framebuffers[0], framebuffers[1]);
+        // fog.render(framebuffers[1], framebuffers[0]);
+        // bloom.render(framebuffers[0], framebuffers[1]);
+        // flare.render(framebuffers[1], framebuffers[0]);
+        ssr.render(framebuffers[0], framebuffers[1]);
+        colorAdjust.render(framebuffers[1], framebuffers[0]);
+        fxaa.render(framebuffers[0]);
 
         ui.render();
 
