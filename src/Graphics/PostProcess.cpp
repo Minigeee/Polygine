@@ -16,6 +16,7 @@
 #include <poly/Graphics/Shaders/postprocess/add.frag.h>
 #include <poly/Graphics/Shaders/postprocess/ssao.frag.h>
 #include <poly/Graphics/Shaders/postprocess/lens_flare.frag.h>
+#include <poly/Graphics/Shaders/postprocess/reflections.frag.h>
 
 namespace poly
 {
@@ -1047,7 +1048,14 @@ Shader& LensFlare::getShader()
 ///////////////////////////////////////////////////////////
 Reflections::Reflections() :
 	m_gBuffer			(0),
-	m_camera			(0)
+	m_camera			(0),
+	m_proceduralSkybox	(0),
+	m_maxDistance		(15.0f),
+	m_stepSize			(15.0f),
+	m_thickness			(0.5f),
+	m_maxDepthDiff		(0.02f),
+	m_noiseFactor		(0.2f),
+	m_fresnelFactor		(1.0f)
 {
 
 }
@@ -1072,6 +1080,17 @@ void Reflections::render(FrameBuffer& input, FrameBuffer& output)
 	Shader& shader = getShader();
 	shader.bind();
 
+	// Apply procedural skybox if being used
+	if (m_proceduralSkybox)
+	{
+		m_proceduralSkybox->apply(&shader);
+		shader.setUniform("u_usesProceduralSkybox", true);
+	}
+	else
+	{
+		shader.setUniform("u_usesProceduralSkybox", false);
+	}
+
 	// Bind textures
 	shader.setUniform("u_color", *input.getColorTexture());
 	shader.setUniform("u_normalShininess", *m_gBuffer->getColorTexture(0));
@@ -1080,8 +1099,15 @@ void Reflections::render(FrameBuffer& input, FrameBuffer& output)
 
 	// Inverse projection-view matrix to calculate position
 	shader.setUniform("u_invProjView", inverse(m_camera->getProjMatrix() * m_camera->getViewMatrix()));
-
 	m_camera->apply(&shader);
+
+	// Properties
+	shader.setUniform("u_maxDistance", m_maxDistance);
+	shader.setUniform("u_stepSize", m_stepSize);
+	shader.setUniform("u_thickness", m_thickness);
+	shader.setUniform("u_maxDepthDiff", m_maxDepthDiff);
+	shader.setUniform("u_noiseFactor", m_noiseFactor);
+	shader.setUniform("u_fresnelFactor", m_fresnelFactor);
 
 	// Render vertex array
 	FullscreenQuad::draw();
@@ -1093,8 +1119,8 @@ Shader& Reflections::getShader()
 {
 	if (!s_shader.getId())
 	{
-		s_shader.load("shaders/postprocess/quad.vert", Shader::Vertex);
-		s_shader.load("shaders/postprocess/reflections.frag", Shader::Fragment);
+		s_shader.load("poly/postprocess/quad.vert", SHADER_POSTPROCESS_QUAD_VERT, Shader::Vertex);
+		s_shader.load("poly/postprocess/reflections.frag", SHADER_POSTPROCESS_REFLECTIONS_FRAG, Shader::Fragment);
 		s_shader.compile();
 	}
 
@@ -1113,6 +1139,97 @@ void Reflections::setGBuffer(FrameBuffer* buffer)
 void Reflections::setCamera(Camera* camera)
 {
 	m_camera = camera;
+}
+
+
+///////////////////////////////////////////////////////////
+void Reflections::setCubemap(ProceduralSkybox* skybox)
+{
+	m_proceduralSkybox = skybox;
+}
+
+
+///////////////////////////////////////////////////////////
+void Reflections::setMaxDistance(float distance)
+{
+	m_maxDistance = distance;
+}
+
+
+///////////////////////////////////////////////////////////
+void Reflections::setStepSize(float size)
+{
+	m_stepSize = size;
+}
+
+
+///////////////////////////////////////////////////////////
+void Reflections::setThickness(float thickness)
+{
+	m_thickness = thickness;
+}
+
+
+///////////////////////////////////////////////////////////
+void Reflections::setMaxDepthDiff(float diff)
+{
+	m_maxDepthDiff = diff;
+}
+
+
+///////////////////////////////////////////////////////////
+void Reflections::setNoiseFactor(float factor)
+{
+	m_noiseFactor = factor;
+}
+
+
+///////////////////////////////////////////////////////////
+void Reflections::setFresnelFactor(float factor)
+{
+	m_fresnelFactor = factor;
+}
+
+
+///////////////////////////////////////////////////////////
+float Reflections::getMaxDistance() const
+{
+	return m_maxDistance;
+}
+
+
+///////////////////////////////////////////////////////////
+float Reflections::getStepSize() const
+{
+	return m_stepSize;
+}
+
+
+///////////////////////////////////////////////////////////
+float Reflections::getThickness() const
+{
+	return m_thickness;
+}
+
+
+///////////////////////////////////////////////////////////
+float Reflections::getMaxDepthDiff() const
+{
+	return m_maxDepthDiff;
+}
+
+
+///////////////////////////////////////////////////////////
+float Reflections::getNoiseFactor() const
+{
+	return m_noiseFactor;
+}
+
+
+///////////////////////////////////////////////////////////
+float Reflections::getFresnelFactor() const
+{
+	return m_fresnelFactor;
 }
 
 

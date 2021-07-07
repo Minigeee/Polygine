@@ -4,6 +4,7 @@
 #include <poly/Graphics/Camera.h>
 #include <poly/Graphics/FrameBuffer.h>
 #include <poly/Graphics/Shader.h>
+#include <poly/Graphics/Skybox.h>
 
 namespace poly
 {
@@ -31,6 +32,7 @@ public:
 
 ///////////////////////////////////////////////////////////
 /// \brief A post processing effect that applies gamma correction and HDR rendering
+/// \ingroup Graphics
 ///
 /// See PostProcess for an example of how to use post processing effects.
 ///
@@ -87,6 +89,7 @@ private:
 
 ///////////////////////////////////////////////////////////
 /// \brief A post processing fog effect
+/// \ingroup Graphics
 ///
 /// Depth fog requires a pointer to the camera that is currently active
 /// in the input framebuffer, a pointer to the depth texture
@@ -235,6 +238,7 @@ private:
 
 ///////////////////////////////////////////////////////////
 /// \brief A post processing effect for fast approximate anti-aliasing
+/// \ingroup Graphics
 ///
 /// See PostProcess for an example of how to use post processing effects.
 ///
@@ -287,6 +291,7 @@ private:
 
 ///////////////////////////////////////////////////////////
 /// \brief A post processing effect for applying either a vertical or horizontal blur
+/// \ingroup Graphics
 ///
 /// See PostProcess for an example of how to use post processing effects.
 ///
@@ -485,6 +490,7 @@ private:
 
 ///////////////////////////////////////////////////////////
 /// \brief A post processing effect for the bloom effect
+/// \ingroup Graphics
 ///
 /// See PostProcess for an example of how to use post processing effects.
 ///
@@ -671,6 +677,7 @@ private:
 
 ///////////////////////////////////////////////////////////
 /// \brief A post processing effect for screen space ambient occlusion
+/// \ingroup Graphics
 ///
 /// SSAO requires a pointer to the camera that is currently active
 /// in the input framebuffer, as well a pointer to the depth texture
@@ -887,6 +894,7 @@ private:
 
 ///////////////////////////////////////////////////////////
 /// \brief A post processing effect for applying lens flare to a single directional light
+/// \ingroup Graphics
 ///
 /// The lens flare effect requires a scene pointer and a camera
 /// pointer to work. Note that lens flare will only be applied
@@ -1055,6 +1063,16 @@ private:
 
 ///////////////////////////////////////////////////////////
 /// \brief A post processing effect for screen-space reflections
+/// \ingroup Graphics
+///
+/// The reflection effect requires the scene g-buffer to retrieve
+/// normals and reflectivity data, a camera to calculate reflection rays
+/// and reconstruct position data, and optionally, cubemaps to fill in
+/// areas of the screen where no reflections could be found.
+///
+/// See PostProcess for an example of how to use post processing effects.
+///
+/// \see setScene, setCamera
 ///
 ///////////////////////////////////////////////////////////
 class Reflections : public PostProcess
@@ -1071,9 +1089,177 @@ public:
 	///////////////////////////////////////////////////////////
 	void render(FrameBuffer& input, FrameBuffer& output = FrameBuffer::Default) override;
 
+	///////////////////////////////////////////////////////////
+	/// \brief Set the scene g-buffer that will be used to apply the effect
+	///
+	/// The g-buffer is needed for the scene normals and reflectivity
+	/// data.
+	///
+	/// \param buffer A pointer to the scene g-buffer
+	///
+	///////////////////////////////////////////////////////////
 	void setGBuffer(FrameBuffer* buffer);
 
+	///////////////////////////////////////////////////////////
+	/// \brief Set the camera that will be used to apply the effect
+	///
+	/// The camera is needed to calculate position data from the depth
+	/// map, and to calculate reflection vectors.
+	///
+	/// \param camera A pointer to a camera
+	///
+	///////////////////////////////////////////////////////////
 	void setCamera(Camera* camera);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set an optional procedural skybox to fill in pixels that have no reflection
+	///
+	/// For areas that don't reflect any other pixel in the screen,
+	/// the procedural skybox will be sampled using the reflected ray
+	/// instead. This does not stack with other environment maps.
+	///
+	/// \param skybox A pointer to a procedural skybox
+	///
+	///////////////////////////////////////////////////////////
+	void setCubemap(ProceduralSkybox* skybox);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the maximum distance from a reflector that objects can be reflected
+	///
+	/// This property determines how far away from a reflector pixel
+	/// that another pixel can be reflected. This value should be provided
+	/// in world space units.
+	///
+	/// \param dist The maximum distance that objects can be reflected
+	///
+	///////////////////////////////////////////////////////////
+	void setMaxDistance(float dist);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the fixed stepping size of the raycast operation
+	///
+	/// A raycast is used to sample reflected data, and the reflected
+	/// ray is traversed in fixed distance intervals (fixed pixel intervals).
+	/// This property determines the raycast step size in pixels.
+	///
+	/// \param size The stepping size of the raycast operation in pixels
+	///
+	///////////////////////////////////////////////////////////
+	void setStepSize(float size);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the raycast intersection thickness property
+	///
+	/// The thickness property determines how far behind a fragment
+	/// would count as a reflection hit. This helps prevent false raycast
+	/// hits when a ray travels behind an object. This is only effective
+	/// in the coarse raycast intersection stage.
+	///
+	/// \param thickness The thickness proprty in world space units
+	///
+	///////////////////////////////////////////////////////////
+	void setThickness(float thickness);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the maximum difference in raycast intersection point and depth sampled point that counts as a raycast hit
+	///
+	/// The maximum depth difference defines the maximum allowed difference
+	/// in the depth of the raycast point (the point where an intersection
+	/// was detected along a point), and the depth sampled from the
+	/// depth map. When this difference is too large, it indicates
+	/// that the raycast hit will be reflecting the wrong fragment,
+	/// so that fragment is marked as no reflection.
+	///
+	/// \param diff The maximum depth difference in world space units
+	///
+	///////////////////////////////////////////////////////////
+	void setMaxDepthDiff(float diff);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the positional offset noise factor
+	///
+	/// This factor determines the magnitude of the noise offset
+	/// of the starting position of the raycast. The larger the
+	/// value, the higher the amount of noise. This is normally
+	/// just used to make reflections look a little smoother, but
+	/// it gives the reflections a very obvious noise pattern that
+	/// may be annoying to the viewer when used on a non-noisy
+	/// material.
+	///
+	/// \param factor The noise factor in world space units
+	///
+	///////////////////////////////////////////////////////////
+	void setNoiseFactor(float factor);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the fresnel effect factor
+	///
+	/// The fresnel effect makes reflective surfaces more reflective
+	/// at a shallower angle, and less reflective at a steeper angle.
+	/// The reflection multiplicative factor is calculated using this equation:
+	///
+	/// \code
+	///	reflFactor = 1 - pow(dot(-viewDir, normal), fresnelFactor);
+	/// \endcode
+	///
+	/// So when the fresnel factor has a larger value, the reflection
+	/// factor will be higher in general, and when the fresnel factor
+	/// is lower, the reflection factor will be lower in general.
+	///
+	/// \param factor The fresnel factor
+	///
+	///////////////////////////////////////////////////////////
+	void setFresnelFactor(float factor);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the maximum reflection distance
+	///
+	/// \return The maximum reflection distance
+	///
+	///////////////////////////////////////////////////////////
+	float getMaxDistance() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the raycast step size in pixels
+	///
+	/// \return The raycast step size in pixels
+	///
+	///////////////////////////////////////////////////////////
+	float getStepSize() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the thickness of the raycast intersection region
+	///
+	/// \return The thickness of the raycast intersection region in world space units
+	///
+	///////////////////////////////////////////////////////////
+	float getThickness() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the maximum depth difference property
+	///
+	/// \return The maximum depth difference property
+	///
+	/// \see setMaxDepthDiff
+	///
+	///////////////////////////////////////////////////////////
+	float getMaxDepthDiff() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the position offset noise factor
+	///
+	/// \return The positional offset noise factor
+	///
+	///////////////////////////////////////////////////////////
+	float getNoiseFactor() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the fresnel effect factor
+	///
+	/// \return The fresnel effect factor
+	///
+	///////////////////////////////////////////////////////////
+	float getFresnelFactor() const;
 
 private:
 	static Shader& getShader();
@@ -1081,8 +1267,16 @@ private:
 	static Shader s_shader;
 
 private:
-	FrameBuffer* m_gBuffer;
-	Camera* m_camera;
+	FrameBuffer* m_gBuffer;					//!< A pointer to the scene g-buffer
+	Camera* m_camera;						//!< A pointer to the camera that will be used to apply the reflections effect
+	ProceduralSkybox* m_proceduralSkybox;	//!< An optional procedural skybox to fill in areas without a reflection
+
+	float m_maxDistance;					//!< The maximum distance from the reflected fragment a raycast is allowed to test for reflections
+	float m_stepSize;						//!< The step size of the raycast (in pixels)
+	float m_thickness;						//!< The thickness of the region behind a raycast intersection where an intersection counts as a reflection
+	float m_maxDepthDiff;					//!< The maximum allowed difference in depth from camera (between the ray intersection point and the depth sampled point)
+	float m_noiseFactor;					//!< The positional offset noise factor
+	float m_fresnelFactor;					//!< The fresnel effect factor
 };
 
 

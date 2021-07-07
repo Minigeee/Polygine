@@ -2,6 +2,7 @@
 
 #include "../camera.glsl"
 #include "../noise.glsl"
+#include "../procedural_skybox.glsl"
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -15,12 +16,14 @@ uniform sampler2D u_specularReflectivity;
 uniform sampler2D u_depth;
 
 uniform mat4 u_invProjView;
+uniform bool u_usesProceduralSkybox;
 
-uniform float u_maxDistance = 15.0f;
-uniform float u_stepSize = 15.0f;
-uniform float u_thickness = 0.5f;
-uniform float u_maxDepthDiff = 0.02f;
-uniform float u_noiseFactor = 0.004f;
+uniform float u_maxDistance;
+uniform float u_stepSize;
+uniform float u_thickness;
+uniform float u_maxDepthDiff;
+uniform float u_noiseFactor;
+uniform float u_fresnelFactor;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -58,26 +61,11 @@ vec3 worldToUV(vec3 world)
 
 
 ///////////////////////////////////////////////////////////////////////////////
-void main()
+bool raycast(vec3 position, float depth, vec3 ray, out vec3 rayTexCoord)
 {
-    float depth = 0.0f;
-    vec3 position = getFragPos(v_texCoord, depth);
-    vec3 color = texture(u_color, v_texCoord).rgb;
-    float reflectivity = texture(u_specularReflectivity, v_texCoord).a;
-    f_color = vec4(color, 1.0f);
-
-    // Check if the reflectivity is above 0 and not the skybox
-    if (depth >= 1.0f || reflectivity == 0.0f)
-        return;
-
-    // Get normal and reflected view vector
-    vec3 normal = texture(u_normalShininess, v_texCoord).rgb;
-    vec3 viewDir = normalize(position - u_cameraPos);
-    vec3 reflectedRay = normalize(reflect(viewDir, normal));
-
     // Get endpoints in texture coords
     vec3 startTexCoords = vec3(v_texCoord, depth);
-    vec3 endTexCoords = worldToUV(position + u_maxDistance * reflectedRay);
+    vec3 endTexCoords = worldToUV(position + u_maxDistance * ray);
 
     // Calculate increment size
     vec2 texSize = textureSize(u_depth, 0).xy;
@@ -92,7 +80,7 @@ void main()
     }
     
     // Raycast
-    vec3 rayTexCoord = startTexCoords;
+    rayTexCoord = startTexCoords;
     bool hit = false;
 
     // Keep track of increment endpoints for binary search later
@@ -109,8 +97,7 @@ void main()
         rayTexCoord.z = (startTexCoords.z * endTexCoords.z) / mix(endTexCoords.z, startTexCoords.z, percent);
 
         // Get depth of the pixel
-        vec2 offset = rand2(rayTexCoord.xy) * u_noiseFactor - 0.5f * u_noiseFactor;
-        float depth = texture(u_depth, rayTexCoord.xy + offset).r;
+        depth = texture(u_depth, rayTexCoord.xy).r;
 
         // Get linear depths
         float rayDepthLinear = getLinearDepth(rayTexCoord.z);
@@ -130,6 +117,8 @@ void main()
 
     if (hit)
     {
+        float depth = 0.0f;
+
         // Binary search to find accurate position
         for (int i = 0; i < 5; ++i)
         {
@@ -154,8 +143,59 @@ void main()
 
         hit =
             abs(getLinearDepth(depth) - getLinearDepth(rayTexCoord.z)) < u_maxDepthDiff &&
-            dot(reflectedRay, hitNormal) < 0.0f;
+            dot(ray, hitNormal) < 0.0f;
     }
 
-    f_color = vec4(hit ? texture(u_color, rayTexCoord.xy).rgb : vec3(0.0f), 1.0f);
+    return hit;
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+void main()
+{
+    float depth = 0.0f;
+    vec3 position = getFragPos(v_texCoord, depth);
+    vec3 color = texture(u_color, v_texCoord).rgb;
+    float reflectivity = texture(u_specularReflectivity, v_texCoord).a;
+    f_color = vec4(color, 1.0f);
+
+    // Check if the reflectivity is above 0 and not the skybox
+    if (depth >= 1.0f || reflectivity == 0.0f)
+        return;
+
+    // Offset position by a random amount
+    position += rand3(position) * u_noiseFactor - 0.5f * u_noiseFactor;
+
+    // Get normal and reflected view vector
+    vec3 normal = texture(u_normalShininess, v_texCoord).rgb;
+    vec3 viewDir = normalize(position - u_cameraPos);
+    vec3 reflectedRay = normalize(reflect(viewDir, normal));
+    
+    // Raycast
+    vec3 rayTexCoord;
+    bool hit = raycast(position, depth, reflectedRay, rayTexCoord);
+
+    // Get color of reflection
+    vec3 reflColor;
+    if (hit)
+        reflColor = texture(u_color, rayTexCoord.xy).rgb;
+
+    else
+    {
+        // Take color from skybox
+        if (u_usesProceduralSkybox)
+        {
+            // Make sure reflected ray doesn't go below horizon
+            if (reflectedRay.y < 0.0f)
+                reflectedRay = normalize(vec3(reflectedRay.x, 0.0f, reflectedRay.z));
+
+            reflColor = getSkyColor(reflectedRay);
+        }
+    }
+
+    // Apply the fresnel effect
+    float reflFactor = (1.0f - pow(max(dot(-viewDir, normal), 0.0f), u_fresnelFactor)) * reflectivity;
+    reflColor = mix(color, reflColor, reflFactor);
+
+    f_color = vec4(reflColor, 1.0f);
 }

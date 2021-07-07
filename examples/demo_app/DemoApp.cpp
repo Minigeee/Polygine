@@ -318,6 +318,7 @@ int main()
 
     Reflections ssr;
     ssr.setCamera(&camera);
+    ssr.setCubemap(&skybox);
 
     // Sky colors
     std::vector<float> angles =
@@ -673,11 +674,11 @@ int main()
 
         ssr.setGBuffer(scene.getRenderer().getGBuffer(framebuffers[0]));
 
-        // ssao.render(framebuffers[0], framebuffers[1]);
-        // fog.render(framebuffers[1], framebuffers[0]);
-        // bloom.render(framebuffers[0], framebuffers[1]);
-        // flare.render(framebuffers[1], framebuffers[0]);
         ssr.render(framebuffers[0], framebuffers[1]);
+        ssao.render(framebuffers[1], framebuffers[0]);
+        fog.render(framebuffers[0], framebuffers[1]);
+        bloom.render(framebuffers[1], framebuffers[0]);
+        flare.render(framebuffers[0], framebuffers[1]);
         colorAdjust.render(framebuffers[1], framebuffers[0]);
         fxaa.render(framebuffers[0]);
 
@@ -708,3 +709,4 @@ int main()
 // TODO : Consider switching to a different physics engine in the future if there are too many bugs
 // TODO : Handle rendering transparent objects in octree
 // TODO : Add a custom scene render (for more customization in deferred pipeline)
+// TODO : Environment cubemaps + integrate them into reflections effect

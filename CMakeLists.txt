@@ -21,6 +21,7 @@ set(POLY_COLUMN_MAJOR TRUE CACHE BOOL "Set TRUE to use column major matrices")
 set(POLY_DOWNLOAD_MISSING_DEPS FALSE CACHE BOOL "Set to TRUE to download any missing external dependencies")
 
 set(CMAKE_DEBUG_POSTFIX "-d")
+set(BUILD_SHARED_LIBS OFF)
 
 # Compiler flags
 if (MSVC)
