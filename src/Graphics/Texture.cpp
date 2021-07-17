@@ -62,7 +62,8 @@ Texture::Texture() :
 	m_dataType		(GLType::Uint8),
 	m_wrap			(TextureWrap::ClampToEdge),
 	m_filter		(TextureFilter::Linear),
-	m_multisampled	(false)
+	m_multisampled	(false),
+	m_hasMipmaps	(false)
 {
 
 }
@@ -351,6 +352,78 @@ void Texture::update(void* data, const Vector3u& pos, const Vector3u& size)
 
 
 ///////////////////////////////////////////////////////////
+void Texture::setFilter(TextureFilter filter)
+{
+	// Don't set filter before creating
+	if (!m_id) return;
+
+	m_filter = filter;
+
+	// Bind the texture
+	bind();
+
+	// Get dimensions enum
+	GLenum dims = GL_TEXTURE_1D;
+	if (m_dimensions == 2)
+	{
+		if (m_multisampled)
+			dims = GL_TEXTURE_2D_MULTISAMPLE;
+		else
+			dims = GL_TEXTURE_2D;
+	}
+	else if (m_dimensions == 3)
+		dims = GL_TEXTURE_3D;
+
+	// Use different methods depending on if mipmaps were generated
+	if (m_hasMipmaps)
+	{
+		glCheck(glGenerateMipmap(dims));
+
+		// Set filter parameters
+		GLint magFilter = filter == TextureFilter::Nearest ? GL_NEAREST_MIPMAP_LINEAR : GL_LINEAR_MIPMAP_LINEAR;
+		glCheck(glTexParameteri(dims, GL_TEXTURE_MIN_FILTER, magFilter));
+		glCheck(glTexParameteri(dims, GL_TEXTURE_MAG_FILTER, (GLint)filter));
+	}
+	else
+	{
+		// Set filter parameters
+		glCheck(glTexParameteri(dims, GL_TEXTURE_MIN_FILTER, (GLint)filter));
+		glCheck(glTexParameteri(dims, GL_TEXTURE_MAG_FILTER, (GLint)filter));
+	}
+}
+
+
+///////////////////////////////////////////////////////////
+void Texture::setWrap(TextureWrap wrap)
+{
+	// Don't set wrap before creating
+	if (!m_id) return;
+
+	m_wrap = wrap;
+
+	// Bind the texture
+	bind();
+
+	// Get dimensions enum
+	GLenum dims = GL_TEXTURE_1D;
+	if (m_dimensions == 2)
+	{
+		if (m_multisampled)
+			dims = GL_TEXTURE_2D_MULTISAMPLE;
+		else
+			dims = GL_TEXTURE_2D;
+	}
+	else if (m_dimensions == 3)
+		dims = GL_TEXTURE_3D;
+
+	// Set wrap parameter
+	glCheck(glTexParameteri(dims, GL_TEXTURE_WRAP_S, (GLint)wrap));
+	glCheck(glTexParameteri(dims, GL_TEXTURE_WRAP_T, (GLint)wrap));
+	glCheck(glTexParameteri(dims, GL_TEXTURE_WRAP_R, (GLint)wrap));
+}
+
+
+///////////////////////////////////////////////////////////
 Uint32 Texture::getId() const
 {
 	return m_id;
@@ -417,6 +490,13 @@ TextureFilter Texture::getFilter() const
 bool Texture::isMultisampled() const
 {
 	return m_multisampled;
+}
+
+
+///////////////////////////////////////////////////////////
+bool Texture::hasMipmaps() const
+{
+	return m_hasMipmaps;
 }
 
 

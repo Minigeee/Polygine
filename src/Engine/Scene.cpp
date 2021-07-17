@@ -143,10 +143,10 @@ void Scene::addRenderSystem(RenderSystem* system)
 
 
 ///////////////////////////////////////////////////////////
-void Scene::render(Camera& camera, FrameBuffer& target, RenderPass pass)
+void Scene::render(Camera& camera, FrameBuffer& target, RenderPass pass, const RenderSettings& settings)
 {
 	// Pass to renderer
-	m_renderer.render(camera, target, pass);
+	m_renderer.render(camera, target, pass, settings);
 }
 
 

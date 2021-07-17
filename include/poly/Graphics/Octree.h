@@ -152,10 +152,10 @@ public:
 	///
 	/// \param camera The camera to render from the perspective of
 	/// \param pass The render pass that is being executed
-	/// \param deferred Whether terrain should use a deferred render
+	/// \param settings The render settings to apply
 	///
 	///////////////////////////////////////////////////////////
-	void render(Camera& camera, RenderPass pass, bool deferred) override;
+	void render(Camera& camera, RenderPass pass, const RenderSettings& settings) override;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Octrees render opaque objects during the deferred render pass

@@ -1,6 +1,7 @@
 #version 330 core
 
 #include "camera.glsl"
+#include "clip_planes.glsl"
 #include "shadows_v.glsl"
 
 layout (location = 0) in vec3 a_position;
@@ -45,6 +46,9 @@ void main()
     v_normal = normalize(mat3(transform) * a_normal);
     v_texCoord = a_texCoord;
     v_color = a_color;
+
+    // Apply clip planes
+    applyClipPlanes(worldPos.xyz);
 
     // Set up output variables for shadows
     calcShadowClipSpace(worldPos);

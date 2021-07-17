@@ -700,13 +700,13 @@ void Octree::remove(Entity::Id entity)
 
 
 ///////////////////////////////////////////////////////////
-void Octree::render(Camera& camera, RenderPass pass, bool deferred)
+void Octree::render(Camera& camera, RenderPass pass, const RenderSettings& settings)
 {
 	// Anything in the octree should be rendered for all passes
 
 	ASSERT(m_scene, "The octree must be initialized before using, by calling the init() function");
 
-	if (!deferred)
+	if (!settings.m_deferred)
 	{
 		// TODO : Forward render for transparent objects
 
@@ -852,6 +852,9 @@ void Octree::render(Camera& camera, RenderPass pass, bool deferred)
 	Shader* shader = renderData.front().m_shader;
 	priv::bindShader(shader, camera, m_scene, pass);
 
+	// Apply render settings
+	applyRenderSettings(shader, settings);
+
 	// Iterate through render data and render everything
 	for (Uint32 i = 0; i < renderData.size(); ++i)
 	{
@@ -909,6 +912,9 @@ void Octree::render(Camera& camera, RenderPass pass, bool deferred)
 			}
 		}
 	}
+
+	// Reset render settings
+	resetRenderSettings(settings);
 }
 
 

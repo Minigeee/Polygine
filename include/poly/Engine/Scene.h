@@ -585,7 +585,12 @@ public:
 	/// \copydoc Renderer::render()
 	///
 	///////////////////////////////////////////////////////////
-	void render(Camera& camera, FrameBuffer& target = FrameBuffer::Default, RenderPass passes = RenderPass::Default);
+	void render(
+		Camera& camera,
+		FrameBuffer& target = FrameBuffer::Default,
+		RenderPass passes = RenderPass::Default,
+		const RenderSettings& settings = RenderSettings()
+	);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the scene renderer

@@ -12,8 +12,6 @@ in vec2 v_texCoord;
 
 layout (std140) uniform Terrain
 {
-    uniform vec4 u_clipPlanes[4];
-
     uniform float u_size;
     uniform float u_height;
     uniform float u_tileScale;

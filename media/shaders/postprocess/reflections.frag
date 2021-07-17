@@ -56,7 +56,30 @@ vec3 getFragPos(vec2 uv, out float depth)
 vec3 worldToUV(vec3 world)
 {
     vec4 clipSpace = u_projView * vec4(world, 1.0f);
-    return clamp((clipSpace.xyz / clipSpace.w) * 0.5f + 0.5f, 0.0f, 1.0f);
+    return (clipSpace.xyz / clipSpace.w) * 0.5f + 0.5f;
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+vec3 clampUvRay(vec3 uv1, vec3 uv2)
+{
+    float xFactor = 1.0f;
+    if (uv2.x > 1.0f)
+        xFactor = (1.0f - uv1.x) / (uv2.x - uv1.x);
+    else if (uv2.x < -1.0f)
+        xFactor = (-1.0f - uv1.x) / (uv2.x - uv1.x);
+        
+    float yFactor = 1.0f;
+    if (uv2.y > 1.0f)
+        yFactor = (1.0f - uv1.y) / (uv2.y - uv1.y);
+    else if (uv2.x < -1.0f)
+        yFactor = (-1.0f - uv1.y) / (uv2.y - uv1.y);
+
+    float factor = clamp(min(xFactor, yFactor), 0.0f, 1.0f);
+    vec2 newUv = mix(uv1.xy, uv2.xy, factor);
+    float newZ = (uv1.z * uv2.z) / mix(uv2.z, uv1.z, factor);
+
+    return clamp(vec3(newUv, newZ), 0.0f, 1.0f);
 }
 
 
@@ -66,6 +89,7 @@ bool raycast(vec3 position, float depth, vec3 ray, out vec3 rayTexCoord)
     // Get endpoints in texture coords
     vec3 startTexCoords = vec3(v_texCoord, depth);
     vec3 endTexCoords = worldToUV(position + u_maxDistance * ray);
+    endTexCoords = clampUvRay(startTexCoords, endTexCoords);
 
     // Calculate increment size
     vec2 texSize = textureSize(u_depth, 0).xy;

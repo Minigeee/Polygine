@@ -190,12 +190,17 @@ void VertexArray::setDrawMode(DrawMode mode)
 ///////////////////////////////////////////////////////////
 void VertexArray::setElementBuffer(VertexBuffer& buffer)
 {
+	ASSERT(buffer.getDataType() == GLType::Int32 || buffer.getDataType() == GLType::Uint32, "Element buffer must contain 32-bit integers");
+
 	// Make sure array is bound
 	bind();
 
 	// Bind the buffer to the element target
 	buffer.bind(BufferTarget::Element);
 	m_elementBuffer = buffer.getId();
+
+	// Using an element buffer overrides the number of vertices
+	m_numVertices = buffer.getSize() / sizeof(Uint32);
 
 	// Unbind to save vertex array state
 	unbind();

@@ -198,6 +198,41 @@ public:
 	void update(void* data, const Vector3u& pos, const Vector3u& size);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Set the texture filter method
+	///
+	/// This property determines how to choose the value of a sampled pixel
+	/// when sampling between pixels. When TextureFilter::Linear is used,
+	/// pixels will be linearly interpolated when sampling between
+	/// two pixels, and when TextureFilter::Linear is used, the nearest
+	/// pixel to the sample location will be used.
+	///
+	/// This property can be:
+	/// * TextureFilter::Linear
+	/// * TextureFilter::Nearest
+	///
+	/// \param filter The texture filter type to use
+	///
+	///////////////////////////////////////////////////////////
+	void setFilter(TextureFilter filter);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the texture wrap method
+	///
+	/// This property determines how the value of a pixel is chosen
+	/// when sampling outside the bounds of the texture
+	///
+	/// This property can be:
+	/// * TextureWrap::Repeat
+	/// * TextureWrap::MirroredRepeat
+	/// * TextureWrap::ClampToEdge
+	/// * TextureWrap::ClampToBorder
+	///
+	/// \param wrap The texture wrap method to use
+	///
+	///////////////////////////////////////////////////////////
+	void setWrap(TextureWrap wrap);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the internal texture id
 	///
 	/// \return The internal OpenGL texture id
@@ -277,6 +312,14 @@ public:
 	///////////////////////////////////////////////////////////
 	bool isMultisampled() const;
 
+	///////////////////////////////////////////////////////////
+	/// \brief Check if mipmaps were generated for the texture
+	///
+	/// \return True if mipmaps were generated for the texture
+	///
+	///////////////////////////////////////////////////////////
+	bool hasMipmaps() const;
+
 private:
 	Uint32 m_id;			//!< The texture id
 	Uint32 m_width;			//!< Texture width
@@ -288,6 +331,7 @@ private:
 	TextureWrap m_wrap;		//!< The wrap sampling method
 	TextureFilter m_filter;	//!< The filter sampling method
 	bool m_multisampled;	//!< True if the texture is multisampled
+	bool m_hasMipmaps;		//!< True if mipmaps were generated for the texture
 
 	static Uint32 currentBound[100];
 };

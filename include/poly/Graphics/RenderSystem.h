@@ -64,6 +64,21 @@ RenderPass operator~(RenderPass a);
 
 
 ///////////////////////////////////////////////////////////
+/// \brief A struct containing render settings
+///
+///////////////////////////////////////////////////////////
+struct RenderSettings
+{
+	RenderSettings();
+
+	Vector4f m_clipPlanes[8];	//!< An array of clip planes
+	Uint32 m_numClipPlanes;		//!< The number of enabled clip planes
+	Uint32 m_numPointLights;	//!< The number of point lights to enable (capped by the maximum allowed by light system)
+	bool m_deferred;			//!< Determines if the system should render using deferred render or forward render
+};
+
+
+///////////////////////////////////////////////////////////
 /// \brief The base class for all rendering procedure classes
 ///
 ///////////////////////////////////////////////////////////
@@ -101,10 +116,10 @@ public:
 	///
 	/// \param camera The camera to render from the perspective of
 	/// \param pass The render pass that is being executed
-	/// \param deferred Determines if this system should render using deferred render or forward render
+	/// \param settings The render settings that control the behavior of the render system
 	///
 	///////////////////////////////////////////////////////////
-	virtual void render(Camera& camera, RenderPass pass, bool deferred) = 0;
+	virtual void render(Camera& camera, RenderPass pass, const RenderSettings& settings) = 0;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Check if the render system has a deferred render pass
@@ -127,6 +142,24 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	virtual bool hasForwardPass() const;
+
+protected:
+	///////////////////////////////////////////////////////////
+	/// \brief A convenient utility function to quickly apply render settings
+	///
+	/// \param shader A pointer to the shader to apply the settings to
+	/// \param settings The settings to apply
+	///
+	///////////////////////////////////////////////////////////
+	void applyRenderSettings(Shader* shader, const RenderSettings& settings);
+
+	///////////////////////////////////////////////////////////
+	/// \brief A convenient utility function to quickly reset render settings
+	///
+	/// \param settings The settings to reset
+	///
+	///////////////////////////////////////////////////////////
+	void resetRenderSettings(const RenderSettings& settings);
 
 protected:
 	Scene* m_scene;		//!< A pointer to the scene

@@ -73,8 +73,11 @@ public:
 	/// because the scene automatically calls this at the beginning
 	/// of each render.
 	///
+	/// \param camera The camera to update lighting system for (culling point lights)
+	/// \param maxPointLights The maximum number of point lights to apply
+	///
 	///////////////////////////////////////////////////////////
-	void update(Camera& camera);
+	void update(Camera& camera, Uint32 maxPointLights = 100);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Apply lighting parameters to a shader

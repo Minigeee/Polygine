@@ -176,7 +176,7 @@ public:
 	Uint32 getNumChannels() const;
 
 	///////////////////////////////////////////////////////////
-	/// \brief Get a pointer to a pixel at specified row and coluomn
+	/// \brief Get a pointer to a pixel at specified row and column
 	///
 	/// \param r The row index of the pixel
 	/// \param c The column index of the pixel
@@ -186,17 +186,30 @@ public:
 	///////////////////////////////////////////////////////////
 	void* getPixel(Uint32 r, Uint32 c) const;
 
+	///////////////////////////////////////////////////////////
+	/// \brief Get the value of a pixel using linear interpolation
+	///
+	/// \param r The row index of the pixel
+	/// \param c The column index of the pixel
+	/// \param out The location to store the interpolated value of the image at the given coordinates
+	///
+	///////////////////////////////////////////////////////////
+	template <typename T>
+	void getPixel(float r, float c, T* out) const;
+
 private:
 	void* m_data;					//!< A pointer to pixel data
 	Uint32 m_width;					//!< THe image width
 	Uint32 m_height;				//!< The image height
-	GLType m_dataType;				//!< The pixel data tyoe
+	GLType m_dataType;				//!< The pixel data type
 
 	Uint32 m_numChannels	: 31;	//!< The number of color channels per pixel
 	Uint32 m_ownsData		: 1;	//!< True if the image owns the data
 };
 
 }
+
+#include <poly/Graphics/Image.inl>
 
 #endif
 

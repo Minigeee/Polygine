@@ -22,7 +22,7 @@ Lighting::Lighting(Scene* scene) :
 
 
 ///////////////////////////////////////////////////////////
-void Lighting::update(Camera& camera)
+void Lighting::update(Camera& camera, Uint32 maxPointLights)
 {
 	// Need a scene
 	if (!m_scene) return;
@@ -57,7 +57,8 @@ void Lighting::update(Camera& camera)
 	blockChanged |= (block.m_numDirLights != m_cache.m_numDirLights);
 
 	// Maximum number of point lights allowed
-	constexpr int maxNumPointLights = sizeof(UniformBlock_Lights::m_pointLights) / sizeof(UniformStruct_PointLight);
+	int maxNumPointLights = sizeof(UniformBlock_Lights::m_pointLights) / sizeof(UniformStruct_PointLight);
+	maxNumPointLights = std::min((int)maxPointLights, maxNumPointLights);
 
 	// Frustum for culling point lights
 	const Frustum& frustum = camera.getFrustum();

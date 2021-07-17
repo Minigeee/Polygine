@@ -17,8 +17,6 @@ namespace poly
 ///////////////////////////////////////////////////////////
 struct UniformBlock_Terrain
 {
-	UniformBufferType<Vector4f> m_clipPlanes[4];
-
 	UniformBufferType<float> m_size;
 	UniformBufferType<float> m_height;
 	UniformBufferType<float> m_tileScale;
@@ -90,10 +88,10 @@ public:
 	///
 	/// \param camera The camera to render from the perspective of
 	/// \param pass The render pass that is being executed
-	/// \param deferred Whether terrain should use a deferred render
+	/// \param settings The render settings to apply
 	///
 	///////////////////////////////////////////////////////////
-	virtual void render(Camera& camera, RenderPass pass, bool deferred) override;
+	void render(Camera& camera, RenderPass pass, const RenderSettings& settings) override;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the shader used to render the terrain

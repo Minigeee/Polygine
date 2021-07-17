@@ -70,7 +70,7 @@ void Renderer::addRenderSystem(RenderSystem* system)
 
 
 ///////////////////////////////////////////////////////////
-void Renderer::render(Camera& camera, FrameBuffer& target, RenderPass pass)
+void Renderer::render(Camera& camera, FrameBuffer& target, RenderPass pass, RenderSettings settings)
 {
 	FrameBuffer* buffer = 0;
 
@@ -132,12 +132,15 @@ void Renderer::render(Camera& camera, FrameBuffer& target, RenderPass pass)
 	// Disable alpha blending
 	glCheck(glDisable(GL_BLEND));
 
+	// Update settings to do a deferred render
+	settings.m_deferred = true;
+
 	// Deferred render
 	for (Uint32 i = 0; i < m_renderSystems.size(); ++i)
 	{
 		RenderSystem* system = m_renderSystems[i];
 		if (system->hasDeferredPass())
-			system->render(camera, pass, true);
+			system->render(camera, pass, settings);
 	}
 
 	// Skip the rest of the render if doing a shadow pass
@@ -147,7 +150,7 @@ void Renderer::render(Camera& camera, FrameBuffer& target, RenderPass pass)
 
 	// Make sure lighting is updated
 	Lighting* lighting = m_scene->getExtension<Lighting>();
-	lighting->update(camera);
+	lighting->update(camera, settings.m_numPointLights);
 
 	// Combine into target shader
 	target.bind();
@@ -181,12 +184,15 @@ void Renderer::render(Camera& camera, FrameBuffer& target, RenderPass pass)
 	glCheck(glEnable(GL_DEPTH_TEST));
 
 
+	// Update settings to do a forward render
+	settings.m_deferred = false;
+
 	// Forward render
 	for (Uint32 i = 0; i < m_renderSystems.size(); ++i)
 	{
 		RenderSystem* system = m_renderSystems[i];
 		if (system->hasForwardPass())
-			system->render(camera, pass, false);
+			system->render(camera, pass, settings);
 	}
 }
 

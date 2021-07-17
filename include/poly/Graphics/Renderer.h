@@ -73,9 +73,15 @@ public:
 	/// \param camera The camera used to render the scene
 	/// \param target The target framebuffer to render the scene to
 	/// \param pass The render pass that should be executed
+	/// \param settings The render settings that should be applied to this pass
 	///
 	///////////////////////////////////////////////////////////
-	void render(Camera& camera, FrameBuffer& target = FrameBuffer::Default, RenderPass pass = RenderPass::Default);
+	void render(
+		Camera& camera,
+		FrameBuffer& target = FrameBuffer::Default,
+		RenderPass pass = RenderPass::Default,
+		RenderSettings settings = RenderSettings()
+	);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the g-buffer of the specified output target framebuffer

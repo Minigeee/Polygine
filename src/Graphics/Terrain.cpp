@@ -438,7 +438,7 @@ void Terrain::createTileLayout()
 
 
 ///////////////////////////////////////////////////////////
-void Terrain::render(Camera& camera, RenderPass pass, bool deferred)
+void Terrain::render(Camera& camera, RenderPass pass, const RenderSettings& settings)
 {
 	// The terrain should be rendered regardless of render pass
 
@@ -549,11 +549,6 @@ void Terrain::render(Camera& camera, RenderPass pass, bool deferred)
 	if (m_isUniformDirty)
 	{
 		UniformBlock_Terrain block;
-		block.m_clipPlanes[0] = Vector4f(-1.0f, 0.0f, 0.0f, m_size * 0.5f);
-		block.m_clipPlanes[1] = Vector4f(1.0f, 0.0f, 0.0f, m_size * 0.5f);
-		block.m_clipPlanes[2] = Vector4f(0.0f, 0.0f, -1.0f, m_size * 0.5f);
-		block.m_clipPlanes[3] = Vector4f(0.0f, 0.0f, 1.0f, m_size * 0.5f);
-
 		block.m_size = m_size;
 		block.m_height = m_height;
 		block.m_tileScale = m_tileScale;
@@ -565,6 +560,14 @@ void Terrain::render(Camera& camera, RenderPass pass, bool deferred)
 
 		m_isUniformDirty = false;
 	}
+
+	// Update clip planes
+	RenderSettings newSettings = settings;
+	newSettings.m_clipPlanes[newSettings.m_numClipPlanes + 0] = Vector4f(-1.0f, 0.0f, 0.0f, m_size * 0.5f);
+	newSettings.m_clipPlanes[newSettings.m_numClipPlanes + 1] = Vector4f(1.0f, 0.0f, 0.0f, m_size * 0.5f);
+	newSettings.m_clipPlanes[newSettings.m_numClipPlanes + 2] = Vector4f(0.0f, 0.0f, -1.0f, m_size * 0.5f);
+	newSettings.m_clipPlanes[newSettings.m_numClipPlanes + 3] = Vector4f(0.0f, 0.0f, 1.0f, m_size * 0.5f);
+	newSettings.m_numClipPlanes += 4;
 
 
 	// Bind shader and set uniforms
@@ -579,16 +582,15 @@ void Terrain::render(Camera& camera, RenderPass pass, bool deferred)
 	// Apply textures
 	applyTextures(m_shader);
 
+	// Apply render settings
+	applyRenderSettings(m_shader, newSettings);
+
 	// Enable depth testing
 	glCheck(glEnable(GL_DEPTH_TEST));
 
 	// Single side render
 	glCheck(glEnable(GL_CULL_FACE));
 	glCheck(glCullFace(pass == RenderPass::Shadow ? GL_FRONT : GL_BACK));
-
-	// Enable clip planes
-	for (Uint32 i = 0; i < 4; ++i)
-		glCheck(glEnable(GL_CLIP_DISTANCE0 + i));
 
 	// Attach instance buffer and render
 	m_normalTile.bind();
@@ -608,9 +610,8 @@ void Terrain::render(Camera& camera, RenderPass pass, bool deferred)
 	m_edgeTile.addBuffer(m_instanceBuffer, 7, 4, sizeof(InstanceData), offset + 4 + 3 * sizeof(Vector4f), 1);
 	m_edgeTile.draw(edgeTiles.size());
 
-	// Disable clip planes
-	for (Uint32 i = 0; i < 4; ++i)
-		glCheck(glDisable(GL_CLIP_DISTANCE0 + i));
+	// Reset render settings
+	resetRenderSettings(newSettings);
 
 	// Update buffer offset
 	m_instanceBufferOffset += size;

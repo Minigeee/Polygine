@@ -1,6 +1,7 @@
 #version 330 core
 
 #include "camera.glsl"
+#include "clip_planes.glsl"
 #include "shadows_v.glsl"
 
 layout (location = 0) in vec2 a_position;
@@ -16,8 +17,6 @@ out vec2 v_texCoord;
 
 layout (std140) uniform Terrain
 {
-    uniform vec4 u_clipPlanes[4];
-
     uniform float u_size;
     uniform float u_height;
     uniform float u_tileScale;
@@ -29,8 +28,6 @@ uniform sampler2D u_normalMap;
 uniform sampler2D u_colorMap;
 
 uniform sampler2D u_heightMap;
-
-float gl_ClipDistance[4];
 
 void main()
 {
@@ -78,8 +75,7 @@ void main()
     }
 
     // Apply clip planes
-    for (int i = 0; i < 4; ++i)
-        gl_ClipDistance[i] = dot(worldPos, u_clipPlanes[i]);
+    applyClipPlanes(worldPos.xyz);
 
     v_fragPos = worldPos.xyz;
 

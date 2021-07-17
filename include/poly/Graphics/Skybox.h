@@ -65,10 +65,10 @@ public:
 	///
 	/// \param camera The camera to render from
 	/// \param pass The render pass that is being executed
-	/// \param deferred Whether terrain should use a deferred render
+	/// \param settings The render settings to apply
 	///
 	///////////////////////////////////////////////////////////
-	void render(Camera& camera, RenderPass pass, bool deferred) override;
+	void render(Camera& camera, RenderPass pass, const RenderSettings& settings) override;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Load a single side of the cube map from an image file
@@ -143,10 +143,10 @@ public:
 	///
 	/// \param camera The camera to render from
 	/// \param pass The render pass that is being executed
-	/// \param deferred Whether terrain should use a deferred render
+	/// \param settings The render settings to apply
 	///
 	///////////////////////////////////////////////////////////
-	void render(Camera& camera, RenderPass pass, bool deferred) override;
+	void render(Camera& camera, RenderPass pass, const RenderSettings& settings) override;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Apply the procedural skybox uniforms to a shader
