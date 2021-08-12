@@ -679,8 +679,8 @@ int main()
         fog.render(framebuffers[0], framebuffers[1]);
         bloom.render(framebuffers[1], framebuffers[0]);
         flare.render(framebuffers[0], framebuffers[1]);
-        colorAdjust.render(framebuffers[1], framebuffers[0]);
-        fxaa.render(framebuffers[0]);
+        // colorAdjust.render(framebuffers[1], framebuffers[0]);
+        fxaa.render(framebuffers[1]);
 
         ui.render();
 

@@ -1050,11 +1050,9 @@ Reflections::Reflections() :
 	m_gBuffer			(0),
 	m_camera			(0),
 	m_proceduralSkybox	(0),
-	m_maxDistance		(15.0f),
-	m_stepSize			(15.0f),
-	m_thickness			(0.5f),
-	m_maxDepthDiff		(0.02f),
-	m_noiseFactor		(0.2f),
+	m_maxSteps			(100),
+	m_stepSize			(5.0f),
+	m_maxDepthDiff		(0.001f),
 	m_fresnelFactor		(1.0f)
 {
 
@@ -1102,11 +1100,9 @@ void Reflections::render(FrameBuffer& input, FrameBuffer& output)
 	m_camera->apply(&shader);
 
 	// Properties
-	shader.setUniform("u_maxDistance", m_maxDistance);
+	shader.setUniform("u_maxSteps", (int)m_maxSteps);
 	shader.setUniform("u_stepSize", m_stepSize);
-	shader.setUniform("u_thickness", m_thickness);
 	shader.setUniform("u_maxDepthDiff", m_maxDepthDiff);
-	shader.setUniform("u_noiseFactor", m_noiseFactor);
 	shader.setUniform("u_fresnelFactor", m_fresnelFactor);
 
 	// Render vertex array
@@ -1150,9 +1146,9 @@ void Reflections::setCubemap(ProceduralSkybox* skybox)
 
 
 ///////////////////////////////////////////////////////////
-void Reflections::setMaxDistance(float distance)
+void Reflections::setMaxSteps(Uint32 steps)
 {
-	m_maxDistance = distance;
+	m_maxSteps = steps;
 }
 
 
@@ -1164,23 +1160,9 @@ void Reflections::setStepSize(float size)
 
 
 ///////////////////////////////////////////////////////////
-void Reflections::setThickness(float thickness)
-{
-	m_thickness = thickness;
-}
-
-
-///////////////////////////////////////////////////////////
 void Reflections::setMaxDepthDiff(float diff)
 {
 	m_maxDepthDiff = diff;
-}
-
-
-///////////////////////////////////////////////////////////
-void Reflections::setNoiseFactor(float factor)
-{
-	m_noiseFactor = factor;
 }
 
 
@@ -1192,9 +1174,9 @@ void Reflections::setFresnelFactor(float factor)
 
 
 ///////////////////////////////////////////////////////////
-float Reflections::getMaxDistance() const
+Uint32 Reflections::getMaxSteps() const
 {
-	return m_maxDistance;
+	return m_maxSteps;
 }
 
 
@@ -1206,23 +1188,9 @@ float Reflections::getStepSize() const
 
 
 ///////////////////////////////////////////////////////////
-float Reflections::getThickness() const
-{
-	return m_thickness;
-}
-
-
-///////////////////////////////////////////////////////////
 float Reflections::getMaxDepthDiff() const
 {
 	return m_maxDepthDiff;
-}
-
-
-///////////////////////////////////////////////////////////
-float Reflections::getNoiseFactor() const
-{
-	return m_noiseFactor;
 }
 
 

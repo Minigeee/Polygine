@@ -1133,7 +1133,7 @@ public:
 	/// \param dist The maximum distance that objects can be reflected
 	///
 	///////////////////////////////////////////////////////////
-	void setMaxDistance(float dist);
+	void setMaxSteps(Uint32 steps);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the fixed stepping size of the raycast operation
@@ -1146,19 +1146,6 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	void setStepSize(float size);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Set the raycast intersection thickness property
-	///
-	/// The thickness property determines how far behind a fragment
-	/// would count as a reflection hit. This helps prevent false raycast
-	/// hits when a ray travels behind an object. This is only effective
-	/// in the coarse raycast intersection stage.
-	///
-	/// \param thickness The thickness proprty in world space units
-	///
-	///////////////////////////////////////////////////////////
-	void setThickness(float thickness);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the maximum difference in raycast intersection point and depth sampled point that counts as a raycast hit
@@ -1174,22 +1161,6 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	void setMaxDepthDiff(float diff);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Set the positional offset noise factor
-	///
-	/// This factor determines the magnitude of the noise offset
-	/// of the starting position of the raycast. The larger the
-	/// value, the higher the amount of noise. This is normally
-	/// just used to make reflections look a little smoother, but
-	/// it gives the reflections a very obvious noise pattern that
-	/// may be annoying to the viewer when used on a non-noisy
-	/// material.
-	///
-	/// \param factor The noise factor in world space units
-	///
-	///////////////////////////////////////////////////////////
-	void setNoiseFactor(float factor);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the fresnel effect factor
@@ -1212,12 +1183,12 @@ public:
 	void setFresnelFactor(float factor);
 
 	///////////////////////////////////////////////////////////
-	/// \brief Get the maximum reflection distance
+	/// \brief Get the maximum number of raycast steps allowed
 	///
-	/// \return The maximum reflection distance
+	/// \return The maximum number of raycast steps allowed
 	///
 	///////////////////////////////////////////////////////////
-	float getMaxDistance() const;
+	Uint32 getMaxSteps() const;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the raycast step size in pixels
@@ -1228,14 +1199,6 @@ public:
 	float getStepSize() const;
 
 	///////////////////////////////////////////////////////////
-	/// \brief Get the thickness of the raycast intersection region
-	///
-	/// \return The thickness of the raycast intersection region in world space units
-	///
-	///////////////////////////////////////////////////////////
-	float getThickness() const;
-
-	///////////////////////////////////////////////////////////
 	/// \brief Get the maximum depth difference property
 	///
 	/// \return The maximum depth difference property
@@ -1244,14 +1207,6 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	float getMaxDepthDiff() const;
-
-	///////////////////////////////////////////////////////////
-	/// \brief Get the position offset noise factor
-	///
-	/// \return The positional offset noise factor
-	///
-	///////////////////////////////////////////////////////////
-	float getNoiseFactor() const;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the fresnel effect factor
@@ -1271,11 +1226,9 @@ private:
 	Camera* m_camera;						//!< A pointer to the camera that will be used to apply the reflections effect
 	ProceduralSkybox* m_proceduralSkybox;	//!< An optional procedural skybox to fill in areas without a reflection
 
-	float m_maxDistance;					//!< The maximum distance from the reflected fragment a raycast is allowed to test for reflections
+	Uint32 m_maxSteps;						//!< The maximum number of steps the raycast is allowed to perform
 	float m_stepSize;						//!< The step size of the raycast (in pixels)
-	float m_thickness;						//!< The thickness of the region behind a raycast intersection where an intersection counts as a reflection
 	float m_maxDepthDiff;					//!< The maximum allowed difference in depth from camera (between the ray intersection point and the depth sampled point)
-	float m_noiseFactor;					//!< The positional offset noise factor
 	float m_fresnelFactor;					//!< The fresnel effect factor
 };
 
