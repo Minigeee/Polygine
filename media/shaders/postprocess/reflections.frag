@@ -22,6 +22,7 @@ uniform int u_maxSteps;
 uniform float u_stepSize;
 uniform float u_maxDepthDiff;
 uniform float u_fresnelFactor;
+uniform float u_fresnelFactorMin;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -84,7 +85,7 @@ void main()
             rayTex += dRayTex;
 
             // Stop raycast
-            if (!(rayTex.x > 0.001 && rayTex.x < 0.999 && rayTex.y > 0.01 && rayTex.y < 0.999 && rayTex.z < 0.999)) break;
+            if (!(rayTex.x > 0.001 && rayTex.x < 0.999 && rayTex.y > 0.01 && rayTex.y < 0.999 && rayTex.z < 1.0f)) break;
         }
     }
 
@@ -104,6 +105,7 @@ void main()
 
     // Apply the fresnel effect
     float reflFactor = (1.0f - pow(max(dot(-viewDir, normal), 0.0f), u_fresnelFactor)) * reflectivity;
+    reflFactor = max(reflFactor, u_fresnelFactorMin);
     reflColor = mix(color, reflColor, reflFactor);
 
     f_color = vec4(reflColor, 1.0f);

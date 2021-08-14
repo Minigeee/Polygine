@@ -66,6 +66,24 @@ void FrameBuffer::bind(Uint32 z)
 {
 	if (currentBound != m_id)
 	{
+		// Check if the size of the internal textures has changed
+		if (m_colorTextures.size() && m_colorTextures[0]->getId())
+		{
+			if (m_colorTextures[0]->getWidth() != m_size.x || m_colorTextures[0]->getHeight() != m_size.y)
+			{
+				m_size.x = m_colorTextures[0]->getWidth();
+				m_size.y = m_colorTextures[0]->getHeight();
+			}
+		}
+		else if (m_depthTexture && m_depthTexture->getId())
+		{
+			if (m_depthTexture->getWidth() != m_size.x || m_depthTexture->getHeight() != m_size.y)
+			{
+				m_size.x = m_depthTexture->getWidth();
+				m_size.y = m_depthTexture->getHeight();
+			}
+		}
+
 		// Bind framebuffer
 		glCheck(glBindFramebuffer(GL_FRAMEBUFFER, m_id));
 

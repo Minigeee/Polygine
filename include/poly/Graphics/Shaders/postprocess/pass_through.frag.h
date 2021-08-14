@@ -1,0 +1,3 @@
+#ifndef SHADER_POSTPROCESS_PASS_THROUGH_FRAG
+#define SHADER_POSTPROCESS_PASS_THROUGH_FRAG "#version 330 core\n\n///////////////////////////////////////////////////////////////////////////////\n\nin vec2 v_texCoord;\n\nlayout (location = 0) out vec4 f_color;\nlayout (location = 1) out float f_depth;\n\nuniform sampler2D u_texture;\nuniform sampler2D u_depth;\nuniform bool u_hasDepth;\n\n///////////////////////////////////////////////////////////////////////////////\n\nvoid main()\n{\n    f_color = texture(u_texture, v_texCoord);\n    if (u_hasDepth)\n        f_depth = texture(u_depth, v_texCoord).r;\n}"
+#endif

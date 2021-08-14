@@ -75,7 +75,7 @@ void Lighting::update(Camera& camera, Uint32 maxPointLights)
 			// Frustum culling (using sphere of radius where contributed brightness < 5% of vec3(1, 1, 1))
 			const Vector3f& c = light.m_coefficients;
 			float brightness = std::max(light.m_diffuse.r, std::max(light.m_diffuse.g, light.m_diffuse.b));
-			float radius = -c.y + sqrtf(c.y * c.y - 4.0f * c.z * (c.x - 20.0f * brightness)) / (2.0f * c.z);
+			float radius = -c.y + sqrtf(c.y * c.y - 4.0f * c.z * (c.x - 1.0f / 0.02f * brightness)) / (2.0f * c.z);
 
 			if (frustum.contains(Sphere(t.m_position, radius)))
 			{

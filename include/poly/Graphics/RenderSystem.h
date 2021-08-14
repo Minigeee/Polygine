@@ -71,6 +71,7 @@ struct RenderSettings
 {
 	RenderSettings();
 
+	FrameBuffer* m_target;		//!< This property will be set by the renderer (the user can leave this as NULL)
 	Vector4f m_clipPlanes[8];	//!< An array of clip planes
 	Uint32 m_numClipPlanes;		//!< The number of enabled clip planes
 	Uint32 m_numPointLights;	//!< The number of point lights to enable (capped by the maximum allowed by light system)

@@ -74,6 +74,9 @@ void Renderer::render(Camera& camera, FrameBuffer& target, RenderPass pass, Rend
 {
 	FrameBuffer* buffer = 0;
 
+	// Set render target in render settings
+	settings.m_target = &target;
+
 	// If on a shadow pass, render directly to target buffer
 	if (pass == RenderPass::Shadow)
 		// Bind target buffer

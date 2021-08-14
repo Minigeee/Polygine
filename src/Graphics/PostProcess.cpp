@@ -8,6 +8,7 @@
 #include <poly/Graphics/Renderer.h>
 
 #include <poly/Graphics/Shaders/postprocess/quad.vert.h>
+#include <poly/Graphics/Shaders/postprocess/pass_through.frag.h>
 #include <poly/Graphics/Shaders/postprocess/color_adjust.frag.h>
 #include <poly/Graphics/Shaders/postprocess/fog.frag.h>
 #include <poly/Graphics/Shaders/postprocess/fxaa.frag.h>
@@ -21,6 +22,9 @@
 namespace poly
 {
 
+
+///////////////////////////////////////////////////////////
+Shader PassThrough::s_shader;
 
 ///////////////////////////////////////////////////////////
 Shader ColorAdjust::s_shader;
@@ -48,6 +52,59 @@ Shader LensFlare::s_shader;
 
 ///////////////////////////////////////////////////////////
 Shader Reflections::s_shader;
+
+
+///////////////////////////////////////////////////////////
+PassThrough::PassThrough()
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
+void PassThrough::render(FrameBuffer& input, FrameBuffer& output)
+{
+	// Bind output target
+	output.bind();
+
+	// Disable depth test
+	glCheck(glDisable(GL_DEPTH_TEST));
+
+	// Disable cull face
+	glCheck(glDisable(GL_CULL_FACE));
+
+	// Bind shader
+	Shader& shader = getShader();
+
+	shader.bind();
+	shader.setUniform("u_texture", *input.getColorTexture());
+
+	if (input.getDepthTexture())
+	{
+		shader.setUniform("u_depth", *input.getDepthTexture());
+		shader.setUniform("u_hasDepth", true);
+	}
+	else
+		shader.setUniform("u_hasDepth", false);
+
+	// Render vertex array
+	FullscreenQuad::draw();
+}
+
+
+///////////////////////////////////////////////////////////
+Shader& PassThrough::getShader()
+{
+	if (!s_shader.getId())
+	{
+		// Load shader
+		s_shader.load("poly/postprocess/quad.vert", SHADER_POSTPROCESS_QUAD_VERT, Shader::Vertex);
+		s_shader.load("poly/postprocess/pass_through.frag", SHADER_POSTPROCESS_PASS_THROUGH_FRAG, Shader::Fragment);
+		s_shader.compile();
+	}
+
+	return s_shader;
+}
 
 
 ///////////////////////////////////////////////////////////
@@ -1053,7 +1110,8 @@ Reflections::Reflections() :
 	m_maxSteps			(100),
 	m_stepSize			(5.0f),
 	m_maxDepthDiff		(0.001f),
-	m_fresnelFactor		(1.0f)
+	m_fresnelFactor		(1.0f),
+	m_fresnelFactorMin	(0.0f)
 {
 
 }
@@ -1104,6 +1162,7 @@ void Reflections::render(FrameBuffer& input, FrameBuffer& output)
 	shader.setUniform("u_stepSize", m_stepSize);
 	shader.setUniform("u_maxDepthDiff", m_maxDepthDiff);
 	shader.setUniform("u_fresnelFactor", m_fresnelFactor);
+	shader.setUniform("u_fresnelFactorMin", m_fresnelFactorMin);
 
 	// Render vertex array
 	FullscreenQuad::draw();
@@ -1170,6 +1229,13 @@ void Reflections::setMaxDepthDiff(float diff)
 void Reflections::setFresnelFactor(float factor)
 {
 	m_fresnelFactor = factor;
+}
+
+
+///////////////////////////////////////////////////////////
+void Reflections::setFresnelFactorMin(float min)
+{
+	m_fresnelFactorMin = min;
 }
 
 

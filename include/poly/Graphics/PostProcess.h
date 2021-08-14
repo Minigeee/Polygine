@@ -31,6 +31,38 @@ public:
 
 
 ///////////////////////////////////////////////////////////
+/// \brief A post processing effect to copy one texture to another
+/// \ingroup Graphics
+///
+/// See PostProcess for an example of how to use post processing effects.
+///
+///////////////////////////////////////////////////////////
+class PassThrough : public PostProcess
+{
+public:
+	///////////////////////////////////////////////////////////
+	/// \brief Default constructor
+	///
+	///////////////////////////////////////////////////////////
+	PassThrough();
+
+	///////////////////////////////////////////////////////////
+	/// \brief Copy one texture to another
+	///
+	/// \param input The input framebuffer
+	/// \param output The output framebuffer
+	///
+	///////////////////////////////////////////////////////////
+	void render(FrameBuffer& input, FrameBuffer& output = FrameBuffer::Default) override;
+
+private:
+	static Shader s_shader;
+
+	static Shader& getShader();
+};
+
+
+///////////////////////////////////////////////////////////
 /// \brief A post processing effect that applies gamma correction and HDR rendering
 /// \ingroup Graphics
 ///
@@ -1170,7 +1202,7 @@ public:
 	/// The reflection multiplicative factor is calculated using this equation:
 	///
 	/// \code
-	///	reflFactor = 1 - pow(dot(-viewDir, normal), fresnelFactor);
+	///	reflFactor = max(1 - pow(dot(-viewDir, normal), fresnelFactor), fresnelFactorMin);
 	/// \endcode
 	///
 	/// So when the fresnel factor has a larger value, the reflection
@@ -1181,6 +1213,22 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	void setFresnelFactor(float factor);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the minimum reflective factor allowed by the fresnel effect
+	///
+	/// The fresnel effect makes reflective surfaces more reflective
+	/// at a shallower angle, and less reflective at a steeper angle.
+	/// The reflection multiplicative factor is calculated using this equation:
+	///
+	/// \code
+	///	reflFactor = max(1 - pow(dot(-viewDir, normal), fresnelFactor), fresnelFactorMin);
+	/// \endcode
+	///
+	/// \param factor The minimum reflective factor allowed by the fresnel effect
+	///
+	///////////////////////////////////////////////////////////
+	void setFresnelFactorMin(float min);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the maximum number of raycast steps allowed
@@ -1216,6 +1264,14 @@ public:
 	///////////////////////////////////////////////////////////
 	float getFresnelFactor() const;
 
+	///////////////////////////////////////////////////////////
+	/// \brief Get the minimum reflective factor allowed by the fresnel effect
+	///
+	/// \return The minimum reflective factor allowed by the fresnel effect
+	///
+	///////////////////////////////////////////////////////////
+	float getFresnelFactorMin() const;
+
 private:
 	static Shader& getShader();
 
@@ -1230,6 +1286,7 @@ private:
 	float m_stepSize;						//!< The step size of the raycast (in pixels)
 	float m_maxDepthDiff;					//!< The maximum allowed difference in depth from camera (between the ray intersection point and the depth sampled point)
 	float m_fresnelFactor;					//!< The fresnel effect factor
+	float m_fresnelFactorMin;				//!< The minimum reflective factor allowed by the fresnel effect
 };
 
 

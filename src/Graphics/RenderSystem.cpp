@@ -32,6 +32,7 @@ RenderPass operator~(RenderPass a)
 
 ///////////////////////////////////////////////////////////
 RenderSettings::RenderSettings() :
+	m_target			(0),
 	m_numClipPlanes		(0),
 	m_numPointLights	(INT32_MAX),
 	m_deferred			(true)
