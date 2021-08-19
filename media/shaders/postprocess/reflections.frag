@@ -57,9 +57,12 @@ void main()
     // Only raycast for rays that point away from camera
     vec3 reflColor;
     bool hit = false;
+    vec3 endpoint1, endpoint2;
 
     if (true)
     {
+        float depthDiffFactor = 20.0f * pow(abs(normalize(stepNDC).z), 0.6f);
+
         // Make step go one pixel in the direction the change is largest
         vec2 dv = abs(stepNDC.xy * 0.5f * textureSize(u_depth, 0));
         stepNDC = stepNDC / (dv.x > dv.y ? dv.x : dv.y);
@@ -74,18 +77,22 @@ void main()
             // Get depth at ray texture coord
             float zDepth = texture(u_depth, rayTex.xy).r;
 
-            if (rayTex.z > zDepth && abs(rayTex.z - zDepth) < u_maxDepthDiff)
+            if (rayTex.z > zDepth && abs(rayTex.z - zDepth) < u_maxDepthDiff * depthDiffFactor)
             {
                 hit = true;
-                reflColor = texture(u_color, rayTex.xy).rgb;
+                endpoint2 = rayTex;
                 break;
             }
+            
+            if (rayTex.z > 1.0f) break;
+            
+            endpoint1 = rayTex;
 
             nStep++;
             rayTex += dRayTex;
 
             // Stop raycast
-            if (!(rayTex.x > 0.001 && rayTex.x < 0.999 && rayTex.y > 0.01 && rayTex.y < 0.999 && rayTex.z < 1.0f)) break;
+            if (!(rayTex.x > 0.001 && rayTex.x < 0.999 && rayTex.y > 0.01 && rayTex.y < 0.999)) break;
         }
     }
 
@@ -101,6 +108,27 @@ void main()
 
             reflColor = getSkyColor(rayWorld);
         }
+    }
+    else
+    {
+        vec3 midpoint;
+        float zDepth;
+
+        for (int i = 0; i < 3; ++i)
+        {
+            midpoint = mix(endpoint1, endpoint2, 0.5f);
+            zDepth = texture(u_depth, midpoint.xy).r;
+
+            if (midpoint.z > zDepth)
+                endpoint2 = midpoint;
+            else
+                endpoint1 = midpoint;
+        }
+
+        midpoint = mix(endpoint1, endpoint2, 0.5f);
+        zDepth = texture(u_depth, midpoint.xy).r;
+        if (true)
+            reflColor = texture(u_color, midpoint.xy).rgb;
     }
 
     // Apply the fresnel effect
