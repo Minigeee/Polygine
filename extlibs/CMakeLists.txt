@@ -34,6 +34,31 @@ else()
     message("tsl::hopscotch_map not found")
 endif()
 
+# zlib
+find_package(zlib QUIET)
+if (zlib_FOUND)
+    message(STATUS "zlib ${zlib_VERSION} found in ${zlib_DIR}")
+    target_link_libraries(polygine zlibstatic)
+elseif (POLY_DOWNLOAD_MISSING_DEPS)
+    CPMAddPackage("gh:madler/zlib#master")
+    
+    target_include_directories(
+        polygine PUBLIC 
+        "$<BUILD_INTERFACE:${zlib_SOURCE_DIR}>"
+        "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
+    target_link_libraries(polygine PUBLIC zlibstatic)
+
+    install(TARGETS zlibstatic EXPORT polygine-export)
+    install(
+        FILES
+            "${zlib_SOURCE_DIR}/zlib.h"
+            "${zlib_BINARY_DIR}/zconf.h"
+        DESTINATION
+            "${CMAKE_INSTALL_INCLUDEDIR}")
+else()
+    message("zlib not found")
+endif()
+
 # GLFW
 find_package(glfw3 QUIET)
 if (glfw3_FOUND)
@@ -52,11 +77,11 @@ endif()
 find_package(assimp 5.0.0 QUIET)
 if (assimp_FOUND)
     message(STATUS "Assimp ${assimp_VERSION} found in ${assimp_DIR}")
-    target_link_libraries(polygine glfw)
+    target_link_libraries(polygine assimp)
 elseif (POLY_DOWNLOAD_MISSING_DEPS)
     CPMAddPackage("gh:assimp/assimp#v5.0.1")
     target_link_libraries(polygine PRIVATE assimp)
-    install(TARGETS zlibstatic IrrXML assimp EXPORT polygine-export)
+    install(TARGETS IrrXML assimp EXPORT polygine-export)
 else()
     message("Assimp not found")
 endif()
