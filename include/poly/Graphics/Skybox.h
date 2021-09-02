@@ -1,6 +1,8 @@
 #ifndef POLY_SKYBOX_H
 #define POLY_SKYBOX_H
 
+#include <poly/Engine/Entity.h>
+
 #include <poly/Graphics/RenderSystem.h>
 #include <poly/Graphics/Shader.h>
 #include <poly/Graphics/VertexArray.h>

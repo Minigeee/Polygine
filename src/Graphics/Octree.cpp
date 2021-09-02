@@ -510,8 +510,24 @@ void Octree::merge(Node* node)
 {
 	// Count the number of entities in children nodes
 	Uint32 numEntities = 0;
+	bool hasChildren = false;
+	bool hasGrandchildren = false;
+
 	for (Uint32 i = 0; i < 8; ++i)
-		numEntities += node->m_children[i]->m_data.size();
+	{
+		Node* child = node->m_children[i];
+		if (child)
+		{
+			hasChildren = true;
+			numEntities += child->m_data.size();
+
+			for (Uint32 j = 0; j < 8; ++j)
+				hasGrandchildren |= (bool)child->m_children[j];
+		}
+	}
+
+	// Can't merge if there is nothing to merge or if the node has grandchildren
+	if (!hasChildren || hasGrandchildren) return;
 
 	// Only merge if the number of entitites is less than a certain margin
 	if (numEntities < (Uint32)(0.7f * m_maxPerCell))
@@ -520,9 +536,12 @@ void Octree::merge(Node* node)
 
 		for (Uint32 i = 0; i < 8; ++i)
 		{
-			// Append all child node data
-			std::vector<EntityData*>& childData = node->m_children[i]->m_data;
-			data.insert(data.end(), childData.begin(), childData.end());
+			if (node->m_children[i])
+			{
+				// Append all child node data
+				std::vector<EntityData*>& childData = node->m_children[i]->m_data;
+				data.insert(data.end(), childData.begin(), childData.end());
+			}
 		}
 
 		// Update the containing node of each entity
@@ -532,7 +551,9 @@ void Octree::merge(Node* node)
 		// Remove the children node
 		for (Uint32 i = 0; i < 8; ++i)
 		{
-			m_nodePool.free(node->m_children[i]);
+			if (node->m_children[i])
+				m_nodePool.free(node->m_children[i]);
+
 			node->m_children[i] = 0;
 		}
 	}

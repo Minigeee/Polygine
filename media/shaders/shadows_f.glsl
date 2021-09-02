@@ -46,7 +46,7 @@ float getShadowFactor(int lightNum, vec3 normal, int kernelSize)
 
     // Get shadow map depth
     float shadow = 0.0f;
-    int kernelHalfSize = (regionNum == 0 ? kernelSize / 2 : 0);
+    int kernelHalfSize = kernelSize / 2;
     vec2 texelSize = 1.0f / textureSize(u_shadowMaps[mapIndex], 0);
 
     for (int r = -kernelHalfSize; r <= kernelHalfSize; ++r)

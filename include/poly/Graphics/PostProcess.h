@@ -1,6 +1,8 @@
 #ifndef POLY_POST_PROCESS_H
 #define POLY_POST_PROCESS_H
 
+#include <poly/Engine/Entity.h>
+
 #include <poly/Graphics/Camera.h>
 #include <poly/Graphics/FrameBuffer.h>
 #include <poly/Graphics/Shader.h>

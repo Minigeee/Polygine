@@ -79,6 +79,20 @@ void onSubmit(const Utf32String& text)
     std::cout << text.c_str() << '\n';
 }
 
+///////////////////////////////////////////////////////////
+float remap(float val, float min1, float max1, float min2, float max2)
+{
+	return min2 + (((val - min1) / (max1 - min1)) * (max2 - min2));
+}
+
+
+///////////////////////////////////////////////////////////
+float getDistToSphere(float r, float mu, float r1)
+{
+    r = r < r1 ? r : r1;
+    return -r * mu + sqrt(r * r * (mu * mu - 1.0f) + r1 * r1);
+}
+
 int main()
 {
     Logger::init("game.log");
@@ -260,13 +274,13 @@ int main()
 
     t.m_scale = Vector3f(1.0f);
 
-    for (Uint32 i = 0; i < 10; ++i)
+    for (Uint32 i = 0; i < 1000; ++i)
     {
         RigidBodyComponent rbody;
-        rbody.m_position = Vector3f(0.0f, 60.0f + 2 * i, -5.0f);
+        t.m_position = Vector3f(0.0f, 60.0f + 2 * i, -5.0f);
         rbody.m_mass = 10.0f;
-        Entity boxEntity1 = scene.createEntity(t, RenderComponent(&box), rbody, DynamicTag());
-        physics->addCollider(boxEntity1, BoxShape(1.0f, 1.0f, 1.0f));
+        Entity boxEntity1 = scene.createEntity(t, RenderComponent(&box), DynamicTag());
+        // physics->addCollider(boxEntity1, BoxShape(1.0f, 1.0f, 1.0f));
     }
 
     rbody.m_position = Vector3f(0.0f, 0.0f, 0.0f);
@@ -579,6 +593,8 @@ int main()
     std::vector<float> fpsWindow;
     Uint32 windowIndex = 0;
 
+    bool temp = true;
+
     // Game loop
     while (window.isOpen())
     {
@@ -640,6 +656,16 @@ int main()
             }
         );
 
+        Vector3f offset = temp ? Vector3f(200.0f, 0.0f, 0.0f) : Vector3f(-200.0f, 0.0f, 0.0f);
+        temp = !temp;
+        scene.system<TransformComponent>(
+            [&](const Entity::Id& id, TransformComponent& t)
+            {
+                t.m_position += offset;
+            },
+            ComponentTypeSet::create<RigidBodyComponent>()
+        );
+
         TransformComponent* t = player.get<TransformComponent>();
         camera.setPosition(t->m_position - 3.0f * camera.getDirection() + Vector3f(0.0f, 2.0f, 0.0f));
 
@@ -667,7 +693,7 @@ int main()
 
         // Render scene
         skeleton.update(elapsed);
-        octree.update();
+        octree.update(true);
         scene.getExtension<Shadows>()->render(camera);
         scene.render(camera, framebuffers[0]);
         // physics->render(camera, framebuffers[0]);
@@ -679,8 +705,8 @@ int main()
         fog.render(framebuffers[0], framebuffers[1]);
         bloom.render(framebuffers[1], framebuffers[0]);
         flare.render(framebuffers[0], framebuffers[1]);
-        // colorAdjust.render(framebuffers[1], framebuffers[0]);
-        fxaa.render(framebuffers[1]);
+        colorAdjust.render(framebuffers[1], framebuffers[0]);
+        fxaa.render(framebuffers[0]);
 
         ui.render();
 
@@ -695,8 +721,8 @@ int main()
         std::cout << "Game loop: " << data.mean().toMicroseconds() << '\n';
     }
     {
-        const ProfilerData& data = Profiler::getData("poly::Octree::render");
-        std::cout << "Octree render: " << data.mean().toMicroseconds() << '\n';
+        const ProfilerData& data = Profiler::getData("poly::Octree::update");
+        std::cout << "Octree update: " << data.mean().toMicroseconds() << '\n';
     }
     {
         const ProfilerData& data = Profiler::getData("poly::Terrain::render");

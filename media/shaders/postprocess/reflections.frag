@@ -96,20 +96,8 @@ void main()
         }
     }
 
-    // Use skybox if no hit was detected
-    if (!hit)
-    {
-        // Take color from skybox
-        if (u_usesProceduralSkybox)
-        {
-            // Make sure reflected ray doesn't go below horizon
-            if (rayWorld.y < 0.0f)
-                rayWorld = normalize(vec3(rayWorld.x, 0.0f, rayWorld.z));
-
-            reflColor = getSkyColor(rayWorld);
-        }
-    }
-    else
+    // Get precies intersect location
+    if (hit)
     {
         vec3 midpoint;
         float zDepth;
@@ -127,8 +115,24 @@ void main()
 
         midpoint = mix(endpoint1, endpoint2, 0.5f);
         zDepth = texture(u_depth, midpoint.xy).r;
-        if (true)
+        if (zDepth < 1.0f)
             reflColor = texture(u_color, midpoint.xy).rgb;
+        else
+            hit = false;
+    }
+    
+    // Use skybox if no hit was detected
+    if (!hit)
+    {
+        // Take color from skybox
+        if (u_usesProceduralSkybox)
+        {
+            // Make sure reflected ray doesn't go below horizon
+            if (rayWorld.y < 0.0f)
+                rayWorld = normalize(vec3(rayWorld.x, 0.0f, rayWorld.z));
+
+            reflColor = getSkyColor(rayWorld);
+        }
     }
 
     // Apply the fresnel effect
