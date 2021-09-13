@@ -1,4 +1,5 @@
 #include <poly/Core/Allocate.h>
+#include <poly/Core/ObjectPool.h>
 #include <poly/Core/Profiler.h>
 
 #include <poly/Engine/Scene.h>
@@ -65,6 +66,18 @@ Shader Terrain::s_shader;
 
 
 ///////////////////////////////////////////////////////////
+Terrain::Chunk::Chunk() :
+	m_heightMap			(0),
+	m_normalMap			(0),
+	m_colorMap			(0),
+	m_heightMapData		(0),
+	m_normalMapData		(0)
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
 Shader& Terrain::getDefaultShader()
 {
 	if (!s_shader.getId())
@@ -81,14 +94,12 @@ Shader& Terrain::getDefaultShader()
 ///////////////////////////////////////////////////////////
 Terrain::Terrain() :
 	m_shader				(0),
-	m_size					(0.0f),
-	m_height				(0.0f),
+	m_chunkSize				(0.0f),
+	m_maxHeight				(0.0f),
 	m_tileScale				(0.0f),
 	m_lodScale				(0.0f),
 	m_maxDist				(0.0f),
 	m_useFlatShading		(true),
-	m_heightMapData			(0),
-	m_normalMapData			(0),
 	m_instanceBufferOffset	(0),
 	m_isUniformDirty		(true)
 {
@@ -99,10 +110,28 @@ Terrain::Terrain() :
 ///////////////////////////////////////////////////////////
 Terrain::~Terrain()
 {
-	if (m_normalMapData)
-		FREE_DBG(m_normalMapData);
+	// Free all chunk data
+	for (auto it = m_chunks.begin(); it != m_chunks.end(); ++it)
+	{
+		Chunk& chunk = it.value();
 
-	m_normalMapData = 0;
+		if (chunk.m_heightMap)
+			Pool<Texture>::free(chunk.m_heightMap);
+		if (chunk.m_normalMap)
+			Pool<Texture>::free(chunk.m_normalMap);
+		if (chunk.m_colorMap)
+			Pool<Texture>::free(chunk.m_colorMap);
+		if (chunk.m_normalMapData)
+			FREE_DBG(chunk.m_normalMapData);
+
+		// Don't need to free height map data bc its handled by the image
+
+		chunk.m_heightMap = 0;
+		chunk.m_normalMap = 0;
+		chunk.m_colorMap = 0;
+		chunk.m_heightMapData = 0;
+		chunk.m_normalMapData = 0;
+	}
 }
 
 
@@ -114,7 +143,7 @@ void Terrain::init(Scene* scene)
 
 
 ///////////////////////////////////////////////////////////
-void Terrain::create(float size, float height, float tileScale, float lodScale, float maxDist)
+void Terrain::create(float chunkSize, float maxHeight, float tileScale, float lodScale, float maxDist)
 {
 	// Only create once
 	if (m_instanceBuffer.getId()) return;
@@ -122,8 +151,8 @@ void Terrain::create(float size, float height, float tileScale, float lodScale, 
 	// Uniform buffer
 	m_uniformBuffer.create(sizeof(UniformBlock_Terrain), BufferUsage::Static);
 
-	m_size = size;
-	m_height = height;
+	m_chunkSize = chunkSize;
+	m_maxHeight = maxHeight;
 	m_tileScale = tileScale;
 	m_lodScale = lodScale;
 	m_maxDist = maxDist;
@@ -346,7 +375,7 @@ void Terrain::createTileLayout()
 			tile.m_scale = powf(2.0f, (float)lodLevel) * m_tileScale;
 			tile.m_lod = lodLevel;
 			tile.m_boundingBox.m_min = Vector3f(tile.m_position.x - 0.5f * tileSize, 0.0f, tile.m_position.y - 0.5f * tileSize);
-			tile.m_boundingBox.m_max = Vector3f(tile.m_position.x + 0.5f * tileSize, m_height, tile.m_position.y + 0.5f * tileSize);
+			tile.m_boundingBox.m_max = Vector3f(tile.m_position.x + 0.5f * tileSize, m_maxHeight, tile.m_position.y + 0.5f * tileSize);
 
 			if (changedLodLevel && c != 0 && c != numTiles - 1)
 			{
@@ -363,7 +392,7 @@ void Terrain::createTileLayout()
 			tile.m_scale = powf(2.0f, (float)lodLevel) * m_tileScale;
 			tile.m_lod = lodLevel;
 			tile.m_boundingBox.m_min = Vector3f(tile.m_position.x - 0.5f * tileSize, 0.0f, tile.m_position.y - 0.5f * tileSize);
-			tile.m_boundingBox.m_max = Vector3f(tile.m_position.x + 0.5f * tileSize, m_height, tile.m_position.y + 0.5f * tileSize);
+			tile.m_boundingBox.m_max = Vector3f(tile.m_position.x + 0.5f * tileSize, m_maxHeight, tile.m_position.y + 0.5f * tileSize);
 
 			if (changedLodLevel && c != 0 && c != numTiles - 1)
 			{
@@ -385,7 +414,7 @@ void Terrain::createTileLayout()
 			tile.m_scale = powf(2.0f, (float)lodLevel) * m_tileScale;
 			tile.m_lod = lodLevel;
 			tile.m_boundingBox.m_min = Vector3f(tile.m_position.x - 0.5f * tileSize, 0.0f, tile.m_position.y - 0.5f * tileSize);
-			tile.m_boundingBox.m_max = Vector3f(tile.m_position.x + 0.5f * tileSize, m_height, tile.m_position.y + 0.5f * tileSize);
+			tile.m_boundingBox.m_max = Vector3f(tile.m_position.x + 0.5f * tileSize, m_maxHeight, tile.m_position.y + 0.5f * tileSize);
 
 			if (changedLodLevel)
 			{
@@ -402,7 +431,7 @@ void Terrain::createTileLayout()
 			tile.m_scale = powf(2.0f, (float)lodLevel) * m_tileScale;
 			tile.m_lod = lodLevel;
 			tile.m_boundingBox.m_min = Vector3f(tile.m_position.x - 0.5f * tileSize, 0.0f, tile.m_position.y - 0.5f * tileSize);
-			tile.m_boundingBox.m_max = Vector3f(tile.m_position.x + 0.5f * tileSize, m_height, tile.m_position.y + 0.5f * tileSize);
+			tile.m_boundingBox.m_max = Vector3f(tile.m_position.x + 0.5f * tileSize, m_maxHeight, tile.m_position.y + 0.5f * tileSize);
 
 			if (changedLodLevel)
 			{
@@ -449,6 +478,11 @@ void Terrain::render(Camera& camera, RenderPass pass, const RenderSettings& sett
 		m_shader = &getDefaultShader();
 
 	START_PROFILING_FUNC;
+	
+	// Get terrain size
+	Vector2f terrainSize;
+	terrainSize.x = (m_xBounds.y - m_xBounds.x + 1) * m_chunkSize;
+	terrainSize.y = (m_zBounds.y - m_zBounds.x + 1) * m_chunkSize;
 
 	std::vector<TerrainTile*> normalTiles, edgeTiles;
 
@@ -476,8 +510,8 @@ void Terrain::render(Camera& camera, RenderPass pass, const RenderSettings& sett
 
 		bool shouldRender =
 			frustum.contains(bbox) &&
-			tilePos.x < m_size&&
-			tilePos.y < m_size;
+			fabsf(tilePos.x) < 0.5f * terrainSize.x &&
+			fabsf(tilePos.y) < 0.5f * terrainSize.y;
 
 		if (shouldRender)
 			normalTiles.push_back(&m_normalTiles[i]);
@@ -497,8 +531,8 @@ void Terrain::render(Camera& camera, RenderPass pass, const RenderSettings& sett
 
 		bool shouldRender =
 			frustum.contains(bbox) &&
-			tilePos.x < m_size &&
-			tilePos.y < m_size;
+			fabsf(tilePos.x) < 0.5f * terrainSize.x &&
+			fabsf(tilePos.y) < 0.5f * terrainSize.y;
 
 		if (shouldRender)
 			edgeTiles.push_back(&m_edgeTiles[i]);
@@ -549,8 +583,8 @@ void Terrain::render(Camera& camera, RenderPass pass, const RenderSettings& sett
 	if (m_isUniformDirty)
 	{
 		UniformBlock_Terrain block;
-		block.m_size = m_size;
-		block.m_height = m_height;
+		block.m_chunkSize = m_chunkSize;
+		block.m_maxHeight = m_maxHeight;
 		block.m_tileScale = m_tileScale;
 		block.m_blendLodDist = m_lodDists[m_lodDists.size() - 2];
 		block.m_useFlatShading = m_useFlatShading;
@@ -563,10 +597,10 @@ void Terrain::render(Camera& camera, RenderPass pass, const RenderSettings& sett
 
 	// Update clip planes
 	RenderSettings newSettings = settings;
-	newSettings.m_clipPlanes[newSettings.m_numClipPlanes + 0] = Vector4f(-1.0f, 0.0f, 0.0f, m_size * 0.5f);
-	newSettings.m_clipPlanes[newSettings.m_numClipPlanes + 1] = Vector4f(1.0f, 0.0f, 0.0f, m_size * 0.5f);
-	newSettings.m_clipPlanes[newSettings.m_numClipPlanes + 2] = Vector4f(0.0f, 0.0f, -1.0f, m_size * 0.5f);
-	newSettings.m_clipPlanes[newSettings.m_numClipPlanes + 3] = Vector4f(0.0f, 0.0f, 1.0f, m_size * 0.5f);
+	newSettings.m_clipPlanes[newSettings.m_numClipPlanes + 0] = Vector4f(-1.0f, 0.0f, 0.0f, terrainSize.x * 0.5f);
+	newSettings.m_clipPlanes[newSettings.m_numClipPlanes + 1] = Vector4f(1.0f, 0.0f, 0.0f, terrainSize.x * 0.5f);
+	newSettings.m_clipPlanes[newSettings.m_numClipPlanes + 2] = Vector4f(0.0f, 0.0f, -1.0f, terrainSize.y * 0.5f);
+	newSettings.m_clipPlanes[newSettings.m_numClipPlanes + 3] = Vector4f(0.0f, 0.0f, 1.0f, terrainSize.y * 0.5f);
 	newSettings.m_numClipPlanes += 4;
 
 
@@ -580,7 +614,7 @@ void Terrain::render(Camera& camera, RenderPass pass, const RenderSettings& sett
 	camera.apply(m_shader);
 
 	// Apply textures
-	applyTextures(m_shader);
+	applyTextures(m_shader, camera.getPosition());
 
 	// Apply render settings
 	applyRenderSettings(m_shader, newSettings);
@@ -619,15 +653,38 @@ void Terrain::render(Camera& camera, RenderPass pass, const RenderSettings& sett
 
 
 ///////////////////////////////////////////////////////////
-void Terrain::applyTextures(Shader* shader)
+void Terrain::applyTextures(Shader* shader, const Vector3f& cameraPos)
 {
-	// Terrain maps
-	if (m_heightMap.getId())
-		m_shader->setUniform("u_heightMap", m_heightMap);
-	if (m_normalMap.getId())
-		m_shader->setUniform("u_normalMap", m_normalMap);
-	if (m_colorMap.getId())
-		m_shader->setUniform("u_colorMap", m_colorMap);
+	// Get chunk index
+	Vector2f chunkCoordsf = Vector2f(cameraPos.x, cameraPos.z) / m_chunkSize;
+	Vector2i chunkCoordsi;
+	chunkCoordsi.x = std::lround(chunkCoordsf.x);
+	chunkCoordsi.y = std::lround(chunkCoordsf.y);
+
+	// Apply textures in current and surrounding chunks
+	for (int x1 = -1; x1 <= 1; ++x1)
+	{
+		for (int z1 = -1; z1 <= 1; ++z1)
+		{
+			int x = chunkCoordsi.x + x1;
+			int z = chunkCoordsi.y + z1;
+
+			auto it = m_chunks.find(Vector2i(x, z));
+			// Skip if chunk doesn't exist
+			if (it == m_chunks.end()) continue;
+
+			Chunk& chunk = it.value();
+			std::string indexStr = '[' + std::to_string((x1 + 1) * 3 + z1 + 1) + ']';
+
+			// Terrain maps
+			if (chunk.m_heightMap)
+				m_shader->setUniform("u_heightMaps" + indexStr, *chunk.m_heightMap);
+			if (chunk.m_normalMap)
+				m_shader->setUniform("u_normalMaps" + indexStr, *chunk.m_normalMap);
+			if (chunk.m_colorMap)
+				m_shader->setUniform("u_colorMaps" + indexStr, *chunk.m_colorMap);
+		}
+	}
 }
 
 
@@ -639,33 +696,37 @@ void Terrain::setShader(Shader* shader)
 
 
 ///////////////////////////////////////////////////////////
-void Terrain::setSize(float size)
+void Terrain::setChunkSize(float size)
 {
 	// Calculate change in scale
-	Vector3f scale(size / m_size);
+	Vector3f scale(size / m_chunkSize);
 	scale.y = 1.0f;
 
 	// Update size
-	m_size = size;
+	m_chunkSize = size;
 
-	// Update normal map
-	updateNormalMap(scale);
+	// Update normal maps
+	for (auto it = m_chunks.begin(); it != m_chunks.end(); ++it)
+		updateNormalMap(it.value(), scale);
+
 	m_isUniformDirty = true;
 }
 
 
 ///////////////////////////////////////////////////////////
-void Terrain::setHeight(float height)
+void Terrain::setMaxHeight(float height)
 {
 	// Calculate change in scale
 	Vector3f scale(1.0f);
-	scale.y = height / m_height;
+	scale.y = height / m_maxHeight;
 
 	// Update size
-	m_height = height;
+	m_maxHeight = height;
 
 	// Update normal map
-	updateNormalMap(scale);
+	for (auto it = m_chunks.begin(); it != m_chunks.end(); ++it)
+		updateNormalMap(it.value(), scale);
+
 	m_isUniformDirty = true;
 }
 
@@ -711,83 +772,123 @@ void Terrain::setUseFlatShading(bool use)
 
 
 ///////////////////////////////////////////////////////////
-void Terrain::setHeightMap(const Image& map)
+void Terrain::setHeightMap(const Image& map, int x, int z)
 {
 	ASSERT(map.getDataType() == GLType::Float, "Terrain height maps must use float values");
 	ASSERT(map.getNumChannels() == 1, "Terrain height maps must have only one color channel");
 
+	// Get chunk
+	Chunk& chunk = m_chunks[Vector2i(x, z)];
+
 	// Upload data to texture
-	m_heightMap.create(map);
-	m_heightMapData = (float*)map.getData();
+	if (!chunk.m_heightMap)
+		chunk.m_heightMap = Pool<Texture>::alloc();
+	chunk.m_heightMap->create(map);
+	chunk.m_heightMapData = (float*)map.getData();
 
 	// Iterate through data and generate normals
 	Vector2u size = Vector2u(map.getWidth(), map.getHeight());
-	if (!m_normalMapData)
-	m_normalMapData = (Vector3f*)MALLOC_DBG(size.x * size.y * sizeof(Vector3f));
+	if (chunk.m_normalMapData)
+		FREE_DBG(chunk.m_normalMapData);
+	chunk.m_normalMapData = (Vector3f*)MALLOC_DBG(size.x * size.y * sizeof(Vector3f));
 
 	// Calculate normals
-	calcNormals(map, Vector2u(0), size);
+	calcNormals(map, chunk.m_normalMapData, Vector2u(0), size);
 
 	// Upload normal data
-	m_normalMap.create(m_normalMapData, PixelFormat::Rgb, size.x, size.y, 0, GLType::Float);
+	if (!chunk.m_normalMap)
+		chunk.m_normalMap = Pool<Texture>::alloc();
+	chunk.m_normalMap->create(chunk.m_normalMapData, PixelFormat::Rgb, size.x, size.y, 0, GLType::Float);
+
+	// Update chunk bounds
+	if (x < m_xBounds.x)
+		m_xBounds.x = x;
+	if (x > m_xBounds.y)
+		m_xBounds.y = x;
+
+	if (z < m_zBounds.x)
+		m_zBounds.x = z;
+	if (z > m_zBounds.y)
+		m_zBounds.y = z;
 }
 
 
 ///////////////////////////////////////////////////////////
-void Terrain::calcNormals(const Image& hmap, const Vector2i& pos, const Vector2u& size)
+void Terrain::calcNormals(const Image& hmap, Vector3f* normals, const Vector2i& pos, const Vector2u& size)
 {
 	Vector2u mapSize = Vector2u(hmap.getWidth(), hmap.getHeight());
-	Vector2f sizeFactor = m_size / Vector2f(mapSize);
+	Vector2f sizeFactor = m_chunkSize / Vector2f(mapSize);
 
 	for (Uint32 r = pos.y; r < mapSize.y && r < pos.y + size.y; ++r)
 	{
 		for (Uint32 c = pos.x; c < mapSize.x && c < pos.x + size.x; ++c)
 		{
 			// Calculate normal
-			float h01 = *(float*)hmap.getPixel(r, c - (c == 0 ? 0 : 1)) * m_height;
-			float h21 = *(float*)hmap.getPixel(r, c + (c == mapSize.x - 1 ? 0 : 1)) * m_height;
-			float h10 = *(float*)hmap.getPixel(r + (r == mapSize.y - 1 ? 0 : 1), c) * m_height;
-			float h12 = *(float*)hmap.getPixel(r - (r == 0 ? 0 : 1), c) * m_height;
+			float h01 = *(float*)hmap.getPixel(r, c - (c == 0 ? 0 : 1)) * m_maxHeight;
+			float h21 = *(float*)hmap.getPixel(r, c + (c == mapSize.x - 1 ? 0 : 1)) * m_maxHeight;
+			float h10 = *(float*)hmap.getPixel(r + (r == mapSize.y - 1 ? 0 : 1), c) * m_maxHeight;
+			float h12 = *(float*)hmap.getPixel(r - (r == 0 ? 0 : 1), c) * m_maxHeight;
 
 			Vector3f v1(sizeFactor.x, h21 - h01, 0.0f);
 			Vector3f v2(0.0f, h12 - h10, -sizeFactor.y);
 			Vector3f normal = normalize(cross(v1, v2));
 
-			m_normalMapData[r * hmap.getWidth() + c] = normal;
+			normals[r * hmap.getWidth() + c] = normal;
 		}
 	}
 }
 
 
 ///////////////////////////////////////////////////////////
-void Terrain::updateNormalMap(const Vector3f& scale)
+void Terrain::updateNormalMap(Chunk& chunk, const Vector3f& scale)
 {
-	if (!m_normalMap.getId()) return;
+	if (!chunk.m_normalMap->getId()) return;
 
 	// Get normal transform matrix
 	Matrix3f transform = Matrix3f(transpose(inverse(toTransformMatrix(Vector3f(0.0f), Vector3f(0.0f), scale))));
 
 	// Multiply every normal by transform
-	Uint32 size = m_normalMap.getWidth() * m_normalMap.getHeight();
+	Uint32 size = chunk.m_normalMap->getWidth() * chunk.m_normalMap->getHeight();
 	for (Uint32 i = 0; i < size; ++i)
-		m_normalMapData[i] = transform * m_normalMapData[i];
+		chunk.m_normalMapData[i] = transform * chunk.m_normalMapData[i];
 
 	// Update texture data
-	m_normalMap.update(m_normalMapData);
+	chunk.m_normalMap->update(chunk.m_normalMapData);
 }
 
 
 ///////////////////////////////////////////////////////////
-void Terrain::setColorMap(const Image& map)
+void Terrain::setColorMap(const Image& map, int x, int z)
 {
+	// Get chunk
+	Chunk& chunk = m_chunks[Vector2i(x, z)];
+
 	// Upload data to texture
-	m_colorMap.create(map);
+	if (!chunk.m_colorMap)
+		chunk.m_colorMap = Pool<Texture>::alloc();
+	chunk.m_colorMap->create(map);
+
+	// Update chunk bounds
+	if (x < m_xBounds.x)
+		m_xBounds.x = x;
+	if (x > m_xBounds.y)
+		m_xBounds.y = x;
+
+	if (z < m_zBounds.x)
+		m_zBounds.x = z;
+	if (z > m_zBounds.y)
+		m_zBounds.y = z;
 }
 
 
 ///////////////////////////////////////////////////////////
-void Terrain::updateHeightMap(const Image& map, const Vector2i& pos, const Vector2u& size)
+void Terrain::updateHeightMap(const Image& map, int x, int z, const Vector2i& pos, const Vector2u& size)
 {
+	// Get chunk
+	auto it = m_chunks.find(Vector2i(x, z));
+	if (it == m_chunks.end()) return;
+	Chunk& chunk = it.value();
+
 	// Get rectangle size
 	Vector2u rectSize = Vector2u(size.x ? size.x : map.getWidth(), size.y ? size.y : map.getHeight());
 
@@ -802,7 +903,7 @@ void Terrain::updateHeightMap(const Image& map, const Vector2i& pos, const Vecto
 		}
 
 		// Push data
-		m_heightMap.update(data, pos, rectSize);
+		chunk.m_heightMap->update(data, pos, rectSize);
 		FREE_DBG(data);
 	}
 
@@ -815,19 +916,19 @@ void Terrain::updateHeightMap(const Image& map, const Vector2i& pos, const Vecto
 		rectSize += 2u;
 
 		// Update normals
-		calcNormals(map, rectPos, rectSize);
+		calcNormals(map, chunk.m_normalMapData, rectPos, rectSize);
 
 		// Copy data to a separate buffer
 		Vector3f* data = (Vector3f*)MALLOC_DBG(rectSize.x * rectSize.y * sizeof(Vector3f));
 		for (Uint32 r = 0; r < rectSize.y; ++r)
 		{
-			Vector3f* src = m_normalMapData;
+			Vector3f* src = chunk.m_normalMapData;
 			src += (rectPos.y + r) * map.getWidth() + rectPos.x;
 			memcpy(data + r * rectSize.x, src, rectSize.x * sizeof(Vector3f));
 		}
 
 		// Push data
-		m_normalMap.update(data, rectPos, rectSize);
+		chunk.m_normalMap->update(data, rectPos, rectSize);
 		FREE_DBG(data);
 	}
 
@@ -835,8 +936,13 @@ void Terrain::updateHeightMap(const Image& map, const Vector2i& pos, const Vecto
 
 
 ///////////////////////////////////////////////////////////
-void Terrain::updateColorMap(const Image& map, const Vector2i& pos, const Vector2u& size)
+void Terrain::updateColorMap(const Image& map, int x, int z, const Vector2i& pos, const Vector2u& size)
 {
+	// Get chunk
+	auto it = m_chunks.find(Vector2i(x, z));
+	if (it == m_chunks.end()) return;
+	Chunk& chunk = it.value();
+
 	// Get rectangle size
 	Vector2u rectSize = Vector2u(size.x ? size.x : map.getWidth(), size.y ? size.y : map.getHeight());
 
@@ -850,8 +956,38 @@ void Terrain::updateColorMap(const Image& map, const Vector2i& pos, const Vector
 	}
 
 	// Push data
-	m_colorMap.update(data, pos, rectSize);
+	chunk.m_colorMap->update(data, pos, rectSize);
 	FREE_DBG(data);
+}
+
+
+///////////////////////////////////////////////////////////
+void Terrain::freeChunk(int x, int z)
+{
+	// Get chunk
+	auto it = m_chunks.find(Vector2i(x, z));
+	if (it == m_chunks.end()) return;
+	Chunk& chunk = it.value();
+
+	if (chunk.m_heightMap)
+		Pool<Texture>::free(chunk.m_heightMap);
+	if (chunk.m_normalMap)
+		Pool<Texture>::free(chunk.m_normalMap);
+	if (chunk.m_colorMap)
+		Pool<Texture>::free(chunk.m_colorMap);
+	if (chunk.m_normalMapData)
+		FREE_DBG(chunk.m_normalMapData);
+
+	// Don't need to free height map data bc its handled by the image
+
+	chunk.m_heightMap = 0;
+	chunk.m_normalMap = 0;
+	chunk.m_colorMap = 0;
+	chunk.m_heightMapData = 0;
+	chunk.m_normalMapData = 0;
+
+	// Remove entry from hashmap
+	m_chunks.erase(it);
 }
 
 
@@ -863,16 +999,16 @@ Shader* Terrain::getShader() const
 
 
 ///////////////////////////////////////////////////////////
-float Terrain::getSize() const
+float Terrain::getChunkSize() const
 {
-	return m_size;
+	return m_chunkSize;
 }
 
 
 ///////////////////////////////////////////////////////////
-float Terrain::getHeight() const
+float Terrain::getMaxHeight() const
 {
-	return m_height;
+	return m_maxHeight;
 }
 
 
@@ -905,48 +1041,38 @@ bool Terrain::usesFlatShading() const
 
 
 ///////////////////////////////////////////////////////////
-Texture& Terrain::getHeightMap()
-{
-	return m_heightMap;
-}
-
-
-///////////////////////////////////////////////////////////
-Texture& Terrain::getColorMap()
-{
-	return m_colorMap;
-}
-
-
-///////////////////////////////////////////////////////////
-Texture& Terrain::getNormalMap()
-{
-	return m_normalMap;
-}
-
-
-///////////////////////////////////////////////////////////
 float Terrain::getHeightAt(float x, float z) const
 {
-	if (!m_heightMapData)
+	// Get chunk index
+	Vector2f chunkCoordsf = Vector2f(x, z) / m_chunkSize;
+	Vector2i chunkCoordsi;
+	chunkCoordsi.x = std::lround(chunkCoordsf.x);
+	chunkCoordsi.y = std::lround(chunkCoordsf.y);
+
+	auto it = m_chunks.find(chunkCoordsi);
+	if (it == m_chunks.end())
+		return 0.0f;
+	const Chunk& chunk = it.value();
+
+	if (!chunk.m_heightMapData)
 		return 0.0f;
 
 	// Calculate pixel location
-	Vector2u texSize(m_heightMap.getWidth(), m_heightMap.getHeight());
-	Vector2f p = (Vector2f(x, z) / m_size + 0.5f) * (Vector2f)texSize;
+	Vector2u texSize(chunk.m_heightMap->getWidth(), chunk.m_heightMap->getHeight());
+	Vector2f p = (chunkCoordsf - (Vector2f)chunkCoordsi + 0.5f) * (Vector2f)texSize;
 
 	// Get height values
-	float h00 = m_heightMapData[(Uint32)p.y * texSize.x + (Uint32)p.x];
-	float h10 = m_heightMapData[(Uint32)p.y * texSize.x + (Uint32)p.x + 1];
-	float h01 = m_heightMapData[(Uint32)(p.y + 1) * texSize.x + (Uint32)p.x];
-	float h11 = m_heightMapData[(Uint32)(p.y + 1) * texSize.x + (Uint32)p.x + 1];
+	float h00 = chunk.m_heightMapData[(Uint32)p.y * texSize.x + (Uint32)p.x];
+	float h10 = chunk.m_heightMapData[(Uint32)p.y * texSize.x + (Uint32)p.x + 1];
+	float h01 = chunk.m_heightMapData[(Uint32)(p.y + 1) * texSize.x + (Uint32)p.x];
+	float h11 = chunk.m_heightMapData[(Uint32)(p.y + 1) * texSize.x + (Uint32)p.x + 1];
 
 	// Interpolate
 	float a0 = mix(h00, h10, p.x - (Uint32)p.x);
 	float a1 = mix(h00, h10, p.x - (Uint32)p.x);
 	float h = mix(a0, a1, p.y - (Uint32)p.y);
 
-	return h * m_height;
+	return h * m_maxHeight;
 }
 
 

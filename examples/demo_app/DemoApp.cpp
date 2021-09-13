@@ -274,13 +274,13 @@ int main()
 
     t.m_scale = Vector3f(1.0f);
 
-    for (Uint32 i = 0; i < 1000; ++i)
+    for (Uint32 i = 0; i < 10; ++i)
     {
         RigidBodyComponent rbody;
-        t.m_position = Vector3f(0.0f, 60.0f + 2 * i, -5.0f);
+        rbody.m_position = Vector3f(0.0f, 60.0f + 2 * i, -5.0f);
         rbody.m_mass = 10.0f;
-        Entity boxEntity1 = scene.createEntity(t, RenderComponent(&box), DynamicTag());
-        // physics->addCollider(boxEntity1, BoxShape(1.0f, 1.0f, 1.0f));
+        Entity boxEntity1 = scene.createEntity(t, RenderComponent(&box), rbody, DynamicTag());
+        physics->addCollider(boxEntity1, BoxShape(1.0f, 1.0f, 1.0f));
     }
 
     rbody.m_position = Vector3f(0.0f, 0.0f, 0.0f);
@@ -593,8 +593,6 @@ int main()
     std::vector<float> fpsWindow;
     Uint32 windowIndex = 0;
 
-    bool temp = true;
-
     // Game loop
     while (window.isOpen())
     {
@@ -656,16 +654,6 @@ int main()
             }
         );
 
-        Vector3f offset = temp ? Vector3f(200.0f, 0.0f, 0.0f) : Vector3f(-200.0f, 0.0f, 0.0f);
-        temp = !temp;
-        scene.system<TransformComponent>(
-            [&](const Entity::Id& id, TransformComponent& t)
-            {
-                t.m_position += offset;
-            },
-            ComponentTypeSet::create<RigidBodyComponent>()
-        );
-
         TransformComponent* t = player.get<TransformComponent>();
         camera.setPosition(t->m_position - 3.0f * camera.getDirection() + Vector3f(0.0f, 2.0f, 0.0f));
 
@@ -693,7 +681,7 @@ int main()
 
         // Render scene
         skeleton.update(elapsed);
-        octree.update(true);
+        octree.update();
         scene.getExtension<Shadows>()->render(camera);
         scene.render(camera, framebuffers[0]);
         // physics->render(camera, framebuffers[0]);

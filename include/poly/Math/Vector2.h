@@ -951,6 +951,29 @@ typedef Vector2<bool>		Vector2b;
 
 }
 
+
+///////////////////////////////////////////////////////////
+// Hash
+///////////////////////////////////////////////////////////
+#ifndef DOXYGEN_SKIP
+
+namespace std
+{
+
+template <typename T>
+struct hash<poly::Vector2<T>>
+{
+	std::size_t operator()(const poly::Vector2<T>& k) const
+	{
+		return hash<T>()(k.x) * hash<T>()(k.y);
+	}
+};
+
+}
+
+#endif
+
+
 #include <poly/Math/Vector2.inl>
 
 #endif

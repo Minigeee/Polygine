@@ -1020,6 +1020,29 @@ typedef Color<Uint32>		Color32;
 
 }
 
+
+///////////////////////////////////////////////////////////
+// Hash
+///////////////////////////////////////////////////////////
+#ifndef DOXYGEN_SKIP
+
+namespace std
+{
+
+template <typename T>
+struct hash<poly::Vector4<T>>
+{
+	std::size_t operator()(const poly::Vector4<T>& k) const
+	{
+		return hash<T>()(k.x) * hash<T>()(k.y) * hash<T>()(k.z) * hash<T>()(k.w);
+	}
+};
+
+}
+
+#endif
+
+
 #include <poly/Math/Vector4.inl>
 
 #endif

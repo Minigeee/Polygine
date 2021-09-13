@@ -1006,6 +1006,29 @@ typedef Vector3<bool>		Vector3b;
 
 }
 
+
+///////////////////////////////////////////////////////////
+// Hash
+///////////////////////////////////////////////////////////
+#ifndef DOXYGEN_SKIP
+
+namespace std
+{
+
+template <typename T>
+struct hash<poly::Vector3<T>>
+{
+	std::size_t operator()(const poly::Vector3<T>& k) const
+	{
+		return hash<T>()(k.x) * hash<T>()(k.y) * hash<T>()(k.z);
+	}
+};
+
+}
+
+#endif
+
+
 #include <poly/Math/Vector3.inl>
 
 #endif

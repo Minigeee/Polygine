@@ -59,6 +59,21 @@ public:
 	bool load(const std::string& fname, GLType dtype = GLType::Uint8);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Load 2D image data from memory
+	///
+	/// When an image is loaded from memory, new memeory for the
+	/// uncompressed pixels is allocated and freed automatically
+	/// by the image class. Supported image formats are: PNG,
+	/// JPEG, BMP, TGA, PSD, GIF, HDR, PIC, and PNM.
+	///
+	/// \param data A pointer to the unparsed image (compressed data)
+	/// \param len The length of the data in memory (in bytes)
+	/// \param dtype The data type to store the pixels in
+	///
+	///////////////////////////////////////////////////////////
+	bool load(void* data, Uint32 len, GLType dtype = GLType::Uint8);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Free pixel data if it is owned by the image
 	///
 	/// If the image owns the pixel data, it will be freed when the

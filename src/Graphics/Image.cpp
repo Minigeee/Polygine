@@ -82,6 +82,42 @@ bool Image::load(const std::string& fname, GLType dtype)
 
 
 ///////////////////////////////////////////////////////////
+bool Image::load(void* mem, Uint32 len, GLType dtype)
+{
+	int x = 0, y = 0, c = 0;
+	void* data = 0;
+
+	// Load image based on type
+	if (dtype == GLType::Uint8)
+		data = stbi_load_from_memory((Uint8*)mem, len, &x, &y, &c, 0);
+	else if (dtype == GLType::Uint16)
+		data = stbi_load_16_from_memory((Uint8*)mem, len, &x, &y, &c, 0);
+	else if (dtype == GLType::Float)
+		data = stbi_loadf_from_memory((Uint8*)mem, len, &x, &y, &c, 0);
+	else
+	{
+		LOG_ERROR("Unsupported data type while loading image from memory");
+		return false;
+	}
+
+	if (!data)
+	{
+		LOG_ERROR("Failed to load image from memory");
+		return false;
+	}
+
+	m_data = data;
+	m_width = x;
+	m_height = y;
+	m_numChannels = c;
+	m_dataType = dtype;
+	m_ownsData = true;
+
+	return true;
+}
+
+
+///////////////////////////////////////////////////////////
 void Image::free()
 {
 	if (m_ownsData && m_data)
