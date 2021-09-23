@@ -1,6 +1,5 @@
 #version 330 core
 
-#include "../camera.glsl"
 #include "../noise.glsl"
 #include "../procedural_skybox.glsl"
 
@@ -15,7 +14,10 @@ uniform sampler2D u_normalShininess;
 uniform sampler2D u_specularReflectivity;
 uniform sampler2D u_depth;
 
-uniform mat4 u_invProjView;
+uniform mat3 u_viewMat;
+uniform mat4 u_projMat;
+uniform mat3 u_invView;
+uniform mat4 u_invProj;
 uniform bool u_usesProceduralSkybox;
 
 uniform int u_maxSteps;
@@ -38,17 +40,17 @@ void main()
         return;
 
     vec4 posNDC = vec4(2.0f * v_texCoord - 1.0f, 2.0f * depth - 1.0f, 1.0f);
-    vec4 posWorld = u_invProjView * posNDC;
-    posWorld /= posWorld.w;
+    vec4 posView = u_invProj * posNDC;
+    posView /= posView.w;
 
     // Get normal and reflected view vector
-    vec3 normal = texture(u_normalShininess, v_texCoord).rgb;
-    vec3 viewDir = normalize(posWorld.xyz - u_cameraPos);
-    vec3 rayWorld = normalize(reflect(viewDir, normal));
+    vec3 normal = normalize(u_viewMat * texture(u_normalShininess, v_texCoord).rgb);
+    vec3 viewDir = normalize(posView.xyz);
+    vec3 rayView = normalize(reflect(viewDir, normal));
     
     // Calculate second ray point
-    vec4 farWorld = vec4(posWorld.xyz + rayWorld, 1.0f);
-    vec4 farNDC = u_projView * farWorld;
+    vec4 farView = vec4(posView.xyz + rayView, 1.0f);
+    vec4 farNDC = u_projMat * farView;
     farNDC /= farNDC.w;
     
     // Calculate step vector
@@ -128,6 +130,7 @@ void main()
         if (u_usesProceduralSkybox)
         {
             // Make sure reflected ray doesn't go below horizon
+            vec3 rayWorld = normalize(u_invView * rayView);
             if (rayWorld.y < 0.0f)
                 rayWorld = normalize(vec3(rayWorld.x, 0.0f, rayWorld.z));
 

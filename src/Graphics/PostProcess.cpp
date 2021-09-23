@@ -1153,9 +1153,11 @@ void Reflections::render(FrameBuffer& input, FrameBuffer& output)
 	shader.setUniform("u_specularReflectivity", *m_gBuffer->getColorTexture(2));
 	shader.setUniform("u_depth", *m_gBuffer->getDepthTexture());
 
-	// Inverse projection-view matrix to calculate position
-	shader.setUniform("u_invProjView", inverse(m_camera->getProjMatrix() * m_camera->getViewMatrix()));
-	m_camera->apply(&shader);
+	// Camera matrices
+	shader.setUniform("u_viewMat", Matrix3f(m_camera->getViewMatrix()));
+	shader.setUniform("u_projMat", m_camera->getProjMatrix());
+	shader.setUniform("u_invView", Matrix3f(inverse(m_camera->getViewMatrix())));
+	shader.setUniform("u_invProj", inverse(m_camera->getProjMatrix()));
 
 	// Properties
 	shader.setUniform("u_maxSteps", (int)m_maxSteps);
