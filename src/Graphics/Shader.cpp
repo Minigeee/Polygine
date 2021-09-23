@@ -547,9 +547,9 @@ void Shader::setUniform(const std::string& name, Texture& texture)
 	int slot = 0;
 
 	// Get texture slot
-	auto it = m_textures.find(texture.getId());
+	auto it = m_textures.find(name);
 	if (it == m_textures.end())
-		slot = (int)(m_textures[texture.getId()] = m_textures.size());
+		slot = (int)(m_textures[name] = m_textures.size());
 
 	else
 		slot = (int)it->second;

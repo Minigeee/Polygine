@@ -366,9 +366,9 @@ private:
 private:
 	Uint32 m_id;									//!< The program id
 	std::vector<Uint32> m_shaders;					//!< A list of shader ids
-	HashMap<std::string, UniformData> m_uniforms;			//!< A map of uniform names to uniform locations
+	HashMap<std::string, UniformData> m_uniforms;	//!< A map of uniform names to uniform locations
 	HashMap<std::string, Uint32> m_uniformBlocks;	//!< A map of uniform names to uniform block index
-	HashMap<Uint32, Uint32> m_textures;				//!< A map of texture ids to texture slot
+	HashMap<std::string, Uint32> m_textures;		//!< A map of texture uniforms to texture slot
 
 	static Uint32 currentBound;
 	static HashMap<std::string, Uint32> loadedShaders;

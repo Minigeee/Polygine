@@ -148,6 +148,12 @@ void Terrain::create(float chunkSize, float maxHeight, float tileScale, float lo
 	// Only create once
 	if (m_instanceBuffer.getId()) return;
 
+	// Default material
+	m_material.setSpecular(Vector3f(0.2f));
+	m_material.setShininess(20.0f);
+	m_material.setOcclusionFactor(1.0f);
+	m_material.setReflectivity(0.0f);
+
 	// Uniform buffer
 	m_uniformBuffer.create(sizeof(UniformBlock_Terrain), BufferUsage::Static);
 
@@ -480,9 +486,8 @@ void Terrain::render(Camera& camera, RenderPass pass, const RenderSettings& sett
 	START_PROFILING_FUNC;
 	
 	// Get terrain size
-	Vector2f terrainSize;
-	terrainSize.x = (m_xBounds.y - m_xBounds.x + 1) * m_chunkSize;
-	terrainSize.y = (m_zBounds.y - m_zBounds.x + 1) * m_chunkSize;
+	Vector2f xBounds = ((Vector2f)m_xBounds + Vector2f(-0.5f, 0.5f)) * m_chunkSize;
+	Vector2f zBounds = ((Vector2f)m_zBounds + Vector2f(-0.5f, 0.5f)) * m_chunkSize;
 
 	std::vector<TerrainTile*> normalTiles, edgeTiles;
 
@@ -503,15 +508,14 @@ void Terrain::render(Camera& camera, RenderPass pass, const RenderSettings& sett
 		bbox.m_max += pos;
 
 		// Check if the tile should be rendered
-		Vector2f tilePos = Vector2f(
-			std::min(std::abs(bbox.m_min.x), std::abs(bbox.m_max.x)),
-			std::min(std::abs(bbox.m_min.z), std::abs(bbox.m_max.z))
-		) * 2.0f;
+		Vector3f tilePos = bbox.getCenter();
 
 		bool shouldRender =
 			frustum.contains(bbox) &&
-			fabsf(tilePos.x) < 0.5f * terrainSize.x &&
-			fabsf(tilePos.y) < 0.5f * terrainSize.y;
+			tilePos.x > xBounds.x &&
+			tilePos.x < xBounds.y &&
+			tilePos.z > zBounds.x &&
+			tilePos.z < zBounds.y;
 
 		if (shouldRender)
 			normalTiles.push_back(&m_normalTiles[i]);
@@ -524,15 +528,14 @@ void Terrain::render(Camera& camera, RenderPass pass, const RenderSettings& sett
 		bbox.m_max += pos;
 
 		// Check if the tile should be rendered
-		Vector2f tilePos = Vector2f(
-			std::min(std::abs(bbox.m_min.x), std::abs(bbox.m_max.x)),
-			std::min(std::abs(bbox.m_min.z), std::abs(bbox.m_max.z))
-		) * 2.0f;
+		Vector3f tilePos = bbox.getCenter();
 
 		bool shouldRender =
 			frustum.contains(bbox) &&
-			fabsf(tilePos.x) < 0.5f * terrainSize.x &&
-			fabsf(tilePos.y) < 0.5f * terrainSize.y;
+			tilePos.x > xBounds.x &&
+			tilePos.x < xBounds.y &&
+			tilePos.z > zBounds.x &&
+			tilePos.z < zBounds.y;
 
 		if (shouldRender)
 			edgeTiles.push_back(&m_edgeTiles[i]);
@@ -597,10 +600,10 @@ void Terrain::render(Camera& camera, RenderPass pass, const RenderSettings& sett
 
 	// Update clip planes
 	RenderSettings newSettings = settings;
-	newSettings.m_clipPlanes[newSettings.m_numClipPlanes + 0] = Vector4f(-1.0f, 0.0f, 0.0f, terrainSize.x * 0.5f);
-	newSettings.m_clipPlanes[newSettings.m_numClipPlanes + 1] = Vector4f(1.0f, 0.0f, 0.0f, terrainSize.x * 0.5f);
-	newSettings.m_clipPlanes[newSettings.m_numClipPlanes + 2] = Vector4f(0.0f, 0.0f, -1.0f, terrainSize.y * 0.5f);
-	newSettings.m_clipPlanes[newSettings.m_numClipPlanes + 3] = Vector4f(0.0f, 0.0f, 1.0f, terrainSize.y * 0.5f);
+	newSettings.m_clipPlanes[newSettings.m_numClipPlanes + 0] = Vector4f(-1.0f, 0.0f, 0.0f, std::fabsf(xBounds.y));
+	newSettings.m_clipPlanes[newSettings.m_numClipPlanes + 1] = Vector4f(1.0f, 0.0f, 0.0f, std::fabsf(xBounds.x));
+	newSettings.m_clipPlanes[newSettings.m_numClipPlanes + 2] = Vector4f(0.0f, 0.0f, -1.0f, std::fabsf(zBounds.y));
+	newSettings.m_clipPlanes[newSettings.m_numClipPlanes + 3] = Vector4f(0.0f, 0.0f, 1.0f, std::fabsf(zBounds.x));
 	newSettings.m_numClipPlanes += 4;
 
 
@@ -609,6 +612,7 @@ void Terrain::render(Camera& camera, RenderPass pass, const RenderSettings& sett
 
 	// Terrain
 	m_shader->bindUniformBlock("Terrain", m_uniformBuffer);
+	m_material.apply(m_shader);
 
 	// Camera
 	camera.apply(m_shader);
@@ -683,6 +687,10 @@ void Terrain::applyTextures(Shader* shader, const Vector3f& cameraPos)
 				m_shader->setUniform("u_normalMaps" + indexStr, *chunk.m_normalMap);
 			if (chunk.m_colorMap)
 				m_shader->setUniform("u_colorMaps" + indexStr, *chunk.m_colorMap);
+
+			// Custom maps
+			for (Uint32 i = 0; i < chunk.m_customMaps.size(); ++i)
+				m_shader->setUniform(chunk.m_customMaps[i].first + indexStr, *chunk.m_customMaps[i].second);
 		}
 	}
 }
@@ -772,7 +780,7 @@ void Terrain::setUseFlatShading(bool use)
 
 
 ///////////////////////////////////////////////////////////
-void Terrain::setHeightMap(const Image& map, int x, int z)
+void Terrain::setHeightMap(const Image& map, int x, int z, bool genNormals)
 {
 	ASSERT(map.getDataType() == GLType::Float, "Terrain height maps must use float values");
 	ASSERT(map.getNumChannels() == 1, "Terrain height maps must have only one color channel");
@@ -786,19 +794,56 @@ void Terrain::setHeightMap(const Image& map, int x, int z)
 	chunk.m_heightMap->create(map);
 	chunk.m_heightMapData = (float*)map.getData();
 
-	// Iterate through data and generate normals
-	Vector2u size = Vector2u(map.getWidth(), map.getHeight());
-	if (chunk.m_normalMapData)
-		FREE_DBG(chunk.m_normalMapData);
-	chunk.m_normalMapData = (Vector3f*)MALLOC_DBG(size.x * size.y * sizeof(Vector3f));
+	// Generate normals if specified
+	if (genNormals)
+	{
+		// Iterate through data and generate normals
+		Vector2u size = Vector2u(map.getWidth(), map.getHeight());
+		if (chunk.m_normalMapData)
+			FREE_DBG(chunk.m_normalMapData);
+		chunk.m_normalMapData = (Vector3f*)MALLOC_DBG(size.x * size.y * sizeof(Vector3f));
 
-	// Calculate normals
-	calcNormals(map, chunk.m_normalMapData, Vector2u(0), size);
+		// Calculate normals
+		calcNormals(map, chunk.m_normalMapData, Vector2u(0), size);
+
+		// Upload normal data
+		if (!chunk.m_normalMap)
+			chunk.m_normalMap = Pool<Texture>::alloc();
+		chunk.m_normalMap->create(chunk.m_normalMapData, PixelFormat::Rgb, size.x, size.y, 0, GLType::Float);
+	}
+
+	// Update chunk bounds
+	if (x < m_xBounds.x)
+		m_xBounds.x = x;
+	if (x > m_xBounds.y)
+		m_xBounds.y = x;
+
+	if (z < m_zBounds.x)
+		m_zBounds.x = z;
+	if (z > m_zBounds.y)
+		m_zBounds.y = z;
+}
+
+
+///////////////////////////////////////////////////////////
+void Terrain::setNormalMap(Image& map, int x, int z)
+{
+	ASSERT(map.getDataType() == GLType::Float, "Terrain normal maps must use float values");
+	ASSERT(map.getNumChannels() == 3, "Terrain normal maps must have three color channel");
+
+	// Get chunk
+	Chunk& chunk = m_chunks[Vector2i(x, z)];
+
+	// Copy data pointer
+	chunk.m_normalMapData = (Vector3f*)map.getData();
+
+	// Take ownership of normals data
+	map.setOwnsData(false);
 
 	// Upload normal data
 	if (!chunk.m_normalMap)
 		chunk.m_normalMap = Pool<Texture>::alloc();
-	chunk.m_normalMap->create(chunk.m_normalMapData, PixelFormat::Rgb, size.x, size.y, 0, GLType::Float);
+	chunk.m_normalMap->create(chunk.m_normalMapData, PixelFormat::Rgb, map.getWidth(), map.getHeight(), 0, GLType::Float);
 
 	// Update chunk bounds
 	if (x < m_xBounds.x)
@@ -867,6 +912,29 @@ void Terrain::setColorMap(const Image& map, int x, int z)
 	if (!chunk.m_colorMap)
 		chunk.m_colorMap = Pool<Texture>::alloc();
 	chunk.m_colorMap->create(map);
+
+	// Update chunk bounds
+	if (x < m_xBounds.x)
+		m_xBounds.x = x;
+	if (x > m_xBounds.y)
+		m_xBounds.y = x;
+
+	if (z < m_zBounds.x)
+		m_zBounds.x = z;
+	if (z > m_zBounds.y)
+		m_zBounds.y = z;
+}
+
+
+///////////////////////////////////////////////////////////
+void Terrain::setCustomMap(const std::string& name, const Image& map, int x, int z)
+{
+	// Get chunk
+	Chunk& chunk = m_chunks[Vector2i(x, z)];
+
+	// Upload data to texture
+	chunk.m_customMaps.push_back(std::make_pair(name, Pool<Texture>::alloc()));
+	chunk.m_customMaps.back().second->create(map);
 
 	// Update chunk bounds
 	if (x < m_xBounds.x)
@@ -999,6 +1067,13 @@ Shader* Terrain::getShader() const
 
 
 ///////////////////////////////////////////////////////////
+Material& Terrain::getMaterial()
+{
+	return m_material;
+}
+
+
+///////////////////////////////////////////////////////////
 float Terrain::getChunkSize() const
 {
 	return m_chunkSize;
@@ -1037,6 +1112,30 @@ float Terrain::getMaxDist() const
 bool Terrain::usesFlatShading() const
 {
 	return m_useFlatShading;
+}
+
+
+///////////////////////////////////////////////////////////
+Texture* Terrain::getHeightMap(int x, int z) const
+{
+	auto it = m_chunks.find(Vector2i(x, z));
+	return it == m_chunks.end() ? 0 : it.value().m_heightMap;
+}
+
+
+///////////////////////////////////////////////////////////
+Texture* Terrain::getNormalMap(int x, int z) const
+{
+	auto it = m_chunks.find(Vector2i(x, z));
+	return it == m_chunks.end() ? 0 : it.value().m_normalMap;
+}
+
+
+///////////////////////////////////////////////////////////
+Texture* Terrain::getColorMap(int x, int z) const
+{
+	auto it = m_chunks.find(Vector2i(x, z));
+	return it == m_chunks.end() ? 0 : it.value().m_colorMap;
 }
 
 

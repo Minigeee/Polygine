@@ -1,8 +1,9 @@
 #ifndef POLY_TERRAIN_H
 #define POLY_TERRAIN_H
 
-#include <poly/Graphics/Shader.h>
+#include <poly/Graphics/Material.h>
 #include <poly/Graphics/RenderSystem.h>
+#include <poly/Graphics/Shader.h>
 #include <poly/Graphics/Texture.h>
 #include <poly/Graphics/UniformBuffer.h>
 #include <poly/Graphics/VertexArray.h>
@@ -175,14 +176,38 @@ public:
 	/// to the GPU texture. This function may take some time to
 	/// transfer data between the CPU and the GPU. The image data
 	/// pointer is used to retrieve height values, so make sure the
-	/// data exists while the terrain is active.
+	/// data exists while the terrain is active. When using the chunk
+	/// system, it is recommended to generate normals, and provide them
+	/// to the terrain using setNormalMap() because the terrain
+	/// generated normals will normally have artifacts along the edges
+	/// of the maps. If providing normals, make sure to set \a genNormals
+	/// to false.
 	///
 	/// \param map The height map
 	/// \param x The x index coordinate of the chunk to modify
 	/// \param z The z index coordinate of the chunk to modify
+	/// \param genNormals Indicates whether or not to automatically generate normals
 	///
 	///////////////////////////////////////////////////////////
-	void setHeightMap(const Image& map, int x = 0, int z = 0);
+	void setHeightMap(const Image& map, int x = 0, int z = 0, bool genNormals = true);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the terrain normal map
+	///
+	/// The normal map defines the normal of the terrain at different
+	/// areas of the terrain. This function may take some time to
+	/// transfer data between the CPU and the GPU. Typically, the
+	/// normals map is automatically generated in setHeightMap(),
+	/// but sometimes the user may want to provide their own normal
+	/// map. This function provides the option to use user generated
+	/// normals.
+	///
+	/// \param map The normal map
+	/// \param x The x index coordinate of the chunk to modify
+	/// \param z The z index coordinate of the chunk to modify
+	///
+	///////////////////////////////////////////////////////////
+	void setNormalMap(Image& map, int x = 0, int z = 0);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the terrain color map
@@ -197,6 +222,30 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	void setColorMap(const Image& map, int x = 0, int z = 0);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set a custom texture map for the terrain
+	///
+	/// This function allows for the use of custom terrain maps
+	/// (i.e. biome maps, splat maps, etc.), and just like the
+	/// height maps and normal maps, each map belongs to its own
+	/// chunk. The standard built-in shader will not be able to make
+	/// use of these texture maps, so a custom shader will have to
+	/// be used with setShader(). The \a name of the map corresponds
+	/// to the sampler array in the custom shader, where the texture
+	/// array should be defined as:
+	///
+	/// \code
+	/// uniform sampler2D TextureName[9];
+	/// \endcode
+	///
+	/// \param name The uniform name of the texture
+	/// \param map The custom texture map
+	/// \param x The x index coordinate of the chunk to modify
+	/// \param z The z index coordinate of the chunk to modify
+	///
+	///////////////////////////////////////////////////////////
+	void setCustomMap(const std::string& name, const Image& map, int x = 0, int z = 0);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Updates a subregion of the height map
@@ -249,6 +298,18 @@ public:
 	Shader* getShader() const;
 
 	///////////////////////////////////////////////////////////
+	/// \brief Get the terrain material
+	///
+	/// This can be used to change the diffuse and specular colors
+	/// of the terrain, or to provide custom textures, such as textures
+	/// for splat maps.
+	///
+	/// \return A reference to the terrain material
+	///
+	///////////////////////////////////////////////////////////
+	Material& getMaterial();
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get terrain chunk size
 	///
 	/// \return Terrain chunk size
@@ -297,6 +358,48 @@ public:
 	bool usesFlatShading() const;
 
 	///////////////////////////////////////////////////////////
+	/// \brief Get the height map of the specified chunk
+	///
+	/// Each terrain chunk has its own height map, so the height map
+	/// of each chunk can be retrieved.
+	///
+	/// \param x The x-coordinate of the chunk
+	/// \param z The z-coordinate of the chunk
+	///
+	/// \return A pointer to the height map texture, or NULL if it doesn't exist
+	///
+	///////////////////////////////////////////////////////////
+	Texture* getHeightMap(int x = 0, int = 0) const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the normal map of the specified chunk
+	///
+	/// Each terrain chunk has its own normal map, so the normal map
+	/// of each chunk can be retrieved.
+	///
+	/// \param x The x-coordinate of the chunk
+	/// \param z The z-coordinate of the chunk
+	///
+	/// \return A pointer to the normal map texture, or NULL if it doesn't exist
+	///
+	///////////////////////////////////////////////////////////
+	Texture* getNormalMap(int x = 0, int = 0) const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the color map of the specified chunk
+	///
+	/// Each terrain chunk has its own color map, so the color map
+	/// of each chunk can be retrieved.
+	///
+	/// \param x The x-coordinate of the chunk
+	/// \param z The z-coordinate of the chunk
+	///
+	/// \return A pointer to the color map texture, or NULL if it doesn't exist
+	///
+	///////////////////////////////////////////////////////////
+	Texture* getColorMap(int x = 0, int = 0) const;
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the interpolated height at the given 2d coordinates in world space
 	///
 	/// \param x The x-coordinate of the point of height to retrieve
@@ -338,6 +441,7 @@ protected:
 		Texture* m_colorMap;				//!< Color map
 		float* m_heightMapData;				//!< Height map texture data
 		Vector3f* m_normalMapData;			//!< Normal map texture data
+		std::vector<std::pair<std::string, Texture*>> m_customMaps;	//!< Custom terrain maps
 	};
 
 	///////////////////////////////////////////////////////////
@@ -383,6 +487,7 @@ protected:
 	Vector2i m_zBounds;						//!< Terrain chunk bounds on the z-axis
 
 	Shader* m_shader;						//!< The shader used to render the terrain
+	Material m_material;					//!< The terrain material
 	UniformBuffer m_uniformBuffer;			//!< The uniform buffer used to store terrain uniform data
 	VertexArray m_normalTile;				//!< The mesh for a normal tile
 	VertexArray m_edgeTile;					//!< The mesh for an edge tile

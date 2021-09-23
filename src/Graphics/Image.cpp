@@ -45,6 +45,125 @@ Image::Image(const std::string& fname, GLType dtype) :
 
 
 ///////////////////////////////////////////////////////////
+Image::Image(const Image& other) :
+	m_data			(0),
+	m_width			(other.m_width),
+	m_height		(other.m_height),
+	m_dataType		(other.m_dataType),
+	m_numChannels	(other.m_numChannels),
+	m_ownsData		(other.m_ownsData)
+{
+	if (other.m_data)
+	{
+		if (m_ownsData)
+		{
+			Uint32 typeSize = 1;
+			if (m_dataType == GLType::Uint16)
+				typeSize = 2;
+			else if (m_dataType == GLType::Float)
+				typeSize = 4;
+
+			// The image owns the data, so create a new copy of the data
+			Uint32 dataSize = m_width * m_height * m_numChannels * typeSize;
+			m_data = malloc(dataSize);
+
+			// Copy data
+			memcpy(m_data, other.m_data, dataSize);
+		}
+		else
+			// The data is not owned by the image, copy the pointer
+			m_data = other.m_data;
+	}
+}
+
+
+///////////////////////////////////////////////////////////
+Image& Image::operator=(const Image& other)
+{
+	if (&other != this)
+	{
+		// Free previous image
+		free();
+
+		m_width = other.m_width;
+		m_height = other.m_height;
+		m_dataType = other.m_dataType;
+		m_numChannels = other.m_numChannels;
+		m_ownsData = other.m_ownsData;
+
+		if (other.m_data)
+		{
+			if (m_ownsData)
+			{
+				Uint32 typeSize = 1;
+				if (m_dataType == GLType::Uint16)
+					typeSize = 2;
+				else if (m_dataType == GLType::Float)
+					typeSize = 4;
+
+				// The image owns the data, so create a new copy of the data
+				Uint32 dataSize = m_width * m_height * m_numChannels * typeSize;
+				m_data = malloc(dataSize);
+
+				// Copy data
+				memcpy(m_data, other.m_data, dataSize);
+			}
+			else
+				// The data is not owned by the image, copy the pointer
+				m_data = other.m_data;
+		}
+	}
+
+	return *this;
+}
+
+
+///////////////////////////////////////////////////////////
+Image::Image(Image&& other) :
+	m_data			(other.m_data),
+	m_width			(other.m_width),
+	m_height		(other.m_height),
+	m_dataType		(other.m_dataType),
+	m_numChannels	(other.m_numChannels),
+	m_ownsData		(other.m_ownsData)
+{
+	other.m_data = 0;
+	other.m_width = 0;
+	other.m_height = 0;
+	other.m_dataType = GLType::Unknown;
+	other.m_numChannels = 0;
+	other.m_ownsData = false;
+}
+
+
+///////////////////////////////////////////////////////////
+Image& Image::operator=(Image&& other)
+{
+	if (&other != this)
+	{
+		// Free previous image
+		free();
+
+		m_data = other.m_data;
+		m_width = other.m_width;
+		m_height = other.m_height;
+		m_dataType = other.m_dataType;
+		m_numChannels = other.m_numChannels;
+		m_ownsData = other.m_ownsData;
+
+		other.m_data = 0;
+		other.m_width = 0;
+		other.m_height = 0;
+		other.m_dataType = GLType::Unknown;
+		other.m_numChannels = 0;
+		other.m_ownsData = false;
+	}
+
+	return *this;
+}
+
+
+///////////////////////////////////////////////////////////
 bool Image::load(const std::string& fname, GLType dtype)
 {
 	int x = 0, y = 0, c = 0;
@@ -196,6 +315,13 @@ void Image::setDataType(GLType dtype)
 void Image::setNumChannels(Uint32 c)
 {
 	m_numChannels = c;
+}
+
+
+///////////////////////////////////////////////////////////
+void Image::setOwnsData(bool owns)
+{
+	m_ownsData = owns;
 }
 
 

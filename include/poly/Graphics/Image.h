@@ -45,6 +45,13 @@ public:
 	///////////////////////////////////////////////////////////
 	Image(const std::string& fname, GLType dtype = GLType::Uint8);
 
+#ifndef DOXYGEN_SKIP
+	Image(const Image& other);
+	Image& operator=(const Image& other);
+	Image(Image&& other);
+	Image& operator=(Image&& other);
+#endif
+
 	///////////////////////////////////////////////////////////
 	/// \brief Load 2D image data from an image file
 	///
@@ -149,6 +156,17 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	void setNumChannels(Uint32 num);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set whether image should take ownership of internal data
+	///
+	/// This can be used to force image to handle releasing memory
+	/// during destruction, or to give up ownership of data.
+	///
+	/// \param owns A boolean specifying whether the image should take ownership of data
+	///
+	///////////////////////////////////////////////////////////
+	void setOwnsData(bool owns);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get a pointer to the pixel data
