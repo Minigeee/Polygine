@@ -368,7 +368,7 @@ private:
 	std::vector<Uint32> m_shaders;					//!< A list of shader ids
 	HashMap<std::string, UniformData> m_uniforms;	//!< A map of uniform names to uniform locations
 	HashMap<std::string, Uint32> m_uniformBlocks;	//!< A map of uniform names to uniform block index
-	HashMap<std::string, Uint32> m_textures;		//!< A map of texture uniforms to texture slot
+	int m_numTextures;							//!< The number of textures used in the shader
 
 	static Uint32 currentBound;
 	static HashMap<std::string, Uint32> loadedShaders;

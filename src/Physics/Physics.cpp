@@ -748,9 +748,6 @@ void Physics::createCollider(Collider& collider, const Entity& entity, void* rp3
 	// Set type
 	collider.m_type = type;
 
-	// Lock mutex
-	std::unique_lock<std::mutex> lock(m_dataMutex);
-
 	if (entity.has<RigidBodyComponent>())
 	{
 		// Get rigid body
@@ -802,8 +799,9 @@ BoxCollider Physics::addCollider(const Entity& entity, const BoxShape& shape, co
 {
 	ASSERT(entity.has<RigidBodyComponent>() || entity.has<CollisionBodyComponent>(), "A collider can only be added to an entity with a rigid body or a collision body");
 
-	// Lock mutex
-	std::unique_lock<std::mutex> lock(m_mutex);
+	// Lock mutexes
+	std::unique_lock<std::mutex> lock1(m_dataMutex);
+	std::unique_lock<std::mutex> lock2(m_mutex);
 
 	// Create shape
 	reactphysics3d::BoxShape* rp3dShape = (reactphysics3d::BoxShape*)createBoxShape(shape.m_dimensions);
@@ -821,8 +819,9 @@ CapsuleCollider Physics::addCollider(const Entity& entity, const CapsuleShape& s
 {
 	ASSERT(entity.has<RigidBodyComponent>() || entity.has<CollisionBodyComponent>(), "A collider can only be added to an entity with a rigid body or a collision body");
 
-	// Lock mutex
-	std::unique_lock<std::mutex> lock(m_mutex);
+	// Lock mutexes
+	std::unique_lock<std::mutex> lock1(m_dataMutex);
+	std::unique_lock<std::mutex> lock2(m_mutex);
 
 	// Create shape
 	reactphysics3d::CapsuleShape* rp3dShape = (reactphysics3d::CapsuleShape*)createCapsuleShape(Vector2f(shape.m_radius, shape.m_height));
@@ -840,8 +839,9 @@ ConcaveMeshCollider Physics::addCollider(const Entity& entity, const ConcaveMesh
 {
 	ASSERT(entity.has<RigidBodyComponent>() || entity.has<CollisionBodyComponent>(), "A collider can only be added to an entity with a rigid body or a collision body");
 
-	// Lock mutex
-	std::unique_lock<std::mutex> lock(m_mutex);
+	// Lock mutexes
+	std::unique_lock<std::mutex> lock1(m_dataMutex);
+	std::unique_lock<std::mutex> lock2(m_mutex);
 
 	// Create shape
 	reactphysics3d::ConcaveMeshShape* rp3dShape = (reactphysics3d::ConcaveMeshShape*)createConcaveMeshShape(shape);
@@ -859,8 +859,9 @@ ConvexMeshCollider Physics::addCollider(const Entity& entity, const ConvexMeshSh
 {
 	ASSERT(entity.has<RigidBodyComponent>() || entity.has<CollisionBodyComponent>(), "A collider can only be added to an entity with a rigid body or a collision body");
 
-	// Lock mutex
-	std::unique_lock<std::mutex> lock(m_mutex);
+	// Lock mutexes
+	std::unique_lock<std::mutex> lock1(m_dataMutex);
+	std::unique_lock<std::mutex> lock2(m_mutex);
 
 	// Create shape
 	reactphysics3d::ConvexMeshShape* rp3dShape = (reactphysics3d::ConvexMeshShape*)createConvexMeshShape(shape);
@@ -878,8 +879,9 @@ HeightMapCollider Physics::addCollider(const Entity& entity, const HeightMapShap
 {
 	ASSERT(entity.has<RigidBodyComponent>() || entity.has<CollisionBodyComponent>(), "A collider can only be added to an entity with a rigid body or a collision body");
 
-	// Lock mutex
-	std::unique_lock<std::mutex> lock(m_mutex);
+	// Lock mutexes
+	std::unique_lock<std::mutex> lock1(m_dataMutex);
+	std::unique_lock<std::mutex> lock2(m_mutex);
 
 	// Create shape
 	reactphysics3d::HeightFieldShape* rp3dShape = (reactphysics3d::HeightFieldShape*)createHeightMapShape(shape);
@@ -899,8 +901,9 @@ SphereCollider Physics::addCollider(const Entity& entity, const SphereShape& sha
 {
 	ASSERT(entity.has<RigidBodyComponent>() || entity.has<CollisionBodyComponent>(), "A collider can only be added to an entity with a rigid body or a collision body");
 
-	// Lock mutex
-	std::unique_lock<std::mutex> lock(m_mutex);
+	// Lock mutexes
+	std::unique_lock<std::mutex> lock1(m_dataMutex);
+	std::unique_lock<std::mutex> lock2(m_mutex);
 
 	// Create shape
 	reactphysics3d::HeightFieldShape* rp3dShape = (reactphysics3d::HeightFieldShape*)createSphereShape(shape.m_radius);
@@ -918,6 +921,8 @@ void Physics::removeCollider(const Entity& entity, const Collider& collider)
 {
 	// Lock mutex
 	std::unique_lock<std::mutex> lock1(m_dataMutex);
+
+	std::cout << "Lock remove mutex\n";
 
 	BodyData* data = 0;
 	reactphysics3d::CollisionBody* body = 0;
@@ -1112,16 +1117,16 @@ Joint Physics::addJoint(const Entity& e1, const Entity& e2, Joint::Type type, co
 
 	Joint joint;
 
-	// Lock mutex
+	// Lock mutexes
 	std::unique_lock<std::mutex> lock1(m_dataMutex);
+	std::unique_lock<std::mutex> lock2(m_mutex);
+
+	std::cout << "Lock mutex\n";
 
 	// Get the two bodies
 	reactphysics3d::RigidBody* b1 = RBODY_CAST(m_rigidBodies[e1.getId()].m_body);
 	reactphysics3d::RigidBody* b2 = RBODY_CAST(m_rigidBodies[e2.getId()].m_body);
 	lock1.unlock();
-
-	// Lock mutex
-	std::unique_lock<std::mutex> lock2(m_mutex);
 
 	if (type == Joint::BallAndSocket)
 	{

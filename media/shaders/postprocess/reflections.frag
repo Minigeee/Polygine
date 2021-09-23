@@ -55,6 +55,7 @@ void main()
     
     // Calculate step vector
     vec3 stepNDC = farNDC.xyz - posNDC.xyz;
+    float depthDiffFactor = 20.0f * pow(abs(normalize(stepNDC).z), 0.6f);
 
     // Only raycast for rays that point away from camera
     vec3 reflColor;
@@ -63,8 +64,6 @@ void main()
 
     if (true)
     {
-        float depthDiffFactor = 20.0f * pow(abs(normalize(stepNDC).z), 0.6f);
-
         // Make step go one pixel in the direction the change is largest
         vec2 dv = abs(stepNDC.xy * 0.5f * textureSize(u_depth, 0));
         stepNDC = stepNDC / (dv.x > dv.y ? dv.x : dv.y);
