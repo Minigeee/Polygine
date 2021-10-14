@@ -3,97 +3,55 @@
 #include "camera.glsl"
 #include "clip_planes.glsl"
 
-layout (location = 0) in vec2 a_position;
-layout (location = 1) in vec2 a_nearTexCoord;
-layout (location = 2) in vec2 a_farTexCoord;
-layout (location = 3) in float a_lodDist;
-layout (location = 4) in mat4 a_transform;
+layout (location = 0) in vec2 a_vertex;
+layout (location = 1) in vec4 a_instance;
 
 out vec3 v_fragPos;
-out vec3 v_normal;
-out vec3 v_color;
-flat out int v_chunk;
+out vec2 v_texCoord;
 
-layout (std140) uniform Terrain
+uniform float u_size;
+uniform float u_maxHeight;
+uniform float u_lodRanges[20];
+
+uniform sampler2D u_heightMap;
+
+
+float l1(vec3 p1, vec3 p2)
 {
-    uniform float u_chunkSize;
-    uniform float u_maxHeight;
-    uniform float u_tileScale;
-    uniform float u_blendLodDist;
-    uniform bool u_useFlatShading;
-};
+    return max(max(abs(p1.x - p2.x), abs(p1.y - p2.y)), abs(p1.z - p2.z));
+}
 
-uniform sampler2D u_normalMaps[9];
-uniform sampler2D u_colorMaps[9];
-uniform sampler2D u_heightMaps[9];
 
 void main()
 {
-    vec4 worldPos = a_transform * vec4(a_position.x, 0.0f, a_position.y, 1.0f);
+    // Calculate position
+    vec3 localPos = vec3(a_vertex.x, 0.0f, a_vertex.y) * a_instance.z;
+    vec4 worldPos = vec4(localPos + vec3(a_instance.x, 0.0f, a_instance.y), 1.0f);
 
-    // Get chunk offset
-    vec2 terrainCenter = round(u_cameraPos.xz / u_chunkSize) * u_chunkSize;
-    vec2 chunkCenter = round(worldPos.xz / u_chunkSize) * u_chunkSize;
-    vec2 chunkOffset = chunkCenter - terrainCenter;
-    float halfChunkSize = 0.5f * u_chunkSize;
+    // Get height
+    v_texCoord = worldPos.xz / u_size + 0.5f;
+    worldPos.y = texture(u_heightMap, v_texCoord).x * u_maxHeight;
 
-    v_chunk = 4;
-    if (chunkOffset.x > halfChunkSize)
-        v_chunk += 3;
-    else if (chunkOffset.x < -halfChunkSize)
-        v_chunk -= 3;
-    if (chunkOffset.y > halfChunkSize)
-        v_chunk += 1;
-    else if (chunkOffset.y < -halfChunkSize)
-        v_chunk -= 1;
+    // Geomorph
+    int lod = int(a_instance.w);
+    float sRange = u_lodRanges[lod + 1];
+    float eRange = u_lodRanges[lod];
+    float morphStart = mix(sRange, eRange, 0.8f);
 
-    // Get texture coordinate
-    vec2 mapSize = textureSize(u_heightMaps[v_chunk], 0);
-    vec2 texCoord = clamp((worldPos.xz - chunkCenter) / u_chunkSize + 0.5f, 0.0f, 1.0f);
-    texCoord = (mapSize - 1.0f) / mapSize * texCoord + 0.5f / mapSize;
+    float d = distance(u_cameraPos, worldPos.xyz);
+    float morphFactor = clamp((d - morphStart) / (eRange - morphStart), 0.0f, 1.0f);
+    vec2 isOdd = fract(a_vertex * 0.5f) * 2.0f;
+    worldPos.xz -= isOdd * a_instance.z * morphFactor;
 
-    // Calculate height
-    worldPos.y = texture(u_heightMaps[v_chunk], texCoord).r * u_maxHeight;
-
-    gl_Position =  u_projView * worldPos;
-    
-    if (u_useFlatShading)
+    // Resample height if morph changed position
+    if (morphFactor > 0.0f)
     {
-        vec3 normal, color;
-
-        // Calculate texture coordinate
-        float dist = max(abs(u_cameraPos.x - worldPos.x), abs(u_cameraPos.z - worldPos.z));
-
-        if (dist < u_blendLodDist)
-        {
-            vec2 nearTexCoord = (a_transform * vec4(a_nearTexCoord.x, 0.0f, a_nearTexCoord.y, 1.0f)).xz;
-            vec2 farTexCoord = (a_transform * vec4(a_farTexCoord.x, 0.0f, a_farTexCoord.y, 1.0f)).xz;
-
-            float factor = (dist - (a_lodDist - 4.0f * u_tileScale)) / (4.0f * u_tileScale);
-            factor = clamp(factor, 0.0f, 1.0f);
-
-            texCoord = mix(nearTexCoord, farTexCoord, factor);
-            texCoord = fract((texCoord - chunkCenter) / u_chunkSize + 0.5f);
-
-            normal = texture(u_normalMaps[v_chunk], texCoord).rgb;
-            color = texture(u_colorMaps[v_chunk], texCoord).rgb;
-        }
-        else
-        {
-            vec2 nearTexCoord = (a_transform * vec4(a_nearTexCoord.x, 0.0f, a_nearTexCoord.y, 1.0f)).xz;
-            nearTexCoord = fract((nearTexCoord - chunkCenter) / u_chunkSize + 0.5f);
-
-            normal = texture(u_normalMaps[v_chunk], texCoord).rgb * 0.3;
-            normal += texture(u_normalMaps[v_chunk], nearTexCoord).rgb * 0.7;
-            color = texture(u_colorMaps[v_chunk], texCoord).rgb;
-        }
-
-        v_normal = normal;
-        v_color = color;
+        v_texCoord = worldPos.xz / u_size + 0.5f;
+        worldPos.y = texture(u_heightMap, v_texCoord).x * u_maxHeight;
     }
 
-    // Apply clip planes
-    applyClipPlanes(worldPos.xyz);
+    // Clip space pos
+    gl_Position = u_projView * worldPos;
 
     v_fragPos = worldPos.xyz;
 }

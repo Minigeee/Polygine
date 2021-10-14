@@ -59,36 +59,6 @@ public:
 	void init(Scene* scene) override;
 
 	///////////////////////////////////////////////////////////
-	/// \brief Create the low-poly terrain with the specified parameters
-	///
-	/// The terrain can be thought of as a very large mesh. The terrain works
-	/// by separating itself into large chunks, where each chunk has its own
-	/// height maps, detail maps, etc. This chunk system allows for very large
-	/// terrains to be rendered, as all the data doesn't need to be loaded
-	/// in at the same time. Only the current chunk and its surrounding chunks
-	/// (if any exist) will be rendered. For this reason, the terrain chunk size
-	/// should be larger than the maximum camera viewing distance (e.g. 1024 units).
-	/// To set up a simple terrain, this chunk size can be set to the size of
-	/// the entire terrain, so that a single height map can be used.
-	/// Another optimization used to render large amounts of land is tile LOD.
-	///
-	/// The terrain is made up of small tiles that slowly get larger
-	/// as their distance to the camera increases (terrain lod). The default
-	/// tile size is 2.0 units, but this can be scaled with /a tileScale.
-	/// The distances at which the tiles start growing in size are defined
-	/// by the lod distances. By default, these distances are [20.0, 100.0,
-	/// 200.0, maxDist], but these distances can be scaled with \a lodScale.
-	///
-	/// \param chunkSize The size of a terrain chunk edge
-	/// \param maxHeight The max height of the terrain
-	/// \param tileScale The factor to scale a single tile scale at lod 0 (Default size is 2.0 units)
-	/// \param lodScale The factor to scale terrain lod distances (Default lod distances are: [20, 100, 200, maxDist])
-	/// \param maxDist The maximum distance the terrain should still be visible
-	///
-	///////////////////////////////////////////////////////////
-	void create(float chunkSize, float maxHeight, float tileScale = 1.0f, float lodScale = 1.0f, float maxDist = 800.0f);
-
-	///////////////////////////////////////////////////////////
 	/// \brief Render the terrain from the perspective of the camera
 	///
 	/// This function will be called by the scene, so in most cases,
@@ -102,407 +72,53 @@ public:
 	void render(Camera& camera, RenderPass pass, const RenderSettings& settings) override;
 
 	///////////////////////////////////////////////////////////
-	/// \brief Set the shader used to render the terrain
-	///
-	/// \param A pointer to the terrain shader
-	///
 	///////////////////////////////////////////////////////////
-	void setShader(Shader* shader);
+	void create(float size, float maxHeight, float maxNodeSize = 50.0f, float viewDist = -1.0f);
 
 	///////////////////////////////////////////////////////////
-	/// \brief Set the size of the terrain
-	///
-	/// The size of the terrain is the length of one of its sides
-	///
-	/// \param size The size
-	///
 	///////////////////////////////////////////////////////////
-	void setChunkSize(float size);
+	void setViewpoint(const Vector3f& point);
 
-	///////////////////////////////////////////////////////////
-	/// \brief Set the max height of the terrain
-	///
-	/// \param height The height
-	///
-	///////////////////////////////////////////////////////////
-	void setMaxHeight(float height);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Set the scale of each tile
-	///
-	/// The default tile size is 2.0, this size can be scaled with
-	/// this function.
-	///
-	/// \param height The tile scale
-	///
-	///////////////////////////////////////////////////////////
-	void setTileScale(float scale);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Set the scale of each lod (level of detail) distance
-	///
-	/// The default lod distances are [20.0, 100.0, 200.0, maxDist],
-	/// and those distances can be scaled with this function.
-	///
-	/// \param height The tile scale
-	///
-	///////////////////////////////////////////////////////////
-	void setLodScale(float scale);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Set the maximum distance the terrain is rendered
-	///
-	/// Any terrain sections that are further from the camera than
-	/// this distance will not be rendered.
-	///
-	/// \param maxDist The maximum distance
-	///
-	///////////////////////////////////////////////////////////
-	void setMaxDist(float maxDist);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Set whether the terrain should use flat shading (low-poly style)
-	///
-	/// \param use The boolean controlling whether to use flat shading or not
-	///
-	///////////////////////////////////////////////////////////
-	void setUseFlatShading(bool use);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Set the terrain height map for a specific chunk
-	///
-	/// Everytime a new height map is set, the normals are recalculated
-	/// and both the height map and the normal map are pushed
-	/// to the GPU texture. This function may take some time to
-	/// transfer data between the CPU and the GPU. The image data
-	/// pointer is used to retrieve height values, so make sure the
-	/// data exists while the terrain is active. When using the chunk
-	/// system, it is recommended to generate normals, and provide them
-	/// to the terrain using setNormalMap() because the terrain
-	/// generated normals will normally have artifacts along the edges
-	/// of the maps. If providing normals, make sure to set \a genNormals
-	/// to false.
-	///
-	/// \param map The height map
-	/// \param x The x index coordinate of the chunk to modify
-	/// \param z The z index coordinate of the chunk to modify
-	/// \param genNormals Indicates whether or not to automatically generate normals
-	///
-	///////////////////////////////////////////////////////////
-	void setHeightMap(const Image& map, int x = 0, int z = 0, bool genNormals = true);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Set the terrain normal map
-	///
-	/// The normal map defines the normal of the terrain at different
-	/// areas of the terrain. This function may take some time to
-	/// transfer data between the CPU and the GPU. Typically, the
-	/// normals map is automatically generated in setHeightMap(),
-	/// but sometimes the user may want to provide their own normal
-	/// map. This function provides the option to use user generated
-	/// normals.
-	///
-	/// \param map The normal map
-	/// \param x The x index coordinate of the chunk to modify
-	/// \param z The z index coordinate of the chunk to modify
-	///
-	///////////////////////////////////////////////////////////
-	void setNormalMap(Image& map, int x = 0, int z = 0);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Set the terrain color map
-	///
-	/// The color map defines the color of the terrain at different
-	/// areas of the terrain. This function may take some time to
-	/// transfer data between the CPU and the GPU.
-	///
-	/// \param map The color map
-	/// \param x The x index coordinate of the chunk to modify
-	/// \param z The z index coordinate of the chunk to modify
-	///
-	///////////////////////////////////////////////////////////
-	void setColorMap(const Image& map, int x = 0, int z = 0);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Set a custom texture map for the terrain
-	///
-	/// This function allows for the use of custom terrain maps
-	/// (i.e. biome maps, splat maps, etc.), and just like the
-	/// height maps and normal maps, each map belongs to its own
-	/// chunk. The standard built-in shader will not be able to make
-	/// use of these texture maps, so a custom shader will have to
-	/// be used with setShader(). The \a name of the map corresponds
-	/// to the sampler array in the custom shader, where the texture
-	/// array should be defined as:
-	///
-	/// \code
-	/// uniform sampler2D TextureName[9];
-	/// \endcode
-	///
-	/// \param name The uniform name of the texture
-	/// \param map The custom texture map
-	/// \param x The x index coordinate of the chunk to modify
-	/// \param z The z index coordinate of the chunk to modify
-	///
-	///////////////////////////////////////////////////////////
-	void setCustomMap(const std::string& name, const Image& map, int x = 0, int z = 0);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Updates a subregion of the height map
-	///
-	/// The provided image containing the new height map data must
-	/// have a size that matches the terrain height map.
-	///
-	/// \param map An image containing the new data (has to be the same size as the current height map)
-	/// \param x The x index coordinate of the chunk to modify
-	/// \param z The z index coordinate of the chunk to modify
-	/// \param pos The top-left corner of the rectangle to update (in pixels)
-	/// \param size The size of the rectangle to update (in pixels)
-	///
-	///////////////////////////////////////////////////////////
-	void updateHeightMap(const Image& map, int x = 0, int z = 0, const Vector2i& pos = Vector2i(0), const Vector2u& size = Vector2u(0));
-
-	///////////////////////////////////////////////////////////
-	/// \brief Updates a subregion of the color map
-	///
-	/// The provided image containing the new color map data must
-	/// have a size that matches the terrain color map.
-	///
-	/// \param map An image containing the new data (has to be the same size as the current height map)
-	/// \param x The x index coordinate of the chunk to modify
-	/// \param z The z index coordinate of the chunk to modify
-	/// \param pos The top-left corner of the rectangle to update (in pixels)
-	/// \param size The size of the rectangle to update (in pixels)
-	///
-	///////////////////////////////////////////////////////////
-	void updateColorMap(const Image& map, int x = 0, int z = 0, const Vector2i& pos = Vector2i(0), const Vector2u& size = Vector2u(0));
-
-	///////////////////////////////////////////////////////////
-	/// \brief Free resources for the specified chunk
-	///
-	/// Whenever the camera moves into a new area, data from the
-	/// previous chunks can be freed to save on memory space.
-	///
-	/// \param x The x index coordinate of the chunk to free
-	/// \param z The z index coordinate of the chunk to free
-	///
-	///////////////////////////////////////////////////////////
-	void freeChunk(int x, int z);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Get the terrain shader
-	///
-	/// \return A pointer to the terrain shader
-	///
-	///////////////////////////////////////////////////////////
-	Shader* getShader() const;
-
-	///////////////////////////////////////////////////////////
-	/// \brief Get the terrain material
-	///
-	/// This can be used to change the diffuse and specular colors
-	/// of the terrain, or to provide custom textures, such as textures
-	/// for splat maps.
-	///
-	/// \return A reference to the terrain material
-	///
-	///////////////////////////////////////////////////////////
-	Material& getMaterial();
-
-	///////////////////////////////////////////////////////////
-	/// \brief Get terrain chunk size
-	///
-	/// \return Terrain chunk size
-	///
-	///////////////////////////////////////////////////////////
-	float getChunkSize() const;
-
-	///////////////////////////////////////////////////////////
-	/// \brief Get terrain max height
-	///
-	/// \return Terrain max height
-	///
-	///////////////////////////////////////////////////////////
-	float getMaxHeight() const;
-
-	///////////////////////////////////////////////////////////
-	/// \brief Get terrain tile scale
-	///
-	/// \return Terrain tile scale
-	///
-	///////////////////////////////////////////////////////////
-	float getTileScale() const;
-
-	///////////////////////////////////////////////////////////
-	/// \brief Get terrain lod scale
-	///
-	/// \return Terrain lod scale
-	///
-	///////////////////////////////////////////////////////////
-	float getLodScale() const;
-
-	///////////////////////////////////////////////////////////
-	/// \brief Get max view distance
-	///
-	/// \return Max view distance
-	///
-	///////////////////////////////////////////////////////////
-	float getMaxDist() const;
-
-	///////////////////////////////////////////////////////////
-	/// \brief Check if this terrain is rendered using flat shading
-	///
-	/// \return True if the terrain uses flat shading
-	///
-	///////////////////////////////////////////////////////////
-	bool usesFlatShading() const;
-
-	///////////////////////////////////////////////////////////
-	/// \brief Get the height map of the specified chunk
-	///
-	/// Each terrain chunk has its own height map, so the height map
-	/// of each chunk can be retrieved.
-	///
-	/// \param x The x-coordinate of the chunk
-	/// \param z The z-coordinate of the chunk
-	///
-	/// \return A pointer to the height map texture, or NULL if it doesn't exist
-	///
-	///////////////////////////////////////////////////////////
-	Texture* getHeightMap(int x = 0, int = 0) const;
-
-	///////////////////////////////////////////////////////////
-	/// \brief Get the normal map of the specified chunk
-	///
-	/// Each terrain chunk has its own normal map, so the normal map
-	/// of each chunk can be retrieved.
-	///
-	/// \param x The x-coordinate of the chunk
-	/// \param z The z-coordinate of the chunk
-	///
-	/// \return A pointer to the normal map texture, or NULL if it doesn't exist
-	///
-	///////////////////////////////////////////////////////////
-	Texture* getNormalMap(int x = 0, int = 0) const;
-
-	///////////////////////////////////////////////////////////
-	/// \brief Get the color map of the specified chunk
-	///
-	/// Each terrain chunk has its own color map, so the color map
-	/// of each chunk can be retrieved.
-	///
-	/// \param x The x-coordinate of the chunk
-	/// \param z The z-coordinate of the chunk
-	///
-	/// \return A pointer to the color map texture, or NULL if it doesn't exist
-	///
-	///////////////////////////////////////////////////////////
-	Texture* getColorMap(int x = 0, int = 0) const;
-
-	///////////////////////////////////////////////////////////
-	/// \brief Get the interpolated height at the given 2d coordinates in world space
-	///
-	/// \param x The x-coordinate of the point of height to retrieve
-	/// \param z The z-coordinate of the point of height to retrieve
-	///
-	/// \param height The height of the given point in world space units
-	///
-	///////////////////////////////////////////////////////////
-	float getHeightAt(float x, float z) const;
+	void setHeightMap(const Image& hmap);
 
 protected:
+	struct LodLevel
+	{
+		float m_range;
+		std::vector<Vector2<Uint16>> m_heightBounds;
+	};
+
 	static Shader& getDefaultShader();
 
-	struct TerrainTile
-	{
-		BoundingBox m_boundingBox;
-		Vector2f m_position;
-		float m_rotation;
-		float m_scale;
-		Uint32 m_lod;
-	};
+	static Shader s_shader;
 
-	struct InstanceData
-	{
-		float m_lodDist;
-		Matrix4f m_transform;
-	};
+	void updateData(const Vector2u& pos, const Vector2u& size);
 
-	///////////////////////////////////////////////////////////
-	/// \brief A struct containing data for a single terrain chunk
-	//
-	///////////////////////////////////////////////////////////
-	struct Chunk
-	{
-		Chunk();
+	void updateHeightBounds(Uint32 r, Uint32 c);
 
-		Texture* m_heightMap;				//!< Height map
-		Texture* m_normalMap;				//!< Normal map
-		Texture* m_colorMap;				//!< Color map
-		float* m_heightMapData;				//!< Height map texture data
-		Vector3f* m_normalMapData;			//!< Normal map texture data
-		std::vector<std::pair<std::string, Texture*>> m_customMaps;	//!< Custom terrain maps
-	};
-
-	///////////////////////////////////////////////////////////
-	/// \brief Apply terrain setting uniforms to shader
-	///
-	/// This is called before every terrain render to bind textures
-	/// to the shader. The terrain uniform block is binded outside
-	/// this function.
-	///
-	/// \param shader A pointer to the terrain shader
-	///
-	///////////////////////////////////////////////////////////
-	virtual void applyTextures(Shader* shader, const Vector3f& cameraPos);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Create ring layout of terrain, depends on tile scale, lod scale, and max distance
-	///
-	///////////////////////////////////////////////////////////
-	void createTileLayout();
-
-	///////////////////////////////////////////////////////////
-	/// \brief Calculate normals from height map given a subregion
-	///
-	///////////////////////////////////////////////////////////
-	void calcNormals(const Image& hmap, Vector3f* normals, const Vector2i& pos, const Vector2u& size);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Update normal map, depends on height and size
-	///
-	///////////////////////////////////////////////////////////
-	void updateNormalMap(Chunk& chunk, const Vector3f& scale);
+	void addLodNodes(const Vector2u& node, Uint32 lod, const Frustum& frustum, std::vector<Vector4f>& renderList);
 
 protected:
-	float m_chunkSize;						//!< The terrain chunk size
-	float m_maxHeight;						//!< Maximume terrain height
-	float m_tileScale;						//!< Tile scale
-	float m_lodScale;						//!< Lod distance scale
-	float m_maxDist;						//!< Maximum view distance
-	bool m_useFlatShading;					//!< Controls if the terrain should be rendered using flat shading
+	float m_size;
+	float m_maxHeight;
+	Uint32 m_numLevels;
 
-	HashMap<Vector2i, Chunk> m_chunks;		//!< The terrain chunks
-	Vector2i m_xBounds;						//!< Terrain chunk bounds on the x-axis
-	Vector2i m_zBounds;						//!< Terrain chunk bounds on the z-axis
+	Texture m_heightMap;
+	Texture m_normalMap;
+	Image m_heightMapImg;
+	Image m_normalMapImg;
 
-	Shader* m_shader;						//!< The shader used to render the terrain
-	Material m_material;					//!< The terrain material
-	UniformBuffer m_uniformBuffer;			//!< The uniform buffer used to store terrain uniform data
-	VertexArray m_normalTile;				//!< The mesh for a normal tile
-	VertexArray m_edgeTile;					//!< The mesh for an edge tile
-	VertexBuffer m_normalBuffer;			//!< The data buffer for a normal tile
-	VertexBuffer m_edgeBuffer;				//!< The data buffer for a normal tile
-	VertexBuffer m_instanceBuffer;			//!< The instance buffer for tile transform matrices
-	Uint32 m_instanceBufferOffset;			//!< The current offset in the instance buffer
+	Shader* m_shader;
+	VertexBuffer m_instanceBuffer;
+	VertexBuffer m_vertexBuffer;
+	VertexBuffer m_indexBuffer;
+	VertexArray m_vertexArray;
+	Uint32 m_instanceDataOffset;
 
-	std::vector<TerrainTile> m_normalTiles;	//!< A list of normal tiles in their default position
-	std::vector<TerrainTile> m_edgeTiles;	//!< A list of edge tiles in their default position
-	std::vector<float> m_lodDists;			//!< A list of exact lod distances
-
-	bool m_isUniformDirty;					//!< This is true when one of the uniform parameters has changed
-
-	static Shader s_shader;
+	Vector3f m_viewpoint;
+	bool m_useCustomViewpoint;
+	float m_baseScale;
+	std::vector<LodLevel> m_lodLevels;
 };
 
 }

@@ -44,6 +44,19 @@ public:
 	///////////////////////////////////////////////////////////
 	Vector3f getDimensions() const;
 
+	///////////////////////////////////////////////////////////
+	/// \brief Check if this bounding box overlaps another bounding box
+	///
+	/// This function returns if there is any intersection of the
+	/// two boxes.
+	///
+	/// \param bbox The other bounding box to test against
+	///
+	/// \return True if the bounding boxes overlap
+	///
+	///////////////////////////////////////////////////////////
+	bool overlaps(const BoundingBox& bbox);
+
 	Vector3f m_min;		//!< The minimum coordinate of the box
 	Vector3f m_max;		//!< The maximum coordinate of the box
 };

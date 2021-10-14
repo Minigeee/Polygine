@@ -36,4 +36,14 @@ Vector3f BoundingBox::getDimensions() const
 }
 
 
+///////////////////////////////////////////////////////////
+bool BoundingBox::overlaps(const BoundingBox& bbox)
+{
+	return
+		(m_min.x <= bbox.m_max.x && m_max.x >= bbox.m_min.x) &&
+		(m_min.y <= bbox.m_max.y && m_max.y >= bbox.m_min.y) &&
+		(m_min.z <= bbox.m_max.z && m_max.z >= bbox.m_min.z);
+}
+
+
 }

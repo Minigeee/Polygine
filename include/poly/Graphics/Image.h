@@ -113,6 +113,23 @@ public:
 	void create(void* data, Uint32 w, Uint32 h, Uint32 c, GLType dtype = GLType::Uint8, bool manage = false);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Scales the image to a new size
+	///
+	/// This function allocates a new block of memory to store the
+	/// data of the scaled image. After the image is rescaled, if the
+	/// image owned the previous data, then it is freed. Otherwise,
+	/// nothing happens. The image automatically takes ownership
+	/// of the new data.
+	///
+	/// \note This function only works for GLType::Uint8 and GLType::Float, nothing happens if the incorrect data type is used
+	///
+	/// \param w The width of the new image
+	/// \param h The height of the new image
+	///
+	///////////////////////////////////////////////////////////
+	void resize(Uint32 w, Uint32 h);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Set image size
 	///
 	/// This does not modfiy any pixel values, rescale the image,

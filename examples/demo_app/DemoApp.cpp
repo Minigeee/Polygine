@@ -171,6 +171,7 @@ int main()
     Camera camera;
     camera.setPosition(0.0f, 50.0f, 0.0f);
     camera.setRotation(0.0f, 0.0f);
+    camera.setFar(10000.0f);
 
     // UI
     Font font;
@@ -192,8 +193,7 @@ int main()
     Scene scene;
 
     Terrain terrain;
-    terrain.create(4000.0f, 200.0f, 1.0f);
-    terrain.setUseFlatShading(false);
+    terrain.create(4000.0f, 200.0f);
     scene.addRenderSystem(&terrain);
 
     FractalNoise noise;
@@ -224,7 +224,7 @@ int main()
         }
     }
     colorMap.create(colorMapData, 1024, 1024, 3, GLType::Uint8, true);
-    terrain.setColorMap(colorMap);
+    // terrain.setColorMap(colorMap);
 
     Octree octree;
     octree.create();
@@ -382,7 +382,7 @@ int main()
     bool usedDoubleJump = false;
     Clock leftGroundClock;
     Clock dashClock;
-    const float jumpSpeed = 6.0f;
+    const float jumpSpeed = 100.0f;
 
     scene.addListener<E_PhysicsCollision>(
         [&](const E_PhysicsCollision& e)
