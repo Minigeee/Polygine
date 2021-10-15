@@ -18,12 +18,155 @@
 #include <poly/Math/Vector2.h>
 #include <poly/Math/Vector4.h>
 
+#include <chrono>
+
+
+#define TEXTURE_CAST(x) reinterpret_cast<Texture*>(x)
+#define TMAP_CAST(x) reinterpret_cast<TerrainMap*>(x)
+
+
 namespace poly
 {
 
 
 ///////////////////////////////////////////////////////////
+Vector2u estimateCacheSize(Uint32 numLevels)
+{
+	// Get the number of required tiles in the very worst case (this will be the size of cache)
+	Uint32 numTiles = 1;
+	numTiles += numLevels >= 1 ? 4 : 0;
+	numTiles += numLevels >= 2 ? 9 * (numLevels - 2) : 0;
+
+	// Get smallest rectangle that can fit the required number of tiles
+	while (true)
+	{
+		// Keep track of biggest factor (to keep texture as square as possible)
+		Uint32 biggestFactor = 1;
+
+		// Get stopping point
+		Uint32 stop = (Uint32)sqrtf((float)numTiles) + 1;
+
+		for (Uint32 i = 2; i < stop; ++i)
+		{
+			if (numTiles % i == 0)
+				biggestFactor = i;
+		}
+
+		// If biggest factor is not one, found a rectangle
+		if (biggestFactor != 1)
+			return Vector2u(numTiles / biggestFactor, biggestFactor);
+
+		// Otherwise, increment num tiles by 1
+		++numTiles;
+	}
+
+	//Get rid of warning
+	return Vector2u();
+}
+
+
+///////////////////////////////////////////////////////////
+TerrainMap::TerrainMap() :
+	m_size			(0),
+	m_tileSize		(0),
+	m_format		(PixelFormat::Rgb),
+	m_dataType		(GLType::Uint8)
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
+void TerrainMap::create(Uint32 size, Uint32 tileSize, PixelFormat fmt, GLType dtype)
+{
+#ifndef NDEBUG
+	{
+		Uint32 factor = size / tileSize;
+		ASSERT(size % tileSize == 0 && (factor & (factor - 1)) == 0, "Terrain map tile size must be a factor of map size and their quotient must be a power of 2");
+	}
+#endif
+
+	m_size = size;
+	m_tileSize = tileSize;
+	m_format = fmt;
+	m_dataType = dtype;
+}
+
+
+///////////////////////////////////////////////////////////
+Texture& TerrainMap::getTexture()
+{
+	return m_texture;
+}
+
+
+///////////////////////////////////////////////////////////
+Uint32 TerrainMap::getSize() const
+{
+	return m_size;
+}
+
+
+///////////////////////////////////////////////////////////
+Uint32 TerrainMap::getTileSize() const
+{
+	return m_tileSize;
+}
+
+
+///////////////////////////////////////////////////////////
+PixelFormat TerrainMap::getFormat() const
+{
+	return m_format;
+}
+
+
+///////////////////////////////////////////////////////////
+GLType TerrainMap::getDataType() const
+{
+	return m_dataType;
+}
+
+
+///////////////////////////////////////////////////////////
+void TerrainMap::onRequestTile(const std::function<bool(const Vector2i&, Uint32, Image&)>& func)
+{
+	m_loadFunc = func;
+}
+
+
+///////////////////////////////////////////////////////////
+Image* TerrainMap::load(const Vector2i& pos, Uint32 level)
+{
+	// Set load image output
+	Image* output = Pool<Image>::alloc();
+
+	// Load image
+	if (!m_loadFunc(pos, level, *output))
+	{
+		// Free image
+		Pool<Image>::free(output);
+		return NULL;
+	}
+
+	// Return image
+	return output;
+}
+
+
+///////////////////////////////////////////////////////////
+void TerrainMap::setCacheSize(Uint32 w, Uint32 h)
+{
+	// Create a new empty texture
+	m_texture.create(NULL, m_format, w * m_tileSize, h * m_tileSize, 0, m_dataType);
+}
+
+
+///////////////////////////////////////////////////////////
 Shader Terrain::s_shader;
+
+///////////////////////////////////////////////////////////
+Shader Terrain::s_tmapShader;
 
 
 ///////////////////////////////////////////////////////////
@@ -41,11 +184,31 @@ Shader& Terrain::getDefaultShader()
 
 
 ///////////////////////////////////////////////////////////
+Shader& Terrain::getTerrainMapShader()
+{
+	if (!s_tmapShader.getId())
+	{
+		s_tmapShader.load("shaders/terrain_tmap.vert", Shader::Vertex);
+		s_tmapShader.load("shaders/terrain_tmap.frag", Shader::Fragment);
+		s_tmapShader.compile();
+	}
+
+	return s_tmapShader;
+}
+
+
+///////////////////////////////////////////////////////////
 Terrain::Terrain() :
 	m_shader				(0),
 	m_size					(0.0f),
 	m_maxHeight				(0.0f),
 	m_viewpoint				(0.0f),
+	m_heightMap				(0),
+	m_normalMap				(0),
+	m_tileSize				(0),
+	m_usesTerrainMaps		(false),
+	m_indexMapChanged		(false),
+	m_highestMapLevel		(0),
 	m_instanceDataOffset	(0),
 	m_useCustomViewpoint	(false),
 	m_baseScale				(1.0f)
@@ -57,7 +220,24 @@ Terrain::Terrain() :
 ///////////////////////////////////////////////////////////
 Terrain::~Terrain()
 {
+	if (m_heightMap)
+	{
+		if (m_useCustomViewpoint)
+			Pool<Texture>::free(TEXTURE_CAST(m_heightMap));
+		else
+			Pool<TerrainMap>::free(TMAP_CAST(m_heightMap));
+	}
 
+	if (m_normalMap)
+	{
+		if (m_useCustomViewpoint)
+			Pool<Texture>::free(TEXTURE_CAST(m_normalMap));
+		else
+			Pool<TerrainMap>::free(TMAP_CAST(m_normalMap));
+	}
+
+	m_heightMap = 0;
+	m_normalMap = 0;
 }
 
 
@@ -89,7 +269,7 @@ void Terrain::create(float size, float maxHeight, float maxNodeSize, float viewD
 
 		// Add lod level
 		m_lodLevels.push_back(LodLevel());
-		m_lodLevels.back().m_heightBounds.resize(numNodes, Vector2<Uint16>(65535, 0));
+		m_lodLevels.back().m_heightBounds.resize(numNodes, Vector2<Uint16>(0, (Uint16)(m_maxHeight * 65535.0f)));
 
 		// Update size
 		currSize *= 0.5f;
@@ -152,7 +332,7 @@ void Terrain::render(Camera& camera, RenderPass pass, const RenderSettings& sett
 	// Load shader if none given yet
 	if (!m_shader)
 	{
-		m_shader = &getDefaultShader();
+		m_shader = m_usesTerrainMaps ? &getTerrainMapShader() : &getDefaultShader();
 
 		// Set lod ranges a single time
 		m_shader->bind();
@@ -166,7 +346,92 @@ void Terrain::render(Camera& camera, RenderPass pass, const RenderSettings& sett
 
 	// Only update viewpoint for default render passes
 	if (pass == RenderPass::Default && !m_useCustomViewpoint)
-		m_viewpoint = camera.getPosition();
+	{
+		const Vector3f& cameraPos = camera.getPosition();
+		m_viewpointChanged = m_viewpoint != cameraPos;
+		m_viewpoint = cameraPos;
+	}
+
+	// Load terrain maps
+	if (m_usesTerrainMaps)
+	{
+		if (m_viewpointChanged)
+		{
+			loadMapTiles(Vector2u(0), 0);
+			m_viewpointChanged = false;
+		}
+
+		// Check if any load threads are complete
+		if (m_loadThreads.size())
+		{
+			// Iterate backwards
+			for (int i = m_loadThreads.size() - 1; i >= 0; --i)
+			{
+				AsyncTileObj& asyncObj = m_loadThreads[i];
+
+				// Check if thread is complete
+				if (asyncObj.m_future.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready)
+					continue;
+
+				// Thread is complete, get image data
+				Image* img = asyncObj.m_future.get();
+
+				// Push to testure
+				asyncObj.m_cacheTexture->update(img->getData(), (Vector2u)asyncObj.m_cachePos * m_tileSize, Vector2u(m_tileSize));
+
+				// Update mapping
+				m_loadedMapTiles[asyncObj.m_nodeData] = asyncObj.m_cachePos;
+
+				// Get bounds of tile in the index map
+				Uint32 pixelsPerTile = 1 << (m_highestMapLevel - (Uint32)asyncObj.m_nodeData.z);
+				Uint32 sr = asyncObj.m_nodeData.x * pixelsPerTile;
+				Uint32 sc = asyncObj.m_nodeData.y * pixelsPerTile;
+				Uint32 fr = (asyncObj.m_nodeData.x + 1) * pixelsPerTile;
+				Uint32 fc = (asyncObj.m_nodeData.y + 1) * pixelsPerTile;
+
+				// Update redirect location
+				for (Uint32 r = sr; r < fr; ++r)
+				{
+					for (Uint32 c = sc; c < fc; ++c)
+						m_indexMapImg[r][c] = asyncObj.m_cachePos;
+				}
+
+				// Mark index map as changed
+				m_indexMapChanged = true;
+
+				// Check if this is a height tile
+				if (asyncObj.m_cacheTexture == &TMAP_CAST(m_heightMap)->m_texture)
+				{
+					// Don't free image yet, use it to create normal tile
+					Uint32 numNodesPerEdge = 1 << asyncObj.m_nodeData.z;
+					float nodeSize = m_size / (float)numNodesPerEdge;
+
+					asyncObj.m_future = std::async(std::launch::async, &Terrain::createNormalTile, this, img, nodeSize);
+					asyncObj.m_cacheTexture = &TMAP_CAST(m_normalMap)->m_texture;
+					m_loadThreads.push_back(std::move(asyncObj));
+				}
+				else
+				{
+					// This is another tile, free image
+					Pool<Image>::free(img);
+
+					// Remove async object from list
+					if (i != m_loadThreads.size())
+						m_loadThreads[i] = std::move(m_loadThreads.back());
+					m_loadThreads.pop_back();
+				}
+			}
+		}
+
+		// Update index map
+		if (m_indexMapChanged)
+		{
+			// Update texture
+			m_indexMap.update(m_indexMapImg.getData());
+
+			m_indexMapChanged = false;
+		}
+	}
 
 	// Get lod nodes
 	std::vector<Vector4f> renderList;
@@ -208,8 +473,12 @@ void Terrain::render(Camera& camera, RenderPass pass, const RenderSettings& sett
 	m_shader->setUniform("u_maxHeight", m_maxHeight);
 
 	// Textures
-	m_shader->setUniform("u_heightMap", m_heightMap);
-	m_shader->setUniform("u_normalMap", m_normalMap);
+	Texture& hmap = m_usesTerrainMaps ? TMAP_CAST(m_heightMap)->m_texture : *TEXTURE_CAST(m_heightMap);
+	Texture& nmap = m_usesTerrainMaps ? TMAP_CAST(m_normalMap)->m_texture : *TEXTURE_CAST(m_normalMap);
+	m_shader->setUniform("u_heightMap", hmap);
+	m_shader->setUniform("u_normalMap", nmap);
+	if (m_usesTerrainMaps)
+		m_shader->setUniform("u_indexMap", m_indexMap);
 
 	// Camera
 	camera.apply(m_shader);
@@ -225,6 +494,47 @@ void Terrain::render(Camera& camera, RenderPass pass, const RenderSettings& sett
 	m_vertexArray.bind();
 	m_vertexArray.addBuffer(m_instanceBuffer, 1, 4, sizeof(Vector4f), offset, 1);
 	m_vertexArray.draw(renderList.size());
+}
+
+
+///////////////////////////////////////////////////////////
+Image* Terrain::createNormalTile(Image* hmap, float chunkSize)
+{
+	// Create a new image
+	Image* normalImg = Pool<Image>::alloc();
+	normalImg->create(0, hmap->getWidth(), hmap->getHeight(), 3, GLType::Uint16);
+
+	// Calculate normals
+	Vector3<Uint16>* normals = (Vector3<Uint16>*)normalImg->getData();
+	Vector2u mapSize(hmap->getWidth(), hmap->getHeight());
+	Vector2f sizeFactor = chunkSize / Vector2f(mapSize);
+
+	for (Uint32 r = 0; r < mapSize.y; ++r)
+	{
+		for (Uint32 c = 0; c < mapSize.x; ++c)
+		{
+			// Calculate normal
+			float h01 = *(float*)hmap->getPixel(r, c - (c == 0 ? 0 : 1)) * m_maxHeight;
+			float h21 = *(float*)hmap->getPixel(r, c + (c == mapSize.x - 1 ? 0 : 1)) * m_maxHeight;
+			float h10 = *(float*)hmap->getPixel(r + (r == mapSize.y - 1 ? 0 : 1), c) * m_maxHeight;
+			float h12 = *(float*)hmap->getPixel(r - (r == 0 ? 0 : 1), c) * m_maxHeight;
+
+			Vector3f v1(sizeFactor.x, h21 - h01, 0.0f);
+			Vector3f v2(0.0f, h12 - h10, -sizeFactor.y);
+			Vector3f normal = normalize(cross(v1, v2));
+
+			// Adjust for 16-bit
+			normal.x = 0.5f * normal.x + 0.5f;
+			normal.z = 0.5f * normal.z + 0.5f;
+
+			normals[r * mapSize.x + c] = Vector3<Uint16>(normal * 65535.0f);
+		}
+	}
+
+	// Free height map (for now)
+	Pool<Image>::free(hmap);
+
+	return normalImg;
 }
 
 
@@ -311,8 +621,109 @@ void Terrain::addLodNodes(const Vector2u& node, Uint32 lod, const Frustum& frust
 
 
 ///////////////////////////////////////////////////////////
+void Terrain::loadMapTiles(const Vector2u& node, Uint32 lod)
+{
+	// Maps
+	TerrainMap* hmap = TMAP_CAST(m_heightMap);
+	TerrainMap* nmap = TMAP_CAST(m_normalMap);
+
+	// Calculate node properties
+	Uint32 numNodesPerEdge = 1 << lod;
+	float nodeSize = m_size / (float)numNodesPerEdge;
+	float halfNodeSize = 0.5f * nodeSize;
+	Vector2f center = nodeSize * (Vector2f(node.y, node.x) - (float)(numNodesPerEdge / 2) + 0.5f);
+	if (lod == 0)
+		center = Vector2f(0.0f);
+
+	// Get bounding box
+	const Vector2<Uint16>& hbounds = m_lodLevels[lod].m_heightBounds[node.x * numNodesPerEdge + node.y];
+
+	BoundingBox bbox;
+	bbox.m_min = Vector3f(center.x - halfNodeSize, (float)hbounds.x / 65535.0f * m_maxHeight, center.y - halfNodeSize);
+	bbox.m_max = Vector3f(center.x + halfNodeSize, (float)hbounds.y / 65535.0f * m_maxHeight, center.y + halfNodeSize);
+
+	// Check if bounding box is inside the current lod range
+	Vector3<Uint8> nodeData(node.x, node.y, lod);
+	if (intersects(m_viewpoint, m_lodLevels[lod + 1].m_range, bbox))
+	{
+		// Check if the tile is loaded yet
+		if (m_loadedMapTiles.find(nodeData) == m_loadedMapTiles.end())
+		{
+			// Get next free index
+			Vector2<Uint8> nextFree = m_indexFreeList.top();
+			m_indexFreeList.pop();
+
+			// Load tiles (transform to xy instead of rc)
+			Vector2i tile = Vector2i(node.y, node.x) - (int)numNodesPerEdge / 2;
+
+			// Height map
+			{
+				AsyncTileObj asyncObj;
+				asyncObj.m_future = std::async(std::launch::async, &TerrainMap::load, hmap, tile, lod);
+				asyncObj.m_cacheTexture = &hmap->m_texture;
+				asyncObj.m_nodeData = nodeData;
+				asyncObj.m_cachePos = nextFree;
+				m_loadThreads.push_back(std::move(asyncObj));
+			}
+		}
+
+		// Quit if higher than the highest map level
+		if (lod >= m_highestMapLevel) return;
+
+		// Load maps for children
+		Vector2u childNode = 2u * node;
+		loadMapTiles(childNode + Vector2u(0, 0), lod + 1);
+		loadMapTiles(childNode + Vector2u(0, 1), lod + 1);
+		loadMapTiles(childNode + Vector2u(1, 0), lod + 1);
+		loadMapTiles(childNode + Vector2u(1, 1), lod + 1);
+	}
+
+	// Don't remove base tile
+	else if (lod > 0)
+	{
+		// Check if the tile needs to be unloaded
+		auto it = m_loadedMapTiles.find(nodeData);
+		if (it != m_loadedMapTiles.end())
+		{
+			// Add the tile coords to the free list
+			Vector2<Uint8> redirectLoc = it.value();
+			m_indexFreeList.push(redirectLoc);
+
+			// Update redirect locations to point at tile at lower lod
+			Vector3<Uint8> parentNode = Vector3<Uint8>(node / 2u, lod - 1);
+			auto parentTileEntry = m_loadedMapTiles.find(parentNode);
+			ASSERT(parentTileEntry != m_loadedMapTiles.end(), "Parent node map tile hasn't been loaded (Terrain)");
+
+			// Get new redirect location
+			Vector2<Uint8> newRedirectLoc = parentTileEntry.value();
+
+			// Get bounds of tile in the index map
+			Uint32 pixelsPerTile = 1 << (m_highestMapLevel - lod);
+			Uint32 sr = node.x * pixelsPerTile;
+			Uint32 sc = node.y * pixelsPerTile;
+			Uint32 fr = (node.x + 1) * pixelsPerTile;
+			Uint32 fc = (node.y + 1) * pixelsPerTile;
+
+			for (Uint32 r = sr; r < fr; ++r)
+			{
+				for (Uint32 c = sc; c < fc; ++c)
+					m_indexMapImg[r][c] = newRedirectLoc;
+			}
+
+			// Indicate that the index map has changed
+			m_indexMapChanged = true;
+
+			// Remove from map
+			m_loadedMapTiles.erase(it);
+		}
+	}
+}
+
+
+///////////////////////////////////////////////////////////
 void Terrain::setViewpoint(const Vector3f& point)
 {
+	m_viewpointChanged = m_viewpoint != point;
 	m_viewpoint = point;
 	m_useCustomViewpoint = true;
 }
@@ -322,7 +733,8 @@ void Terrain::setViewpoint(const Vector3f& point)
 void Terrain::setHeightMap(const Image& hmap)
 {
 	// Make sure image has correct requirements
-	ASSERT(hmap.getWidth() == hmap.getHeight(), "Height maps must be square");
+	ASSERT(hmap.getWidth() == hmap.getHeight() && hmap.getWidth() != 0, "Height maps must be square with a size greater than 0");
+	ASSERT((hmap.getWidth() & (hmap.getWidth() - 1)) == 0, "Height map size must be a power of two");
 	ASSERT(hmap.getDataType() == GLType::Float || hmap.getDataType() == GLType::Uint16, "Height maps must contain data with either the Float or Uint16 type");
 	ASSERT(hmap.getNumChannels() == 1, "Height maps must contain a single color channel");
 
@@ -344,10 +756,81 @@ void Terrain::setHeightMap(const Image& hmap)
 	}
 
 	// Create texture
-	m_heightMap.create(m_heightMapImg);
+	if (!m_heightMap)
+		m_heightMap = Pool<Texture>::alloc();
+	TEXTURE_CAST(m_heightMap)->create(m_heightMapImg);
 
 	// Update entire map
 	updateData(Vector2u(0), Vector2u(hmap.getWidth(), hmap.getHeight()));
+
+	// Indicate that normal images are used
+	m_usesTerrainMaps = false;
+}
+
+
+///////////////////////////////////////////////////////////
+void Terrain::setHeightMap(TerrainMap* hmap)
+{
+	// Make sure image has correct requirements
+	ASSERT((hmap->getSize() & (hmap->getSize() - 1)) == 0, "Height map size must be a power of two");
+	ASSERT(hmap->getDataType() == GLType::Float, "Height maps must contain data with either the Float type");
+	ASSERT(hmap->getFormat() == PixelFormat::R, "Height maps must contain a single color channel");
+
+	// Set tile size
+	if (!m_tileSize)
+		m_tileSize = hmap->getTileSize();
+	ASSERT(m_tileSize == hmap->getTileSize(), "Tile size must match previously set tile size");
+
+	// Create index map
+	createIndexMap(hmap->getSize());
+
+	// Set terrain map
+	m_heightMap = hmap;
+
+	// Set cache size
+	Vector2u cacheSize = estimateCacheSize(m_highestMapLevel + 1);
+	hmap->setCacheSize(cacheSize.x, cacheSize.y);
+
+	// Indicate that terrain maps are used
+	m_usesTerrainMaps = true;
+}
+
+
+///////////////////////////////////////////////////////////
+void Terrain::createIndexMap(Uint32 size)
+{
+	// Don't create twice
+	if (m_indexMap.getId()) return;
+
+	// Calculate highest tile level
+	Uint32 currSize = size;
+	while (currSize > m_tileSize)
+	{
+		currSize /= 2;
+		++m_highestMapLevel;
+	}
+
+	// Create free list
+	Vector2i cacheSize = estimateCacheSize(m_highestMapLevel + 1);
+	for (int r = cacheSize.y - 1; r >= 0; --r)
+	{
+		if (r < cacheSize.y - 1)
+			m_indexFreeList.push(Vector2<Uint8>(r + 1, 0));
+
+		for (int c = cacheSize.x - 2; c >= 0; --c)
+			m_indexFreeList.push(Vector2<Uint8>(r, c + 1));
+	}
+	m_indexFreeList.push(Vector2<Uint8>(0));
+
+	// Create index image
+	int mapSize = 1 << m_highestMapLevel;
+	m_indexMapImg.create(mapSize, mapSize, Vector2<Uint8>(0));
+
+	// Create texture
+	m_indexMap.create(m_indexMapImg.getData(), PixelFormat::Rg, mapSize, mapSize, 0, GLType::Uint8, TextureFilter::Nearest);
+
+	// Mark changed flag
+	m_indexMapChanged = true;
 }
 
 
@@ -356,11 +839,32 @@ void Terrain::updateData(const Vector2u& pos, const Vector2u& size)
 {
 	// Calculate rectangle in node coordinates
 	Uint32 numTilesPerEdge = 1 << (m_lodLevels.size() - 1);
-	Uint32 pixelsPerTile = m_heightMap.getWidth() / numTilesPerEdge;
+	Uint32 pixelsPerTile = TEXTURE_CAST(m_heightMap)->getWidth() / numTilesPerEdge;
 	Uint32 sr = pos.y / pixelsPerTile;
 	Uint32 sc = pos.x / pixelsPerTile;
 	Uint32 fr = (pos.y + size.y - 1) / pixelsPerTile;
 	Uint32 fc = (pos.x + size.x - 1) / pixelsPerTile;
+
+	// Reset height bounds
+	for (int i = m_lodLevels.size() - 1; i >= 0; --i)
+	{
+		LodLevel& level = m_lodLevels[i];
+
+		Uint32 denom = (Uint32)(1 << (m_lodLevels.size() - i - 1));
+		Vector2u start = Vector2u(sr, sc) / denom;
+		Vector2u finish = Vector2u(fr, fc) / denom;
+		Uint32 tilesPerEdge = numTilesPerEdge / denom;
+
+		// Reset bounds in the region
+		for (Uint32 r = start.x; r <= finish.x; ++r)
+		{
+			for (Uint32 c = start.y; c <= finish.y; ++c)
+			{
+				Uint32 index = r * tilesPerEdge + c;
+				level.m_heightBounds[index] = Vector2<Uint16>(65535, 0);
+			}
+		}
+	}
 
 	// Update height bounds
 	for (Uint32 r = sr; r <= fr; ++r)
@@ -374,17 +878,19 @@ void Terrain::updateData(const Vector2u& pos, const Vector2u& size)
 	Vector2f sizeFactor = m_size / Vector2f(mapSize);
 
 	// If a normal map hasn't been created, create a new one
-	if (!m_normalMap.getId())
+	if (!m_normalMap)
 	{
 		// Create empty image
-		m_normalMapImg.create(0, mapSize.x, mapSize.y, 3, GLType::Float);
+		m_normalMapImg.create(0, mapSize.x, mapSize.y, 3, GLType::Uint16);
 
 		// Create texture
-		m_normalMap.create(m_normalMapImg);
+		Texture* nmap = Pool<Texture>::alloc();
+		nmap->create(m_normalMapImg);
+		m_normalMap = nmap;
 	}
 
 	// Calculate normals
-	Vector3f* normals = (Vector3f*)m_normalMapImg.getData();
+	Vector3<Uint16>* normals = (Vector3<Uint16>*)m_normalMapImg.getData();
 	sr = pos.x;
 	sc = pos.y;
 	fr = pos.x + size.x;
@@ -404,12 +910,16 @@ void Terrain::updateData(const Vector2u& pos, const Vector2u& size)
 			Vector3f v2(0.0f, h12 - h10, -sizeFactor.y);
 			Vector3f normal = normalize(cross(v1, v2));
 
-			normals[r * mapSize.x + c] = normal;
+			// Adjust for 16-bit
+			normal.x = 0.5f * normal.x + 0.5f;
+			normal.z = 0.5f * normal.z + 0.5f;
+
+			normals[r * mapSize.x + c] = Vector3<Uint16>(normal * 65535.0f);
 		}
 	}
 
 	// Update texture
-	m_normalMap.update(normals);
+	TEXTURE_CAST(m_normalMap)->update(normals);
 }
 
 
@@ -418,7 +928,7 @@ void Terrain::updateHeightBounds(Uint32 nr, Uint32 nc)
 {
 	// Calculate node bounds in pixels
 	Uint32 numTilesPerEdge = 1 << (m_lodLevels.size() - 1);
-	Uint32 pixelsPerTile = m_heightMap.getWidth() / numTilesPerEdge;
+	Uint32 pixelsPerTile = TEXTURE_CAST(m_heightMap)->getWidth() / numTilesPerEdge;
 	Uint32 sr = (nr + 0) * pixelsPerTile;
 	Uint32 sc = (nc + 0) * pixelsPerTile;
 	Uint32 fr = (nr + 1) * pixelsPerTile;
@@ -470,6 +980,47 @@ void Terrain::updateHeightBounds(Uint32 nr, Uint32 nc)
 		--level;
 		nr /= 2;
 		nc /= 2;
+		numTilesPerEdge /= 2;
+	}
+}
+
+
+///////////////////////////////////////////////////////////
+void Terrain::setHeightBounds(const Vector2i& tile, const Vector2f& bounds)
+{
+	Uint32 numTilesPerEdge = 1 << (m_lodLevels.size() - 1);
+
+	// Transform tile coords to indices
+	Vector2u indices = tile + (int)numTilesPerEdge / 2;
+
+	// Update height bounds for all nodes up to root
+	bool boundsChanged = true;
+	int level = m_lodLevels.size() - 1;
+	Vector2<Uint16> newBounds = Vector2<Uint16>(bounds * 65535.0f);
+
+	while (boundsChanged && level >= 0)
+	{
+		// Reset flag to false
+		boundsChanged = false;
+
+		// Get current bounds
+		Vector2<Uint16>& currBounds = m_lodLevels[level].m_heightBounds[indices.y * numTilesPerEdge + indices.x];
+
+		if (newBounds.x < currBounds.x)
+		{
+			currBounds.x = newBounds.x;
+			boundsChanged = true;
+		}
+		if (newBounds.y > currBounds.y)
+		{
+			currBounds.y = newBounds.y;
+			boundsChanged = true;
+		}
+
+		// Update state
+		--level;
+		indices.y /= 2;
+		indices.x /= 2;
 		numTilesPerEdge /= 2;
 	}
 }

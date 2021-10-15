@@ -9,23 +9,59 @@
 #include <poly/Graphics/VertexArray.h>
 #include <poly/Graphics/VertexBuffer.h>
 
+#include <future>
+#include <stack>
+
 namespace poly
 {
 
 
-#ifndef DOXYGEN_SKIP
+class Terrain;
+
 
 ///////////////////////////////////////////////////////////
-struct UniformBlock_Terrain
+/// \brief A texture wrapper class for large terrain maps that are too large to hold in memory
+///
+///////////////////////////////////////////////////////////
+class TerrainMap
 {
-	UniformBufferType<float> m_chunkSize;
-	UniformBufferType<float> m_maxHeight;
-	UniformBufferType<float> m_tileScale;
-	UniformBufferType<float> m_blendLodDist;
-	UniformBufferType<bool> m_useFlatShading;
-};
+	friend Terrain;
 
-#endif
+public:
+	///////////////////////////////////////////////////////////
+	/// \brief Default constructor
+	///
+	///////////////////////////////////////////////////////////
+	TerrainMap();
+
+	void create(Uint32 size, Uint32 tileSize = 256, PixelFormat fmt = PixelFormat::Rgb, GLType dtype = GLType::Uint8);
+
+	Texture& getTexture();
+
+	Uint32 getSize() const;
+
+	Uint32 getTileSize() const;
+
+	PixelFormat getFormat() const;
+
+	GLType getDataType() const;
+
+	void onRequestTile(const std::function<bool(const Vector2i&, Uint32, Image&)>& func);
+
+private:
+	Image* load(const Vector2i& pos, Uint32 level);
+
+	void setCacheSize(Uint32 w, Uint32 h);
+
+private:
+	Texture m_texture;			//!< The cache texture
+	Uint32 m_size;				//!< The true size of the texture
+	Uint32 m_tileSize;			//!< The tile size of the texture
+	PixelFormat m_format;		//!< The pixel format of the texture
+	GLType m_dataType;			//!< The data type of the pixel data
+
+	std::function<bool(const Vector2i&, Uint32, Image&)> m_loadFunc;
+};
 
 
 ///////////////////////////////////////////////////////////
@@ -73,13 +109,17 @@ public:
 
 	///////////////////////////////////////////////////////////
 	///////////////////////////////////////////////////////////
-	void create(float size, float maxHeight, float maxNodeSize = 50.0f, float viewDist = -1.0f);
+	void create(float chunkSize, float maxHeight, float maxNodeSize = 50.0f, float viewDist = -1.0f);
 
 	///////////////////////////////////////////////////////////
 	///////////////////////////////////////////////////////////
 	void setViewpoint(const Vector3f& point);
 
 	void setHeightMap(const Image& hmap);
+
+	void setHeightMap(TerrainMap* hmap);
+
+	void setHeightBounds(const Vector2i& tile, const Vector2f& bounds);
 
 protected:
 	struct LodLevel
@@ -88,9 +128,20 @@ protected:
 		std::vector<Vector2<Uint16>> m_heightBounds;
 	};
 
+	struct AsyncTileObj
+	{
+		std::future<Image*> m_future;
+		Texture* m_cacheTexture;
+		Vector3<Uint8> m_nodeData;
+		Vector2<Uint8> m_cachePos;
+	};
+
 	static Shader& getDefaultShader();
 
+	static Shader& getTerrainMapShader();
+
 	static Shader s_shader;
+	static Shader s_tmapShader;
 
 	void updateData(const Vector2u& pos, const Vector2u& size);
 
@@ -98,15 +149,24 @@ protected:
 
 	void addLodNodes(const Vector2u& node, Uint32 lod, const Frustum& frustum, std::vector<Vector4f>& renderList);
 
+	void loadMapTiles(const Vector2u& node, Uint32 lod);
+
+	void createIndexMap(Uint32 size);
+
+	Image* createNormalTile(Image* hmap, float chunkSize);
+
 protected:
 	float m_size;
 	float m_maxHeight;
 	Uint32 m_numLevels;
 
-	Texture m_heightMap;
-	Texture m_normalMap;
+	void* m_heightMap;
+	void* m_normalMap;
 	Image m_heightMapImg;
 	Image m_normalMapImg;
+	std::vector<TerrainMap*> m_customMaps;
+	Uint32 m_tileSize;
+	bool m_usesTerrainMaps;
 
 	Shader* m_shader;
 	VertexBuffer m_instanceBuffer;
@@ -115,10 +175,19 @@ protected:
 	VertexArray m_vertexArray;
 	Uint32 m_instanceDataOffset;
 
+	Texture m_indexMap;
+	ImageBuffer<Vector2<Uint8>> m_indexMapImg;
+	std::stack<Vector2<Uint8>> m_indexFreeList;
+	Uint32 m_highestMapLevel;
+	HashMap<Vector3<Uint8>, Vector2<Uint8>> m_loadedMapTiles;
+	std::vector<AsyncTileObj> m_loadThreads;
+	bool m_indexMapChanged;
+
 	Vector3f m_viewpoint;
-	bool m_useCustomViewpoint;
 	float m_baseScale;
 	std::vector<LodLevel> m_lodLevels;
+	bool m_viewpointChanged;
+	bool m_useCustomViewpoint;
 };
 
 }

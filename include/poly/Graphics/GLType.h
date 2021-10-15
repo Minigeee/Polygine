@@ -1,6 +1,8 @@
 #ifndef POLY_GL_TYPE_H
 #define POLY_GL_TYPE_H
 
+#include <poly/Core/DataTypes.h>
+
 namespace poly
 {
 
@@ -43,6 +45,40 @@ enum class BlendFactor
 	ConstColor			= 0x8001,
 	OneMinusConstColor	= 0x8002
 };
+
+
+///////////////////////////////////////////////////////////
+/// \brief Get a GLType enum from a templated variable type
+///
+/// \return A GLType enum
+///
+///////////////////////////////////////////////////////////
+template <typename T>
+inline GLType getGLType() { return GLType::Unknown; }
+
+template <>
+inline GLType getGLType<Int8>() { return GLType::Int8; }
+
+template <>
+inline GLType getGLType<Uint8>() { return GLType::Uint8; }
+
+template <>
+inline GLType getGLType<Int16>() { return GLType::Int16; }
+
+template <>
+inline GLType getGLType<Uint16>() { return GLType::Uint16; }
+
+template <>
+inline GLType getGLType<Int32>() { return GLType::Int32; }
+
+template <>
+inline GLType getGLType<Uint32>() { return GLType::Uint32; }
+
+template <>
+inline GLType getGLType<float>() { return GLType::Float; }
+
+template <>
+inline GLType getGLType<double>() { return GLType::Double; }
 
 
 }

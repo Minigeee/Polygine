@@ -382,7 +382,7 @@ int main()
     bool usedDoubleJump = false;
     Clock leftGroundClock;
     Clock dashClock;
-    const float jumpSpeed = 100.0f;
+    const float jumpSpeed = 6.0f;
 
     scene.addListener<E_PhysicsCollision>(
         [&](const E_PhysicsCollision& e)

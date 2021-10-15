@@ -2,6 +2,7 @@
 
 #include "camera.glsl"
 #include "clip_planes.glsl"
+#include "terrain_map.glsl"
 
 layout (location = 0) in vec2 a_vertex;
 layout (location = 1) in vec4 a_instance;
@@ -24,7 +25,7 @@ void main()
 
     // Get height
     v_texCoord = worldPos.xz / u_size + 0.5f;
-    worldPos.y = texture(u_heightMap, v_texCoord).x * u_maxHeight;
+    worldPos.y = sampleBase(u_heightMap, v_texCoord).x * u_maxHeight;
 
     // Geomorph
     int lod = int(a_instance.w);
@@ -38,11 +39,8 @@ void main()
     worldPos.xz -= isOdd * a_instance.z * morphFactor;
 
     // Resample height if morph changed position
-    if (morphFactor > 0.0f)
-    {
-        v_texCoord = worldPos.xz / u_size + 0.5f;
-        worldPos.y = texture(u_heightMap, v_texCoord).x * u_maxHeight;
-    }
+    v_texCoord = worldPos.xz / u_size + 0.5f;
+    worldPos.y = sample(u_heightMap, v_texCoord).x * u_maxHeight;
 
     // Clip space pos
     gl_Position = u_projView * worldPos;

@@ -10,12 +10,335 @@
 namespace poly
 {
 
+
+///////////////////////////////////////////////////////////
+/// \brief Provides a convenient way to store and manipulate image pixel data
+///
+///////////////////////////////////////////////////////////
+template <typename T>
+class ImageBuffer
+{
+public:
+	///////////////////////////////////////////////////////////
+	/// \brief Default constructor
+	///
+	/// Creates an empty buffer with no size
+	///
+	///////////////////////////////////////////////////////////
+	ImageBuffer();
+
+	///////////////////////////////////////////////////////////
+	/// \brief Creates a buffer with the specified width and height and filled with the given value
+	///
+	/// \param w The width of the image in pixels
+	/// \param h The height of the image in pixels
+	/// \param value The value to fill the buffer with
+	///
+	///////////////////////////////////////////////////////////
+	ImageBuffer(Uint32 w, Uint32 h, const T& value = T(0));
+
+	///////////////////////////////////////////////////////////
+	/// \brief Create an image buffer from the specified data and image size
+	///
+	/// Any buffer created with data allocated from an outside source
+	/// will be freed during the destruction of this buffer.
+	///
+	/// \param data A pointer to the data
+	/// \param w The width of the image buffer in pixels
+	/// \param h The height of the image buffer in pixels
+	///
+	///////////////////////////////////////////////////////////
+	ImageBuffer(T* data, Uint32 w, Uint32 h);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Destructor
+	///
+	///////////////////////////////////////////////////////////
+	~ImageBuffer();
+
+#ifndef DOXYGEN_SKIP
+	ImageBuffer(const ImageBuffer<T>&);
+	ImageBuffer& operator=(const ImageBuffer<T>&);
+	ImageBuffer(ImageBuffer<T>&&);
+	ImageBuffer& operator=(ImageBuffer<T>&&);
+#endif
+
+	///////////////////////////////////////////////////////////
+	/// \brief Convert to a different type
+	///
+	///////////////////////////////////////////////////////////
+	template <typename U>
+	operator ImageBuffer<U>() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get a pointer to a row in the image buffer
+	///
+	/// The returned row pointer can be used to access a specific
+	/// pixel within the row
+	///
+	/// \param index The row index
+	///
+	///////////////////////////////////////////////////////////
+	T* operator[](Uint32 index) const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Create an image buffer with the specified size and filled with the given value
+	///
+	/// \param w The width of the image buffer in pixels
+	/// \param h The height of the image buffer in pixels
+	/// \param value The value to fill the buffer with
+	///
+	///////////////////////////////////////////////////////////
+	void create(Uint32 w, Uint32 h, const T& value = T(0));
+
+	///////////////////////////////////////////////////////////
+	/// \brief Create an image buffer from the specified data and image size
+	///
+	/// Any buffer created with data allocated from an outside source
+	/// will be freed during the destruction of this buffer.
+	///
+	/// \param data A pointer to the data
+	/// \param w The width of the image buffer in pixels
+	/// \param h The height of the image buffer in pixels
+	///
+	///////////////////////////////////////////////////////////
+	void create(T* data, Uint32 w, Uint32 h);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get width of the image buffer in pixels
+	///
+	/// \return The width of the image buffer in pixels
+	///
+	///////////////////////////////////////////////////////////
+	Uint32 getWidth() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get height of the image buffer in pixels
+	///
+	/// \return The height of the image buffer in pixels
+	///
+	///////////////////////////////////////////////////////////
+	Uint32 getHeight() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get a pointer to the data
+	///
+	///////////////////////////////////////////////////////////
+	T* getData() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Execute a segment of code for every pixel in subrectangle of the image buffer
+	///
+	/// The function must accept: \a pixel, \a row, \a col parameters.
+	/// The subrectangle must be specified in pixels. The subrectangle
+	/// will automatically be clamped to buffer bounds. If \a dr or \a dc, the
+	/// subrectangle sizes, are negative, the full image will be used.
+	///
+	/// \param func The function to execute for each pixel
+	/// \param r The subrectangle row position
+	/// \param c The subrectangle col position
+	/// \param dr The subrectangle size along the row axis
+	/// \param dr The subrectangle size along the col axis
+	///
+	///////////////////////////////////////////////////////////
+	template <typename Func>
+	void forEach(Func&& func, int r = 0, int c = 0, int dr = -1, int dc = -1) const;
+
+private:
+	T* m_data;			//!< A pointer to the data
+	Uint32 m_width;		//!< The height of the image buffer in pixels
+	Uint32 m_height;	//!< The height of the image buffer in pixels
+	bool m_ownsData;	//!< True if the image buffer owns the data
+};
+
+
+///////////////////////////////////////////////////////////
+// Operators
+///////////////////////////////////////////////////////////
+
+template <typename T, typename U>
+ImageBuffer<T>& operator+=(ImageBuffer<T>& a, U b);
+
+template <typename T, typename U>
+ImageBuffer<T>& operator+=(ImageBuffer<T>& a, const ImageBuffer<U>& b);
+
+template <typename T, typename U>
+ImageBuffer<T>& operator-=(ImageBuffer<T>& a, U b);
+
+template <typename T, typename U>
+ImageBuffer<T>& operator-=(ImageBuffer<T>& a, const ImageBuffer<U>& b);
+
+template <typename T, typename U>
+ImageBuffer<T>& operator*=(ImageBuffer<T>& a, U b);
+
+template <typename T, typename U>
+ImageBuffer<T>& operator*=(ImageBuffer<T>& a, const ImageBuffer<U>& b);
+
+template <typename T, typename U>
+ImageBuffer<T>& operator/=(ImageBuffer<T>& a, U b);
+
+template <typename T, typename U>
+ImageBuffer<T>& operator/=(ImageBuffer<T>& a, const ImageBuffer<U>& b);
+
+
+template <typename T, typename U>
+ImageBuffer<T> operator+(const ImageBuffer<T>& a, U b);
+
+template <typename T, typename U>
+ImageBuffer<T> operator+(U a, const ImageBuffer<T>& b);
+
+template <typename T, typename U>
+ImageBuffer<T> operator+(const ImageBuffer<T>& a, const ImageBuffer<U>& b);
+
+template <typename T, typename U>
+ImageBuffer<T> operator-(const ImageBuffer<T>& a, U b);
+
+template <typename T, typename U>
+ImageBuffer<T> operator-(U a, const ImageBuffer<T>& b);
+
+template <typename T, typename U>
+ImageBuffer<T> operator-(const ImageBuffer<T>& a, const ImageBuffer<U>& b);
+
+template <typename T, typename U>
+ImageBuffer<T> operator*(const ImageBuffer<T>& a, U b);
+
+template <typename T, typename U>
+ImageBuffer<T> operator*(U a, const ImageBuffer<T>& b);
+
+template <typename T, typename U>
+ImageBuffer<T> operator*(const ImageBuffer<T>& a, const ImageBuffer<U>& b);
+
+template <typename T, typename U>
+ImageBuffer<T> operator/(const ImageBuffer<T>& a, U b);
+
+template <typename T, typename U>
+ImageBuffer<T> operator/(U a, const ImageBuffer<T>& b);
+
+template <typename T, typename U>
+ImageBuffer<T> operator/(const ImageBuffer<T>& a, const ImageBuffer<U>& b);
+
+
+///////////////////////////////////////////////////////////
+/// \brief Perform a square root operation on every pixel in the input image buffer
+///
+/// \param x The input image buffer
+///
+/// \return A new image buffer containing the operation results
+///
+///////////////////////////////////////////////////////////
+template <typename T>
+ImageBuffer<T> sqrt(const ImageBuffer<T>& x);
+
+///////////////////////////////////////////////////////////
+/// \brief Perform a power operation on every pixel in the input image buffer
+///
+/// \param x The input image buffer containing the base value
+/// \param p The power value
+///
+/// \return A new image buffer containing the operation results
+///
+///////////////////////////////////////////////////////////
+template <typename T, typename P>
+ImageBuffer<T> pow(const ImageBuffer<T>& b, const P& p);
+
+///////////////////////////////////////////////////////////
+/// \brief Clamp every pixel within the image buffer to the given range
+///
+/// \param x The input image buffer
+/// \param a The minimum value of the clamp range
+/// \param b The maximum value of the clamp range
+///
+/// \return A new image buffer containing the operation results
+///
+///////////////////////////////////////////////////////////
+template <typename T, typename A, typename B>
+ImageBuffer<T> clamp(const ImageBuffer<T>& x, const A& a, const B& b);
+
+///////////////////////////////////////////////////////////
+/// \brief Remap every pixel within the image buffer from the original range to a new range
+///
+/// This operation does not perform any clamping before or
+/// after the remap operation.
+///
+/// \param x The input image buffer
+/// \param a1 The minimum value of the original range
+/// \param b1 The maximum value of the original range
+/// \param a2 The minimum value of the new range
+/// \param b2 The maximum value of the new range
+///
+/// \return A new image buffer containing the operation results
+///
+///////////////////////////////////////////////////////////
+template <typename T, typename A1, typename B1, typename A2, typename B2>
+ImageBuffer<T> remap(const ImageBuffer<T>& x, const A1& a1, const B1& b1, const A2& a2, const B2& b2);
+
+///////////////////////////////////////////////////////////
+/// \brief Linearly interpolate between an image buffer and another value
+///
+/// \param a The input image buffer
+/// \param b The second interpolation operand
+/// \param factor The interpolation factor
+///
+/// \return A new image buffer containing the operation results
+///
+///////////////////////////////////////////////////////////
+template <typename T, typename U>
+ImageBuffer<T> mix(const ImageBuffer<T>& a, const U& b, float factor);
+
+///////////////////////////////////////////////////////////
+/// \brief Get the minumum value in an image buffer
+///
+/// \param x The input image buffer
+///
+/// \return The minimum value in the image buffer
+///
+///////////////////////////////////////////////////////////
+template <typename T>
+T min(const ImageBuffer<T>& x);
+
+///////////////////////////////////////////////////////////
+/// \brief Get the maximum value in an image buffer
+///
+/// \param x The input image buffer
+///
+/// \return The maximum value in the image buffer
+///
+///////////////////////////////////////////////////////////
+template <typename T>
+T max(const ImageBuffer<T>& x);
+
+///////////////////////////////////////////////////////////
+/// \brief Get the pixel coordinate (r, c) of the minumum value in an image buffer
+///
+/// \param x The input image buffer
+///
+/// \return The pixel coordinate (r, c) of the minumum value
+///
+///////////////////////////////////////////////////////////
+template <typename T>
+Vector2u argmin(const ImageBuffer<T>& x);
+
+///////////////////////////////////////////////////////////
+/// \brief Get the pixel coordinate (r, c) of the maximum value in an image buffer
+///
+/// \param x The input image buffer
+///
+/// \return The pixel coordinate (r, c) of the maximum value
+///
+///////////////////////////////////////////////////////////
+template <typename T>
+Vector2u argmax(const ImageBuffer<T>& x);
+
+
 ///////////////////////////////////////////////////////////
 /// \brief Holds pixel data for 2D images
 ///
 ///////////////////////////////////////////////////////////
 class Image
 {
+	template <typename T>
+	friend class ImageBuffer;
+
 public:
 	///////////////////////////////////////////////////////////
 	/// \brief Default constructor
@@ -111,6 +434,41 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	void create(void* data, Uint32 w, Uint32 h, Uint32 c, GLType dtype = GLType::Uint8, bool manage = false);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Create a new image from an image buffer
+	///
+	/// When creating an image using an image buffer, the current
+	/// image will inherit ownership of the buffer data, only if
+	/// the buffer has ownership of the data. The data type and number
+	/// of color channels will be inferred from the buffer template type.
+	///
+	/// \param buffer The image buffer
+	///
+	///////////////////////////////////////////////////////////
+	template <typename T>
+	void create(ImageBuffer<T>& buffer);
+
+	///////////////////////////////////////////////////////////
+	/// \copydoc create(const ImageBuffer<T>&)
+	///
+	///////////////////////////////////////////////////////////
+	template <typename T>
+	void create(ImageBuffer<Vector2<T>>& buffer);
+
+	///////////////////////////////////////////////////////////
+	/// \copydoc create(const ImageBuffer<T>&)
+	///
+	///////////////////////////////////////////////////////////
+	template <typename T>
+	void create(ImageBuffer<Vector3<T>>& buffer);
+
+	///////////////////////////////////////////////////////////
+	/// \copydoc create(const ImageBuffer<T>&)
+	///
+	///////////////////////////////////////////////////////////
+	template <typename T>
+	void create(ImageBuffer<Vector4<T>>& buffer);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Scales the image to a new size
@@ -226,6 +584,18 @@ public:
 	Uint32 getNumChannels() const;
 
 	///////////////////////////////////////////////////////////
+	/// \brief Get an image buffer using the image data
+	///
+	/// The current image retains ownership of pixel data, if it
+	/// currently has ownership.
+	///
+	/// \return An image buffer
+	///
+	///////////////////////////////////////////////////////////
+	template <typename T>
+	ImageBuffer<T> getBuffer() const;
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get a pointer to a pixel at specified row and column
 	///
 	/// \param r The row index of the pixel
@@ -262,6 +632,61 @@ private:
 #include <poly/Graphics/Image.inl>
 
 #endif
+
+
+///////////////////////////////////////////////////////////
+/// \class poly::ImageBuffer
+/// \ingroup Graphics
+///
+/// An image buffer provides a convenient way to store and
+/// manipulate image pixel data. An image buffer can be created
+/// using the create() function and providing the size, and optionally,
+/// a pointer to existing continuous row-major pixel data. If a pointer to
+/// existing data is given, you can tell the image buffer to
+/// manage the freeing of the data during the buffer's destruction.
+/// An image buffer can also be created by using Image::getBuffer(),
+/// which uses the data already allocated by the image.
+///
+/// Images can be created from an image buffer using Image::create().
+/// When an image is created from an image buffer, the image inherits
+/// ownership of the internal data, if the buffer had original ownership.
+/// Many common mathematical operations and functions can be performed
+/// on an image buffer, but most of these operations and functions
+/// create an entire new image buffer with the same size as the input
+/// image buffers. So be careful when using mathematical operators
+/// on large image buffers.
+///
+/// To operate on image buffers with more space or time efficiency,
+/// it is often times better to loop through the data in a normal way, or
+/// to use the forEach() function to loop through each pixel in the
+/// buffer.
+///
+/// To access individual pixels, use the [r][c] operator with row-major
+/// indexing.
+///
+/// Usage example:
+/// \code
+///
+/// using namespace poly;
+///
+/// // Create a 512x512 float image with an intial value of 1.0
+/// ImageBuffer<float> buffer(512, 512, 1.0f);
+///
+/// // Do some math operations
+/// buffer = buffer * 2.0f - 1.0f;
+///
+/// // Get pixel at 5th row, 35th column
+/// float p = buffer[4][34];
+/// buffer[1][1] = p;
+///
+/// // Assign to image
+/// Image img;
+/// img.create(buffer);
+///
+/// \endcode
+///
+///////////////////////////////////////////////////////////
+
 
 ///////////////////////////////////////////////////////////
 /// \class poly::Image
