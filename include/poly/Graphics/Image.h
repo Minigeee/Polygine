@@ -38,6 +38,15 @@ public:
 	ImageBuffer(Uint32 w, Uint32 h, const T& value = T(0));
 
 	///////////////////////////////////////////////////////////
+	/// \brief Create an image buffer with the specified size and filled with the given value
+	///
+	/// \param size The width and height of the image buffer
+	/// \param value The value to fill the buffer with
+	///
+	///////////////////////////////////////////////////////////
+	ImageBuffer(Uint32 size, const T& value = T(0));
+
+	///////////////////////////////////////////////////////////
 	/// \brief Create an image buffer from the specified data and image size
 	///
 	/// Any buffer created with data allocated from an outside source
@@ -90,6 +99,15 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	void create(Uint32 w, Uint32 h, const T& value = T(0));
+
+	///////////////////////////////////////////////////////////
+	/// \brief Create an image buffer with the specified size and filled with the given value
+	///
+	/// \param size The width and height of the image buffer
+	/// \param value The value to fill the buffer with
+	///
+	///////////////////////////////////////////////////////////
+	void create(Uint32 size, const T& value = T(0));
 
 	///////////////////////////////////////////////////////////
 	/// \brief Create an image buffer from the specified data and image size

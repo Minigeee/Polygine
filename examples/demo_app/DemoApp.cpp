@@ -93,8 +93,27 @@ float getDistToSphere(float r, float mu, float r1)
     return -r * mu + sqrt(r * r * (mu * mu - 1.0f) + r1 * r1);
 }
 
+///////////////////////////////////////////////////////////
+void testPrint(const std::string& test)
+{
+    std::cout << test.c_str() << '\n';
+}
+
 int main()
 {
+    Scheduler scheduler;
+
+    Task<float> taskB = scheduler.addTask(remap, 0.1f, -1.0f, 1.0f, 0.0f, 1.0f);
+    Task<float> taskC = scheduler.addTask(remap, -0.1f, -1.0f, 1.0f, 0.0f, 1.0f);
+    Task<void> taskA = scheduler.addTask(testPrint, "Hello World");
+
+    scheduler.finish();
+
+    float b = taskB.getResult();
+    float c = taskC.getResult();
+
+    return 0;
+
     Logger::init("game.log");
     srand(time(NULL));
 

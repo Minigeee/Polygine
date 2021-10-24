@@ -13,6 +13,98 @@
 namespace poly
 {
 
+
+class Scheduler;
+
+
+///////////////////////////////////////////////////////////
+/// \brief A class for checking status of and retrieving scheduler task results
+///
+///////////////////////////////////////////////////////////
+template <typename T>
+class Task
+{
+	friend Scheduler;
+
+public:
+	///////////////////////////////////////////////////////////
+	/// \brief Destructor
+	///
+	///////////////////////////////////////////////////////////
+	~Task();
+
+#ifndef DOXYGEN_SKIP
+	Task(const Task<T>&)				= delete;
+	Task& operator=(const Task<T>&)		= delete;
+	Task(Task<T>&&);
+	Task& operator=(Task<T>&&);
+#endif
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the result of a function executed through a scheduler
+	///
+	/// This function does not exist for Task<void>.
+	///
+	/// \return The value returned from a function executed through a scheduler
+	///
+	///////////////////////////////////////////////////////////
+	T& getResult() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Check if a function executed through a scheduler has finished
+	///
+	/// \return True if a function executed through a scheduler has finished
+	///
+	///////////////////////////////////////////////////////////
+	bool isFinished() const;
+
+private:
+	struct TaskImpl
+	{
+		T m_result;						//!< A variable to store function return value
+		std::atomic_int m_refCount;		//!< The reference count
+	};
+
+	Task(TaskImpl* impl);
+
+private:
+	TaskImpl* m_impl;		//!< A pointer to the implementation
+};
+
+
+#ifndef DOXYGEN_SKIP
+///////////////////////////////////////////////////////////
+template <>
+class Task<void>
+{
+	friend Scheduler;
+
+public:
+	~Task();
+
+#ifndef DOXYGEN_SKIP
+	Task(const Task<void>&)				= delete;
+	Task& operator=(const Task<void>&)	= delete;
+	Task(Task<void>&&);
+	Task& operator=(Task<void>&&);
+#endif
+
+	bool isFinished() const;
+
+private:
+	struct TaskImpl
+	{
+		std::atomic_int m_refCount;
+	};
+
+	Task(TaskImpl* impl);
+
+private:
+	TaskImpl* m_impl;
+};
+#endif
+
+
 ///////////////////////////////////////////////////////////
 /// \brief A class that distributes tasks to several worker threads
 ///
@@ -77,9 +169,9 @@ public:
 	///
 	/// This function adds the specified function to a queue
 	/// for the worker threads to execute when available.
-	/// Functions that have return values will not be retrievable,
-	/// so if some result is needed from the task, use another
-	/// method to retrieve the results (i.e. setting a member variable).
+	/// The return value of the function and the running status
+	/// of the function can be checked through returned Task
+	/// object.
 	///
 	/// To add a normal function:
 	///
@@ -99,18 +191,20 @@ public:
 	/// \param func The function to execute
 	/// \param args All other arguments for the specified function
 	///
+	/// \return A Task obejct that can be used to retrieve the function return value
+	///
 	///////////////////////////////////////////////////////////
-	template <typename F, typename... Args>
-	void addTask(F&& func, Args&&... args);
+	template <typename F, typename... Args, typename Ret = typename std::result_of<F(Args...)>::type>
+	Task<Ret> addTask(F&& func, Args&&... args);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Add a task function with a certain priority for the scheduler to execute
 	///
 	/// This function adds the specified function to a queue
 	/// for the worker threads to execute when available.
-	/// Functions that have return values will not be retrievable,
-	/// so if some result is needed from the task, use another
-	/// method to retrieve the results (i.e. setting a member variable).
+	/// The return value of the function and the running status
+	/// of the function can be checked through returned Task
+	/// object.
 	///
 	/// To add a normal function:
 	///
@@ -137,10 +231,14 @@ public:
 	/// \param func The function to execute
 	/// \param args All other arguments for the specified function
 	///
+	/// \return A Task obejct that can be used to retrieve the function return value
+	///
 	///////////////////////////////////////////////////////////
+	template <typename F, typename... Args, typename Ret = typename std::result_of<F(Args...)>::type>
+	typename std::enable_if<std::is_same<Ret, void>::value, Task<Ret>>::type addTask(Priority priority, F && func, Args&&... args);
 
-	template <typename F, typename... Args>
-	void addTask(Priority priority, F&& func, Args&&... args);
+	template <typename F, typename... Args, typename Ret = typename std::result_of<F(Args...)>::type>
+	typename std::enable_if<!std::is_same<Ret, void>::value, Task<Ret>>::type addTask(Priority priority, F && func, Args&&... args);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Wait for all tasks in the queue to finish
@@ -180,11 +278,27 @@ private:
 	std::condition_variable m_fcv;					//!< The condition variable used to notify finishing tasks (finish)
 };
 
+
 }
 
 #include <poly/Core/Scheduler.inl>
 
 #endif
+
+
+///////////////////////////////////////////////////////////
+/// \class poly::Task
+/// \ingroup Core
+///
+/// This class provides a way to check if a function executed
+/// through Scheduler::addTask() has finished, and it provides
+/// a way to retrieve the return value of the function.
+///
+/// A Task is moveable but not copyable.
+///
+/// For a usage example, plase check the documentation for Scheduler.
+///
+///////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////
 /// \class poly::Scheduler
@@ -233,6 +347,11 @@ private:
 ///		std::cout << "Hello " << str << "!\n";
 /// }
 ///
+/// float add(float a, float b)
+/// {
+///		return a + b;
+/// }
+///
 /// int main()
 /// {
 ///		// The constructor will create a certain number of threads
@@ -254,10 +373,19 @@ private:
 ///		scheduler.addTask(&A::test, &a, "Class A");
 ///
 ///
+///		// Using a task
+///		Task<float> task = scheduler.addTask(add, 5.0f, 4.0f);
+///
+///
 ///		// Wait for all tasks to finish
 ///		scheduler.finish();
 ///		// Join all worker threads
 ///		scheduler.stop();
+///
+///		// Check the results
+///		if (task.isFinished())
+///			// This should print 9.0
+///			std::cout << task.getResult() << '\n';
 ///
 ///		return 0;
 /// }

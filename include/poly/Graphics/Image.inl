@@ -32,6 +32,19 @@ inline ImageBuffer<T>::ImageBuffer(Uint32 w, Uint32 h, const T& value) :
 
 ///////////////////////////////////////////////////////////
 template <typename T>
+inline ImageBuffer<T>::ImageBuffer(Uint32 size, const T& value) :
+	m_data			(0),
+	m_width			(0),
+	m_height		(0),
+	m_ownsData		(false)
+{
+	// Create map
+	create(size, value);
+}
+
+
+///////////////////////////////////////////////////////////
+template <typename T>
 inline ImageBuffer<T>::ImageBuffer(T* data, Uint32 w, Uint32 h) :
 	m_data			(0),
 	m_width			(0),
@@ -178,6 +191,25 @@ inline void ImageBuffer<T>::create(Uint32 w, Uint32 h, const T& value)
 
 	// Allocate space
 	Uint32 numPixels = w * h;
+	m_data = (T*)malloc(numPixels * sizeof(T));
+
+	// Construct all objects
+	for (Uint32 i = 0; i < numPixels; ++i)
+		new(m_data + i)T(value);
+}
+
+
+///////////////////////////////////////////////////////////
+template <typename T>
+inline void ImageBuffer<T>::create(Uint32 size, const T& value)
+{
+	// Set size
+	m_width = size;
+	m_height = size;
+	m_ownsData = true;
+
+	// Allocate space
+	Uint32 numPixels = size * size;
 	m_data = (T*)malloc(numPixels * sizeof(T));
 
 	// Construct all objects
@@ -595,7 +627,7 @@ inline ImageBuffer<T> pow(const ImageBuffer<T>& b, const P& p)
 	Uint32 numPixels = b.getWidth() * b.getHeight();
 
 	for (Uint32 i = 0; i < numPixels; ++i)
-		dst[i] = pow(data[i], p);
+		dst[i] = ::pow(data[i], p);
 
 	return result;
 }
