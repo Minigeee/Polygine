@@ -14,7 +14,7 @@ namespace poly
 
 std::ofstream Logger::m_file;
 
-Scheduler* Logger::m_scheduler = 0;
+bool Logger::m_useScheduler = false;
 Scheduler::Priority Logger::m_priority = Scheduler::Low;
 HashMap<std::thread::id, std::string> Logger::m_threadNames;
 std::queue<Logger::LogMsg> Logger::m_msgQueue;
@@ -64,7 +64,7 @@ void Logger::log(Logger::MsgType type, const std::string& msg, const std::string
 	else
 	{
 		// Otherwise, use the scheduler if possible
-		if (m_scheduler)
+		if (m_useScheduler)
 		{
 			{
 				std::lock_guard<std::mutex> lock(m_queueMutex);
@@ -77,7 +77,7 @@ void Logger::log(Logger::MsgType type, const std::string& msg, const std::string
 			if (!m_taskExists)
 			{
 				m_taskExists = true;
-				m_scheduler->addTask(m_priority, &Logger::logAsync);
+				Scheduler::addTask(m_priority, Logger::logAsync);
 			}
 		}
 		else
@@ -215,9 +215,9 @@ void Logger::setThreadName(const std::string& name)
 	m_threadNames[std::this_thread::get_id()] = name;
 }
 
-void Logger::setScheduler(Scheduler* scheduler, Scheduler::Priority priority)
+void Logger::setUseScheduler(bool use, Scheduler::Priority priority)
 {
-	m_scheduler = scheduler;
+	m_useScheduler = use;
 	m_priority = priority;
 }
 

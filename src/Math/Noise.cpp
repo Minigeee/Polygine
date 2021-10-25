@@ -25,28 +25,28 @@ FractalNoise::~FractalNoise()
 
 
 ///////////////////////////////////////////////////////////
-float FractalNoise::generate(float x)
+float FractalNoise::generate(float x) const
 {
 	return NOISE_CAST(m_generator)->GetNoise(x, 0.0f) * 0.5f + 0.5f;
 }
 
 
 ///////////////////////////////////////////////////////////
-float FractalNoise::generate(float x, float y)
+float FractalNoise::generate(float x, float y) const
 {
 	return NOISE_CAST(m_generator)->GetNoise(x, y) * 0.5f + 0.5f;
 }
 
 
 ///////////////////////////////////////////////////////////
-float FractalNoise::generate(float x, float y, float z)
+float FractalNoise::generate(float x, float y, float z) const
 {
 	return NOISE_CAST(m_generator)->GetNoise(x, y, z) * 0.5f + 0.5f;
 }
 
 
 ///////////////////////////////////////////////////////////
-void FractalNoise::generateImage(float* data, Uint32 w, Uint32 h)
+void FractalNoise::generateImage(float* data, Uint32 w, Uint32 h) const
 {
 	for (Uint32 y = 0, i = 0; y < h; ++y)
 	{
@@ -57,7 +57,7 @@ void FractalNoise::generateImage(float* data, Uint32 w, Uint32 h)
 
 
 ///////////////////////////////////////////////////////////
-void FractalNoise::generateImage(float* data, Uint32 w, Uint32 h, Uint32 d)
+void FractalNoise::generateImage(float* data, Uint32 w, Uint32 h, Uint32 d) const
 {
 	for (Uint32 z = 0, i = 0; z < d; ++z)
 	{

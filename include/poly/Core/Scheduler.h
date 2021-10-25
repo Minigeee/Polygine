@@ -8,101 +8,147 @@
 #include <mutex>
 #include <queue>
 #include <thread>
+#include <utility>
 #include <vector>
 
 namespace poly
 {
 
-
+template <typename Ret> class TaskBase;
 class Scheduler;
 
+#ifndef DOXYGEN_SKIP
+namespace priv
+{
+
 
 ///////////////////////////////////////////////////////////
-/// \brief A class for checking status of and retrieving scheduler task results
+/// \brief The base class for task states
 ///
 ///////////////////////////////////////////////////////////
-template <typename T>
-class Task
+class TaskStateBase
+{
+	template <typename Ret>
+	friend class TaskBase;
+
+public:
+	///////////////////////////////////////////////////////////
+	/// \brief Virtual destructor
+	///
+	///////////////////////////////////////////////////////////
+	virtual ~TaskStateBase() { }
+
+	///////////////////////////////////////////////////////////
+	/// \brief Virtual function operator
+	///
+	///////////////////////////////////////////////////////////
+	virtual void operator()() = 0;
+
+protected:
+	std::atomic_int m_refCount;		//!< A reference counter to help with lifetime management
+};
+
+
+///////////////////////////////////////////////////////////
+/// \brief A task state base type with result type
+///
+///////////////////////////////////////////////////////////
+template <typename Ret>
+class TaskStateResultType : public TaskStateBase
+{
+public:
+	///////////////////////////////////////////////////////////
+	/// \brief Virtual destructor
+	///
+	///////////////////////////////////////////////////////////
+	virtual ~TaskStateResultType() { }
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the result from the task state
+	///
+	///////////////////////////////////////////////////////////
+	Ret& getResult();
+
+protected:
+	Ret m_result;		//!< The funtion return value
+};
+
+template <> class TaskStateResultType<void> : public TaskStateBase { };
+
+
+}
+#endif
+
+
+///////////////////////////////////////////////////////////
+/// \brief The base class for scheduler tasks
+///
+///////////////////////////////////////////////////////////
+template <typename Ret>
+class TaskBase
 {
 	friend Scheduler;
 
 public:
+	///////////////////////////////////////////////////////////
+	/// \brief Default constructor
+	///
+	/// Creates a task with no associated task state
+	///
+	///////////////////////////////////////////////////////////
+	TaskBase();
+
+#ifndef DOXYGEN_SKIP
+	TaskBase(const TaskBase&) = delete;
+	TaskBase& operator=(const TaskBase&) = delete;
+	TaskBase(TaskBase&& other);
+	TaskBase& operator=(TaskBase&& other);
+#endif
+
 	///////////////////////////////////////////////////////////
 	/// \brief Destructor
 	///
 	///////////////////////////////////////////////////////////
-	~Task();
-
-#ifndef DOXYGEN_SKIP
-	Task(const Task<T>&)				= delete;
-	Task& operator=(const Task<T>&)		= delete;
-	Task(Task<T>&&);
-	Task& operator=(Task<T>&&);
-#endif
+	~TaskBase();
 
 	///////////////////////////////////////////////////////////
-	/// \brief Get the result of a function executed through a scheduler
+	/// \brief Check if associated scheduler task has finished executing
 	///
-	/// This function does not exist for Task<void>.
-	///
-	/// \return The value returned from a function executed through a scheduler
-	///
-	///////////////////////////////////////////////////////////
-	T& getResult() const;
-
-	///////////////////////////////////////////////////////////
-	/// \brief Check if a function executed through a scheduler has finished
-	///
-	/// \return True if a function executed through a scheduler has finished
+	/// \return True if the scheduler task has finished executing
 	///
 	///////////////////////////////////////////////////////////
 	bool isFinished() const;
 
-private:
-	struct TaskImpl
-	{
-		T m_result;						//!< A variable to store function return value
-		std::atomic_int m_refCount;		//!< The reference count
-	};
-
-	Task(TaskImpl* impl);
-
-private:
-	TaskImpl* m_impl;		//!< A pointer to the implementation
+protected:
+	priv::TaskStateResultType<Ret>* m_state;	//!< The associated task state
 };
 
 
-#ifndef DOXYGEN_SKIP
 ///////////////////////////////////////////////////////////
-template <>
-class Task<void>
+/// \brief A class used to check status and get results of a scheduler task
+///
+///////////////////////////////////////////////////////////
+template <typename Ret>
+class Task : public TaskBase<Ret>
 {
-	friend Scheduler;
-
 public:
-	~Task();
-
-#ifndef DOXYGEN_SKIP
-	Task(const Task<void>&)				= delete;
-	Task& operator=(const Task<void>&)	= delete;
-	Task(Task<void>&&);
-	Task& operator=(Task<void>&&);
-#endif
-
-	bool isFinished() const;
-
-private:
-	struct TaskImpl
-	{
-		std::atomic_int m_refCount;
-	};
-
-	Task(TaskImpl* impl);
-
-private:
-	TaskImpl* m_impl;
+	///////////////////////////////////////////////////////////
+	/// \brief Get the return value of a scheduler task
+	///
+	/// The returned reference will contain the value returned from
+	/// the schdduler task if the task has finished executing, or the
+	/// default value if it has not. The running status of a task can
+	/// be checked with isFinished().
+	///
+	/// This function does not exist when the return type is void.
+	///
+	/// \return A reference to the task return value
+	///
+	///////////////////////////////////////////////////////////
+	Ret& getResult();
 };
-#endif
+
+template <> class Task<void> : public TaskBase<void> { };
 
 
 ///////////////////////////////////////////////////////////
@@ -173,6 +219,13 @@ public:
 	/// of the function can be checked through returned Task
 	/// object.
 	///
+	/// In order to call the task function at a later time, when
+	/// the current local variables may have gone out of scope, all arguments
+	/// that are an rvalue reference or a const lvalue reference are
+	/// copied into an internal tuple. Lvalue references that are not
+	/// const are kept as references, so undefined behavior will
+	/// occur if the stored references go out of scope.
+	///
 	/// To add a normal function:
 	///
 	/// \li addTask(func, arg1, arg2, arg3, ...);
@@ -195,7 +248,7 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	template <typename F, typename... Args, typename Ret = typename std::result_of<F(Args...)>::type>
-	Task<Ret> addTask(F&& func, Args&&... args);
+	static Task<Ret> addTask(F&& func, Args&&... args);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Add a task function with a certain priority for the scheduler to execute
@@ -205,6 +258,13 @@ public:
 	/// The return value of the function and the running status
 	/// of the function can be checked through returned Task
 	/// object.
+	///
+	/// In order to call the task function at a later time, when
+	/// the current local variables may have gone out of scope, all arguments
+	/// that are an rvalue reference or a const lvalue reference are
+	/// copied into an internal tuple. Lvalue references that are not
+	/// const are kept as references, so undefined behavior will
+	/// occur if the stored references go out of scope.
 	///
 	/// To add a normal function:
 	///
@@ -235,10 +295,7 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	template <typename F, typename... Args, typename Ret = typename std::result_of<F(Args...)>::type>
-	typename std::enable_if<std::is_same<Ret, void>::value, Task<Ret>>::type addTask(Priority priority, F && func, Args&&... args);
-
-	template <typename F, typename... Args, typename Ret = typename std::result_of<F(Args...)>::type>
-	typename std::enable_if<!std::is_same<Ret, void>::value, Task<Ret>>::type addTask(Priority priority, F && func, Args&&... args);
+	static Task<Ret> addTask(Priority priority, F && func, Args&&... args);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Wait for all tasks in the queue to finish
@@ -247,7 +304,7 @@ public:
 	/// current tasks and tasks in the queue have finished.
 	///
 	///////////////////////////////////////////////////////////
-	void finish();
+	static void finish();
 
 	///////////////////////////////////////////////////////////
 	/// \brief Clears the task queue and stops all worker threads
@@ -258,7 +315,7 @@ public:
 	/// and have joined the current thread.
 	///
 	///////////////////////////////////////////////////////////
-	void stop();
+	static void stop();
 
 private:
 	///////////////////////////////////////////////////////////
@@ -267,7 +324,7 @@ private:
 	///////////////////////////////////////////////////////////
 	void workerLoop(Uint32 id);
 
-	std::queue<std::function<void()>> m_queue[3];	//!< The task queue
+	std::queue<priv::TaskStateBase*> m_queue[3];	//!< The task queue
 	std::vector<std::thread> m_threads;				//!< The list of worker threads
 	std::atomic<Uint32> m_numBusy;					//!< The number of busy threads
 	std::atomic<Uint32> m_numStopped;				//!< The number of threads that have left their loop
@@ -276,6 +333,8 @@ private:
 	std::mutex m_mutex;								//!< Mutex to protect queue and for condition variables
 	std::condition_variable m_scv;					//!< The condition variable used to notify new tasks (start)
 	std::condition_variable m_fcv;					//!< The condition variable used to notify finishing tasks (finish)
+
+	static Scheduler s_instance;					//!< Singleton
 };
 
 
@@ -354,33 +413,30 @@ private:
 ///
 /// int main()
 /// {
-///		// The constructor will create a certain number of threads
-///		Scheduler scheduler;
-///
 ///		// These tasks will be added into the high priority queue
-///		scheduler.addTask(test, "World");
-///		scheduler.addTask(test, "ABC");
+///		Scheduler::addTask(test, "World");
+///		Scheduler::addTask(test, "ABC");
 ///
 ///
 ///		// Add a low priority task
-///		scheduler.addTask(Scheduler::Low, test, "Low");
+///		Scheduler::addTask(Scheduler::Low, test, "Low");
 ///		// Even though this task was added after the low priority, it will execute first
-///		scheduler.addTask(Scheduler::Medium, test, "Medium");
+///		Scheduler::addTask(Scheduler::Medium, test, "Medium");
 ///
 ///
 ///		// Call a member function
 ///		A a;
-///		scheduler.addTask(&A::test, &a, "Class A");
+///		Scheduler::addTask(&A::test, &a, "Class A");
 ///
 ///
 ///		// Using a task
-///		Task<float> task = scheduler.addTask(add, 5.0f, 4.0f);
+///		Task<float> task = Scheduler::addTask(add, 5.0f, 4.0f);
 ///
 ///
 ///		// Wait for all tasks to finish
-///		scheduler.finish();
+///		Scheduler::finish();
 ///		// Join all worker threads
-///		scheduler.stop();
+///		Scheduler::stop();
 ///
 ///		// Check the results
 ///		if (task.isFinished())

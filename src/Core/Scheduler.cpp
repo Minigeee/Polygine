@@ -8,6 +8,10 @@ namespace poly
 
 
 ///////////////////////////////////////////////////////////
+Scheduler Scheduler::s_instance;
+
+
+///////////////////////////////////////////////////////////
 Scheduler::Scheduler() :
 	m_numBusy		(0),
 	m_numStopped	(0),
@@ -53,7 +57,7 @@ void Scheduler::workerLoop(Uint32 id)
 
 	while (!m_shouldStop)
 	{
-		std::function<void()> fn;
+		priv::TaskStateBase* state = 0;
 
 		{
 			// Acquire the mutex to access queue
@@ -81,23 +85,23 @@ void Scheduler::workerLoop(Uint32 id)
 			// Use std::move because its faster
 			if (m_queue[0].size())
 			{
-				fn = std::move(m_queue[0].front());
+				state = m_queue[0].front();
 				m_queue[0].pop();
 			}
 			else if (m_queue[1].size())
 			{
-				fn = std::move(m_queue[1].front());
+				state = m_queue[1].front();
 				m_queue[1].pop();
 			}
 			else
 			{
-				fn = std::move(m_queue[2].front());
+				state = m_queue[2].front();
 				m_queue[2].pop();
 			}
 		}
 
 		// Run the function
-		fn();
+		(*state)();
 	}
 
 	// Once done, increment the stopped counter
@@ -108,11 +112,11 @@ void Scheduler::workerLoop(Uint32 id)
 ///////////////////////////////////////////////////////////
 void Scheduler::finish()
 {
-	std::unique_lock<std::mutex> lock(m_mutex);
+	std::unique_lock<std::mutex> lock(s_instance.m_mutex);
 
 	// Keep waiting until number of busy threads is 0 and the size of queue is 0
-	while (m_numBusy || m_queue[0].size() || m_queue[1].size() || m_queue[2].size())
-		m_fcv.wait(lock);
+	while (s_instance.m_numBusy || s_instance.m_queue[0].size() || s_instance.m_queue[1].size() || s_instance.m_queue[2].size())
+		s_instance.m_fcv.wait(lock);
 }
 
 
@@ -121,21 +125,21 @@ void Scheduler::stop()
 {
 	{
 		// Acquire mutex and clear queue to prevent any extra tasks executing
-		std::unique_lock<std::mutex> lock(m_mutex);
+		std::unique_lock<std::mutex> lock(s_instance.m_mutex);
 
 		for (int i = 0; i < 3; ++i)
 		{
-			while (!m_queue[i].empty())
-				m_queue[i].pop();
+			while (!s_instance.m_queue[i].empty())
+				s_instance.m_queue[i].pop();
 		}
 
 		// Wait until all threads are waiting
-		while (m_numBusy)
-			m_fcv.wait(lock);
+		while (s_instance.m_numBusy)
+			s_instance.m_fcv.wait(lock);
 	}
 
 	// Set stop flag
-	m_shouldStop = true;
+	s_instance.m_shouldStop = true;
 
 	do
 		// Sometimes (very rarely), the stopping thread will notify the conditional variable
@@ -144,14 +148,14 @@ void Scheduler::stop()
 		// once, the thread will wait until a signal from another source is recieve
 
 		// Loop the notify until all threads are stopped
-		m_scv.notify_all();
-	while (m_numStopped < m_threads.size());
+		s_instance.m_scv.notify_all();
+	while (s_instance.m_numStopped < s_instance.m_threads.size());
 
 	// Join all threads
-	for (Uint32 i = 0; i < m_threads.size(); ++i)
+	for (Uint32 i = 0; i < s_instance.m_threads.size(); ++i)
 	{
-		if (m_threads[i].joinable())
-			m_threads[i].join();
+		if (s_instance.m_threads[i].joinable())
+			s_instance.m_threads[i].join();
 	}
 }
 

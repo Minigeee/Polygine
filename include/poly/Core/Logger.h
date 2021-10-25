@@ -90,7 +90,7 @@ public:
 	static void log(MsgType type, const std::string& msg, const std::string& loc = "");
 
 	///////////////////////////////////////////////////////////
-	/// \brief Assign the logger a scheduler to use for asynchronous logging
+	/// \brief Set whether or not the logger should use a scheduler for asyncrhonous logging
 	///
 	/// Whenever a log message is sent, it will be passed as a
 	/// task to the scheduler instead. By default, the priority
@@ -113,7 +113,7 @@ public:
 	/// \param priority Optional priority value to assign to log tasks
 	///
 	///////////////////////////////////////////////////////////
-	static void setScheduler(Scheduler* scheduler, Scheduler::Priority priority = Scheduler::Low);
+	static void setUseScheduler(bool use, Scheduler::Priority priority = Scheduler::Low);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set if certain message types should flush their file output
@@ -157,7 +157,7 @@ private:
 
 	static std::ofstream m_file;			//!< The file stream to write the log to
 
-	static Scheduler* m_scheduler;			//!< Scheduler for asynchronous logging
+	static bool m_useScheduler;				//!< Scheduler for asynchronous logging
 	static Scheduler::Priority m_priority;	//!< Priority level to give logging tasks
 	static HashMap<std::thread::id, std::string> m_threadNames;	//!< Map of thread IDs to names for custom thread names
 	static std::queue<LogMsg> m_msgQueue;	//!< The message queue used for asynchronous messages

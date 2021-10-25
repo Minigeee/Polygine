@@ -1,113 +1,266 @@
 namespace poly
 {
 
-
-///////////////////////////////////////////////////////////
-template <typename T>
-inline Task<T>::Task(TaskImpl* impl):
-	m_impl		(impl)
+#ifndef DOXYGEN_SKIP
+namespace priv
 {
-	m_impl->m_refCount = 2;
-}
 
 
 ///////////////////////////////////////////////////////////
 template <typename T>
-inline Task<T>::Task(Task<T>&& other) :
-	m_impl		(other.m_impl)
+struct arg
 {
-	other.m_impl = 0;
-}
+    typedef typename std::conditional<
+        std::is_lvalue_reference<T>::value,
+        typename std::conditional<
+            std::is_const<typename std::remove_reference<T>::type>::value,
+            typename std::decay<T>::type,
+            typename T
+        >::type,
+        typename std::decay<T>::type
+    >::type type;
+};
 
-
-///////////////////////////////////////////////////////////
 template <typename T>
-inline Task<T>& Task<T>::operator=(Task<T>&& other)
+using arg_t = typename arg<T>::type;
+
+
+///////////////////////////////////////////////////////////
+template<int ...>
+struct seq { };
+
+template<int N, int ...S>
+struct gens : gens<N - 1, N - 1, S...> { };
+
+template<int ...S>
+struct gens<0, S...> {
+    typedef seq<S...> type;
+};
+
+
+///////////////////////////////////////////////////////////
+template <typename Sig>
+class TaskState;
+
+
+///////////////////////////////////////////////////////////
+template <typename Ret, typename... Args>
+class TaskState<Ret(Args...)> : public TaskStateResultType<Ret>
 {
-	if (&other != this)
-	{
-		if (m_impl && --m_impl->m_refCount == 0)
-			delete m_impl;
+public:
+    template <typename Func, typename... PassArgs>
+    TaskState(Func&& func, PassArgs&&... args) :
+        m_function      (std::forward<Func>(func)),
+        m_args          (std::forward<PassArgs>(args)...)
+    {
+        m_refCount = 2;
+    }
 
-		m_impl = other.m_impl;
-		other.m_impl = 0;
-	}
+    void operator()() override
+    {
+        invoke(typename gens<sizeof...(Args)>::type());
 
-	return *this;
+        // Delete self if ref count is 0
+        if (--m_refCount == 0)
+            delete this;
+    }
+
+private:
+    template<int ...S>
+    void invoke(seq<S...>)
+    {
+        m_result = m_function(std::forward<arg_t<Args>>(std::get<S>(m_args))...);
+    }
+
+public:
+    std::function<Ret(Args...)> m_function;
+    std::tuple<arg_t<Args>...> m_args;
+};
+
+
+///////////////////////////////////////////////////////////
+template <typename... Args>
+class TaskState<void(Args...)> : public TaskStateResultType<void>
+{
+public:
+    template <typename Func, typename... PassArgs>
+    TaskState(Func&& func, PassArgs&&... args) :
+        m_function      (std::forward<Func>(func)),
+        m_args          (std::forward<PassArgs>(args)...)
+    {
+        m_refCount = 2;
+    }
+
+    void operator()() override
+    {
+        invoke(typename gens<sizeof...(Args)>::type());
+
+        // Delete self if ref count is 0
+        if (--m_refCount == 0)
+            delete this;
+    }
+
+private:
+    template<int ...S>
+    void invoke(seq<S...>)
+    {
+        m_function(std::get<S>(m_args)...);
+    }
+
+public:
+    std::function<void(Args...)> m_function;
+    std::tuple<arg_t<Args>...> m_args;
+};
+
+
+///////////////////////////////////////////////////////////
+template <typename Ret>
+class TaskState<Ret()> : public TaskStateResultType<Ret>
+{
+public:
+    template <typename Func>
+    TaskState(Func&& func) :
+        m_function      (std::forward<Func>(func))
+    {
+        m_refCount = 2;
+    }
+
+    void operator()() override
+    {
+        m_result = m_function();
+
+        // Delete self if ref count is 0
+        if (--m_refCount == 0)
+            delete this;
+    }
+
+public:
+    std::function<Ret()> m_function;
+};
+
+
+///////////////////////////////////////////////////////////
+template <typename Ret, typename T, typename... Args>
+class TaskState<Ret(T::*)(Args...)> : public TaskState<Ret(T*, Args...)>
+{
+public:
+    template <typename Func, typename... PassArgs>
+    TaskState(Func&& func, PassArgs&&... args) :
+        TaskState<Ret(T*, Args...)>(std::forward<Func>(func), std::forward<PassArgs>(args)...)
+    { }
+};
+
+///////////////////////////////////////////////////////////
+template <typename Ret, typename... Args>
+class TaskState<std::function<Ret(Args...)>> : public TaskState<Ret(Args...)>
+{
+public:
+    template <typename Func, typename... PassArgs>
+    TaskState(Func&& func, PassArgs&&... args) :
+        TaskState<Ret(Args...)>(std::forward<Func>(func), std::forward<PassArgs>(args)...)
+    { }
+};
+
+
+///////////////////////////////////////////////////////////
+template <>
+class TaskState<void()> : public TaskStateResultType<void>
+{
+public:
+    template <typename Func>
+    TaskState(Func&& func) :
+        m_function      (std::forward<Func>(func))
+    {
+        m_refCount = 2;
+    }
+
+    void operator()() override
+    {
+        m_function();
+
+        // Delete self if ref count is 0
+        if (--m_refCount == 0)
+            delete this;
+    }
+
+public:
+    std::function<void()> m_function;
+};
+
+
+///////////////////////////////////////////////////////////
+template <typename Ret>
+inline Ret& TaskStateResultType<Ret>::getResult()
+{
+    return m_result;
+}
+
+
+}
+#endif
+
+
+///////////////////////////////////////////////////////////
+template <typename Ret>
+inline TaskBase<Ret>::TaskBase() :
+    m_state     (0)
+{
+
 }
 
 
 ///////////////////////////////////////////////////////////
-template <typename T>
-inline Task<T>::~Task()
+template <typename Ret>
+inline TaskBase<Ret>::TaskBase(TaskBase<Ret>&& other) :
+    m_state     (other.m_state)
 {
-	if (--m_impl->m_refCount == 0)
-		delete m_impl;
-	m_impl = 0;
+    other.m_state = 0;
 }
 
 
 ///////////////////////////////////////////////////////////
-template <typename T>
-inline T& Task<T>::getResult() const
+template <typename Ret>
+inline TaskBase<Ret>& TaskBase<Ret>::operator=(TaskBase<Ret>&& other)
 {
-	return m_impl->m_result;
+    if (&other != this)
+    {
+        // Delete last state
+        if (m_state && --m_state->m_refCount == 0)
+            delete m_state;
+
+        m_state = other.m_state;
+        other.m_state = 0;
+    }
+
+    return *this;
 }
 
 
 ///////////////////////////////////////////////////////////
-template <typename T>
-inline bool Task<T>::isFinished() const
+template <typename Ret>
+inline TaskBase<Ret>::~TaskBase()
 {
-	return m_impl->m_refCount == 1;
+    if (m_state && --m_state->m_refCount == 0)
+        delete m_state;
+
+    m_state = 0;
 }
 
 
 ///////////////////////////////////////////////////////////
-inline Task<void>::Task(TaskImpl* impl) :
-	m_impl(impl)
+template <typename Ret>
+inline bool TaskBase<Ret>::isFinished() const
 {
-	m_impl->m_refCount = 2;
+    // Task is finished when the ref count is 1
+    return m_state && m_state->m_refCount == 1;
 }
 
 
 ///////////////////////////////////////////////////////////
-inline Task<void>::~Task()
+template <typename Ret>
+inline Ret& Task<Ret>::getResult()
 {
-	if (--m_impl->m_refCount == 0)
-		delete m_impl;
-	m_impl = 0;
-}
-
-
-///////////////////////////////////////////////////////////
-inline Task<void>::Task(Task<void>&& other) :
-	m_impl		(other.m_impl)
-{
-	other.m_impl = 0;
-}
-
-
-///////////////////////////////////////////////////////////
-inline Task<void>& Task<void>::operator=(Task<void>&& other)
-{
-	if (&other != this)
-	{
-		if (m_impl && --m_impl->m_refCount == 0)
-			delete m_impl;
-
-		m_impl = other.m_impl;
-		other.m_impl = 0;
-	}
-
-	return *this;
-}
-
-
-///////////////////////////////////////////////////////////
-inline bool Task<void>::isFinished() const
-{
-	return m_impl->m_refCount == 1;
+    return m_state->getResult();
 }
 
 
@@ -121,55 +274,25 @@ inline Task<Ret> Scheduler::addTask(F&& func, Args&&... args)
 
 ///////////////////////////////////////////////////////////
 template <typename F, typename... Args, typename Ret>
-inline typename std::enable_if<std::is_same<Ret, void>::value, Task<Ret>>::type Scheduler::addTask(Scheduler::Priority priority, F&& func, Args&&... args)
+inline Task<Ret> Scheduler::addTask(Scheduler::Priority priority, F&& func, Args&&... args)
 {
-	// Task
-	Task<Ret>::TaskImpl* impl = new Task<Ret>::TaskImpl();
+    // Create new task state
+    using Ft = typename std::conditional<std::is_member_function_pointer<F>::value, typename F, typename std::remove_reference<F>::type>::type;
+    priv::TaskState<Ft>* state = new priv::TaskState<Ft>(std::forward<F>(func), std::forward<Args>(args)...);
 
-	auto f = [&, impl]()
-	{
-		func(args...);
+    // Add to queue
+    {
+        std::unique_lock<std::mutex> lock(s_instance.m_mutex);
+        s_instance.m_queue[priority].push(state);
+    }
 
-		if (--impl->m_refCount == 0)
-			delete impl;
-	};
+    // Notify any threads that are ready
+    s_instance.m_scv.notify_one();
 
-	{
-		std::unique_lock<std::mutex> lock(m_mutex);
-		m_queue[priority].push(std::move(f));
-	}
-
-	// Notify any threads that are ready
-	m_scv.notify_one();
-
-	return Task<Ret>(impl);
-}
-
-
-///////////////////////////////////////////////////////////
-template <typename F, typename... Args, typename Ret>
-inline typename std::enable_if<!std::is_same<Ret, void>::value, Task<Ret>>::type Scheduler::addTask(Scheduler::Priority priority, F&& func, Args&&... args)
-{
-	// Task
-	Task<Ret>::TaskImpl* impl = new Task<Ret>::TaskImpl();
-
-	auto f = [&, impl]()
-	{
-		impl->m_result = func(args...);
-
-		if (--impl->m_refCount == 0)
-			delete impl;
-	};
-
-	{
-		std::unique_lock<std::mutex> lock(m_mutex);
-		m_queue[priority].push(std::move(f));
-	}
-
-	// Notify any threads that are ready
-	m_scv.notify_one();
-
-	return Task<Ret>(impl);
+    // Return task object
+    Task<Ret> task;
+    task.m_state = state;
+    return task;
 }
 
 
