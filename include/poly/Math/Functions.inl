@@ -15,7 +15,7 @@ inline T clamp(T val, T min, T max)
 template <typename T>
 inline T mix(T a, T b, float factor)
 {
-	return a + factor * (b - a);
+	return T(a + factor * (b - a));
 }
 
 

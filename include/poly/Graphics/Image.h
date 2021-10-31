@@ -625,15 +625,21 @@ public:
 	void* getPixel(Uint32 r, Uint32 c) const;
 
 	///////////////////////////////////////////////////////////
-	/// \brief Get the value of a pixel using linear interpolation
+	/// \brief Sample the value of a pixel using linear interpolation
 	///
-	/// \param r The row index of the pixel
-	/// \param c The column index of the pixel
-	/// \param out The location to store the interpolated value of the image at the given coordinates
+	/// This functions samples the image from a normalized uv coordinate
+	/// (0 to 1) using linear interpolation. This uses the usual sampling
+	/// method in shaders, where (0, 0) is the bottom left corner of the
+	/// image. The template type must match the image data type and color
+	/// channels.
+	///
+	/// \param uv The texture uv coordinates to sample from
+	///
+	/// \return A linear interoplated pixel value
 	///
 	///////////////////////////////////////////////////////////
 	template <typename T>
-	void getPixel(float r, float c, T* out) const;
+	T sample(const Vector2f& uv) const;
 
 private:
 	void* m_data;					//!< A pointer to pixel data

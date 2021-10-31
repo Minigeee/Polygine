@@ -294,11 +294,13 @@ void Image::create(void* data, Uint32 w, Uint32 h, Uint32 c, GLType dtype, bool 
 ///////////////////////////////////////////////////////////
 void Image::resize(Uint32 w, Uint32 h)
 {
-	ASSERT(m_dataType == GLType::Uint8 || m_dataType == GLType::Float, "Resizing images only works for Uint8 and float types");
+	ASSERT(m_dataType == GLType::Uint8 || m_dataType == GLType::Uint16 || m_dataType == GLType::Float, "Resizing images only works for Uint8, Uint16, and float types");
 
 	// Get type size
 	Uint32 typeSize = 1;
-	if (m_dataType == GLType::Float)
+	if (m_dataType == GLType::Uint16)
+		typeSize = 2;
+	else if (m_dataType == GLType::Float)
 		typeSize = 4;
 
 	Uint32 inputStride = m_width * m_numChannels * typeSize;
@@ -311,6 +313,8 @@ void Image::resize(Uint32 w, Uint32 h)
 	// Resize
 	if (m_dataType == GLType::Uint8)
 		stbir_resize_uint8((Uint8*)m_data, m_width, m_height, inputStride, (Uint8*)data, w, h, outputStride, m_numChannels);
+	else if (m_dataType == GLType::Uint16)
+		stbir_resize_uint16_generic((Uint16*)m_data, m_width, m_height, inputStride, (Uint16*)data, w, h, outputStride, m_numChannels, -1, 0, STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, NULL);
 	else
 		stbir_resize_float((float*)m_data, m_width, m_height, inputStride, (float*)data, w, h, outputStride, m_numChannels);
 

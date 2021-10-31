@@ -6,7 +6,10 @@ namespace poly
 
 
 ///////////////////////////////////////////////////////////
-Uint32 Texture::currentBound[] = {};
+Uint32 Texture::s_currentBound[] = {};
+
+///////////////////////////////////////////////////////////
+Uint32 Texture::s_currentSlot = 0;
 
 
 ///////////////////////////////////////////////////////////
@@ -108,8 +111,17 @@ void Texture::bind(Uint32 slot)
 
 	ASSERT(slot < 100, "Texture slot number is too big");
 
+	// Make sure the correct texture slot is active
+	if (s_currentSlot != slot)
+	{
+		// Set slot as active
+		glCheck(glActiveTexture(GL_TEXTURE0 + slot));
+
+		s_currentSlot = slot;
+	}
+
 	// Only bind if it is not bound yet
-	if (currentBound[slot] != m_id)
+	if (s_currentBound[slot] != m_id)
 	{
 		// Get dimensions enum
 		GLenum dims = GL_TEXTURE_1D;
@@ -124,10 +136,9 @@ void Texture::bind(Uint32 slot)
 			dims = GL_TEXTURE_3D;
 
 		// Bind texture
-		glCheck(glActiveTexture(GL_TEXTURE0 + slot));
 		glCheck(glBindTexture(dims, m_id));
 
-		currentBound[slot] = m_id;
+		s_currentBound[slot] = m_id;
 	}
 }
 

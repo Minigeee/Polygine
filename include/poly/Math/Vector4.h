@@ -442,8 +442,8 @@ Vector4<T> operator-(const Vector4<T>& v);
 /// \return The resulting vector
 ///
 ///////////////////////////////////////////////////////////
-template <typename T>
-Vector4<T> operator+(const Vector4<T>& a, T b);
+template <typename T, typename U>
+Vector4<T> operator+(const Vector4<T>& a, U b);
 
 ///////////////////////////////////////////////////////////
 /// \relates Vector4
@@ -457,8 +457,8 @@ Vector4<T> operator+(const Vector4<T>& a, T b);
 /// \return The resulting vector
 ///
 ///////////////////////////////////////////////////////////
-template <typename T>
-Vector4<T> operator+(T a, const Vector4<T>& b);
+template <typename T, typename U>
+Vector4<T> operator+(T a, const Vector4<U>& b);
 
 ///////////////////////////////////////////////////////////
 /// \relates Vector4
@@ -472,8 +472,8 @@ Vector4<T> operator+(T a, const Vector4<T>& b);
 /// \return The resulting vector
 ///
 ///////////////////////////////////////////////////////////
-template <typename T>
-Vector4<T> operator+(const Vector4<T>& a, const Vector4<T>& b);
+template <typename T, typename U>
+Vector4<T> operator+(const Vector4<T>& a, const Vector4<U>& b);
 
 ///////////////////////////////////////////////////////////
 /// \relates Vector4
@@ -487,8 +487,8 @@ Vector4<T> operator+(const Vector4<T>& a, const Vector4<T>& b);
 /// \return The resulting vector
 ///
 ///////////////////////////////////////////////////////////
-template <typename T>
-Vector4<T> operator-(const Vector4<T>& a, T b);
+template <typename T, typename U>
+Vector4<T> operator-(const Vector4<T>& a, U b);
 
 ///////////////////////////////////////////////////////////
 /// \relates Vector4
@@ -502,8 +502,8 @@ Vector4<T> operator-(const Vector4<T>& a, T b);
 /// \return The resulting vector
 ///
 ///////////////////////////////////////////////////////////
-template <typename T>
-Vector4<T> operator-(T a, const Vector4<T>& b);
+template <typename T, typename U>
+Vector4<T> operator-(T a, const Vector4<U>& b);
 
 ///////////////////////////////////////////////////////////
 /// \relates Vector4
@@ -517,8 +517,8 @@ Vector4<T> operator-(T a, const Vector4<T>& b);
 /// \return The resulting vector
 ///
 ///////////////////////////////////////////////////////////
-template <typename T>
-Vector4<T> operator-(const Vector4<T>& a, const Vector4<T>& b);
+template <typename T, typename U>
+Vector4<T> operator-(const Vector4<T>& a, const Vector4<U>& b);
 
 ///////////////////////////////////////////////////////////
 /// \relates Vector4
@@ -532,8 +532,8 @@ Vector4<T> operator-(const Vector4<T>& a, const Vector4<T>& b);
 /// \return The resulting vector
 ///
 ///////////////////////////////////////////////////////////
-template <typename T>
-Vector4<T> operator*(const Vector4<T>& a, T b);
+template <typename T, typename U>
+Vector4<T> operator*(const Vector4<T>& a, U b);
 
 ///////////////////////////////////////////////////////////
 /// \relates Vector4
@@ -547,8 +547,8 @@ Vector4<T> operator*(const Vector4<T>& a, T b);
 /// \return The resulting vector
 ///
 ///////////////////////////////////////////////////////////
-template <typename T>
-Vector4<T> operator*(T a, const Vector4<T>& b);
+template <typename T, typename U>
+Vector4<T> operator*(T a, const Vector4<U>& b);
 
 ///////////////////////////////////////////////////////////
 /// \relates Vector4
@@ -562,8 +562,8 @@ Vector4<T> operator*(T a, const Vector4<T>& b);
 /// \return The resulting vector
 ///
 ///////////////////////////////////////////////////////////
-template <typename T>
-Vector4<T> operator*(const Vector4<T>& a, const Vector4<T>& b);
+template <typename T, typename U>
+Vector4<T> operator*(const Vector4<T>& a, const Vector4<U>& b);
 
 ///////////////////////////////////////////////////////////
 /// \relates Vector4
@@ -577,8 +577,8 @@ Vector4<T> operator*(const Vector4<T>& a, const Vector4<T>& b);
 /// \return The resulting vector
 ///
 ///////////////////////////////////////////////////////////
-template <typename T>
-Vector4<T> operator/(const Vector4<T>& a, T b);
+template <typename T, typename U>
+Vector4<T> operator/(const Vector4<T>& a, U b);
 
 ///////////////////////////////////////////////////////////
 /// \relates Vector4
@@ -592,8 +592,8 @@ Vector4<T> operator/(const Vector4<T>& a, T b);
 /// \return The resulting vector
 ///
 ///////////////////////////////////////////////////////////
-template <typename T>
-Vector4<T> operator/(T a, const Vector4<T>& b);
+template <typename T, typename U>
+Vector4<T> operator/(T a, const Vector4<U>& b);
 
 ///////////////////////////////////////////////////////////
 /// \relates Vector4
@@ -607,8 +607,8 @@ Vector4<T> operator/(T a, const Vector4<T>& b);
 /// \return The resulting vector
 ///
 ///////////////////////////////////////////////////////////
-template <typename T>
-Vector4<T> operator/(const Vector4<T>& a, const Vector4<T>& b);
+template <typename T, typename U>
+Vector4<T> operator/(const Vector4<T>& a, const Vector4<U>& b);
 
 ///////////////////////////////////////////////////////////
 /// \relates Vector4
@@ -622,8 +622,8 @@ Vector4<T> operator/(const Vector4<T>& a, const Vector4<T>& b);
 /// \return The resulting vector
 ///
 ///////////////////////////////////////////////////////////
-template <typename T>
-Vector4<T> operator%(const Vector4<T>& a, T b);
+template <typename T, typename U>
+Vector4<T> operator%(const Vector4<T>& a, U b);
 
 ///////////////////////////////////////////////////////////
 /// \relates Vector4
@@ -637,8 +637,8 @@ Vector4<T> operator%(const Vector4<T>& a, T b);
 /// \return The resulting vector
 ///
 ///////////////////////////////////////////////////////////
-template <typename T>
-Vector4<T> operator%(T a, const Vector4<T>& b);
+template <typename T, typename U>
+Vector4<T> operator%(T a, const Vector4<U>& b);
 
 ///////////////////////////////////////////////////////////
 /// \relates Vector4
@@ -652,8 +652,8 @@ Vector4<T> operator%(T a, const Vector4<T>& b);
 /// \return The resulting vector
 ///
 ///////////////////////////////////////////////////////////
-template <typename T>
-Vector4<T> operator%(const Vector4<T>& a, const Vector4<T>& b);
+template <typename T, typename U>
+Vector4<T> operator%(const Vector4<T>& a, const Vector4<U>& b);
 
 ///////////////////////////////////////////////////////////
 /// \relates Vector4

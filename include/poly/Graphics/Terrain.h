@@ -16,51 +16,67 @@ namespace poly
 {
 
 
-class Terrain;
-
-
 ///////////////////////////////////////////////////////////
-/// \brief A texture wrapper class for large terrain maps that are too large to hold in memory
-///
-///////////////////////////////////////////////////////////
-class TerrainMap
+class TerrainBase : public RenderSystem
 {
-	friend Terrain;
-
 public:
+	TerrainBase();
+
+	virtual ~TerrainBase();
+
+	void init(Scene* scene) override;
+
+	void render(Camera& camera, RenderPass pass, const RenderSettings& settings) override;
+
+	void create(float size, float maxHeight, float maxBaseSize = 50.0f);
+
+protected:
 	///////////////////////////////////////////////////////////
-	/// \brief Default constructor
+	/// \brief This function is called before rendering
+	///
+	/// This function should be responsible for binding the shader,
+	/// setting any uniforms and textures needed to render the terrain,
+	/// and potentially any terrain updates that need to occur.
 	///
 	///////////////////////////////////////////////////////////
-	TerrainMap();
+	virtual void onRender(Camera& camera) = 0;
 
-	void create(Uint32 size, Uint32 tileSize = 256, PixelFormat fmt = PixelFormat::Rgb, GLType dtype = GLType::Uint8);
+protected:
+	///////////////////////////////////////////////////////////
+	/// \brief A struct containing data for terrain lod levels
+	///
+	///////////////////////////////////////////////////////////
+	struct LodLevel
+	{
+		float m_dist;									//!< The distance this lod level ends at
+		ImageBuffer<Vector2<Uint16>> m_heightBounds;	//!< An image buffer of height bounds values for each terrain tile
+	};
 
-	Texture& getTexture();
+	///////////////////////////////////////////////////////////
+	/// \brief Make render list from quadtree nodes
+	///
+	///////////////////////////////////////////////////////////
+	void makeRenderList(const Vector2u& node, Uint32 lod, const Frustum& frustum, std::vector<Vector4f>& renderList);
 
-	Uint32 getSize() const;
+protected:
+	float m_size;						//!< The size of each side of the terrain (world units)
+	float m_maxHeight;					//!< The maximum height of the terrain (world units)
 
-	Uint32 getTileSize() const;
+	Vector3f m_viewpoint;				//!< The player viewpoint (determins lod level of each tile)
+	float m_baseScale;					//!< The scale of the base level tile
 
-	PixelFormat getFormat() const;
+	Shader* m_shader;					//!< A pointer to the terrain shader
+	VertexBuffer m_instanceBuffer;		//!< The tile instance buffer
+	VertexBuffer m_vertexBuffer;		//!< The tile vertex buffer
+	VertexBuffer m_indexBuffer;			//!< The tile index buffer
+	VertexArray m_vertexArray;			//!< The render vertex array
+	Uint32 m_instanceDataOffset;		//!< The offset of the instance buffer in bytes
 
-	GLType getDataType() const;
+	Uint32 m_numLevels;					//!< The number of quadtree levels
+	std::vector<LodLevel> m_lodLevels;	//!< A list of terrain lod levels (where 0 is the largest level)
 
-	void onRequestTile(const std::function<bool(const Vector2i&, Uint32, Image&)>& func);
-
-private:
-	Image* load(const Vector2i& pos, Uint32 level);
-
-	void setCacheSize(Uint32 w, Uint32 h);
-
-private:
-	Texture m_texture;			//!< The cache texture
-	Uint32 m_size;				//!< The true size of the texture
-	Uint32 m_tileSize;			//!< The tile size of the texture
-	PixelFormat m_format;		//!< The pixel format of the texture
-	GLType m_dataType;			//!< The data type of the pixel data
-
-	std::function<bool(const Vector2i&, Uint32, Image&)> m_loadFunc;
+	bool m_viewpointChanged;			//!< True if viewpoint has changed (this is set in render loop, must be reset when used)
+	bool m_lodDistsChanged;				//!< True if lod distances changed
 };
 
 
@@ -68,7 +84,7 @@ private:
 /// \brief A render system that render low-poly style terrain
 ///
 ///////////////////////////////////////////////////////////
-class Terrain : public RenderSystem
+class Terrain : public TerrainBase
 {
 public:
 	///////////////////////////////////////////////////////////
@@ -83,112 +99,148 @@ public:
 	///////////////////////////////////////////////////////////
 	~Terrain();
 
-	///////////////////////////////////////////////////////////
-	/// \brief Initialize the terrain for a scene
-	///
-	/// This stores a pointer to the scene, and is automatically called
-	/// when the terrain is added to a scene with Scene::addRenderSystem().
-	///
-	/// \param scene A pointer to the scene to initialize with
-	///
-	///////////////////////////////////////////////////////////
-	void init(Scene* scene) override;
-
-	///////////////////////////////////////////////////////////
-	/// \brief Render the terrain from the perspective of the camera
-	///
-	/// This function will be called by the scene, so in most cases,
-	/// this function will not be directly called.
-	///
-	/// \param camera The camera to render from the perspective of
-	/// \param pass The render pass that is being executed
-	/// \param settings The render settings to apply
-	///
-	///////////////////////////////////////////////////////////
-	void render(Camera& camera, RenderPass pass, const RenderSettings& settings) override;
-
-	///////////////////////////////////////////////////////////
-	///////////////////////////////////////////////////////////
-	void create(float chunkSize, float maxHeight, float maxNodeSize = 50.0f, float viewDist = -1.0f);
-
-	///////////////////////////////////////////////////////////
-	///////////////////////////////////////////////////////////
-	void setViewpoint(const Vector3f& point);
-
 	void setHeightMap(const Image& hmap);
 
-	void setHeightMap(TerrainMap* hmap);
+	Texture& getHeightMap();
 
-	void setHeightBounds(const Vector2i& tile, const Vector2f& bounds);
+	Texture& getNormalMap();
 
-protected:
-	struct LodLevel
-	{
-		float m_range;
-		std::vector<Vector2<Uint16>> m_heightBounds;
-	};
+	Image& getHeightData();
 
-	struct AsyncTileObj
-	{
-		std::future<Image*> m_future;
-		Texture* m_cacheTexture;
-		Vector3<Uint8> m_nodeData;
-		Vector2<Uint8> m_cachePos;
-	};
+	Image& getNormalData();
 
-	static Shader& getDefaultShader();
-
-	static Shader& getTerrainMapShader();
+private:
+	static Shader& getShader();
 
 	static Shader s_shader;
-	static Shader s_tmapShader;
 
-	void updateData(const Vector2u& pos, const Vector2u& size);
+	void onRender(Camera& camera) override;
 
-	void updateHeightBounds(Uint32 r, Uint32 c);
+	///////////////////////////////////////////////////////////
+	/// \brief Update a subrect of the terrain height map
+	///
+	///////////////////////////////////////////////////////////
+	void updateHeightMap(const Vector2u& pos, const Vector2u& size);
 
-	void addLodNodes(const Vector2u& node, Uint32 lod, const Frustum& frustum, std::vector<Vector4f>& renderList);
+	void updateHeightBounds(Uint32 nr, Uint32 nc);
 
-	void loadMapTiles(const Vector2u& node, Uint32 lod);
-
-	void createIndexMap(Uint32 size);
-
-	Image* createNormalTile(Image* hmap, float chunkSize);
-
-protected:
-	float m_size;
-	float m_maxHeight;
-	Uint32 m_numLevels;
-
-	void* m_heightMap;
-	void* m_normalMap;
-	Image m_heightMapImg;
-	Image m_normalMapImg;
-	std::vector<TerrainMap*> m_customMaps;
-	Uint32 m_tileSize;
-	bool m_usesTerrainMaps;
-
-	Shader* m_shader;
-	VertexBuffer m_instanceBuffer;
-	VertexBuffer m_vertexBuffer;
-	VertexBuffer m_indexBuffer;
-	VertexArray m_vertexArray;
-	Uint32 m_instanceDataOffset;
-
-	Texture m_indexMap;
-	ImageBuffer<Vector2<Uint8>> m_indexMapImg;
-	std::stack<Vector2<Uint8>> m_indexFreeList;
-	Uint32 m_highestMapLevel;
-	HashMap<Vector3<Uint8>, Vector2<Uint8>> m_loadedMapTiles;
-	std::vector<AsyncTileObj> m_loadThreads;
-	bool m_indexMapChanged;
-
-	Vector3f m_viewpoint;
-	float m_baseScale;
-	std::vector<LodLevel> m_lodLevels;
-	bool m_viewpointChanged;
-	bool m_useCustomViewpoint;
+private:
+	Texture m_heightMap;
+	Texture m_normalMap;
+	ImageBuffer<float> m_heightMapImg;
+	ImageBuffer<Vector3<Uint16>> m_normalMapImg;
 };
+
+
+///////////////////////////////////////////////////////////
+class LargeTerrain : public TerrainBase
+{
+public:
+	typedef std::function<bool(const Vector2i&, Uint32, Image*)> LoadFunc;
+
+public:
+	LargeTerrain();
+
+	~LargeTerrain();
+
+	void create(float size, float maxHeight, float maxBaseSize = 50.0f, float tileSize = 512.0f);
+
+	void setHeightLoader(const LoadFunc& func);
+
+	Texture& getRedirectMap();
+
+	Texture& getHeightMap();
+
+	Texture& getNormalMap();
+
+	void onUnloadTile(const std::function<void(const Vector2i&, Uint32)>& func);
+
+private:
+	enum class EdgeRow
+	{
+		Left,
+		Right,
+		Top,
+		Bottom,
+		LMid,
+		RMid,
+		TMid,
+		BMid
+	};
+
+	struct MapData
+	{
+		enum Type
+		{
+			Height,
+			Normal,
+			Splat,
+			Custom
+		};
+
+		Texture* m_texture;
+		Image* m_fullImg;
+		Image* m_edgeImg;
+		Uint8 m_edgeResL;
+		Uint8 m_edgeResR;
+		Uint8 m_edgeResT;
+		Uint8 m_edgeResB;
+	};
+
+	struct LoadTask
+	{
+		Task<bool> m_task;
+		Image* m_image;
+		Texture* m_texture;
+		MapData::Type m_mapType;
+		Vector3<Uint16> m_tileData;
+	};
+
+	struct Tile
+	{
+		std::vector<MapData> m_mapData;
+		Vector2<Uint8> m_cachePos;
+		Vector3<Uint16> m_tileData;
+		Uint32 m_isLoaded;
+	};
+
+	static Shader& getShader();
+
+	static Shader s_shader;
+
+	void onRender(Camera& camera) override;
+
+	void updateTileMaps(const Vector2u& node, Uint32 lod);
+
+	void updateLoadTasks();
+
+	void addLoadTask(const Vector2u& node, Uint32 lod, Texture* texture, const LoadFunc& func, Uint32 mapType);
+
+	Tile* getAdjTile(const Vector3<Uint16>& tileData);
+
+	bool makeNormalsTile(Image* hmap, Image* output, Uint32 lod);
+
+private:
+	float m_tileSize;		//!< The size of the area that each tile map covers (per side in world units)
+
+	Texture m_heightMap;
+	Texture m_normalMap;
+	Texture m_redirectMap;
+	ImageBuffer<Vector3<Uint8>> m_redirectMapImg;
+
+	LoadFunc m_heightLoadFunc;
+	std::function<void(const Vector2i&, Uint32)> m_unloadFunc;
+
+	Uint32 m_baseTileLevel;
+	Vector2u m_cacheMapSize;
+	std::stack<Vector2<Uint8>> m_freeList;
+	HashMap<Vector3<Uint16>, Tile> m_tileMap;
+	std::vector<LoadTask*> m_loadTasks;
+
+	Uint32 m_tileLoadedBitfield;
+	bool m_redirectMapChanged;
+};
+
 
 }
 

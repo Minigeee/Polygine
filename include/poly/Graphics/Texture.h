@@ -167,8 +167,11 @@ public:
 	/// This will cause data from only the subregion to be updated,
 	/// where pos is pixel offset of the subregion from the top left
 	/// of the texture, and size is the region size in pixels.
+	/// The pixel data must be layed out in continuous row-major order.
 	///
 	/// \param data A pointer to the new texture data
+	/// \param pos The position of the section to update (x)
+	/// \param size The dimensions of the section to update (w)
 	///
 	///////////////////////////////////////////////////////////
 	void update(void* data, Uint32 pos, Uint32 size);
@@ -179,8 +182,13 @@ public:
 	/// This will cause data from only the subregion to be updated,
 	/// where pos is pixel offset of the subregion from the top left
 	/// of the texture, and size is the region size in pixels.
+	/// The pixel data must be layed out in continuous row-major order.
+	///
+	/// \note \a pos must be specified in (x, y) coordinates
 	///
 	/// \param data A pointer to the new texture data
+	/// \param pos The position of the section to update (x, y)
+	/// \param size The dimensions of the section to update (w, h)
 	///
 	///////////////////////////////////////////////////////////
 	void update(void* data, const Vector2u& pos, const Vector2u& size);
@@ -191,8 +199,11 @@ public:
 	/// This will cause data from only the subregion to be updated,
 	/// where pos is pixel offset of the subregion from the top left
 	/// of the texture, and size is the region size in pixels.
+	/// The pixel data must be layed out in continuous row-major order.
 	///
 	/// \param data A pointer to the new texture data
+	/// \param pos The position of the section to update (x, y, z)
+	/// \param size The dimensions of the section to update (w, h, d)
 	///
 	///////////////////////////////////////////////////////////
 	void update(void* data, const Vector3u& pos, const Vector3u& size);
@@ -333,7 +344,8 @@ private:
 	bool m_multisampled;	//!< True if the texture is multisampled
 	bool m_hasMipmaps;		//!< True if mipmaps were generated for the texture
 
-	static Uint32 currentBound[100];
+	static Uint32 s_currentSlot;
+	static Uint32 s_currentBound[100];
 };
 
 }

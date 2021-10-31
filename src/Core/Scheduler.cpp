@@ -17,18 +17,7 @@ Scheduler::Scheduler() :
 	m_numStopped	(0),
 	m_shouldStop	(false)
 {
-	Uint32 size = std::thread::hardware_concurrency();
-	m_numBusy = size;
 
-	for (Uint32 i = 0; i < size; ++i)
-		m_threads.push_back(std::thread(&Scheduler::workerLoop, this, i));
-
-	// Don't continue until all threads are ready
-	{
-		std::unique_lock<std::mutex> lock(m_mutex);
-		while (m_numBusy > 0)
-			m_fcv.wait(lock);
-	}
 }
 
 
@@ -39,6 +28,13 @@ Scheduler::Scheduler(Uint32 numWorkers) :
 {
 	for (Uint32 i = 0; i < numWorkers; ++i)
 		m_threads.push_back(std::thread(&Scheduler::workerLoop, this, i));
+
+	// Don't continue until all threads are ready
+	{
+		std::unique_lock<std::mutex> lock(m_mutex);
+		while (m_numBusy > 0)
+			m_fcv.wait(lock);
+	}
 }
 
 
@@ -157,6 +153,34 @@ void Scheduler::stop()
 		if (s_instance.m_threads[i].joinable())
 			s_instance.m_threads[i].join();
 	}
+}
+
+
+///////////////////////////////////////////////////////////
+void Scheduler::setNumWorkers(Uint32 num)
+{
+	// Stop all threads
+	if (s_instance.m_threads.size())
+		stop();
+
+	s_instance.m_numBusy = num;
+
+	for (Uint32 i = 0; i < num; ++i)
+		s_instance.m_threads.push_back(std::thread(&Scheduler::workerLoop, &s_instance, i));
+
+	// Don't continue until all threads are ready
+	{
+		std::unique_lock<std::mutex> lock(s_instance.m_mutex);
+		while (s_instance.m_numBusy > 0)
+			s_instance.m_fcv.wait(lock);
+	}
+}
+
+
+///////////////////////////////////////////////////////////
+Uint32 Scheduler::getNumWorkers()
+{
+	return s_instance.m_threads.size();
 }
 
 

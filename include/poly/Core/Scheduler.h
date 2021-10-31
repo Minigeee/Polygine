@@ -317,6 +317,26 @@ public:
 	///////////////////////////////////////////////////////////
 	static void stop();
 
+	///////////////////////////////////////////////////////////
+	/// \brief Set the size of the worker thread pool
+	///
+	/// This will determine how many worker threads will be used
+	/// to execute tasks. If a positive number of worker threads already
+	/// exist, then the scheduler will stop(), then resize the thread pool.
+	///
+	/// \param num The number of worker threads that will be used
+	///
+	///////////////////////////////////////////////////////////
+	static void setNumWorkers(Uint32 num);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the size of the worker thread pool
+	///
+	/// \return The number of worker threads that have been created
+	///
+	///////////////////////////////////////////////////////////
+	static Uint32 getNumWorkers();
+
 private:
 	///////////////////////////////////////////////////////////
 	/// \brief The loop that worker threads use
@@ -324,6 +344,7 @@ private:
 	///////////////////////////////////////////////////////////
 	void workerLoop(Uint32 id);
 
+private:
 	std::queue<priv::TaskStateBase*> m_queue[3];	//!< The task queue
 	std::vector<std::thread> m_threads;				//!< The list of worker threads
 	std::atomic<Uint32> m_numBusy;					//!< The number of busy threads

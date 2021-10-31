@@ -5,6 +5,45 @@
 namespace poly
 {
 
+namespace priv
+{
+
+
+///////////////////////////////////////////////////////////
+template <typename T>
+struct PixelMatchesType
+{
+	static bool check(GLType dtype, Uint32 c) { return getGLType<T>() == dtype && c == 1; }
+};
+
+
+///////////////////////////////////////////////////////////
+template <typename T>
+struct PixelMatchesType<Vector2<T>>
+{
+	static bool check(GLType dtype, Uint32 c) { return getGLType<T>() == dtype && c == 2; }
+};
+
+
+///////////////////////////////////////////////////////////
+template <typename T>
+struct PixelMatchesType<Vector3<T>>
+{
+	static bool check(GLType dtype, Uint32 c) { return getGLType<T>() == dtype && c == 3; }
+};
+
+
+///////////////////////////////////////////////////////////
+template <typename T>
+struct PixelMatchesType<Vector4<T>>
+{
+	static bool check(GLType dtype, Uint32 c) { return getGLType<T>() == dtype && c == 4; }
+};
+
+
+}
+
+
 ///////////////////////////////////////////////////////////
 template <typename T>
 inline ImageBuffer<T>::ImageBuffer() :
@@ -838,39 +877,41 @@ inline void Image::create(ImageBuffer<Vector4<T>>& buffer)
 template <typename T>
 inline ImageBuffer<T> Image::getBuffer() const
 {
-	return ImageBuffer<T>(m_data, m_width, m_height);
+	return ImageBuffer<T>((T*)m_data, m_width, m_height);
 }
 
 
 ///////////////////////////////////////////////////////////
 template <typename T>
-inline void Image::getPixel(float r, float c, T* out) const
+inline T Image::sample(const Vector2f& uv) const
 {
+#ifndef NDEBUG
+	ASSERT(priv::PixelMatchesType<T>::check(m_dataType, m_numChannels), "Requested image pixel using the wrong data type: %s", TypeInfo::get<T>().m_name.c_str());
+#endif
+
+	float r = clamp((1.0f - uv.y) * m_height - 0.5f, 0.0f, (float)m_height - 1.0f);
+	float c = clamp(uv.x * m_width - 0.5f, 0.0f, (float)m_width - 1.0f);
 	Uint32 ri = (Uint32)r;
-	Uint32 ci = (Uint32)r;
+	Uint32 ci = (Uint32)c;
 	float rf = r - (float)ri;
 	float cf = c - (float)ci;
 
 	ASSERT(ri < m_height&& ci < m_width, "Requested image pixel row or column is out of bounds: %d, %d", ri, ci);
 
-#ifndef NDEBUG
-	bool correctType = getGLType<T>() == m_dataType;	
-	ASSERT(correctType, "Requested image pixel using the wrong data type: %s", TypeInfo::get<T>().m_name.c_str());
-#endif
+	Uint32 ro = (ri == m_height - 1 ? 0 : 1);
+	Uint32 co = (ci == m_width - 1 ? 0 : 1);
 
 	// Get surrounding pixels
-	T* p1 = (T*)m_data + ((ri + 0) * m_width + (ci + 0)) * m_numChannels;
-	T* p2 = (T*)m_data + ((ri + 1) * m_width + (ci + 0)) * m_numChannels;
-	T* p3 = (T*)m_data + ((ri + 0) * m_width + (ci + 1)) * m_numChannels;
-	T* p4 = (T*)m_data + ((ri + 1) * m_width + (ci + 1)) * m_numChannels;
+	T* p1 = (T*)m_data + (ri + 0) * m_width + (ci + 0);
+	T* p2 = (T*)m_data + (ri + ro) * m_width + (ci + 0);
+	T* p3 = (T*)m_data + (ri + 0) * m_width + (ci + co);
+	T* p4 = (T*)m_data + (ri + ro) * m_width + (ci + co);
 
 	// Interpolate
-	for (Uint32 i = 0; i < m_numChannels; ++i)
-	{
-		T a1 = mix(p1[i], p2[i], rf);
-		T a2 = mix(p3[i], p4[i], rf);
-		out[i] = mix(a1, a2, cf);
-	}
+	T a1 = mix(*p1, *p2, rf);
+	T a2 = mix(*p3, *p4, rf);
+
+	return mix(a1, a2, cf);
 }
 
 

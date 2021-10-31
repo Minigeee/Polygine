@@ -212,92 +212,92 @@ Vector3<T> operator-(const Vector3<T>& v)
 	return Vector3<T>(-v.x, -v.y, -v.z);
 }
 
-template <typename T>
-inline Vector3<T> operator+(const Vector3<T>& v, T s)
+template <typename T, typename U>
+inline Vector3<T> operator+(const Vector3<T>& v, U s)
 {
 	return Vector3<T>(v.x + s, v.y + s, v.z + s);
 }
 
-template <typename T>
-inline Vector3<T> operator+(T s, const Vector3<T>& v)
+template <typename T, typename U>
+inline Vector3<T> operator+(T s, const Vector3<U>& v)
 {
 	return Vector3<T>(s + v.x, s + v.y, s + v.z);
 }
 
-template <typename T>
-inline Vector3<T> operator+(const Vector3<T>& a, const Vector3<T>& b)
+template <typename T, typename U>
+inline Vector3<T> operator+(const Vector3<T>& a, const Vector3<U>& b)
 {
 	return Vector3<T>(a.x + b.x, a.y + b.y, a.z + b.z);
 }
 
-template <typename T>
-inline Vector3<T> operator-(const Vector3<T>& v, T s)
+template <typename T, typename U>
+inline Vector3<T> operator-(const Vector3<T>& v, U s)
 {
 	return Vector3<T>(v.x - s, v.y - s, v.z - s);
 }
 
-template <typename T>
-inline Vector3<T> operator-(T s, const Vector3<T>& v)
+template <typename T, typename U>
+inline Vector3<T> operator-(T s, const Vector3<U>& v)
 {
 	return Vector3<T>(s - v.x, s - v.y, s - v.z);
 }
 
-template <typename T>
-inline Vector3<T> operator-(const Vector3<T>& a, const Vector3<T>& b)
+template <typename T, typename U>
+inline Vector3<T> operator-(const Vector3<T>& a, const Vector3<U>& b)
 {
 	return Vector3<T>(a.x - b.x, a.y - b.y, a.z - b.z);
 }
 
-template <typename T>
-inline Vector3<T> operator*(const Vector3<T>& v, T s)
+template <typename T, typename U>
+inline Vector3<T> operator*(const Vector3<T>& v, U s)
 {
 	return Vector3<T>(v.x * s, v.y * s, v.z * s);
 }
 
-template <typename T>
-inline Vector3<T> operator*(T s, const Vector3<T>& v)
+template <typename T, typename U>
+inline Vector3<T> operator*(T s, const Vector3<U>& v)
 {
 	return Vector3<T>(s * v.x, s * v.y, s * v.z);
 }
 
-template <typename T>
-inline Vector3<T> operator*(const Vector3<T>& a, const Vector3<T>& b)
+template <typename T, typename U>
+inline Vector3<T> operator*(const Vector3<T>& a, const Vector3<U>& b)
 {
 	return Vector3<T>(a.x * b.x, a.y * b.y, a.z * b.z);
 }
 
-template <typename T>
-inline Vector3<T> operator/(const Vector3<T>& v, T s)
+template <typename T, typename U>
+inline Vector3<T> operator/(const Vector3<T>& v, U s)
 {
 	return Vector3<T>(v.x / s, v.y / s, v.z / s);
 }
 
-template <typename T>
-inline Vector3<T> operator/(T s, const Vector3<T>& v)
+template <typename T, typename U>
+inline Vector3<T> operator/(T s, const Vector3<U>& v)
 {
 	return Vector3<T>(s / v.x, s / v.y, s / v.z);
 }
 
-template <typename T>
-inline Vector3<T> operator/(const Vector3<T>& a, const Vector3<T>& b)
+template <typename T, typename U>
+inline Vector3<T> operator/(const Vector3<T>& a, const Vector3<U>& b)
 {
 	return Vector3<T>(a.x / b.x, a.y / b.y, a.z / b.z);
 }
 
-template <typename T>
-inline Vector3<T> operator%(const Vector3<T>& v, T s)
+template <typename T, typename U>
+inline Vector3<T> operator%(const Vector3<T>& v, U s)
 {
 	return Vector3<T>(v.x % s, v.y % s, v.z % s);
 }
 
-template <typename T>
-inline Vector3<T> operator%(T s, const Vector3<T>& v)
+template <typename T, typename U>
+inline Vector3<T> operator%(T s, const Vector3<U>& v)
 {
 	return Vector3<T>(s % v.x, s % v.y, s % v.z);
 }
 
-template <typename T>
-inline Vector3<T> operator%(const Vector3<T>& a, const Vector3<T>& b)
+template <typename T, typename U>
+inline Vector3<T> operator%(const Vector3<T>& a, const Vector3<U>& b)
 {
 	return Vector3<T>(a.x % b.x, a.y % b.y, a.z % b.z);
 }

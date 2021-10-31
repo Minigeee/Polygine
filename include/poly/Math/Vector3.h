@@ -399,8 +399,8 @@ Vector3<T> operator-(const Vector3<T>& v);
 /// \return The resulting vector
 ///
 ///////////////////////////////////////////////////////////
-template <typename T>
-Vector3<T> operator+(const Vector3<T>& a, T b);
+template <typename T, typename U>
+Vector3<T> operator+(const Vector3<T>& a, U b);
 
 ///////////////////////////////////////////////////////////
 /// \relates Vector3
@@ -414,8 +414,8 @@ Vector3<T> operator+(const Vector3<T>& a, T b);
 /// \return The resulting vector
 ///
 ///////////////////////////////////////////////////////////
-template <typename T>
-Vector3<T> operator+(T a, const Vector3<T>& b);
+template <typename T, typename U>
+Vector3<T> operator+(T a, const Vector3<U>& b);
 
 ///////////////////////////////////////////////////////////
 /// \relates Vector3
@@ -429,8 +429,8 @@ Vector3<T> operator+(T a, const Vector3<T>& b);
 /// \return The resulting vector
 ///
 ///////////////////////////////////////////////////////////
-template <typename T>
-Vector3<T> operator+(const Vector3<T>& a, const Vector3<T>& b);
+template <typename T, typename U>
+Vector3<T> operator+(const Vector3<T>& a, const Vector3<U>& b);
 
 ///////////////////////////////////////////////////////////
 /// \relates Vector3
@@ -444,8 +444,8 @@ Vector3<T> operator+(const Vector3<T>& a, const Vector3<T>& b);
 /// \return The resulting vector
 ///
 ///////////////////////////////////////////////////////////
-template <typename T>
-Vector3<T> operator-(const Vector3<T>& a, T b);
+template <typename T, typename U>
+Vector3<T> operator-(const Vector3<T>& a, U b);
 
 ///////////////////////////////////////////////////////////
 /// \relates Vector3
@@ -459,8 +459,8 @@ Vector3<T> operator-(const Vector3<T>& a, T b);
 /// \return The resulting vector
 ///
 ///////////////////////////////////////////////////////////
-template <typename T>
-Vector3<T> operator-(T a, const Vector3<T>& b);
+template <typename T, typename U>
+Vector3<T> operator-(T a, const Vector3<U>& b);
 
 ///////////////////////////////////////////////////////////
 /// \relates Vector3
@@ -474,8 +474,8 @@ Vector3<T> operator-(T a, const Vector3<T>& b);
 /// \return The resulting vector
 ///
 ///////////////////////////////////////////////////////////
-template <typename T>
-Vector3<T> operator-(const Vector3<T>& a, const Vector3<T>& b);
+template <typename T, typename U>
+Vector3<T> operator-(const Vector3<T>& a, const Vector3<U>& b);
 
 ///////////////////////////////////////////////////////////
 /// \relates Vector3
@@ -489,8 +489,8 @@ Vector3<T> operator-(const Vector3<T>& a, const Vector3<T>& b);
 /// \return The resulting vector
 ///
 ///////////////////////////////////////////////////////////
-template <typename T>
-Vector3<T> operator*(const Vector3<T>& a, T b);
+template <typename T, typename U>
+Vector3<T> operator*(const Vector3<T>& a, U b);
 
 ///////////////////////////////////////////////////////////
 /// \relates Vector3
@@ -504,8 +504,8 @@ Vector3<T> operator*(const Vector3<T>& a, T b);
 /// \return The resulting vector
 ///
 ///////////////////////////////////////////////////////////
-template <typename T>
-Vector3<T> operator*(T a, const Vector3<T>& b);
+template <typename T, typename U>
+Vector3<T> operator*(T a, const Vector3<U>& b);
 
 ///////////////////////////////////////////////////////////
 /// \relates Vector3
@@ -519,8 +519,8 @@ Vector3<T> operator*(T a, const Vector3<T>& b);
 /// \return The resulting vector
 ///
 ///////////////////////////////////////////////////////////
-template <typename T>
-Vector3<T> operator*(const Vector3<T>& a, const Vector3<T>& b);
+template <typename T, typename U>
+Vector3<T> operator*(const Vector3<T>& a, const Vector3<U>& b);
 
 ///////////////////////////////////////////////////////////
 /// \relates Vector3
@@ -534,8 +534,8 @@ Vector3<T> operator*(const Vector3<T>& a, const Vector3<T>& b);
 /// \return The resulting vector
 ///
 ///////////////////////////////////////////////////////////
-template <typename T>
-Vector3<T> operator/(const Vector3<T>& a, T b);
+template <typename T, typename U>
+Vector3<T> operator/(const Vector3<T>& a, U b);
 
 ///////////////////////////////////////////////////////////
 /// \relates Vector3
@@ -549,8 +549,8 @@ Vector3<T> operator/(const Vector3<T>& a, T b);
 /// \return The resulting vector
 ///
 ///////////////////////////////////////////////////////////
-template <typename T>
-Vector3<T> operator/(T a, const Vector3<T>& b);
+template <typename T, typename U>
+Vector3<T> operator/(T a, const Vector3<U>& b);
 
 ///////////////////////////////////////////////////////////
 /// \relates Vector3
@@ -564,8 +564,8 @@ Vector3<T> operator/(T a, const Vector3<T>& b);
 /// \return The resulting vector
 ///
 ///////////////////////////////////////////////////////////
-template <typename T>
-Vector3<T> operator/(const Vector3<T>& a, const Vector3<T>& b);
+template <typename T, typename U>
+Vector3<T> operator/(const Vector3<T>& a, const Vector3<U>& b);
 
 ///////////////////////////////////////////////////////////
 /// \relates Vector3
@@ -579,8 +579,8 @@ Vector3<T> operator/(const Vector3<T>& a, const Vector3<T>& b);
 /// \return The resulting vector
 ///
 ///////////////////////////////////////////////////////////
-template <typename T>
-Vector3<T> operator%(const Vector3<T>& a, T b);
+template <typename T, typename U>
+Vector3<T> operator%(const Vector3<T>& a, U b);
 
 ///////////////////////////////////////////////////////////
 /// \relates Vector3
@@ -594,8 +594,8 @@ Vector3<T> operator%(const Vector3<T>& a, T b);
 /// \return The resulting vector
 ///
 ///////////////////////////////////////////////////////////
-template <typename T>
-Vector3<T> operator%(T a, const Vector3<T>& b);
+template <typename T, typename U>
+Vector3<T> operator%(T a, const Vector3<U>& b);
 
 ///////////////////////////////////////////////////////////
 /// \relates Vector3
@@ -609,8 +609,8 @@ Vector3<T> operator%(T a, const Vector3<T>& b);
 /// \return The resulting vector
 ///
 ///////////////////////////////////////////////////////////
-template <typename T>
-Vector3<T> operator%(const Vector3<T>& a, const Vector3<T>& b);
+template <typename T, typename U>
+Vector3<T> operator%(const Vector3<T>& a, const Vector3<U>& b);
 
 ///////////////////////////////////////////////////////////
 /// \relates Vector3
