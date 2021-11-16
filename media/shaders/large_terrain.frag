@@ -2,6 +2,7 @@
 
 #include "camera.glsl"
 #include "deferred.glsl"
+#include "terrain_map.glsl"
 
 ///////////////////////////////////////////////////////////
 
@@ -14,7 +15,10 @@ uniform sampler2D u_normalMap;
 
 void main()
 {
-    vec3 normal = texture(u_normalMap, v_texCoord).xyz;
+    // Get texture redirect data
+    vec3 redirect = sampleRedirectData(v_texCoord);
+
+    vec3 normal = sample(u_normalMap, v_texCoord, redirect).xyz;
     normal.xz = 2.0f * normal.xz - 1.0f;
     vec3 color = vec3(0.4f, 0.8f, 0.4f);
 

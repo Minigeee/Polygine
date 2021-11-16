@@ -1,7 +1,6 @@
 #version 330 core
 
 #include "camera.glsl"
-#include "clip_planes.glsl"
 #include "terrain_map.glsl"
 
 layout (location = 0) in vec2 a_vertex;

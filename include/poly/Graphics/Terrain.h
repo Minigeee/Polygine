@@ -72,6 +72,7 @@ protected:
 	VertexArray m_vertexArray;			//!< The render vertex array
 	Uint32 m_instanceDataOffset;		//!< The offset of the instance buffer in bytes
 
+	std::mutex m_mutex;					//!< Protect potentially multithreaded parts of terrain
 	Uint32 m_numLevels;					//!< The number of quadtree levels
 	std::vector<LodLevel> m_lodLevels;	//!< A list of terrain lod levels (where 0 is the largest level)
 
@@ -86,6 +87,10 @@ protected:
 ///////////////////////////////////////////////////////////
 class Terrain : public TerrainBase
 {
+public:
+	typedef ImageBuffer<float>				HeightMap;
+	typedef ImageBuffer<Vector3<Uint16>>	NormalMap;
+
 public:
 	///////////////////////////////////////////////////////////
 	/// \brief Default constructor
@@ -105,9 +110,9 @@ public:
 
 	Texture& getNormalMap();
 
-	Image& getHeightData();
+	HeightMap& getHeightData();
 
-	Image& getNormalData();
+	NormalMap& getNormalData();
 
 private:
 	static Shader& getShader();
@@ -127,8 +132,8 @@ private:
 private:
 	Texture m_heightMap;
 	Texture m_normalMap;
-	ImageBuffer<float> m_heightMapImg;
-	ImageBuffer<Vector3<Uint16>> m_normalMapImg;
+	HeightMap m_heightMapImg;
+	NormalMap m_normalMapImg;
 };
 
 
@@ -218,7 +223,7 @@ private:
 
 	Tile* getAdjTile(const Vector3<Uint16>& tileData);
 
-	bool makeNormalsTile(Image* hmap, Image* output, Uint32 lod);
+	bool processHeightTile(Image* hmap, Image* nmap, const Vector3<Uint16>& tile);
 
 private:
 	float m_tileSize;		//!< The size of the area that each tile map covers (per side in world units)

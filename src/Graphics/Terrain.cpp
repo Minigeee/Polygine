@@ -380,11 +380,15 @@ void TerrainBase::makeRenderList(const Vector2u& node, Uint32 lod, const Frustum
 		center = Vector2f(0.0f);
 
 	// Get bounding box
-	const Vector2<Uint16>& hbounds = m_lodLevels[lod].m_heightBounds[node.x][node.y];
-
 	BoundingBox bbox;
-	bbox.m_min = Vector3f(center.x - halfNodeSize, (float)hbounds.x / 65535.0f * m_maxHeight, center.y - halfNodeSize);
-	bbox.m_max = Vector3f(center.x + halfNodeSize, (float)hbounds.y / 65535.0f * m_maxHeight, center.y + halfNodeSize);
+	{
+		std::unique_lock<std::mutex> lock(m_mutex);
+
+		const Vector2<Uint16>& hbounds = m_lodLevels[lod].m_heightBounds[node.x][node.y];
+
+		bbox.m_min = Vector3f(center.x - halfNodeSize, (float)hbounds.x / 65535.0f * m_maxHeight, center.y - halfNodeSize);
+		bbox.m_max = Vector3f(center.x + halfNodeSize, (float)hbounds.y / 65535.0f * m_maxHeight, center.y + halfNodeSize);
+	}
 
 	// Check if bounding box is inside frustum
 	if (!frustum.contains(bbox)) return;
@@ -688,6 +692,34 @@ void Terrain::updateHeightBounds(Uint32 nr, Uint32 nc)
 
 
 ///////////////////////////////////////////////////////////
+Texture& Terrain::getHeightMap()
+{
+	return m_heightMap;
+}
+
+
+///////////////////////////////////////////////////////////
+Texture& Terrain::getNormalMap()
+{
+	return m_normalMap;
+}
+
+
+///////////////////////////////////////////////////////////
+Terrain::HeightMap& Terrain::getHeightData()
+{
+	return m_heightMapImg;
+}
+
+
+///////////////////////////////////////////////////////////
+Terrain::NormalMap& Terrain::getNormalData()
+{
+	return m_normalMapImg;
+}
+
+
+///////////////////////////////////////////////////////////
 Shader LargeTerrain::s_shader;
 
 
@@ -839,11 +871,15 @@ void LargeTerrain::updateTileMaps(const Vector2u& node, Uint32 lod)
 		center = Vector2f(0.0f);
 
 	// Get bounding box
-	const Vector2<Uint16>& hbounds = m_lodLevels[lod].m_heightBounds[node.x][node.y];
-
 	BoundingBox bbox;
-	bbox.m_min = Vector3f(center.x - halfNodeSize, (float)hbounds.x / 65535.0f * m_maxHeight, center.y - halfNodeSize);
-	bbox.m_max = Vector3f(center.x + halfNodeSize, (float)hbounds.y / 65535.0f * m_maxHeight, center.y + halfNodeSize);
+	{
+		std::unique_lock<std::mutex> lock(m_mutex);
+
+		const Vector2<Uint16>& hbounds = m_lodLevels[lod].m_heightBounds[node.x][node.y];
+
+		bbox.m_min = Vector3f(center.x - halfNodeSize, (float)hbounds.x / 65535.0f * m_maxHeight, center.y - halfNodeSize);
+		bbox.m_max = Vector3f(center.x + halfNodeSize, (float)hbounds.y / 65535.0f * m_maxHeight, center.y + halfNodeSize);
+	}
 
 	// Check if bounding box is inside the current lod range
 	if (intersects(m_viewpoint, m_lodLevels[lod + 1].m_dist, bbox))
@@ -932,6 +968,16 @@ void LargeTerrain::updateTileMaps(const Vector2u& node, Uint32 lod)
 
 			// Remove mapping
 			m_tileMap.erase(it);
+
+			// Call unload function
+			if (m_unloadFunc)
+			{
+				// Calculate tile coordinates
+				Uint32 numNodesPerEdge = 1 << lod;
+				Vector2i tileXy = Vector2i(node.y, node.x) - (int)numNodesPerEdge / 2;
+
+				m_unloadFunc(tileXy, lod);
+			}
 		}
 	}
 }
@@ -1260,7 +1306,7 @@ void LargeTerrain::updateLoadTasks()
 			normalsTask->m_mapType = MapData::Normal;
 
 			// Call the generate normals task
-			normalsTask->m_task = Scheduler::addTask(&LargeTerrain::makeNormalsTile, this, loadedImage, normalImg, tileData.z);
+			normalsTask->m_task = Scheduler::addTask(&LargeTerrain::processHeightTile, this, loadedImage, normalImg, tileData);
 
 			// Add to task list
 			m_loadTasks.push_back(normalsTask);
@@ -1344,18 +1390,18 @@ LargeTerrain::Tile* LargeTerrain::getAdjTile(const Vector3<Uint16>& tileData)
 
 
 ///////////////////////////////////////////////////////////
-bool LargeTerrain::makeNormalsTile(Image* hmap, Image* output, Uint32 lod)
+bool LargeTerrain::processHeightTile(Image* hmap, Image* nmap, const Vector3<Uint16>& tile)
 {
 	// Get buffer for height map
 	ImageBuffer<float> heights = hmap->getBuffer<float>();
 
 	// Create normals tile
 	Uint32 mapSize = hmap->getWidth() - 2;
-	output->create(NULL, mapSize, mapSize, 3, GLType::Uint16);
-	ImageBuffer<Vector3<Uint16>> normals = output->getBuffer<Vector3<Uint16>>();
+	nmap->create(NULL, mapSize, mapSize, 3, GLType::Uint16);
+	ImageBuffer<Vector3<Uint16>> normals = nmap->getBuffer<Vector3<Uint16>>();
 
 	// Calculate size factor
-	Uint32 numNodesPerEdge = 1 << lod;
+	Uint32 numNodesPerEdge = 1 << tile.z;
 	float sizeFactor = m_size / (mapSize * numNodesPerEdge);
 
 	for (Uint32 r = 0; r < mapSize; ++r)
@@ -1380,6 +1426,132 @@ bool LargeTerrain::makeNormalsTile(Image* hmap, Image* output, Uint32 lod)
 		}
 	}
 
+	// If processing a base level height tile, then do a few extra procedures
+	if (tile.z == m_baseTileLevel)
+	{
+		// Number of base terrain nodes per base map tile edge
+		Uint32 numNodesPerEdge = 1 << (m_lodLevels.size() - m_baseTileLevel - 1);
+
+		// Create a local bounds map to minimize time spent using shared resources
+		ImageBuffer<Vector2<Uint16>> localBounds(numNodesPerEdge, Vector2<Uint16>(65535, 0));
+
+		for (Uint32 r = 0; r < numNodesPerEdge; ++r)
+		{
+			for (Uint32 c = 0; c < numNodesPerEdge; ++c)
+			{
+				// Map map tile coordinates to image coordinates
+				Uint32 rs = (Uint32)std::floor((float)r / numNodesPerEdge * mapSize) + 1;
+				Uint32 cs = (Uint32)std::floor((float)c / numNodesPerEdge * mapSize) + 1;
+				Uint32 rf = (Uint32)std::ceil((float)(r + 1) / numNodesPerEdge * mapSize) + 1;
+				Uint32 cf = (Uint32)std::ceil((float)(c + 1) / numNodesPerEdge * mapSize) + 1;
+
+				Vector2f bounds(1.0f, 0.0f);
+
+				for (Uint32 ri = rs; ri < rf; ++ri)
+				{
+					for (Uint32 ci = cs; ci < cf; ++ci)
+					{
+						// Get height pixel
+						float h = *(float*)hmap->getPixel(ri, ci);
+
+						// Record bounds
+						if (h < bounds.x)
+							bounds.x = h;
+						if (h > bounds.y)
+							bounds.y = h;
+					}
+				}
+
+				// Update bounds value
+				localBounds[r][c] = Vector2<Uint16>(bounds * 65535.0f);
+			}
+		}
+
+		// Copy local bounds map to actual map
+		std::unique_lock<std::mutex> lock(m_mutex);
+
+		// Calculate starting position of tiles
+		ImageBuffer<Vector2<Uint16>>& baseBounds = m_lodLevels.back().m_heightBounds;
+		Uint32 rs = tile.x * numNodesPerEdge;
+		Uint32 cs = tile.y * numNodesPerEdge;
+
+		// Update base bounds
+		for (Uint32 r = 0; r < numNodesPerEdge; ++r)
+		{
+			for (Uint32 c = 0; c < numNodesPerEdge; ++c)
+			{
+				Vector2<Uint16>& base = baseBounds[rs + r][cs + c];
+				Vector2<Uint16>& local = localBounds[r][c];
+
+				if (local.x < base.x)
+					base.x = local.x;
+				if (local.y > base.y)
+					base.y = local.y;
+			}
+		}
+
+		// Propogate up to base map level
+		for (int i = m_lodLevels.size() - 2; i >= (int)m_baseTileLevel; --i)
+		{
+			ImageBuffer<Vector2<Uint16>>& prevBounds = m_lodLevels[i + 1].m_heightBounds;
+			ImageBuffer<Vector2<Uint16>>& currBounds = m_lodLevels[i].m_heightBounds;
+
+			// Update parameters
+			numNodesPerEdge /= 2;
+			rs /= 2;
+			cs /= 2;
+
+			for (Uint32 r = rs; r < rs + numNodesPerEdge; ++r)
+			{
+				for (Uint32 c = cs; c < cs + numNodesPerEdge; ++c)
+				{
+					Vector2<Uint16>& b1 = prevBounds[2 * r + 0][2 * c + 0];
+					Vector2<Uint16>& b2 = prevBounds[2 * r + 0][2 * c + 1];
+					Vector2<Uint16>& b3 = prevBounds[2 * r + 1][2 * c + 0];
+					Vector2<Uint16>& b4 = prevBounds[2 * r + 1][2 * c + 1];
+
+					// Apply mins and maxes
+					Vector2<Uint16>& bounds = currBounds[r][c] = Vector2<Uint16>(65535, 0);
+
+					if (b1.x < bounds.x)
+						bounds.x = b1.x;
+					if (b2.x < bounds.x)
+						bounds.x = b2.x;
+					if (b3.x < bounds.x)
+						bounds.x = b3.x;
+					if (b4.x < bounds.x)
+						bounds.x = b4.x;
+
+					if (b1.y > bounds.y)
+						bounds.y = b1.y;
+					if (b2.y > bounds.y)
+						bounds.y = b2.y;
+					if (b3.y > bounds.y)
+						bounds.y = b3.y;
+					if (b4.y > bounds.y)
+						bounds.y = b4.y;
+				}
+			}
+		}
+
+		// Propogate up to root level
+		for (int i = m_baseTileLevel - 1; i >= 0; --i)
+		{
+			Vector2<Uint16>& prevBounds = m_lodLevels[i + 1].m_heightBounds[rs][cs];
+			Vector2<Uint16>& currBounds = m_lodLevels[i].m_heightBounds[rs / 2][cs / 2];
+
+			// Update parameters
+			rs /= 2;
+			cs /= 2;
+
+			// Apply min and max
+			if (prevBounds.x < currBounds.x)
+				currBounds.x = prevBounds.x;
+			if (prevBounds.y > currBounds.y)
+				currBounds.y = prevBounds.y;
+		}
+	}
+
 	// TODO : Don't free height map to use for terrain colliders
 	Pool<Image>::free(hmap);
 
@@ -1392,13 +1564,116 @@ void LargeTerrain::setHeightLoader(const LoadFunc& func)
 {
 	m_heightLoadFunc = func;
 	m_tileLoadedBitfield |= MapData::Height | MapData::Normal;
+
+	// Load base tile to fill height bounds map with bounds
+	Image hmap;
+	if (!m_heightLoadFunc(Vector2i(0), 0, &hmap))
+		return;
+
+	// Make sure tile is correct
+	ASSERT(hmap.getWidth() == hmap.getHeight(), "Terrain map tiles must be sqaure");
+	ASSERT(hmap.getDataType() == GLType::Float, "Large terrain height maps must use the float data type");
+	ASSERT(hmap.getNumChannels() == 1, "Large terrain height maps must use a single color channel");
+
+	// Determine the number of steps each base level tile needs
+	float baseLevelSize = m_size / (float)(1 << (m_lodLevels.size() - 1));
+	float numSteps = baseLevelSize * (float)hmap.getWidth() / m_size;
+
+	// Fill in base bounds
+	std::unique_lock<std::mutex> lock(m_mutex);
+
+	ImageBuffer<Vector2<Uint16>>& baseBounds = m_lodLevels.back().m_heightBounds;
+
+	for (Uint32 r = 0; r < baseBounds.getHeight(); ++r)
+	{
+		for (Uint32 c = 0; c < baseBounds.getWidth(); ++c)
+		{
+			float rs = (float)r * numSteps;
+			float cs = (float)c * numSteps;
+			float rf = (float)(r + 1) * numSteps;
+			float cf = (float)(c + 1) * numSteps;
+
+			Vector2f bounds(1.0, 0.0f);
+
+			for (float ri = rs; ri <= rf;)
+			{
+				for (float ci = cs; ci <= cf;)
+				{
+					// Get height
+					Vector2f uv = Vector2f(ci, ri) / (float)(hmap.getWidth() - 1);
+					uv.y = 1.0f - uv.y;
+					float h = hmap.sample<float>(uv);
+
+					// Record max and min
+					if (h < bounds.x)
+						bounds.x = h;
+					if (h > bounds.y)
+						bounds.y = h;
+
+					// Update c
+					if (ci == cf)
+						break;
+					else
+						ci = std::min(ci + 1.0f, cf);
+				}
+
+				// Update r
+				if (ri == rf)
+					break;
+				else
+					ri = std::min(ri + 1.0f, rf);
+			}
+
+			// Write bounds to map
+			baseBounds[r][c] = Vector2<Uint16>(bounds * 65535.0f);
+		}
+	}
+
+	// Propogate height bounds up the lod levels
+	for (int i = m_lodLevels.size() - 2; i >= 0; --i)
+	{
+		ImageBuffer<Vector2<Uint16>>& prevBounds = m_lodLevels[i + 1].m_heightBounds;
+		ImageBuffer<Vector2<Uint16>>& currBounds = m_lodLevels[i].m_heightBounds;
+
+		for (Uint32 r = 0; r < currBounds.getHeight(); ++r)
+		{
+			for (Uint32 c = 0; c < currBounds.getWidth(); ++c)
+			{
+				Vector2<Uint16>& b1 = prevBounds[2 * r + 0][2 * c + 0];
+				Vector2<Uint16>& b2 = prevBounds[2 * r + 0][2 * c + 1];
+				Vector2<Uint16>& b3 = prevBounds[2 * r + 1][2 * c + 0];
+				Vector2<Uint16>& b4 = prevBounds[2 * r + 1][2 * c + 1];
+
+				// Apply mins and maxes
+				Vector2<Uint16>& bounds = currBounds[r][c] = Vector2<Uint16>(65535, 0);
+
+				if (b1.x < bounds.x)
+					bounds.x = b1.x;
+				if (b2.x < bounds.x)
+					bounds.x = b2.x;
+				if (b3.x < bounds.x)
+					bounds.x = b3.x;
+				if (b4.x < bounds.x)
+					bounds.x = b4.x;
+
+				if (b1.y > bounds.y)
+					bounds.y = b1.y;
+				if (b2.y > bounds.y)
+					bounds.y = b2.y;
+				if (b3.y > bounds.y)
+					bounds.y = b3.y;
+				if (b4.y > bounds.y)
+					bounds.y = b4.y;
+			}
+		}
+	}
 }
 
 
 ///////////////////////////////////////////////////////////
-void LargeTerrain::setHeightBounds(const Image& bounds)
+Texture& LargeTerrain::getRedirectMap()
 {
-	Uint32 numNodesPerEdge = m_lodLevels.size();
+	return m_redirectMap;
 }
 
 
@@ -1406,6 +1681,20 @@ void LargeTerrain::setHeightBounds(const Image& bounds)
 Texture& LargeTerrain::getHeightMap()
 {
 	return m_heightMap;
+}
+
+
+///////////////////////////////////////////////////////////
+Texture& LargeTerrain::getNormalMap()
+{
+	return m_normalMap;
+}
+
+
+///////////////////////////////////////////////////////////
+void LargeTerrain::onUnloadTile(const std::function<void(const Vector2i&, Uint32)>& func)
+{
+	m_unloadFunc = func;
 }
 
 
