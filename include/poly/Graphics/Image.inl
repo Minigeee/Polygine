@@ -791,6 +791,58 @@ inline Vector2u argmax(const ImageBuffer<T>& x)
 
 ///////////////////////////////////////////////////////////
 template <typename T>
+inline ImageBuffer<T> resize(const ImageBuffer<T>& buffer, Uint32 w, Uint32 h)
+{
+	// Resize image
+	ImageBuffer<T> dst(w, h);
+	priv::resize(buffer.getData(), dst.getData(), buffer.getWidth(), buffer.getHeight(), w, h, 1, getGLType<T>());
+
+	// Return new buffer
+	return dst;
+}
+
+
+///////////////////////////////////////////////////////////
+template <typename T>
+inline ImageBuffer<Vector2<T>> resize(const ImageBuffer<Vector2<T>>& buffer, Uint32 w, Uint32 h)
+{
+	// Resize image
+	ImageBuffer<Vector2<T>> dst(w, h);
+	priv::resize(buffer.getData(), dst.getData(), buffer.getWidth(), buffer.getHeight(), w, h, 2, getGLType<T>());
+
+	// Return new buffer
+	return dst
+}
+
+
+///////////////////////////////////////////////////////////
+template <typename T>
+inline ImageBuffer<Vector3<T>> resize(const ImageBuffer<Vector3<T>>& buffer, Uint32 w, Uint32 h)
+{
+	// Resize image
+	ImageBuffer<Vector3<T>> dst(w, h);
+	priv::resize(buffer.getData(), dst.getData(), buffer.getWidth(), buffer.getHeight(), w, h, 3, getGLType<T>());
+
+	// Return new buffer
+	return dst
+}
+
+
+///////////////////////////////////////////////////////////
+template <typename T>
+inline ImageBuffer<Vector4<T>> resize(const ImageBuffer<Vector4<T>>& buffer, Uint32 w, Uint32 h)
+{
+	// Resize image
+	ImageBuffer<Vector4<T>> dst(w, h);
+	priv::resize(buffer.getData(), dst.getData(), buffer.getWidth(), buffer.getHeight(), w, h, 4, getGLType<T>());
+
+	// Return new buffer
+	return dst
+}
+
+
+///////////////////////////////////////////////////////////
+template <typename T>
 inline void Image::create(ImageBuffer<T>& buffer)
 {
 	// Free previous data if needed

@@ -10,6 +10,15 @@
 namespace poly
 {
 
+namespace priv
+{
+
+
+bool resize(void* src, void* dst, Uint32 w1, Uint32 h1, Uint32 w2, Uint32 h2, Uint32 c, GLType dtype);
+
+
+}
+
 
 ///////////////////////////////////////////////////////////
 /// \brief Provides a convenient way to store and manipulate image pixel data
@@ -346,6 +355,19 @@ Vector2u argmin(const ImageBuffer<T>& x);
 ///////////////////////////////////////////////////////////
 template <typename T>
 Vector2u argmax(const ImageBuffer<T>& x);
+
+///////////////////////////////////////////////////////////
+/// \brief Resize an image buffer
+///
+/// \param buffer The image buffer to resize
+/// \param w The width of the new buffer in pixels
+/// \param h The height of the new buffer in pixels
+///
+/// \return The resized image buffer
+///
+///////////////////////////////////////////////////////////
+template <typename T>
+ImageBuffer<T> resize(const ImageBuffer<T>& buffer, Uint32 w, Uint32 h);
 
 
 ///////////////////////////////////////////////////////////

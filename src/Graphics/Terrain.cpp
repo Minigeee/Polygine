@@ -18,6 +18,10 @@
 #include <poly/Math/Vector2.h>
 #include <poly/Math/Vector4.h>
 
+#include <poly/Physics/Components.h>
+#include <poly/Physics/Physics.h>
+#include <poly/Physics/Shapes.h>
+
 #include <chrono>
 
 
@@ -199,6 +203,13 @@ TerrainBase::~TerrainBase()
 void TerrainBase::init(Scene* scene)
 {
 	m_scene = scene;
+
+	// Create entity
+	RigidBodyComponent rbody;
+	rbody.m_type = RigidBodyType::Static;
+	rbody.m_position = Vector3f(0.0f);
+
+	m_entity = m_scene->createEntity(rbody);
 }
 
 
@@ -432,6 +443,34 @@ void TerrainBase::makeRenderList(const Vector2u& node, Uint32 lod, const Frustum
 
 
 ///////////////////////////////////////////////////////////
+void TerrainBase::setShader(Shader* shader)
+{
+	m_shader = shader;
+}
+
+
+///////////////////////////////////////////////////////////
+Entity TerrainBase::getEntity() const
+{
+	return m_entity;
+}
+
+
+///////////////////////////////////////////////////////////
+float TerrainBase::getSize() const
+{
+	return m_size;
+}
+
+
+///////////////////////////////////////////////////////////
+float TerrainBase::getMaxHeight() const
+{
+	return m_maxHeight;
+}
+
+
+///////////////////////////////////////////////////////////
 Shader Terrain::s_shader;
 
 
@@ -450,7 +489,11 @@ Shader& Terrain::getShader()
 
 
 ///////////////////////////////////////////////////////////
-Terrain::Terrain()
+Terrain::Terrain() :
+	m_bounciness			(0.1f),
+	m_friction				(0.2f),
+	m_collisionCategory		(0x0001),
+	m_collisionMask			(0xFFFF)
 {
 
 }
@@ -460,6 +503,27 @@ Terrain::Terrain()
 Terrain::~Terrain()
 {
 
+}
+
+
+///////////////////////////////////////////////////////////
+void Terrain::init(Scene* scene)
+{
+	// Call base function
+	TerrainBase::init(scene);
+
+	// Create collider if height map exists
+	if (m_heightMap.getId())
+	{
+		// Create shape
+		HeightMapShape shape;
+		shape.m_data = m_heightMapImg.getData();
+		shape.m_imageSize = Vector2u(m_heightMapImg.getWidth(), m_heightMapImg.getHeight());
+		shape.m_dimensions = Vector3f(m_size, m_maxHeight, m_size);
+
+		// Create collider
+		m_collider = m_scene->getExtension<Physics>()->addCollider(m_entity, shape);
+	}
 }
 
 
@@ -501,6 +565,19 @@ void Terrain::setHeightMap(const Image& hmap)
 
 	// Update entire map
 	updateHeightMap(Vector2u(0), Vector2u(hmap.getWidth(), hmap.getHeight()));
+
+	// Create collider (if entity has been created)
+	if (m_entity.isValid())
+	{
+		// Create shape
+		HeightMapShape shape;
+		shape.m_data = m_heightMapImg.getData();
+		shape.m_imageSize = Vector2u(m_heightMapImg.getWidth(), m_heightMapImg.getHeight());
+		shape.m_dimensions = Vector3f(m_size, m_maxHeight, m_size);
+
+		// Create collider
+		m_collider = m_scene->getExtension<Physics>()->addCollider(m_entity, shape);
+	}
 }
 
 
@@ -692,6 +769,46 @@ void Terrain::updateHeightBounds(Uint32 nr, Uint32 nc)
 
 
 ///////////////////////////////////////////////////////////
+void Terrain::setBounciness(float bounciness)
+{
+	m_bounciness = bounciness;
+
+	if (m_heightMap.getId() && m_entity.isValid())
+		m_collider.setBounciness(bounciness);
+}
+
+
+///////////////////////////////////////////////////////////
+void Terrain::setFrictionCoefficient(float coefficient)
+{
+	m_friction = coefficient;
+
+	if (m_heightMap.getId() && m_entity.isValid())
+		m_collider.setFrictionCoefficient(coefficient);
+}
+
+
+///////////////////////////////////////////////////////////
+void Terrain::setCollisionCategory(Uint16 category)
+{
+	m_collisionCategory = category;
+
+	if (m_heightMap.getId() && m_entity.isValid())
+		m_collider.setCollisionCategory(category);
+}
+
+
+///////////////////////////////////////////////////////////
+void Terrain::setCollisionMask(Uint16 mask)
+{
+	m_collisionMask = mask;
+
+	if (m_heightMap.getId() && m_entity.isValid())
+		m_collider.setCollisionMask(mask);
+}
+
+
+///////////////////////////////////////////////////////////
 Texture& Terrain::getHeightMap()
 {
 	return m_heightMap;
@@ -720,6 +837,34 @@ Terrain::NormalMap& Terrain::getNormalData()
 
 
 ///////////////////////////////////////////////////////////
+float Terrain::getBounciness() const
+{
+	return m_bounciness;
+}
+
+
+///////////////////////////////////////////////////////////
+float Terrain::getFrictionCoefficient() const
+{
+	return m_friction;
+}
+
+
+///////////////////////////////////////////////////////////
+Uint16 Terrain::getCollisionCategory() const
+{
+	return m_collisionCategory;
+}
+
+
+///////////////////////////////////////////////////////////
+Uint16 Terrain::getCollisionMask() const
+{
+	return m_collisionMask;
+}
+
+
+///////////////////////////////////////////////////////////
 Shader LargeTerrain::s_shader;
 
 
@@ -742,6 +887,10 @@ LargeTerrain::LargeTerrain() :
 	m_tileSize				(512.0f),
 	m_baseTileLevel			(0),
 	m_cacheMapSize			(0),
+	m_bounciness			(0.1f),
+	m_friction				(0.2f),
+	m_collisionCategory		(0x0001),
+	m_collisionMask			(0xFFFF),
 	m_tileLoadedBitfield	(0),
 	m_redirectMapChanged	(false)
 {
@@ -856,6 +1005,14 @@ void LargeTerrain::onRender(Camera& camera)
 		m_shader->setUniform("u_heightMap", m_heightMap);
 	if (m_normalMap.getId())
 		m_shader->setUniform("u_normalMap", m_normalMap);
+	if (m_splatMap.getId())
+		m_shader->setUniform("u_splatMap", m_splatMap);
+
+	for (Uint32 i = 0; i < m_splatTextures.size(); ++i)
+	{
+		if (m_splatTextures[i] && m_splatTextures[i]->getId())
+			m_shader->setUniform("u_splatTextures[" + std::to_string(i) + ']', *m_splatTextures[i]);
+	}
 }
 
 
@@ -886,9 +1043,10 @@ void LargeTerrain::updateTileMaps(const Vector2u& node, Uint32 lod)
 	{
 		Vector3<Uint16> tileData(node.x, node.y, lod);
 
-		// Check if this tile has already been loaded, if not loaded
+		// Check if this tile has already been loaded,
+		// and if there is enough space in the cache texture
 		auto it = m_tileMap.find(tileData);
-		if (it == m_tileMap.end())
+		if (m_freeList.size() && it == m_tileMap.end())
 		{
 			// Add mapping
 			Tile tile;
@@ -898,8 +1056,56 @@ void LargeTerrain::updateTileMaps(const Vector2u& node, Uint32 lod)
 			tile.m_isLoaded = 0;
 			m_tileMap[tileData] = tile;
 
+			Vector2i tileXy = Vector2i(node.y, node.x) - (int)numNodesPerEdge / 2;
+
 			// Add load tasks
-			addLoadTask(node, lod, &m_heightMap, m_heightLoadFunc, MapData::Height);
+			if (m_heightLoadFunc)
+			{
+				// Create task
+				LoadTask* task = new LoadTask();
+				task->m_image = Pool<Image>::alloc();
+				task->m_texture = &m_heightMap;
+				task->m_tileData = Vector3<Uint16>(node.x, node.y, lod);
+				task->m_mapType = MapData::Height;
+
+				// Call load function
+				task->m_task = Scheduler::addTask(m_heightLoadFunc, tileXy, lod, task->m_image);
+
+				// Add to list
+				m_loadTasks.push_back(task);
+			}
+
+			if (m_splatLoadFunc)
+			{
+				// Create task
+				LoadTask* task = new LoadTask();
+				task->m_image = Pool<Image>::alloc();
+				task->m_texture = &m_splatMap;
+				task->m_tileData = Vector3<Uint16>(node.x, node.y, lod);
+				task->m_mapType = MapData::Splat;
+
+				// Call load function
+				task->m_task = Scheduler::addTask(m_splatLoadFunc, tileXy, lod, task->m_image);
+
+				// Add to list
+				m_loadTasks.push_back(task);
+			}
+
+			for (Uint32 i = 0; i < m_customLoadFuncs.size(); ++i)
+			{
+				// Create task
+				LoadTask* task = new LoadTask();
+				task->m_image = Pool<Image>::alloc();
+				task->m_texture = m_customMaps[i];
+				task->m_tileData = Vector3<Uint16>(node.x, node.y, lod);
+				task->m_mapType = (MapData::Type)(MapData::Custom + i);
+
+				// Call load function
+				task->m_task = Scheduler::addTask(m_customLoadFuncs[i], tileXy, lod, task->m_image);
+
+				// Add to list
+				m_loadTasks.push_back(task);
+			}
 
 			// Remove from free list
 			m_freeList.pop();
@@ -964,6 +1170,27 @@ void LargeTerrain::updateTileMaps(const Vector2u& node, Uint32 lod)
 
 				mapData.m_fullImg = 0;
 				mapData.m_edgeImg = 0;
+			}
+
+			// Remove collider if this tile is base level
+			if (lod == m_baseTileLevel)
+			{
+				std::unique_lock<std::mutex> lock(m_mutex);
+
+				for (Uint32 i = 0; i < m_colliders.size(); ++i)
+				{
+					if (m_colliders[i].m_tile.x == node.x && m_colliders[i].m_tile.y == node.y)
+					{
+						// Remove collider
+						m_scene->getExtension<Physics>()->removeCollider(m_entity, m_colliders[i].m_collider);
+
+						// Remove from list
+						m_colliders[i] = std::move(m_colliders.back());
+						m_colliders.pop_back();
+
+						break;
+					}
+				}
 			}
 
 			// Remove mapping
@@ -1262,6 +1489,75 @@ void LargeTerrain::updateLoadTasks()
 			mapData.m_edgeResR = (Uint8)rdata.z;
 			mapData.m_edgeResT = (Uint8)tdata.z;
 			mapData.m_edgeResB = (Uint8)bdata.z;
+
+			// For base level tiles, use more accurate corner pixels
+			if (tileData.z == m_baseTileLevel)
+			{
+				// Get corner tiles
+				if (tileData.x > 0 && tileData.y > 0)
+				{
+					auto it = m_tileMap.find(Vector3<Uint16>(tileData.x - 1, tileData.y - 1, tileData.z));
+					if (it != m_tileMap.end() && (it.value().m_isLoaded & mapTypeBitfield))
+					{
+						MapData& cornerMapData = it.value().m_mapData[mapType];
+
+						// Copy bot-right -> top-left
+						memcpy(mapTile.getPixel(0, 0), cornerMapData.m_edgeImg->getPixel((Uint32)EdgeRow::Bottom, mapSize - 1), pixelSize);
+
+						// Update texture
+						Vector2u cachePos = Vector2u(it.value().m_cachePos) * (mapSize + 2) + Vector2u(mapSize + 1, mapSize + 1);
+						cornerMapData.m_texture->update(mapTile.getPixel(1, 1), cachePos, Vector2u(1));
+					}
+				}
+
+				if (tileData.x > 0 && tileData.y < numTilesPerEdge - 1)
+				{
+					auto it = m_tileMap.find(Vector3<Uint16>(tileData.x - 1, tileData.y + 1, tileData.z));
+					if (it != m_tileMap.end() && (it.value().m_isLoaded & mapTypeBitfield))
+					{
+						MapData& cornerMapData = it.value().m_mapData[mapType];
+
+						// Copy bot-left -> top-right
+						memcpy(mapTile.getPixel(0, mapSize + 1), cornerMapData.m_edgeImg->getPixel((Uint32)EdgeRow::Bottom, 0), pixelSize);
+
+						// Update texture
+						Vector2u cachePos = Vector2u(it.value().m_cachePos) * (mapSize + 2) + Vector2u(mapSize + 1, 0);
+						cornerMapData.m_texture->update(mapTile.getPixel(1, mapSize), cachePos, Vector2u(1));
+					}
+				}
+
+				if (tileData.x < numTilesPerEdge - 1 && tileData.y > 0)
+				{
+					auto it = m_tileMap.find(Vector3<Uint16>(tileData.x + 1, tileData.y - 1, tileData.z));
+					if (it != m_tileMap.end() && (it.value().m_isLoaded & mapTypeBitfield))
+					{
+						MapData& cornerMapData = it.value().m_mapData[mapType];
+
+						// Copy top-right -> bot-left
+						memcpy(mapTile.getPixel(mapSize + 1, 0), it.value().m_mapData[mapType].m_edgeImg->getPixel((Uint32)EdgeRow::Top, mapSize - 1), pixelSize);
+
+						// Update texture
+						Vector2u cachePos = Vector2u(it.value().m_cachePos) * (mapSize + 2) + Vector2u(0, mapSize + 1);
+						cornerMapData.m_texture->update(mapTile.getPixel(mapSize, 1), cachePos, Vector2u(1));
+					}
+				}
+
+				if (tileData.x < numTilesPerEdge - 1 && tileData.y < numTilesPerEdge - 1)
+				{
+					auto it = m_tileMap.find(Vector3<Uint16>(tileData.x + 1, tileData.y + 1, tileData.z));
+					if (it != m_tileMap.end() && (it.value().m_isLoaded & mapTypeBitfield))
+					{
+						MapData& cornerMapData = it.value().m_mapData[mapType];
+
+						// Copy top-left -> bot-right
+						memcpy(mapTile.getPixel(mapSize + 1, mapSize + 1), it.value().m_mapData[mapType].m_edgeImg->getPixel((Uint32)EdgeRow::Top, 0), pixelSize);
+
+						// Update texture
+						Vector2u cachePos = Vector2u(it.value().m_cachePos) * (mapSize + 2) + Vector2u(0, 0);
+						cornerMapData.m_texture->update(mapTile.getPixel(mapSize, mapSize), cachePos, Vector2u(1));
+					}
+				}
+			}
 		}
 
 		// Create texture if it hasn't yet (this is the first time it can be created without wasting loading resources)
@@ -1346,27 +1642,6 @@ void LargeTerrain::updateLoadTasks()
 		// Decrement so that next element is not skipped
 		--i;
 	}
-}
-
-
-///////////////////////////////////////////////////////////
-void LargeTerrain::addLoadTask(const Vector2u& node, Uint32 lod, Texture* texture, const LoadFunc& func, Uint32 mapType)
-{
-	Uint32 numNodesPerEdge = 1 << lod;
-	Vector2i tileXy = Vector2i(node.y, node.x) - (int)numNodesPerEdge / 2;
-
-	// Create task
-	LoadTask* task = new LoadTask();
-	task->m_image = Pool<Image>::alloc();
-	task->m_texture = texture;
-	task->m_tileData = Vector3<Uint16>(node.x, node.y, lod);
-	task->m_mapType = (MapData::Type)mapType;
-
-	// Call load function
-	task->m_task = Scheduler::addTask(m_heightLoadFunc, tileXy, lod, task->m_image);
-
-	// Add to list
-	m_loadTasks.push_back(task);
 }
 
 
@@ -1550,10 +1825,43 @@ bool LargeTerrain::processHeightTile(Image* hmap, Image* nmap, const Vector3<Uin
 			if (prevBounds.y > currBounds.y)
 				currBounds.y = prevBounds.y;
 		}
-	}
 
-	// TODO : Don't free height map to use for terrain colliders
-	Pool<Image>::free(hmap);
+
+		// Push data needed to create collider
+		m_colliders.push_back(ColliderInfo());
+		ColliderInfo& colliderInfo = m_colliders.back();
+
+		colliderInfo.m_tile = Vector2<Uint16>(tile);
+		
+		// Calculate metadata needed for collider
+		Physics* physics = m_scene->getExtension<Physics>();
+		numNodesPerEdge = 1 << tile.z;
+		float tileSize = m_size / (float)numNodesPerEdge;
+		float metersPerPixel = tileSize / (float)mapSize;
+
+		// Create collider
+		float colliderSize = tileSize + 2.0f * metersPerPixel;
+		HeightMapShape shape = HeightMapShape(*hmap, Vector3f(colliderSize, m_maxHeight, colliderSize));
+
+		// Calculate collider position
+		Vector2f center = tileSize * (Vector2f(tile.y, tile.x) - (float)(numNodesPerEdge / 2) + 0.5f);
+		Vector3f colliderPos = Vector3f(center.x, 0.0f, center.y);
+
+		// Create collider
+		Collider& collider = colliderInfo.m_collider = physics->addCollider(m_entity, shape, colliderPos);
+
+		// Set default collider properties
+		collider.setBounciness(m_bounciness);
+		collider.setFrictionCoefficient(m_friction);
+		collider.setCollisionCategory(m_collisionCategory);
+		collider.setCollisionMask(m_collisionMask);
+
+		// Copy image pointer to map data so it can be freed later
+		m_tileMap[tile].m_mapData[MapData::Height].m_fullImg = hmap;
+	}
+	else
+		// Free height tile only if not a base level tile
+		Pool<Image>::free(hmap);
 
 	return true;
 }
@@ -1563,7 +1871,7 @@ bool LargeTerrain::processHeightTile(Image* hmap, Image* nmap, const Vector3<Uin
 void LargeTerrain::setHeightLoader(const LoadFunc& func)
 {
 	m_heightLoadFunc = func;
-	m_tileLoadedBitfield |= MapData::Height | MapData::Normal;
+	m_tileLoadedBitfield |= (1 << MapData::Height) | (1 << MapData::Normal);
 
 	// Load base tile to fill height bounds map with bounds
 	Image hmap;
@@ -1671,6 +1979,82 @@ void LargeTerrain::setHeightLoader(const LoadFunc& func)
 
 
 ///////////////////////////////////////////////////////////
+void LargeTerrain::setSplatLoader(const LoadFunc& func)
+{
+	m_splatLoadFunc = func;
+	m_tileLoadedBitfield |= (1 << MapData::Splat);
+}
+
+
+///////////////////////////////////////////////////////////
+void LargeTerrain::addCustomLoader(const LoadFunc& func)
+{
+	m_customLoadFuncs.push_back(func);
+	m_customMaps.push_back(Pool<Texture>::alloc());
+	m_tileLoadedBitfield |= (1 << (MapData::Custom + m_customLoadFuncs.size() - 1));
+}
+
+
+///////////////////////////////////////////////////////////
+void LargeTerrain::setSplatTexture(Texture* texture, Uint32 index)
+{
+	// Add empty pointers until array is the right size
+	while (m_splatTextures.size() <= index)
+		m_splatTextures.push_back(0);
+
+	m_splatTextures[index] = texture;
+}
+
+
+///////////////////////////////////////////////////////////
+void LargeTerrain::applyRedirectMap(Shader* shader)
+{
+	shader->setUniform("u_cacheMapSize", (Vector2f)m_cacheMapSize);
+	shader->setUniform("u_redirectMap", m_redirectMap);
+}
+
+
+///////////////////////////////////////////////////////////
+void LargeTerrain::setBounciness(float bounciness)
+{
+	m_bounciness = bounciness;
+
+	for (Uint32 i = 0; i < m_colliders.size(); ++i)
+		m_colliders[i].m_collider.setBounciness(bounciness);
+}
+
+
+///////////////////////////////////////////////////////////
+void LargeTerrain::setFrictionCoefficient(float coefficient)
+{
+	m_friction = coefficient;
+
+	for (Uint32 i = 0; i < m_colliders.size(); ++i)
+		m_colliders[i].m_collider.setFrictionCoefficient(coefficient);
+}
+
+
+///////////////////////////////////////////////////////////
+void LargeTerrain::setCollisionCategory(Uint16 category)
+{
+	m_collisionCategory = category;
+
+	for (Uint32 i = 0; i < m_colliders.size(); ++i)
+		m_colliders[i].m_collider.setCollisionCategory(category);
+}
+
+
+///////////////////////////////////////////////////////////
+void LargeTerrain::setCollisionMask(Uint16 mask)
+{
+	m_collisionMask = mask;
+
+	for (Uint32 i = 0; i < m_colliders.size(); ++i)
+		m_colliders[i].m_collider.setCollisionMask(mask);
+}
+
+
+///////////////////////////////////////////////////////////
 Texture& LargeTerrain::getRedirectMap()
 {
 	return m_redirectMap;
@@ -1692,9 +2076,51 @@ Texture& LargeTerrain::getNormalMap()
 
 
 ///////////////////////////////////////////////////////////
+Texture& LargeTerrain::getSplatMap()
+{
+	return m_splatMap;
+}
+
+
+///////////////////////////////////////////////////////////
+Texture* LargeTerrain::getCustomMap(Uint32 index) const
+{
+	return m_customMaps[index];
+}
+
+
+///////////////////////////////////////////////////////////
 void LargeTerrain::onUnloadTile(const std::function<void(const Vector2i&, Uint32)>& func)
 {
 	m_unloadFunc = func;
+}
+
+
+///////////////////////////////////////////////////////////
+float LargeTerrain::getBounciness() const
+{
+	return m_bounciness;
+}
+
+
+///////////////////////////////////////////////////////////
+float LargeTerrain::getFrictionCoefficient() const
+{
+	return m_friction;
+}
+
+
+///////////////////////////////////////////////////////////
+Uint16 LargeTerrain::getCollisionCategory() const
+{
+	return m_collisionCategory;
+}
+
+
+///////////////////////////////////////////////////////////
+Uint16 LargeTerrain::getCollisionMask() const
+{
+	return m_collisionMask;
 }
 
 

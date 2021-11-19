@@ -1,6 +1,8 @@
 #ifndef POLY_TERRAIN_H
 #define POLY_TERRAIN_H
 
+#include <poly/Engine/Entity.h>
+
 #include <poly/Graphics/Material.h>
 #include <poly/Graphics/RenderSystem.h>
 #include <poly/Graphics/Shader.h>
@@ -8,6 +10,8 @@
 #include <poly/Graphics/UniformBuffer.h>
 #include <poly/Graphics/VertexArray.h>
 #include <poly/Graphics/VertexBuffer.h>
+
+#include <poly/Physics/Collider.h>
 
 #include <future>
 #include <stack>
@@ -24,11 +28,19 @@ public:
 
 	virtual ~TerrainBase();
 
-	void init(Scene* scene) override;
+	virtual void init(Scene* scene) override;
 
 	void render(Camera& camera, RenderPass pass, const RenderSettings& settings) override;
 
 	void create(float size, float maxHeight, float maxBaseSize = 50.0f);
+
+	void setShader(Shader* shader);
+
+	Entity getEntity() const;
+
+	float getSize() const;
+
+	float getMaxHeight() const;
 
 protected:
 	///////////////////////////////////////////////////////////
@@ -59,6 +71,7 @@ protected:
 	void makeRenderList(const Vector2u& node, Uint32 lod, const Frustum& frustum, std::vector<Vector4f>& renderList);
 
 protected:
+	Entity m_entity;					//!< The scene entity that will be used for terrain colliders
 	float m_size;						//!< The size of each side of the terrain (world units)
 	float m_maxHeight;					//!< The maximum height of the terrain (world units)
 
@@ -104,7 +117,17 @@ public:
 	///////////////////////////////////////////////////////////
 	~Terrain();
 
+	void init(Scene* scene) override;
+
 	void setHeightMap(const Image& hmap);
+
+	void setBounciness(float bounciness);
+
+	void setFrictionCoefficient(float coefficient);
+
+	void setCollisionCategory(Uint16 category);
+
+	void setCollisionMask(Uint16 mask);
 
 	Texture& getHeightMap();
 
@@ -113,6 +136,38 @@ public:
 	HeightMap& getHeightData();
 
 	NormalMap& getNormalData();
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the collider bounciness value
+	///
+	/// \return The bounciness value
+	///
+	///////////////////////////////////////////////////////////
+	float getBounciness() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the friction coefficient
+	///
+	/// \return The friction coefficient
+	///
+	///////////////////////////////////////////////////////////
+	float getFrictionCoefficient() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the collision category bitfield
+	///
+	/// \return The collision category bitfield
+	///
+	///////////////////////////////////////////////////////////
+	Uint16 getCollisionCategory() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the collision mask bitfield
+	///
+	/// \return The collision mask bitfield
+	///
+	///////////////////////////////////////////////////////////
+	Uint16 getCollisionMask() const;
 
 private:
 	static Shader& getShader();
@@ -134,6 +189,12 @@ private:
 	Texture m_normalMap;
 	HeightMap m_heightMapImg;
 	NormalMap m_normalMapImg;
+
+	Collider m_collider;
+	float m_bounciness;
+	float m_friction;
+	Uint16 m_collisionCategory;
+	Uint16 m_collisionMask;
 };
 
 
@@ -152,13 +213,65 @@ public:
 
 	void setHeightLoader(const LoadFunc& func);
 
+	void setSplatLoader(const LoadFunc& func);
+
+	void addCustomLoader(const LoadFunc& func);
+
+	void onUnloadTile(const std::function<void(const Vector2i&, Uint32)>& func);
+
+	void setSplatTexture(Texture* texture, Uint32 index);
+
+	void applyRedirectMap(Shader* shader);
+
+	void setBounciness(float bounciness);
+
+	void setFrictionCoefficient(float coefficient);
+
+	void setCollisionCategory(Uint16 category);
+
+	void setCollisionMask(Uint16 mask);
+
 	Texture& getRedirectMap();
 
 	Texture& getHeightMap();
 
 	Texture& getNormalMap();
 
-	void onUnloadTile(const std::function<void(const Vector2i&, Uint32)>& func);
+	Texture& getSplatMap();
+
+	Texture* getCustomMap(Uint32 index) const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the collider bounciness value
+	///
+	/// \return The bounciness value
+	///
+	///////////////////////////////////////////////////////////
+	float getBounciness() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the friction coefficient
+	///
+	/// \return The friction coefficient
+	///
+	///////////////////////////////////////////////////////////
+	float getFrictionCoefficient() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the collision category bitfield
+	///
+	/// \return The collision category bitfield
+	///
+	///////////////////////////////////////////////////////////
+	Uint16 getCollisionCategory() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the collision mask bitfield
+	///
+	/// \return The collision mask bitfield
+	///
+	///////////////////////////////////////////////////////////
+	Uint16 getCollisionMask() const;
 
 private:
 	enum class EdgeRow
@@ -209,6 +322,12 @@ private:
 		Uint32 m_isLoaded;
 	};
 
+	struct ColliderInfo
+	{
+		Collider m_collider;
+		Vector2<Uint16> m_tile;
+	};
+
 	static Shader& getShader();
 
 	static Shader s_shader;
@@ -219,8 +338,6 @@ private:
 
 	void updateLoadTasks();
 
-	void addLoadTask(const Vector2u& node, Uint32 lod, Texture* texture, const LoadFunc& func, Uint32 mapType);
-
 	Tile* getAdjTile(const Vector3<Uint16>& tileData);
 
 	bool processHeightTile(Image* hmap, Image* nmap, const Vector3<Uint16>& tile);
@@ -230,11 +347,23 @@ private:
 
 	Texture m_heightMap;
 	Texture m_normalMap;
+	Texture m_splatMap;
 	Texture m_redirectMap;
 	ImageBuffer<Vector3<Uint8>> m_redirectMapImg;
+	std::vector<Texture*> m_customMaps;
 
 	LoadFunc m_heightLoadFunc;
+	LoadFunc m_splatLoadFunc;
+	std::vector<LoadFunc> m_customLoadFuncs;
 	std::function<void(const Vector2i&, Uint32)> m_unloadFunc;
+
+	std::vector<Texture*> m_splatTextures;
+
+	std::vector<ColliderInfo> m_colliders;
+	float m_bounciness;
+	float m_friction;
+	Uint16 m_collisionCategory;
+	Uint16 m_collisionMask;
 
 	Uint32 m_baseTileLevel;
 	Vector2u m_cacheMapSize;

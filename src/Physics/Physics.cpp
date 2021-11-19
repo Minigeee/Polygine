@@ -922,8 +922,6 @@ void Physics::removeCollider(const Entity& entity, const Collider& collider)
 	// Lock mutex
 	std::unique_lock<std::mutex> lock1(m_dataMutex);
 
-	std::cout << "Lock remove mutex\n";
-
 	BodyData* data = 0;
 	reactphysics3d::CollisionBody* body = 0;
 	{

@@ -284,13 +284,6 @@ int main()
         physics->addCollider(boxEntity1, BoxShape(1.0f, 1.0f, 1.0f));
     }
 
-    rbody.m_position = Vector3f(0.0f, 0.0f, 0.0f);
-    rbody.m_type = RigidBodyType::Static;
-    Entity terrainEntity = scene.createEntity(t, rbody, DynamicTag());
-    HeightMapShape terrainShape(heightMap, Vector3f(4000.0f, 200.0f, 4000.0f));
-    Collider terrainCollider = physics->addCollider(terrainEntity, terrainShape);
-    terrainCollider.setFrictionCoefficient(2.0f);
-
 
     Clock clock;
     float time = 0.0f;
@@ -725,4 +718,4 @@ int main()
 // TODO : Handle rendering transparent objects in octree
 // TODO : Add a custom scene render (for more customization in deferred pipeline)
 // TODO : Environment cubemaps + integrate them into reflections effect
-// TODO : Upgrade Scheduler
+// TODO : Optimize height bounds map for LargeTerrain to handle even larger terrains (this is currently the limiting factor)
