@@ -52,11 +52,12 @@ public:
 	/// \param fname The relative path to the image file
 	/// \param dtype The data type to use when loading the image
 	/// \param mipmap Determines if mipmaps should be generated for the texture
+	/// \param adjustForGamma The gamma factor that is used in post-processing
 	///
 	/// \see load
 	///
 	///////////////////////////////////////////////////////////
-	Texture(const std::string& fname, GLType dtype = GLType::Uint8, bool mipmap = false);
+	Texture(const std::string& fname, GLType dtype = GLType::Uint8, bool mipmap = false, float adjustForGamma = 1.0f);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Destructor
@@ -88,11 +89,12 @@ public:
 	/// \param fname The relative path to the image file
 	/// \param dtype The data type to use when loading the image
 	/// \param mipmap Determines if mipmaps should be generated for the texture
+	/// \param adjustForGamma The gamma factor that is used in post-processing
 	///
 	/// \return True if the file was successfully loaded
 	///
 	///////////////////////////////////////////////////////////
-	bool load(const std::string& fname, GLType dtype = GLType::Uint8, bool mipmap = false);
+	bool load(const std::string& fname, GLType dtype = GLType::Uint8, bool mipmap = false, float adjustForGamma = 1.0f);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Create a new texture from pixel data

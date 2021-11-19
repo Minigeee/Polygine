@@ -277,7 +277,11 @@ template <typename F, typename... Args, typename Ret>
 inline Task<Ret> Scheduler::addTask(Scheduler::Priority priority, F&& func, Args&&... args)
 {
     // Create new task state
-    using Ft = typename std::conditional<std::is_member_function_pointer<F>::value, typename F, typename std::remove_reference<F>::type>::type;
+    using Ft = typename std::conditional<
+        std::is_member_function_pointer<F>::value,
+        typename F,
+        typename std::remove_const<typename std::remove_reference<F>::type>::type
+    >::type;
     priv::TaskState<Ft>* state = new priv::TaskState<Ft>(std::forward<F>(func), std::forward<Args>(args)...);
 
     // Add to queue

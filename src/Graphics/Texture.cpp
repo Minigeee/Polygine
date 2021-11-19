@@ -73,7 +73,7 @@ Texture::Texture() :
 
 
 ///////////////////////////////////////////////////////////
-Texture::Texture(const std::string& fname, GLType dtype, bool mipmap) :
+Texture::Texture(const std::string& fname, GLType dtype, bool mipmap, float adjustForGamma) :
 	m_id			(0),
 	m_width			(0),
 	m_height		(0),
@@ -85,7 +85,7 @@ Texture::Texture(const std::string& fname, GLType dtype, bool mipmap) :
 	m_filter		(TextureFilter::Linear),
 	m_multisampled	(false)
 {
-	load(fname, dtype, mipmap);
+	load(fname, dtype, mipmap, adjustForGamma);
 }
 
 
@@ -144,12 +144,41 @@ void Texture::bind(Uint32 slot)
 
 
 ///////////////////////////////////////////////////////////
-bool Texture::load(const std::string& fname, GLType dtype, bool mipmap)
+bool Texture::load(const std::string& fname, GLType dtype, bool mipmap, float adjustForGamma)
 {
 	// Load the image
 	Image img;
 	if (!img.load(fname, dtype))
 		return false;
+
+	// Adjust pixels
+	if (adjustForGamma != 1.0f)
+	{
+		Uint32 numPixels = img.getWidth() * img.getHeight();
+		Uint32 numValues = numPixels * img.getNumChannels();
+
+		if (dtype == GLType::Uint8)
+		{
+			Uint8* data = (Uint8*)img.getData();
+
+			for (Uint32 i = 0; i < numValues; ++i)
+				data[i] = (Uint8)(powf((float)data[i] / 255.0f, adjustForGamma) * 255.0f);
+		}
+		else if (dtype == GLType::Uint16)
+		{
+			Uint16* data = (Uint16*)img.getData();
+
+			for (Uint32 i = 0; i < numValues; ++i)
+				data[i] = (Uint16)(powf((float)data[i] / 65535.0f, adjustForGamma) * 65535.0f);
+		}
+		else if (dtype == GLType::Float)
+		{
+			float* data = (float*)img.getData();
+
+			for (Uint32 i = 0; i < numValues; ++i)
+				data[i] = powf(data[i], adjustForGamma);
+		}
+	}
 
 	create(img, TextureFilter::Linear, TextureWrap::ClampToEdge, mipmap);
 
