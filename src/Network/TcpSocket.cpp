@@ -28,6 +28,7 @@ void TcpSocket::disconnect()
 ///////////////////////////////////////////////////////////
 Socket::Status TcpSocket::send(const void* data, Uint32 size)
 {
+	std::unique_lock<std::mutex> lock(m_mutex);
 	return (Status)m_socket.send(data, size);
 }
 
@@ -35,6 +36,7 @@ Socket::Status TcpSocket::send(const void* data, Uint32 size)
 ///////////////////////////////////////////////////////////
 Socket::Status TcpSocket::send(const void* data, Uint32 size, Uint32& sent)
 {
+	std::unique_lock<std::mutex> lock(m_mutex);
 	return (Status)m_socket.send(data, size, sent);
 }
 
@@ -42,6 +44,7 @@ Socket::Status TcpSocket::send(const void* data, Uint32 size, Uint32& sent)
 ///////////////////////////////////////////////////////////
 Socket::Status TcpSocket::send(Packet& packet)
 {
+	std::unique_lock<std::mutex> lock(m_mutex);
 	return (Status)m_socket.send(packet.m_packet);
 }
 
@@ -49,6 +52,7 @@ Socket::Status TcpSocket::send(Packet& packet)
 ///////////////////////////////////////////////////////////
 Socket::Status TcpSocket::receive(void* data, Uint32 size, Uint32& received)
 {
+	std::unique_lock<std::mutex> lock(m_mutex);
 	return (Status)m_socket.receive(data, size, received);
 }
 
@@ -56,6 +60,7 @@ Socket::Status TcpSocket::receive(void* data, Uint32 size, Uint32& received)
 ///////////////////////////////////////////////////////////
 Socket::Status TcpSocket::receive(Packet& packet)
 {
+	std::unique_lock<std::mutex> lock(m_mutex);
 	return (Status)m_socket.receive(packet.m_packet);
 }
 

@@ -37,7 +37,8 @@ public:
 		Error,		//!< Error message type
 		Warning,	//!< Warning message type
 		Info,		//!< Info message type
-		Debug		//!< Debug message type
+		Debug,		//!< Debug message type
+		None		//!< No message tag (for custom tags)
 	};
 
 public:

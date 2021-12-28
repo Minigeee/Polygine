@@ -670,11 +670,13 @@ std::vector<RaycastInfo>& Physics::raycast(const Ray& ray, float dist, Uint16 ma
 	m_maxRaycastIntersects = maxIntersects;
 	m_raycastInfo.clear();
 
-	// Lock mutex
-	std::unique_lock<std::mutex> lock(m_mutex);
+	{
+		// Lock mutex
+		std::unique_lock<std::mutex> lock(m_mutex);
 
-	// Raycast test
-	WORLD_CAST(m_world)->raycast(rp3dRay, m_eventHandler, mask);
+		// Raycast test
+		WORLD_CAST(m_world)->raycast(rp3dRay, m_eventHandler, mask);
+	}
 
 	return m_raycastInfo;
 }

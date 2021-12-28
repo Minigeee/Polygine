@@ -1182,6 +1182,20 @@ public:
 	void setStepSize(float size);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Set the maximum depth in NDC for which a fragment can reflect images
+	///
+	/// This value is set to prevent grainy reflection artifacts
+	/// when reflecting objects very far away. This value should be
+	/// a depth value in NDC (0 to 1).
+	///
+	/// By default, this value is 0.99998.
+	///
+	/// \param depth The maximum depth for which a fragment can reflect images
+	///
+	///////////////////////////////////////////////////////////
+	void setMaxDepth(float depth);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Set the maximum difference in raycast intersection point and depth sampled point that counts as a raycast hit
 	///
 	/// The maximum depth difference defines the maximum allowed difference
@@ -1249,6 +1263,16 @@ public:
 	float getStepSize() const;
 
 	///////////////////////////////////////////////////////////
+	/// \brief Get the maximum depth for which fragments can reflect
+	///
+	/// \return The maximum depth property
+	///
+	/// \see setMaxDepthDiff
+	///
+	///////////////////////////////////////////////////////////
+	float getMaxDepth() const;
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the maximum depth difference property
 	///
 	/// \return The maximum depth difference property
@@ -1286,6 +1310,7 @@ private:
 
 	Uint32 m_maxSteps;						//!< The maximum number of steps the raycast is allowed to perform
 	float m_stepSize;						//!< The step size of the raycast (in pixels)
+	float m_maxDepth;						//!< The maximum depth for which fragments can reflect (in NDC)
 	float m_maxDepthDiff;					//!< The maximum allowed difference in depth from camera (between the ray intersection point and the depth sampled point)
 	float m_fresnelFactor;					//!< The fresnel effect factor
 	float m_fresnelFactorMin;				//!< The minimum reflective factor allowed by the fresnel effect

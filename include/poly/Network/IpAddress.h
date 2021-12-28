@@ -94,6 +94,26 @@ public:
 	Uint32 toInteger() const;
 
 	///////////////////////////////////////////////////////////
+	/// \brief Equality operator for ip address
+	///
+	/// \param x The address to compare to
+	///
+	/// \return True if the ip addresses are equal
+	///
+	///////////////////////////////////////////////////////////
+	bool operator==(const IpAddress& x) const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Inequality operator for ip address
+	///
+	/// \param x The address to compare to
+	///
+	/// \return True if the ip addresses are not equal
+	///
+	///////////////////////////////////////////////////////////
+	bool operator!=(const IpAddress& x) const;
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the ip address of the machine from the LAN point of view
 	///
 	/// This address is only useful for local network communication.

@@ -28,6 +28,7 @@ void UdpSocket::unbind()
 ///////////////////////////////////////////////////////////
 Socket::Status UdpSocket::send(const void* data, Uint32 size, const IpAddress& address, Uint16 port)
 {
+	std::unique_lock<std::mutex> lock(m_mutex);
 	return (Status)m_socket.send(data, size, address.m_address, port);
 }
 
@@ -35,6 +36,7 @@ Socket::Status UdpSocket::send(const void* data, Uint32 size, const IpAddress& a
 ///////////////////////////////////////////////////////////
 Socket::Status UdpSocket::send(Packet& packet, const IpAddress& address, Uint16 port)
 {
+	std::unique_lock<std::mutex> lock(m_mutex);
 	return (Status)m_socket.send(packet.m_packet, address.m_address, port);
 }
 
@@ -42,6 +44,7 @@ Socket::Status UdpSocket::send(Packet& packet, const IpAddress& address, Uint16 
 ///////////////////////////////////////////////////////////
 Socket::Status UdpSocket::receive(void* data, Uint32 max, Uint32& received, IpAddress& address, Uint16& port)
 {
+	std::unique_lock<std::mutex> lock(m_mutex);
 	return (Status)m_socket.receive(data, max, received, address.m_address, port);
 }
 
@@ -49,6 +52,7 @@ Socket::Status UdpSocket::receive(void* data, Uint32 max, Uint32& received, IpAd
 ///////////////////////////////////////////////////////////
 Socket::Status UdpSocket::receive(Packet& packet, IpAddress& address, Uint16& port)
 {
+	std::unique_lock<std::mutex> lock(m_mutex);
 	return (Status)m_socket.receive(packet.m_packet, address.m_address, port);
 }
 

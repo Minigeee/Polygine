@@ -120,7 +120,7 @@ inline ImageBuffer<T>& ImageBuffer<T>::operator=(const ImageBuffer<T>& other)
 	{
 		// Free previous
 		if (m_data && m_ownsData)
-			free(m_data);
+			::free(m_data);
 
 		m_data = 0;
 		m_width = other.m_width;
@@ -162,7 +162,7 @@ inline ImageBuffer<T>& ImageBuffer<T>::operator=(ImageBuffer<T>&& other)
 	{
 		// Free previous
 		if (m_data && m_ownsData)
-			free(m_data);
+			::free(m_data);
 
 		m_data = other.m_data;
 		m_width = other.m_width;
@@ -185,7 +185,7 @@ inline ImageBuffer<T>::~ImageBuffer()
 {
 	// All data types should be POD so no destructor
 	if (m_data && m_ownsData)
-		free(m_data);
+		::free(m_data);
 
 	m_width = 0;
 	m_height = 0;
@@ -791,11 +791,63 @@ inline Vector2u argmax(const ImageBuffer<T>& x)
 
 ///////////////////////////////////////////////////////////
 template <typename T>
+inline ImageBuffer<T> resize(const ImageBuffer<T>& buffer, Uint32 w, Uint32 h)
+{
+	// Resize image
+	ImageBuffer<T> dst(w, h);
+	priv::resize(buffer.getData(), dst.getData(), buffer.getWidth(), buffer.getHeight(), w, h, 1, getGLType<T>());
+
+	// Return new buffer
+	return dst;
+}
+
+
+///////////////////////////////////////////////////////////
+template <typename T>
+inline ImageBuffer<Vector2<T>> resize(const ImageBuffer<Vector2<T>>& buffer, Uint32 w, Uint32 h)
+{
+	// Resize image
+	ImageBuffer<Vector2<T>> dst(w, h);
+	priv::resize(buffer.getData(), dst.getData(), buffer.getWidth(), buffer.getHeight(), w, h, 2, getGLType<T>());
+
+	// Return new buffer
+	return dst
+}
+
+
+///////////////////////////////////////////////////////////
+template <typename T>
+inline ImageBuffer<Vector3<T>> resize(const ImageBuffer<Vector3<T>>& buffer, Uint32 w, Uint32 h)
+{
+	// Resize image
+	ImageBuffer<Vector3<T>> dst(w, h);
+	priv::resize(buffer.getData(), dst.getData(), buffer.getWidth(), buffer.getHeight(), w, h, 3, getGLType<T>());
+
+	// Return new buffer
+	return dst
+}
+
+
+///////////////////////////////////////////////////////////
+template <typename T>
+inline ImageBuffer<Vector4<T>> resize(const ImageBuffer<Vector4<T>>& buffer, Uint32 w, Uint32 h)
+{
+	// Resize image
+	ImageBuffer<Vector4<T>> dst(w, h);
+	priv::resize(buffer.getData(), dst.getData(), buffer.getWidth(), buffer.getHeight(), w, h, 4, getGLType<T>());
+
+	// Return new buffer
+	return dst
+}
+
+
+///////////////////////////////////////////////////////////
+template <typename T>
 inline void Image::create(ImageBuffer<T>& buffer)
 {
 	// Free previous data if needed
 	if (m_data && m_ownsData)
-		free(m_data);
+		::free(m_data);
 
 	// Common properties
 	m_data = buffer.m_data;
@@ -816,7 +868,7 @@ inline void Image::create(ImageBuffer<Vector2<T>>& buffer)
 {
 	// Free previous data if needed
 	if (m_data && m_ownsData)
-		free(m_data);
+		::free(m_data);
 
 	// Common properties
 	m_data = buffer.m_data;
@@ -837,7 +889,7 @@ inline void Image::create(ImageBuffer<Vector3<T>>& buffer)
 {
 	// Free previous data if needed
 	if (m_data && m_ownsData)
-		free(m_data);
+		::free(m_data);
 
 	// Common properties
 	m_data = buffer.m_data;
@@ -858,7 +910,7 @@ inline void Image::create(ImageBuffer<Vector4<T>>& buffer)
 {
 	// Free previous data if needed
 	if (m_data && m_ownsData)
-		free(m_data);
+		::free(m_data);
 
 	// Common properties
 	m_data = buffer.m_data;

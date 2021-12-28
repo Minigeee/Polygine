@@ -822,7 +822,8 @@ void Ssao::render(FrameBuffer& input, FrameBuffer& output)
 	shader.setUniform("u_noiseFactor", m_noiseFactor);
 
 	m_camera->apply(&shader);
-	shader.setUniform("u_invProjView", inverse(m_camera->getProjMatrix() * m_camera->getViewMatrix()));
+	shader.setUniform("u_proj", m_camera->getProjMatrix());
+	shader.setUniform("u_invProj", inverse(m_camera->getProjMatrix()));
 
 	// Render vertex array
 	FullscreenQuad::draw();
@@ -1109,6 +1110,7 @@ Reflections::Reflections() :
 	m_proceduralSkybox	(0),
 	m_maxSteps			(100),
 	m_stepSize			(5.0f),
+	m_maxDepth			(0.99998f),
 	m_maxDepthDiff		(0.001f),
 	m_fresnelFactor		(1.0f),
 	m_fresnelFactorMin	(0.0f)
@@ -1162,6 +1164,7 @@ void Reflections::render(FrameBuffer& input, FrameBuffer& output)
 	// Properties
 	shader.setUniform("u_maxSteps", (int)m_maxSteps);
 	shader.setUniform("u_stepSize", m_stepSize);
+	shader.setUniform("u_maxDepth", m_maxDepth);
 	shader.setUniform("u_maxDepthDiff", m_maxDepthDiff);
 	shader.setUniform("u_fresnelFactor", m_fresnelFactor);
 	shader.setUniform("u_fresnelFactorMin", m_fresnelFactorMin);
@@ -1221,6 +1224,13 @@ void Reflections::setStepSize(float size)
 
 
 ///////////////////////////////////////////////////////////
+void Reflections::setMaxDepth(float depth)
+{
+	m_maxDepth = depth;
+}
+
+
+///////////////////////////////////////////////////////////
 void Reflections::setMaxDepthDiff(float diff)
 {
 	m_maxDepthDiff = diff;
@@ -1252,6 +1262,13 @@ Uint32 Reflections::getMaxSteps() const
 float Reflections::getStepSize() const
 {
 	return m_stepSize;
+}
+
+
+///////////////////////////////////////////////////////////
+float Reflections::getMaxDepth() const
+{
+	return m_maxDepth;
 }
 
 

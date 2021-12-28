@@ -12,6 +12,41 @@
 namespace poly
 {
 
+namespace priv
+{
+
+
+///////////////////////////////////////////////////////////
+bool resize(void* src, void* dst, Uint32 w1, Uint32 h1, Uint32 w2, Uint32 h2, Uint32 c, GLType dtype)
+{
+	// Get type size
+	Uint32 typeSize = 1;
+	if (dtype == GLType::Uint8)
+		typeSize = 1;
+	else if (dtype == GLType::Uint16)
+		typeSize = 2;
+	else if (dtype == GLType::Float)
+		typeSize = 4;
+	else
+		return false;
+
+	Uint32 inputStride = w1 * c * typeSize;
+	Uint32 outputStride = w2 * c * typeSize;
+
+	// Resize
+	if (dtype == GLType::Uint8)
+		stbir_resize_uint8((Uint8*)src, w1, h1, inputStride, (Uint8*)dst, w2, h2, outputStride, c);
+	else if (dtype == GLType::Uint16)
+		stbir_resize_uint16_generic((Uint16*)src, w1, h1, inputStride, (Uint16*)dst, w2, h2, outputStride, c, -1, 0, STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, NULL);
+	else
+		stbir_resize_float((float*)src, w1, h1, inputStride, (float*)dst, w2, h2, outputStride, c);
+
+	return true;
+}
+
+
+}
+
 
 ///////////////////////////////////////////////////////////
 Image::Image() :

@@ -968,6 +968,8 @@ void LargeTerrain::create(float size, float maxHeight, float maxBaseSize, float 
 ///////////////////////////////////////////////////////////
 void LargeTerrain::onRender(Camera& camera)
 {
+	START_PROFILING(LargeTerrainUpdate);
+
 	// Update tile maps if viewpoint changed
 	if (m_viewpointChanged)
 	{
@@ -989,6 +991,8 @@ void LargeTerrain::onRender(Camera& camera)
 
 		m_redirectMapChanged = false;
 	}
+
+	STOP_PROFILING(LargeTerrainUpdate);
 
 	// Get shader
 	if (!m_shader)
@@ -1059,53 +1063,20 @@ void LargeTerrain::updateTileMaps(const Vector2u& node, Uint32 lod)
 			Vector2i tileXy = Vector2i(node.y, node.x) - (int)numNodesPerEdge / 2;
 
 			// Add load tasks
-			if (m_heightLoadFunc)
+			if (m_loadFunc)
 			{
-				// Create task
-				LoadTask* task = new LoadTask();
-				task->m_image = Pool<Image>::alloc();
-				task->m_texture = &m_heightMap;
-				task->m_tileData = Vector3<Uint16>(node.x, node.y, lod);
-				task->m_mapType = MapData::Height;
+				// Create preload task
+				PreloadTask task;
+				task.m_tileData = Vector3<Uint16>(node.x, node.y, lod);
+				task.m_tileXy = tileXy;
+				task.m_task = std::async(m_loadFunc, tileXy, lod);
 
-				// Call load function
-				task->m_task = Scheduler::addTask(m_heightLoadFunc, tileXy, lod, task->m_image);
-
-				// Add to list
-				m_loadTasks.push_back(task);
+				// Add preload task
+				m_preloadTasks.push_back(std::move(task));
 			}
-
-			if (m_splatLoadFunc)
-			{
-				// Create task
-				LoadTask* task = new LoadTask();
-				task->m_image = Pool<Image>::alloc();
-				task->m_texture = &m_splatMap;
-				task->m_tileData = Vector3<Uint16>(node.x, node.y, lod);
-				task->m_mapType = MapData::Splat;
-
-				// Call load function
-				task->m_task = Scheduler::addTask(m_splatLoadFunc, tileXy, lod, task->m_image);
-
-				// Add to list
-				m_loadTasks.push_back(task);
-			}
-
-			for (Uint32 i = 0; i < m_customLoadFuncs.size(); ++i)
-			{
-				// Create task
-				LoadTask* task = new LoadTask();
-				task->m_image = Pool<Image>::alloc();
-				task->m_texture = m_customMaps[i];
-				task->m_tileData = Vector3<Uint16>(node.x, node.y, lod);
-				task->m_mapType = (MapData::Type)(MapData::Custom + i);
-
-				// Call load function
-				task->m_task = Scheduler::addTask(m_customLoadFuncs[i], tileXy, lod, task->m_image);
-
-				// Add to list
-				m_loadTasks.push_back(task);
-			}
+			else
+				// Add regular load tasks
+				addLoadTasks(node, tileXy, lod);
 
 			// Remove from free list
 			m_freeList.pop();
@@ -1156,23 +1127,10 @@ void LargeTerrain::updateTileMaps(const Vector2u& node, Uint32 lod)
 			// Indicate that redirect map has changed
 			m_redirectMapChanged = true;
 
-			// Free images
-			for (Uint32 i = 0; i < tile.m_mapData.size(); ++i)
-			{
-				MapData& mapData = tile.m_mapData[i];
-
-				if (mapData.m_fullImg)
-					Pool<Image>::free(mapData.m_fullImg);
-
-				// Free edge image
-				if (mapData.m_edgeImg)
-					Pool<Image>::free(mapData.m_edgeImg);
-
-				mapData.m_fullImg = 0;
-				mapData.m_edgeImg = 0;
-			}
-
 			// Remove collider if this tile is base level
+			// This is done before freeing images because colliders depend on images
+			// to work correctly and sometimes, this could cause asynchronous physics loops
+			// to bug out
 			if (lod == m_baseTileLevel)
 			{
 				std::unique_lock<std::mutex> lock(m_mutex);
@@ -1193,6 +1151,22 @@ void LargeTerrain::updateTileMaps(const Vector2u& node, Uint32 lod)
 				}
 			}
 
+			// Free images
+			for (Uint32 i = 0; i < tile.m_mapData.size(); ++i)
+			{
+				MapData& mapData = tile.m_mapData[i];
+
+				if (mapData.m_fullImg)
+					Pool<Image>::free(mapData.m_fullImg);
+
+				// Free edge image
+				if (mapData.m_edgeImg)
+					Pool<Image>::free(mapData.m_edgeImg);
+
+				mapData.m_fullImg = 0;
+				mapData.m_edgeImg = 0;
+			}
+
 			// Remove mapping
 			m_tileMap.erase(it);
 
@@ -1211,21 +1185,88 @@ void LargeTerrain::updateTileMaps(const Vector2u& node, Uint32 lod)
 
 
 ///////////////////////////////////////////////////////////
+void LargeTerrain::addLoadTasks(const Vector2u& node, const Vector2i& tile, Uint32 lod)
+{
+	if (m_heightLoadFunc)
+	{
+		// Create task
+		LoadTask* task = new LoadTask();
+		task->m_image = Pool<Image>::alloc();
+		task->m_texture = &m_heightMap;
+		task->m_tileData = Vector3<Uint16>(node.x, node.y, lod);
+		task->m_mapType = MapData::Height;
+
+		// Call load function
+		task->m_task = std::async(m_heightLoadFunc, tile, lod, task->m_image);
+
+		// Add to list
+		m_loadTasks.push_back(task);
+	}
+
+	if (m_splatLoadFunc)
+	{
+		// Create task
+		LoadTask* task = new LoadTask();
+		task->m_image = Pool<Image>::alloc();
+		task->m_texture = &m_splatMap;
+		task->m_tileData = Vector3<Uint16>(node.x, node.y, lod);
+		task->m_mapType = MapData::Splat;
+
+		// Call load function
+		task->m_task = std::async(m_splatLoadFunc, tile, lod, task->m_image);
+
+		// Add to list
+		m_loadTasks.push_back(task);
+	}
+
+	for (Uint32 i = 0; i < m_customLoadFuncs.size(); ++i)
+	{
+		// Create task
+		LoadTask* task = new LoadTask();
+		task->m_image = Pool<Image>::alloc();
+		task->m_texture = m_customMaps[i];
+		task->m_tileData = Vector3<Uint16>(node.x, node.y, lod);
+		task->m_mapType = (MapData::Type)(MapData::Custom + i);
+
+		// Call load function
+		task->m_task = std::async(m_customLoadFuncs[i], tile, lod, task->m_image);
+
+		// Add to list
+		m_loadTasks.push_back(task);
+	}
+}
+
+
+///////////////////////////////////////////////////////////
 void LargeTerrain::updateLoadTasks()
 {
-	// Don't do anything if there are no load tasks
-	if (!m_loadTasks.size()) return;
+	for (int i = 0; i < (int)m_preloadTasks.size(); ++i)
+	{
+		PreloadTask& task = m_preloadTasks[i];
 
-	// Remove list
-	std::vector<Uint32> removeList;
+		// Check if the task is finished
+		if (task.m_task.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+			continue;
 
-	// Update tasks in reverse order
+		auto currentTileIt = m_tileMap.find(task.m_tileData);
+		if (task.m_task.get() && currentTileIt != m_tileMap.end())
+			// The preload was successful, add the rest of the load tasks
+			addLoadTasks(Vector2u(task.m_tileData), Vector2i(task.m_tileXy), task.m_tileData.z);
+
+		// Remove task
+		m_preloadTasks.erase(m_preloadTasks.begin() + i);
+
+		// Decrement so that next element is not skipped
+		--i;
+	}
+
+	// Update load tasks
 	for (int i = 0; i < (int)m_loadTasks.size(); ++i)
 	{
 		LoadTask* loadTask = m_loadTasks[i];
 
 		// Check if the task is finished
-		if (!loadTask->m_task.isFinished())
+		if (loadTask->m_task.valid() && loadTask->m_task.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
 			continue;
 
 		// The loaded image must be a square
@@ -1242,7 +1283,7 @@ void LargeTerrain::updateLoadTasks()
 		// Skip and remove if the image failed to load, and also catches
 		// extreme edge case: the tile went into unload range while it was still loading
 		auto currentTileIt = m_tileMap.find(loadTask->m_tileData);
-		if (!loadTask->m_task.getResult() || currentTileIt == m_tileMap.end())
+		if (loadTask->m_task.valid() && !loadTask->m_task.get() || currentTileIt == m_tileMap.end())
 		{
 			// Remove task
 			delete loadTask;
@@ -1602,7 +1643,7 @@ void LargeTerrain::updateLoadTasks()
 			normalsTask->m_mapType = MapData::Normal;
 
 			// Call the generate normals task
-			normalsTask->m_task = Scheduler::addTask(&LargeTerrain::processHeightTile, this, loadedImage, normalImg, tileData);
+			normalsTask->m_task = std::async(&LargeTerrain::processHeightTile, this, loadedImage, normalImg, tileData);
 
 			// Add to task list
 			m_loadTasks.push_back(normalsTask);
@@ -1875,6 +1916,8 @@ void LargeTerrain::setHeightLoader(const LoadFunc& func)
 
 	// Load base tile to fill height bounds map with bounds
 	Image hmap;
+	if (m_loadFunc && !m_loadFunc(Vector2i(0), 0))
+		return;
 	if (!m_heightLoadFunc(Vector2i(0), 0, &hmap))
 		return;
 
@@ -2086,6 +2129,13 @@ Texture& LargeTerrain::getSplatMap()
 Texture* LargeTerrain::getCustomMap(Uint32 index) const
 {
 	return m_customMaps[index];
+}
+
+
+///////////////////////////////////////////////////////////
+void LargeTerrain::onLoadTile(const std::function<bool(const Vector2i&, Uint32)>& func)
+{
+	m_loadFunc = func;
 }
 
 

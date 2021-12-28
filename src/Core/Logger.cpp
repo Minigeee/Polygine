@@ -30,6 +30,10 @@ bool Logger::m_shouldFlush[5] = { true, true, false, false, false };
 
 bool Logger::init(const std::string& fname)
 {
+	// If a file is already open, return true to indicate that logger is initialized
+	if (m_file.is_open())
+		return true;
+
 	// Open log file
 	m_file.open(fname);
 
@@ -138,7 +142,7 @@ void Logger::logMsg(Logger::MsgType type, const std::string& msg, std::thread::i
 		ss << "[ERROR]   - ";
 	else if (type == Fatal)
 		ss << "[FATAL]   - ";
-	else
+	else if (type == Debug)
 		ss << "[DEBUG]   - ";
 
 	ss << msg << '\n';

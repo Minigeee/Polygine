@@ -22,6 +22,7 @@ uniform bool u_usesProceduralSkybox;
 
 uniform int u_maxSteps;
 uniform float u_stepSize;
+uniform float u_maxDepth;
 uniform float u_maxDepthDiff;
 uniform float u_fresnelFactor;
 uniform float u_fresnelFactorMin;
@@ -62,7 +63,7 @@ void main()
     bool hit = false;
     vec3 endpoint1, endpoint2;
 
-    if (true)
+    if (depth < u_maxDepth)
     {
         // Make step go one pixel in the direction the change is largest
         vec2 dv = abs(stepNDC.xy * 0.5f * textureSize(u_depth, 0));

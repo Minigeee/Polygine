@@ -217,6 +217,8 @@ public:
 
 	void addCustomLoader(const LoadFunc& func);
 
+	void onLoadTile(const std::function<bool(const Vector2i&, Uint32)>& func);
+
 	void onUnloadTile(const std::function<void(const Vector2i&, Uint32)>& func);
 
 	void setSplatTexture(Texture* texture, Uint32 index);
@@ -305,9 +307,16 @@ private:
 		Uint8 m_edgeResB;
 	};
 
+	struct PreloadTask
+	{
+		std::future<bool> m_task;
+		Vector3<Uint16> m_tileData;
+		Vector2<Int16> m_tileXy;
+	};
+
 	struct LoadTask
 	{
-		Task<bool> m_task;
+		std::future<bool> m_task;
 		Image* m_image;
 		Texture* m_texture;
 		MapData::Type m_mapType;
@@ -336,6 +345,8 @@ private:
 
 	void updateTileMaps(const Vector2u& node, Uint32 lod);
 
+	void addLoadTasks(const Vector2u& node, const Vector2i& tile, Uint32 lod);
+
 	void updateLoadTasks();
 
 	Tile* getAdjTile(const Vector3<Uint16>& tileData);
@@ -355,6 +366,7 @@ private:
 	LoadFunc m_heightLoadFunc;
 	LoadFunc m_splatLoadFunc;
 	std::vector<LoadFunc> m_customLoadFuncs;
+	std::function<bool(const Vector2i&, Uint32)> m_loadFunc;
 	std::function<void(const Vector2i&, Uint32)> m_unloadFunc;
 
 	std::vector<Texture*> m_splatTextures;
@@ -369,6 +381,7 @@ private:
 	Vector2u m_cacheMapSize;
 	std::stack<Vector2<Uint8>> m_freeList;
 	HashMap<Vector3<Uint16>, Tile> m_tileMap;
+	std::vector<PreloadTask> m_preloadTasks;
 	std::vector<LoadTask*> m_loadTasks;
 
 	Uint32 m_tileLoadedBitfield;
