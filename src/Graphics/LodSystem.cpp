@@ -5,7 +5,7 @@ namespace poly
 
 
 ///////////////////////////////////////////////////////////
-void LodSystem::addLevel(float dist, Renderable* renderable, Shader* shader)
+void LodSystem::addLevel(float dist, Renderable* renderable)
 {
 	// Add an lod level
 	m_lodLevels.push_back(LodLevel{ renderable, dist });

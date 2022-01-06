@@ -162,7 +162,7 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	template <typename... Cs>
-	Entity createEntity(const Cs&... components);
+	Entity createEntity(Cs&&... components);
 
 
 	///////////////////////////////////////////////////////////
@@ -233,7 +233,7 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	template <typename... Cs>
-	std::vector<Entity> createEntities(Uint32 num, const Cs&... components);
+	std::vector<Entity> createEntities(Uint32 num, Cs&&... components);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Create several entities with the specified component types
@@ -311,6 +311,18 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	void removeQueuedEntities();
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the number of entities queued for removal
+	///
+	/// This function is thread-safe.
+	///
+	/// \return The number of entities queued for removal
+	///
+	/// \see removeEntity
+	///
+	///////////////////////////////////////////////////////////
+	Uint32 getNumRemoveQueued();
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get a pointer to component data associated with a certain entity
@@ -603,11 +615,12 @@ public:
 private:
 	Handle m_handle;									//!< The scene handle used for scene id
 
-	HashMap<Uint32, priv::EntityGroup> m_entityGroups;	//!< Map of group id to priv::EntityGroup
 	std::mutex m_entityMutex;							//!< Mutex to protect creation and removal of entities
+	HashMap<Uint32, priv::EntityGroup> m_entityGroups;	//!< Map of group id to priv::EntityGroup
+	Uint32 m_numRemoveQueued;							//!< Number of entities queued for removal
 
 	HashMap<Uint32, Extension*> m_extensions;			//!< Map of scene extensions
-	Renderer m_renderer;
+	Renderer m_renderer;								//!< Scene renderer
 
 	static HandleArray<bool> s_idArray;					//!< HandleArray to handle scene id generation
 };

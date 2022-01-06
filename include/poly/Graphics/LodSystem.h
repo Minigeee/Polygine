@@ -26,9 +26,10 @@ public:
 	/// this function.
 	///
 	/// \param dist The far distance at which the given renderable is effective
+	/// \param renderale A pointer to the renderable object
 	///
 	///////////////////////////////////////////////////////////
-	void addLevel(float dist, Renderable* renderable, Shader* shader);
+	void addLevel(float dist, Renderable* renderable);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the number of lod levels that have been added

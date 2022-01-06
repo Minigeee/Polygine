@@ -24,6 +24,7 @@
 #include <poly/Graphics/Model.h>
 #include <poly/Graphics/Octree.h>
 
+#include <poly/Graphics/GLCheck.h>
 #include <poly/Graphics/ParticleSystem.h>
 #include <poly/Graphics/PostProcess.h>
 #include <poly/Graphics/Shader.h>
@@ -64,6 +65,7 @@
 #include <poly/UI/UISystem.h>
 
 #include <iostream>
+#include <thread>
 
 using namespace poly;
 
@@ -91,6 +93,14 @@ float getDistToSphere(float r, float mu, float r1)
 {
     r = r < r1 ? r : r1;
     return -r * mu + sqrt(r * r * (mu * mu - 1.0f) + r1 * r1);
+}
+
+
+void testBuffer()
+{
+    Uint32 testBuffer;
+    Uint32* test = &testBuffer;
+    glCheck(glGenVertexArrays(1, test));
 }
 
 
@@ -268,7 +278,7 @@ int main()
     rbody.m_position.y = 55.0f;
     rbody.m_mass = 65.0f;
     rbody.m_inertiaTensor = Vector3f(INFINITY);
-    Entity player = scene.createEntity(t, r, AnimationComponent(&skeleton), rbody, DynamicTag());
+    Entity player = scene.createEntity(&t, r, AnimationComponent(&skeleton), rbody, DynamicTag());
     CapsuleShape capsule(0.4f, 1.0f);
     Collider playerCollider = physics->addCollider(player, capsule, Vector3f(0.0f, 0.9f, 0.0f));
     playerCollider.setFrictionCoefficient(1.0f);
@@ -282,6 +292,8 @@ int main()
         rbody.m_mass = 10.0f;
         Entity boxEntity1 = scene.createEntity(t, RenderComponent(&box), rbody, DynamicTag());
         physics->addCollider(boxEntity1, BoxShape(1.0f, 1.0f, 1.0f));
+
+        scene.removeEntity(boxEntity1);
     }
 
 
@@ -369,6 +381,9 @@ int main()
         Vector3f(0.7f, 0.5f, 0.3f),
         Vector3f(0.02f, 0.06f, 0.12f)
     };
+
+    std::thread thread(testBuffer);
+    thread.join();
 
 
     HashSet<Entity::Id> touchingFeet;
@@ -693,6 +708,8 @@ int main()
         ui.render();
 
         STOP_PROFILING(GameLoop);
+
+        scene.removeQueuedEntities();
 
         // Display (swap buffers)
         window.display();

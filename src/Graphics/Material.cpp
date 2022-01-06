@@ -189,6 +189,27 @@ bool Material::getCullFace() const
 
 
 ///////////////////////////////////////////////////////////
+Texture* Material::getDiffTexture() const
+{
+	return m_diffTexture;
+}
+
+
+///////////////////////////////////////////////////////////
+Texture* Material::getSpecTexture() const
+{
+	return m_specTexture;
+}
+
+
+///////////////////////////////////////////////////////////
+Texture* Material::getNormalTexture() const
+{
+	return m_normalTexture;
+}
+
+
+///////////////////////////////////////////////////////////
 Texture* Material::getTexture(const std::string& uniform) const
 {
 	// Find texture

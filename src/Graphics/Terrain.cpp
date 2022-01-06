@@ -1252,6 +1252,8 @@ void LargeTerrain::updateLoadTasks()
 		if (task.m_task.get() && currentTileIt != m_tileMap.end())
 			// The preload was successful, add the rest of the load tasks
 			addLoadTasks(Vector2u(task.m_tileData), Vector2i(task.m_tileXy), task.m_tileData.z);
+		else
+			LOG_WARNING("Failed to load terrain tile (%d, %d, %d)", task.m_tileData.x, task.m_tileData.y, task.m_tileData.z);
 
 		// Remove task
 		m_preloadTasks.erase(m_preloadTasks.begin() + i);
@@ -1269,22 +1271,13 @@ void LargeTerrain::updateLoadTasks()
 		if (loadTask->m_task.valid() && loadTask->m_task.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
 			continue;
 
-		// The loaded image must be a square
-		Image* loadedImage = loadTask->m_image;
-		ASSERT(loadedImage->getWidth() == loadedImage->getHeight(), "Terrain map tiles must be sqaure");
-
-		// Make sure texture is correct size
-		ASSERT(
-			!loadTask->m_texture->getId() || (
-				loadTask->m_texture->getWidth() / (loadedImage->getWidth() + 2) == m_cacheMapSize.x &&
-				loadTask->m_texture->getHeight() / (loadedImage->getHeight() + 2) == m_cacheMapSize.y),
-			"Terrain map tile sizes must be consistent (%d px)", loadedImage->getWidth());
-
 		// Skip and remove if the image failed to load, and also catches
 		// extreme edge case: the tile went into unload range while it was still loading
 		auto currentTileIt = m_tileMap.find(loadTask->m_tileData);
 		if (loadTask->m_task.valid() && !loadTask->m_task.get() || currentTileIt == m_tileMap.end())
 		{
+			LOG_WARNING("Failed to load terrain tile (%d, %d, %d)", loadTask->m_tileData.x, loadTask->m_tileData.y, loadTask->m_tileData.z);
+
 			// Remove task
 			delete loadTask;
 			m_loadTasks.erase(m_loadTasks.begin() + i);
@@ -1295,6 +1288,17 @@ void LargeTerrain::updateLoadTasks()
 			continue;
 		}
 		Tile& tile = currentTileIt.value();
+
+		// The loaded image must be a square
+		Image* loadedImage = loadTask->m_image;
+		ASSERT(loadedImage->getWidth() == loadedImage->getHeight(), "Terrain map tiles must be sqaure");
+
+		// Make sure texture is correct size
+		ASSERT(
+			!loadTask->m_texture->getId() || (
+				loadTask->m_texture->getWidth() / (loadedImage->getWidth() + 2) == m_cacheMapSize.x &&
+				loadTask->m_texture->getHeight() / (loadedImage->getHeight() + 2) == m_cacheMapSize.y),
+			"Terrain map tile sizes must be consistent (%d px)", loadedImage->getWidth());
 
 
 		// The load task is ready to be processed, create the map tile

@@ -340,7 +340,7 @@ Vector2<T> ceil(const Vector2<T>& v)
 template <typename T>
 Vector2<T> round(const Vector2<T>& v)
 {
-	return Vector2<T>(round(v.x), round(v.y));
+	return Vector2<T>(std::round(v.x), std::round(v.y));
 }
 
 template <typename T>

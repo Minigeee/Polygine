@@ -19,7 +19,46 @@
 namespace poly
 {
 
+#ifndef DOXYGEN_SKIP
+
+namespace priv
+{
+
+
+///////////////////////////////////////////////////////////
+struct SkeletalData
+{
+	SkeletalData();
+
+	Vector4f m_boneWeights;
+	Vector4i m_boneIds;
+};
+
+
+}
+
+#endif
+
 class Texture;
+
+
+///////////////////////////////////////////////////////////
+/// \brief A struct containing model load settings
+///
+///////////////////////////////////////////////////////////
+struct ModelLoadSettings
+{
+	///////////////////////////////////////////////////////////
+	/// \brief Default constructor
+	///
+	///////////////////////////////////////////////////////////
+	ModelLoadSettings();
+
+	Vector3f m_scale;			//!< The scale to apply to model vertices
+	float m_adjustForGamma;		//!< The gamma factor to adjust loaded textures for
+	bool m_flatShading;			//!< Indicates whether the model should be loaded in a way that sets up for flat shading
+	bool m_loadMaterials;		//!< Indicates whether model materials should be loaded (in case materials are shared)
+};
 
 
 ///////////////////////////////////////////////////////////
@@ -78,12 +117,12 @@ public:
 	/// \brief Load a model from a file
 	///
 	/// \param fname The model file name to load
-	/// \param flatShading Set whether the model should be loaded with flat shading
+	/// \param settings The settings to use for loading the model
 	///
 	/// \see load
 	///
 	///////////////////////////////////////////////////////////
-	Model(const std::string& fname, bool flatShading = true);
+	Model(const std::string& fname, const ModelLoadSettings& settings = ModelLoadSettings());
 
 	///////////////////////////////////////////////////////////
 	/// \brief Destructor
@@ -111,13 +150,34 @@ public:
 	/// smooth shading. The model file must also have vertex normals
 	/// setup correctly as well.
 	///
+	/// If this function is not called from a thread with an active
+	/// OpenGL context, the vertices and materials will be loaded into
+	/// memory, but won't be pushed onto the GPU. The model will be
+	/// partially loaded, so finish() must be called from a thread
+	/// with an active OpenGL context.
+	///
 	/// \param fname The model file name to load
-	/// \param flatShading Set whether the model should be loaded with flat shading
+	/// \param settings The settings to use for loading the model
+	///
+	/// \note The \a gamma adjustment factor only affects images with RGB or RGBA color formats
 	///
 	/// \return True if the file was successfully loaded
 	///
 	///////////////////////////////////////////////////////////
-	bool load(const std::string& fname, bool flatShading = true);
+	bool load(const std::string& fname, const ModelLoadSettings& settings = ModelLoadSettings());
+
+	///////////////////////////////////////////////////////////
+	/// \brief Finish loading a model from a file
+	///
+	/// This function should be used if the model is loaded from
+	/// a thread that does not have an active OpenGL context. This
+	/// function should be called from a thread with an active OpenGL
+	/// context.
+	///
+	/// \return True if the model finished loading successfully
+	///
+	///////////////////////////////////////////////////////////
+	bool finish();
 
 	///////////////////////////////////////////////////////////
 	/// \brief Create a model with a single mesh from a list of vertices
@@ -215,16 +275,19 @@ public:
 	static Shader& getAnimatedShader();
 
 private:
-	VertexBuffer m_vertexBuffer;				//!< The vertex buffer used to store the main vertex data
-	VertexBuffer m_skeletalVertexBuffer;		//!< The vertex buffer used to store skeletal vertex data
-	VertexBuffer m_indicesBuffer;				//!< The vertex buffer used to store vertex index data
+	VertexBuffer m_vertexBuffer;					//!< The vertex buffer used to store the main vertex data
+	VertexBuffer m_skeletalVertexBuffer;			//!< The vertex buffer used to store skeletal vertex data
+	VertexBuffer m_indicesBuffer;					//!< The vertex buffer used to store vertex index data
 
-	std::vector<Vertex> m_vertices;				//!< The list of vertex data excluding skeletal data
-	std::vector<Uint32> m_indices;				//!< A list of vertex indices specifying the order of vertices (only for smooth shading)
-	std::vector<Mesh*> m_meshes;				//!< The vertex array used to render the model
+	std::vector<Vertex> m_vertices;					//!< The list of vertex data excluding skeletal data
+	std::vector<Uint32> m_indices;					//!< A list of vertex indices specifying the order of vertices (only for smooth shading)
+	std::vector<Mesh*> m_meshes;					//!< The vertex array used to render the model
 
-	static Shader s_defaultShader;				//!< The default model shader
-	static Shader s_animatedShader;				//!< The animated model shader
+	std::vector<priv::SkeletalData> m_skeletalData;	//!< Stores skeletal data temporarily in the case data is loaded in a non-render thread
+	std::vector<Uint32> m_meshVertexOffsets;		//!< Stores vertex offsets temporarily in the case data is loaded in a non-render thread
+
+	static Shader s_defaultShader;					//!< The default model shader
+	static Shader s_animatedShader;					//!< The animated model shader
 };
 
 }

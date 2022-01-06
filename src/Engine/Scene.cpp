@@ -50,7 +50,8 @@ E_EntitiesRemoved::E_EntitiesRemoved(std::vector<Entity>& entities) :
 ///////////////////////////////////////////////////////////
 Scene::Scene() :
 	m_handle				(s_idArray.add(true)),
-	m_renderer				(this)
+	m_renderer				(this),
+	m_numRemoveQueued		(0)
 {
 
 }
@@ -98,6 +99,9 @@ void Scene::removeEntity(const Entity& entity)
 
 	// This function adds it to a remove queue
 	it.value().removeEntity(entity);
+
+	// Increment number of queued entities
+	++m_numRemoveQueued;
 }
 
 
@@ -128,6 +132,22 @@ void Scene::removeQueuedEntities()
 			group.removeQueuedEntities();
 		}
 	}
+
+	// Reset number of queued
+	m_numRemoveQueued = 0;
+}
+
+
+///////////////////////////////////////////////////////////
+Uint32 Scene::getNumRemoveQueued()
+{
+	Uint32 num = 0;
+	{
+		std::lock_guard<std::mutex> lock(m_entityMutex);
+		num = m_numRemoveQueued;
+	}
+
+	return num;
 }
 
 

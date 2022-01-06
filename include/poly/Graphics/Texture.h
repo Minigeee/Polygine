@@ -51,13 +51,22 @@ public:
 	///
 	/// \param fname The relative path to the image file
 	/// \param dtype The data type to use when loading the image
+	/// \param filter The sampling filter type for choosing a pixel when in between pixels
+	/// \param wrap The sampling wrap type for when sampling outside the texture bounds
 	/// \param mipmap Determines if mipmaps should be generated for the texture
 	/// \param adjustForGamma The gamma factor that is used in post-processing
 	///
 	/// \see load
 	///
 	///////////////////////////////////////////////////////////
-	Texture(const std::string& fname, GLType dtype = GLType::Uint8, bool mipmap = false, float adjustForGamma = 1.0f);
+	Texture(
+		const std::string& fname,
+		GLType dtype = GLType::Uint8,
+		TextureFilter filter = TextureFilter::Linear,
+		TextureWrap wrap = TextureWrap::ClampToEdge,
+		bool mipmap = true,
+		float adjustForGamma = 1.0f
+	);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Destructor
@@ -88,13 +97,35 @@ public:
 	///
 	/// \param fname The relative path to the image file
 	/// \param dtype The data type to use when loading the image
+	/// \param filter The sampling filter type for choosing a pixel when in between pixels
+	/// \param wrap The sampling wrap type for when sampling outside the texture bounds
 	/// \param mipmap Determines if mipmaps should be generated for the texture
 	/// \param adjustForGamma The gamma factor that is used in post-processing
 	///
 	/// \return True if the file was successfully loaded
 	///
 	///////////////////////////////////////////////////////////
-	bool load(const std::string& fname, GLType dtype = GLType::Uint8, bool mipmap = false, float adjustForGamma = 1.0f);
+	bool load(
+		const std::string& fname,
+		GLType dtype = GLType::Uint8,
+		TextureFilter filter = TextureFilter::Linear,
+		TextureWrap wrap = TextureWrap::ClampToEdge,
+		bool mipmap = true,
+		float adjustForGamma = 1.0f
+	);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Finish loading a texture from an image file
+	///
+	/// This function should be used if a texture is loaded from
+	/// a thread that does not have an active OpenGL context. This
+	/// function should be called from a thread with an active OpenGL
+	/// context.
+	///
+	/// \return True if the texture finished loading successfully
+	///
+	///////////////////////////////////////////////////////////
+	bool finish();
 
 	///////////////////////////////////////////////////////////
 	/// \brief Create a new texture from pixel data
@@ -338,11 +369,12 @@ private:
 	Uint32 m_width;			//!< Texture width
 	Uint32 m_height;		//!< Texture height
 	Uint32 m_depth;			//!< Texture depth
-	Uint32 m_dimensions;	//!< Number of dimensions
-	PixelFormat m_format;	//!< The pixel format
+	Uint16 m_dimensions;	//!< Number of dimensions
+	Uint16 m_format;		//!< The pixel format
 	GLType m_dataType;		//!< The pixel data type
-	TextureWrap m_wrap;		//!< The wrap sampling method
-	TextureFilter m_filter;	//!< The filter sampling method
+	Uint16 m_wrap;			//!< The wrap sampling method
+	Uint16 m_filter;		//!< The filter sampling method
+	void* m_data;			//!< A pointer to image data (in case loading image was not on OpenGL thread)
 	bool m_multisampled;	//!< True if the texture is multisampled
 	bool m_hasMipmaps;		//!< True if mipmaps were generated for the texture
 

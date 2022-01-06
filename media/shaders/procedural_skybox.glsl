@@ -1,7 +1,6 @@
 
 uniform vec3 u_zenithColor;
 uniform vec3 u_horizonColor;
-uniform vec3 u_groundColor;
 uniform vec3 u_scatterColor;
 uniform float u_scatterFactor;
 uniform float u_lightStrength;
@@ -49,14 +48,8 @@ vec3 getSkyColor(vec3 viewDir)
     float distToHorizon = sqrt(r * r - u_botRadius * u_botRadius);
     float distBotToTop = sqrt(u_topRadius * u_topRadius - u_botRadius * u_botRadius);
     float d_max = distToHorizon + distBotToTop;
-
-    // Fix ground intersections
-    bool intersectsGround = d > d_max;
-    if (intersectsGround)
-    {
-        d = -r * mu - sqrt(r * r * (mu * mu - 1.0f) + u_botRadius * u_botRadius);
-        d_0 = d;
-    }
+    if (d > d_max)
+        d = d_max;
 
     // Calculate mix factor
     float factor = clamp((d - d_min) / (d_max - d_min), 0.0f, 1.0f);
@@ -64,8 +57,6 @@ vec3 getSkyColor(vec3 viewDir)
 
     vec3 horizonColor = mix(u_zenithColor, u_horizonColor, heightFactor);
     vec3 color = mix(u_zenithColor, horizonColor, factor) * (d / d_0);
-    if (intersectsGround)
-        color = color * factor * 0.5f + u_groundColor;
 
     color *= phaseFunction_R(nu) * u_lightStrength;
 

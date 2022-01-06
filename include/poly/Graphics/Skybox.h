@@ -193,14 +193,6 @@ public:
 	void setHorizonColor(const Vector3f& color);
 
 	///////////////////////////////////////////////////////////
-	/// \brief Set the ground color
-	///
-	/// \param color The ground color
-	///
-	///////////////////////////////////////////////////////////
-	void setGroundColor(const Vector3f& color);
-
-	///////////////////////////////////////////////////////////
 	/// \brief Set the brightness of Mie scattered light
 	///
 	/// This can be used to set the g-factor of the scatter effect.
@@ -282,14 +274,6 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	const Vector3f& getHorizonColor() const;
-
-	///////////////////////////////////////////////////////////
-	/// \brief Get the ground color
-	///
-	/// \return The ground color
-	///
-	///////////////////////////////////////////////////////////
-	const Vector3f& getGroundColor() const;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the brightness of Mie scattered light
@@ -376,7 +360,6 @@ private:
 
 	Vector3f m_zenithColor;		//!< The zenith color
 	Vector3f m_horizonColor;	//!< The horizon color
-	Vector3f m_groundColor;		//!< The ground color
 	float m_scatterStrength;	//!< Scatter brightness
 	float m_scatterFactor;		//!< Mie phase function "g" factor
 	float m_lightStrength;		//!< Color multiplier

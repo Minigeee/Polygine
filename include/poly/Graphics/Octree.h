@@ -217,6 +217,7 @@ private:
 		Material* m_material;
 		Shader* m_shader;
 		Skeleton* m_skeleton;
+		float m_dist;
 		Uint32 m_offset;
 		Uint32 m_instances;
 		bool m_isTransparent;
@@ -232,14 +233,24 @@ private:
 
 	void update(const Entity::Id& id, RenderComponent& r, TransformComponent& t);
 
-	void getRenderData(Node* node, const Frustum& frustum, std::vector<std::vector<EntityData*>>& entityData, const Vector3f& cameraPos, RenderPass pass);
+	void getRenderData(
+		Node* node,
+		const Frustum& frustum,
+		std::vector<std::vector<EntityData*>>& entityData,
+		std::vector<double>& groupAvgDists,
+		const Vector3f& cameraPos,
+		RenderPass pass
+	);
 
 	Uint32 getRenderGroup(Renderable* renderable, Skeleton* skeleton);
+
+	void bindShader(Shader* shader, Camera& camera, Scene* scene, RenderPass pass);
 
 private:
 	std::mutex m_mutex;									//!< Mutex for accessing node data
 	TypePool<Node> m_nodePool;							//!< The object pool that holds node data
 	ObjectPool m_dataPool;								//!< The object pool that holds render data
+	Clock m_clock;										//!< Used for applying time dependent renderables
 
 	Node* m_root;										//!< A pointer to the root node
 	float m_size;										//!< The size of the highest octree level

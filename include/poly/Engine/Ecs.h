@@ -38,6 +38,8 @@ class ComponentData
 public:
 	static void createComponents(Uint16 sceneId, Uint32 groupId, Uint16 num, const C& component);
 
+	static void createComponents(Uint16 sceneId, Uint32 groupId, Uint16 num, const C* component);
+
 	static void removeComponents(Uint16 sceneId, Uint32 groupId, const std::vector<Uint16>& indices);
 
 	static C* getComponent(Uint16 sceneId, Uint32 groupId, Uint16 index);
@@ -77,7 +79,7 @@ public:
 	EntityGroup(Scene* scene, Uint16 sceneId);
 
 	template <typename... Cs>
-	std::vector<Entity> createEntities(Uint16 num, const Cs&... components);
+	std::vector<Entity> createEntities(Uint16 num, Cs&&... components);
 
 	void removeEntity(const Entity& entity);
 

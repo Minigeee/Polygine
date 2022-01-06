@@ -61,10 +61,11 @@ Texture::Texture() :
 	m_height		(0),
 	m_depth			(0),
 	m_dimensions	(2),
-	m_format		(PixelFormat::Rgb),
+	m_format		((Uint16)PixelFormat::Rgb),
 	m_dataType		(GLType::Uint8),
-	m_wrap			(TextureWrap::ClampToEdge),
-	m_filter		(TextureFilter::Linear),
+	m_wrap			((Uint16)TextureWrap::ClampToEdge),
+	m_filter		((Uint16)TextureFilter::Linear),
+	m_data			(0),
 	m_multisampled	(false),
 	m_hasMipmaps	(false)
 {
@@ -73,19 +74,21 @@ Texture::Texture() :
 
 
 ///////////////////////////////////////////////////////////
-Texture::Texture(const std::string& fname, GLType dtype, bool mipmap, float adjustForGamma) :
+Texture::Texture(const std::string& fname, GLType dtype, TextureFilter filter, TextureWrap wrap, bool mipmap, float adjustForGamma) :
 	m_id			(0),
 	m_width			(0),
 	m_height		(0),
 	m_depth			(0),
 	m_dimensions	(2),
-	m_format		(PixelFormat::Rgb),
+	m_format		((Uint16)PixelFormat::Rgb),
 	m_dataType		(GLType::Uint8),
-	m_wrap			(TextureWrap::ClampToEdge),
-	m_filter		(TextureFilter::Linear),
-	m_multisampled	(false)
+	m_wrap			((Uint16)filter),
+	m_filter		((Uint16)wrap),
+	m_data			(0),
+	m_multisampled	(false),
+	m_hasMipmaps	(false)
 {
-	load(fname, dtype, mipmap, adjustForGamma);
+	load(fname, dtype, filter, wrap, mipmap, 1.0f);
 }
 
 
@@ -105,6 +108,10 @@ void Texture::bind(Uint32 slot)
 	// Need to create a texture first
 	if (!m_id)
 	{
+		// Finish loading if data is waiting
+		if (m_data)
+			finish();
+
 		LOG_WARNING("Trying to bind a texture that doesn't exist yet");
 		return;
 	}
@@ -144,7 +151,7 @@ void Texture::bind(Uint32 slot)
 
 
 ///////////////////////////////////////////////////////////
-bool Texture::load(const std::string& fname, GLType dtype, bool mipmap, float adjustForGamma)
+bool Texture::load(const std::string& fname, GLType dtype, TextureFilter filter, TextureWrap wrap, bool mipmap, float adjustForGamma)
 {
 	// Load the image
 	Image img;
@@ -180,7 +187,65 @@ bool Texture::load(const std::string& fname, GLType dtype, bool mipmap, float ad
 		}
 	}
 
-	create(img, TextureFilter::Linear, TextureWrap::ClampToEdge, mipmap);
+
+	if (Window::isContextActive())
+		create(img, filter, wrap, mipmap);
+
+	else
+	{
+		// Get texture format
+		PixelFormat fmt;
+		if (img.getNumChannels() == 1)
+			fmt = PixelFormat::R;
+		else if (img.getNumChannels() == 2)
+			fmt = PixelFormat::Rg;
+		else if (img.getNumChannels() == 3)
+			fmt = PixelFormat::Rgb;
+		else
+			fmt = PixelFormat::Rgba;
+
+		// Store settings
+		m_data = img.getData();
+		m_width = img.getWidth();
+		m_height = img.getHeight();
+		m_format = (Uint16)fmt;
+		m_dataType = img.getDataType();
+		m_filter = (Uint16)filter;
+		m_wrap = (Uint16)wrap;
+		m_hasMipmaps = mipmap;
+
+		// Make sure the image doesn't free data
+		img.setOwnsData(false);
+	}
+
+	return true;
+}
+
+
+///////////////////////////////////////////////////////////
+bool Texture::finish()
+{
+	if (!m_data)
+		return true;
+	if (!Window::isContextActive())
+		return false;
+
+	// Create texture
+	create(
+		m_data,
+		(PixelFormat)m_format,
+		m_width,
+		m_height,
+		0,
+		m_dataType,
+		(TextureFilter)m_filter,
+		(TextureWrap)m_wrap,
+		m_hasMipmaps
+	);
+
+	// Free data
+	free(m_data);
+	m_data = 0;
 
 	return true;
 }
@@ -271,10 +336,10 @@ void Texture::create(void* data, PixelFormat fmt, Uint32 w, Uint32 h, Uint32 d, 
 	m_width = w;
 	m_height = h;
 	m_depth = d;
-	m_format = fmt;
+	m_format = (Uint16)fmt;
 	m_dataType = dtype;
-	m_wrap = wrap;
-	m_filter = filter;
+	m_wrap = (Uint16)wrap;
+	m_filter = (Uint16)filter;
 }
 
 
@@ -290,13 +355,10 @@ void Texture::create(const Image& image, TextureFilter filter, TextureWrap wrap,
 	PixelFormat fmt;
 	if (image.getNumChannels() == 1)
 		fmt = PixelFormat::R;
-
 	else if (image.getNumChannels() == 2)
 		fmt = PixelFormat::Rg;
-
 	else if (image.getNumChannels() == 3)
 		fmt = PixelFormat::Rgb;
-
 	else
 		fmt = PixelFormat::Rgba;
 
@@ -326,7 +388,7 @@ void Texture::update(void* data)
 	bind();
 
 	// Get the internal format
-	Uint32 internalFmt = getInternalFormat(m_format, m_dataType);
+	Uint32 internalFmt = getInternalFormat((PixelFormat)m_format, m_dataType);
 
 	// Buffer data
 	if (m_dimensions == 1)
@@ -397,7 +459,7 @@ void Texture::setFilter(TextureFilter filter)
 	// Don't set filter before creating
 	if (!m_id) return;
 
-	m_filter = filter;
+	m_filter = (Uint16)filter;
 
 	// Bind the texture
 	bind();
@@ -439,7 +501,7 @@ void Texture::setWrap(TextureWrap wrap)
 	// Don't set wrap before creating
 	if (!m_id) return;
 
-	m_wrap = wrap;
+	m_wrap = (Uint16)wrap;
 
 	// Bind the texture
 	bind();
@@ -501,7 +563,7 @@ Uint32 Texture::getNumDimensions() const
 ///////////////////////////////////////////////////////////
 PixelFormat Texture::getFormat() const
 {
-	return m_format;
+	return (PixelFormat)m_format;
 }
 
 
@@ -515,14 +577,14 @@ GLType Texture::getDataType() const
 ///////////////////////////////////////////////////////////
 TextureWrap Texture::getWrap() const
 {
-	return m_wrap;
+	return (TextureWrap)m_wrap;
 }
 
 
 ///////////////////////////////////////////////////////////
 TextureFilter Texture::getFilter() const
 {
-	return m_filter;
+	return (TextureFilter)m_filter;
 }
 
 

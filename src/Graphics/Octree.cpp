@@ -72,16 +72,6 @@ bool updateBoundingBox(BoundingBox& a, const BoundingBox& b)
 	return changed;
 }
 
-
-///////////////////////////////////////////////////////////
-void bindShader(Shader* shader, Camera& camera, Scene* scene, RenderPass pass)
-{
-	shader->bind();
-
-	// Camera
-	camera.apply(shader);
-}
-
 }
 
 
@@ -146,6 +136,18 @@ void Octree::init(Scene* scene)
 			{
 				for (Uint32 i = 0; i < e.m_numEntities; ++i)
 					add(e.m_entities[i]);
+			}
+		}
+	);
+
+	// Automatically remove any entities that are removed
+	m_scene->addListener<E_EntitiesRemoved>(
+		[&](const E_EntitiesRemoved& e)
+		{
+			if (e.m_entities->has<RenderComponent>())
+			{
+				for (Uint32 i = 0; i < e.m_numEntities; ++i)
+					remove(e.m_entities[i].getId());
 			}
 		}
 	);
@@ -583,17 +585,23 @@ void Octree::update(Entity::Id entity)
 
 	// Get component data
 	auto components = m_scene->getComponents<TransformComponent, RenderComponent>(entity);
-	RenderComponent& r = *components.get<RenderComponent*>();
-	TransformComponent& t = *components.get<TransformComponent*>();
+	RenderComponent* r = components.get<RenderComponent*>();
+	TransformComponent* t = components.get<TransformComponent*>();
 
 	// Update entity
-	update(entity, r, t);
+	if (r && t)
+		update(entity, *r, *t);
 }
 
 
 ///////////////////////////////////////////////////////////
 void Octree::update(const Entity::Id& entity, RenderComponent& r, TransformComponent& t)
 {
+	// Make sure the entity exists in the octree
+	auto it = m_dataMap.find(entity);
+	if (it == m_dataMap.end())
+		return;
+
 	// Get transform matrix
 	Matrix4f transform = toTransformMatrix(t.m_position, t.m_rotation, t.m_scale);
 
@@ -636,7 +644,7 @@ void Octree::update(const Entity::Id& entity, RenderComponent& r, TransformCompo
 
 
 	// Get node
-	EntityData* data = m_dataMap[entity];
+	EntityData* data = it.value();
 	data->m_boundingBox = bbox;
 	data->m_transform = transform;
 	data->m_castsShadows = r.m_castsShadows;
@@ -647,7 +655,7 @@ void Octree::update(const Entity::Id& entity, RenderComponent& r, TransformCompo
 	std::unique_lock<std::mutex> lock(m_mutex);
 
 	// Get cell info
-	float cellSize = BASE_SIZE * powf(2.0f, (float)node->m_level - 1.0f);
+	float cellSize = BASE_SIZE * powf(2.0f, (float)node->m_level);
 	Vector3f cellMin = node->m_boundingBox.m_min / cellSize;
 	cellMin = Vector3f(roundf(cellMin.x), roundf(cellMin.y), roundf(cellMin.z)) * cellSize;
 	Vector3f cellMax = cellMin + Vector3f(cellSize);
@@ -693,7 +701,8 @@ void Octree::remove(Entity::Id entity)
 	std::unique_lock<std::mutex> lock(m_mutex);
 
 	// Get node
-	EntityData* data = m_dataMap[entity];
+	auto it = m_dataMap.find(entity);
+	EntityData* data = it.value();
 	Node* node = data->m_node;
 
 	// Search for data in node
@@ -714,6 +723,9 @@ void Octree::remove(Entity::Id entity)
 
 	// Remove from pool
 	m_dataPool.free(data);
+
+	// Remove from map
+	m_dataMap.erase(it);
 
 	// Decrement the number of entities
 	--m_numEntitites;
@@ -741,10 +753,11 @@ void Octree::render(Camera& camera, RenderPass pass, const RenderSettings& setti
 
 	// Get entity data
 	std::vector<std::vector<EntityData*>> entityData(m_renderGroups.size());
+	std::vector<double> groupAvgDists(m_renderGroups.size());
 	const Frustum& frustum = camera.getFrustum();
 	{
 		std::unique_lock<std::mutex> lock(m_mutex);
-		getRenderData(m_root, frustum, entityData, camera.getPosition(), pass);
+		getRenderData(m_root, frustum, entityData, groupAvgDists, camera.getPosition(), pass);
 	}
 	
 	// Get number of visible entities
@@ -754,6 +767,8 @@ void Octree::render(Camera& camera, RenderPass pass, const RenderSettings& setti
 
 	if (!numVisible) return;
 
+
+	HashMap<Shader*, float> groupMinDists;
 
 	// Stream instance data
 	Uint32 size = numVisible * sizeof(Matrix4f);
@@ -788,6 +803,7 @@ void Octree::render(Camera& camera, RenderPass pass, const RenderSettings& setti
 		data.m_skeleton = group.m_skeleton;
 		data.m_offset = m_instanceBufferOffset;
 		data.m_instances = entities.size();
+		data.m_dist = (float)::sqrt(groupAvgDists[i] / data.m_instances);
 
 		// Take different actions based on what type of renderable being dealt with
 		Model* model = 0;
@@ -810,10 +826,20 @@ void Octree::render(Camera& camera, RenderPass pass, const RenderSettings& setti
 				// Only add the data if it isn't masked
 				if (data.m_material && !(Uint32)(data.m_material->getRenderMask() & pass))
 					++numMasked;
-				else if (data.m_isTransparent)
-					m_transparentData.push_back(data);
 				else
-					renderData.push_back(data);
+				{
+					if (data.m_isTransparent)
+						m_transparentData.push_back(data);
+					else
+						renderData.push_back(data);
+
+					// Keep track of min dists for each shader group
+					auto it = groupMinDists.find(data.m_shader);
+					if (it == groupMinDists.end())
+						groupMinDists[data.m_shader] = data.m_dist;
+					else if (data.m_dist < it.value())
+						it.value() = data.m_dist;
+				}
 			}
 
 			// If the number of masked is equal to the number of meshes, skip this group
@@ -830,10 +856,20 @@ void Octree::render(Camera& camera, RenderPass pass, const RenderSettings& setti
 			// Only add the data if it isn't masked
 			if (data.m_material && !(Uint32)(data.m_material->getRenderMask() & pass))
 				continue;
-			else if (data.m_isTransparent)
-				m_transparentData.push_back(data);
 			else
-				renderData.push_back(data);
+			{
+				if (data.m_isTransparent)
+					m_transparentData.push_back(data);
+				else
+					renderData.push_back(data);
+
+				// Keep track of min dists for each shader group
+				auto it = groupMinDists.find(data.m_shader);
+				if (it == groupMinDists.end())
+					groupMinDists[data.m_shader] = data.m_dist;
+				else if (data.m_dist < it.value())
+					it.value() = data.m_dist;
+			}
 		}
 		else
 			// Otherwise, the renderable is not a valid type, and should be skipped
@@ -853,12 +889,24 @@ void Octree::render(Camera& camera, RenderPass pass, const RenderSettings& setti
 
 	// Sort by shader to minimize shader changes
 	std::sort(renderData.begin(), renderData.end(),
-		[](const RenderData& a, const RenderData& b) -> bool
+		[&](const RenderData& a, const RenderData& b) -> bool
 		{
 			if (a.m_shader == b.m_shader)
-				return a.m_offset < b.m_offset;
+				// If two groups are in the same shader group, render the group
+				// with the smallest average distance first
+				return a.m_dist < b.m_dist;
 			else
-				return a.m_shader < b.m_shader;
+			{
+				// If in two separate groups, render the group with the smallest
+				// shader average distance
+				float distA = groupMinDists[a.m_shader];
+				float distB = groupMinDists[b.m_shader];
+
+				if (distA == distB)
+					return a.m_shader < b.m_shader;
+				else
+					return distA < distB;
+			}
 		}
 	);
 
@@ -871,7 +919,7 @@ void Octree::render(Camera& camera, RenderPass pass, const RenderSettings& setti
 
 	// Bind the first shader
 	Shader* shader = renderData.front().m_shader;
-	priv::bindShader(shader, camera, m_scene, pass);
+	bindShader(shader, camera, m_scene, pass);
 
 	// Apply render settings
 	applyRenderSettings(shader, settings);
@@ -885,7 +933,7 @@ void Octree::render(Camera& camera, RenderPass pass, const RenderSettings& setti
 		if (data.m_shader != shader)
 		{
 			shader = data.m_shader;
-			priv::bindShader(shader, camera, m_scene, pass);
+			bindShader(shader, camera, m_scene, pass);
 		}
 
 		Model* model = 0;
@@ -961,7 +1009,25 @@ Uint32 Octree::getNumEntities() const
 
 
 ///////////////////////////////////////////////////////////
-void Octree::getRenderData(Node* node, const Frustum& frustum, std::vector<std::vector<EntityData*>>& entityData, const Vector3f& cameraPos, RenderPass pass)
+void Octree::bindShader(Shader* shader, Camera& camera, Scene* scene, RenderPass pass)
+{
+	shader->bind();
+
+	shader->setUniform("u_time", m_clock.getElapsedTime().toSeconds());
+
+	// Camera
+	camera.apply(shader);
+}
+
+
+///////////////////////////////////////////////////////////
+void Octree::getRenderData(
+	Node* node,
+	const Frustum& frustum,
+	std::vector<std::vector<EntityData*>>& entityData,
+	std::vector<double>& groupAvgDists,
+	const Vector3f& cameraPos,
+	RenderPass pass)
 {
 	// Add all data inside the frustum
 	for (Uint32 i = 0; i < node->m_data.size(); ++i)
@@ -977,21 +1043,30 @@ void Octree::getRenderData(Node* node, const Frustum& frustum, std::vector<std::
 		{
 			Uint32 groupId = data->m_group;
 
+			// Calculate distance squared
+			Vector3f objectOffset = cameraPos - data->m_boundingBox.getCenter();
+			float distSquared = dot(objectOffset, objectOffset);
+
 			// If the renderable is an lod system, add the correct group
 			RenderGroup& group = m_renderGroups[groupId];
 			if (group.m_lodLevels.size())
 			{
 				LodSystem* lod = (LodSystem*)group.m_renderable;
 
-				Vector3f objectOffset = cameraPos - data->m_boundingBox.getCenter();
-				float distSquared = dot(objectOffset, objectOffset);
-
 				// Find the correct lod level
 				Uint32 level = 0;
 				for (; level < lod->getNumLevels() && distSquared > lod->getDistance(level) * lod->getDistance(level); ++level);
 
-				groupId = level < lod->getNumLevels() ? group.m_lodLevels[level] : groupId;
+				// If there isn't an lod level defined for this distance, then don't add this entity
+				if (level >= lod->getNumLevels())
+					continue;
+
+				// Set new group id
+				groupId = group.m_lodLevels[level];
 			}
+
+			// Keep track of average distance
+			groupAvgDists[groupId] += (double)distSquared;
 
 			entityData[groupId].push_back(data);
 		}
@@ -1002,7 +1077,7 @@ void Octree::getRenderData(Node* node, const Frustum& frustum, std::vector<std::
 	{
 		Node* child = node->m_children[i];
 		if (child && frustum.contains(child->m_boundingBox))
-			getRenderData(child, frustum, entityData, cameraPos, pass);
+			getRenderData(child, frustum, entityData, groupAvgDists, cameraPos, pass);
 	}
 }
 
@@ -1029,8 +1104,6 @@ Uint32 Octree::getRenderGroup(Renderable* renderable, Skeleton* skeleton)
 
 	if (!groupExists)
 	{
-		groupId = m_renderGroups.size();
-
 		RenderGroup group;
 		group.m_renderable = renderable;
 		group.m_skeleton = skeleton;
@@ -1046,6 +1119,10 @@ Uint32 Octree::getRenderGroup(Renderable* renderable, Skeleton* skeleton)
 				group.m_lodLevels.push_back(getRenderGroup(lod->getRenderable(i), skeleton));
 		}
 
+		// Get group id
+		groupId = m_renderGroups.size();
+
+		// Add group
 		m_renderGroups.push_back(group);
 	}
 

@@ -1,5 +1,4 @@
 #include <poly/Core/Allocate.h>
-#include <poly/Core/Logger.h>
 
 #include <poly/Graphics/Image.h>
 

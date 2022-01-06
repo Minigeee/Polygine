@@ -211,7 +211,6 @@ bool Skybox::hasForwardPass() const
 ProceduralSkybox::ProceduralSkybox() :
 	m_zenithColor		(0.172f, 0.448f, 0.775f),
 	m_horizonColor		(0.9f, 1.0f, 0.75f),
-    m_groundColor       (0.12f, 0.22f, 0.25f),
     m_scatterStrength   (2.5f),
 	m_scatterFactor 	(0.6f),
 	m_lightStrength		(12.0f),
@@ -296,7 +295,6 @@ void ProceduralSkybox::apply(Shader* shader)
     // Skybox parameters
     shader->setUniform("u_zenithColor", m_zenithColor);
     shader->setUniform("u_horizonColor", m_horizonColor);
-    shader->setUniform("u_groundColor", m_groundColor);
     shader->setUniform("u_scatterFactor", m_scatterFactor);
     shader->setUniform("u_lightStrength", m_lightStrength);
     shader->setUniform("u_topRadius", m_topRadius);
@@ -339,13 +337,6 @@ void ProceduralSkybox::setHorizonColor(const Vector3f& color)
 {
     m_horizonColor = color;
     m_colorsChanged = true;
-}
-
-
-///////////////////////////////////////////////////////////
-void ProceduralSkybox::setGroundColor(const Vector3f& color)
-{
-    m_groundColor = color;
 }
 
 
@@ -409,13 +400,6 @@ const Vector3f& ProceduralSkybox::getZenithColor() const
 const Vector3f& ProceduralSkybox::getHorizonColor() const
 {
     return m_horizonColor;
-}
-
-
-///////////////////////////////////////////////////////////
-const Vector3f& ProceduralSkybox::getGroundColor() const
-{
-    return m_groundColor;
 }
 
 

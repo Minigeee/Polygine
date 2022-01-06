@@ -1,3 +1,4 @@
+#include <poly/Core/Logger.h>
 #include <poly/Core/TypeInfo.h>
 
 #include <poly/Math/Functions.h>
@@ -943,21 +944,16 @@ inline T Image::sample(const Vector2f& uv) const
 
 	float r = clamp((1.0f - uv.y) * m_height - 0.5f, 0.0f, (float)m_height - 1.0f);
 	float c = clamp(uv.x * m_width - 0.5f, 0.0f, (float)m_width - 1.0f);
-	Uint32 ri = (Uint32)r;
-	Uint32 ci = (Uint32)c;
+	Uint32 ri = std::min((Uint32)r, m_height - 2);
+	Uint32 ci = std::min((Uint32)c, m_width - 2);
 	float rf = r - (float)ri;
 	float cf = c - (float)ci;
 
-	ASSERT(ri < m_height&& ci < m_width, "Requested image pixel row or column is out of bounds: %d, %d", ri, ci);
-
-	Uint32 ro = (ri == m_height - 1 ? 0 : 1);
-	Uint32 co = (ci == m_width - 1 ? 0 : 1);
-
 	// Get surrounding pixels
 	T* p1 = (T*)m_data + (ri + 0) * m_width + (ci + 0);
-	T* p2 = (T*)m_data + (ri + ro) * m_width + (ci + 0);
-	T* p3 = (T*)m_data + (ri + 0) * m_width + (ci + co);
-	T* p4 = (T*)m_data + (ri + ro) * m_width + (ci + co);
+	T* p2 = (T*)m_data + (ri + 1) * m_width + (ci + 0);
+	T* p3 = (T*)m_data + (ri + 0) * m_width + (ci + 1);
+	T* p4 = (T*)m_data + (ri + 1) * m_width + (ci + 1);
 
 	// Interpolate
 	T a1 = mix(*p1, *p2, rf);

@@ -28,7 +28,17 @@ Shader Model::s_animatedShader;
 ObjectPool texturePool(sizeof(Texture), 50);
 
 ///////////////////////////////////////////////////////////
-HashMap<std::string, Texture*> textureMap;
+HashMap<std::string, Texture*> s_textureMap;
+
+
+///////////////////////////////////////////////////////////
+ModelLoadSettings::ModelLoadSettings() :
+	m_scale				(1.0f),
+	m_adjustForGamma	(1.0f),
+	m_flatShading		(true)
+{
+
+}
 
 
 ///////////////////////////////////////////////////////////
@@ -72,17 +82,14 @@ namespace priv
 
 #ifndef DOXYGEN_SKIP
 
-///////////////////////////////////////////////////////////
-struct SkeletalData
-{
-	SkeletalData() :
-		m_boneWeights	(0.0f),
-		m_boneIds		(-1)
-	{ }
 
-	Vector4f m_boneWeights;
-	Vector4i m_boneIds;
-};
+///////////////////////////////////////////////////////////
+SkeletalData::SkeletalData() :
+	m_boneWeights	(0.0f),
+	m_boneIds		(-1)
+{
+
+}
 
 
 ///////////////////////////////////////////////////////////
@@ -97,7 +104,7 @@ struct ModelLoadState
 
 	const aiScene* m_scene;
 	std::string m_directory;
-	bool m_flatShading;
+	const ModelLoadSettings* m_settings;
 };
 
 #endif
@@ -115,20 +122,20 @@ Texture* loadMaterialTexture(aiMaterial* material, aiTextureType type, ModelLoad
 	std::string path = state.m_directory  + '/' + fname.C_Str();
 
 	// If the texture has already been loaded, return it
-	auto it = textureMap.find(path);
-	if (it != textureMap.end())
+	auto it = s_textureMap.find(path);
+	if (it != s_textureMap.end())
 		return it.value();
 
-	// Otherwise load the image
-	Image image;
-	if (!image.load(path))
-		return 0;
-
 	// Create the texture
-	Texture*& texture = textureMap[path];
+	Texture*& texture = s_textureMap[path];
 	texture = (Texture*)texturePool.alloc();
-	// Use mipmaps because this texture will actually be used in rendering
-	texture->create(image, TextureFilter::Linear, TextureWrap::ClampToEdge, true);
+
+	// Load texture
+	if (!texture->load(path, GLType::Uint8, TextureFilter::Linear, TextureWrap::Repeat, true, state.m_settings->m_adjustForGamma))
+	{
+		s_textureMap.erase(path);
+		return 0;
+	}
 
 	return texture;
 }
@@ -173,7 +180,7 @@ void processMesh(aiMesh* mesh, ModelLoadState& state)
 		state.m_skeletalData.resize(mesh->mNumVertices);
 
 	// Keep track of mesh vertex offsets
-	Uint32 vertexOffset = state.m_flatShading ? state.m_vertices.size() : state.m_indices.size();
+	Uint32 vertexOffset = state.m_settings->m_flatShading ? state.m_vertices.size() : state.m_indices.size();
 	state.m_vertexOffsets.push_back(vertexOffset);
 
 	// Process bones
@@ -220,6 +227,9 @@ void processMesh(aiMesh* mesh, ModelLoadState& state)
 		weight /= sum(weight);
 	}
 
+	// Scale vertices
+	const Vector3f& scale = state.m_settings->m_scale;
+
 	// Process vertices
 	for (Uint32 i = 0; i < mesh->mNumVertices; ++i)
 	{
@@ -229,9 +239,9 @@ void processMesh(aiMesh* mesh, ModelLoadState& state)
 
 		// Position, normal, tangent
 		Vertex vertex;
-		vertex.m_position.x = p.x;
-		vertex.m_position.y = p.y;
-		vertex.m_position.z = p.z;
+		vertex.m_position.x = p.x * scale.x;
+		vertex.m_position.y = p.y * scale.y;
+		vertex.m_position.z = p.z * scale.z;
 		vertex.m_normal.x = n.x;
 		vertex.m_normal.y = n.y;
 		vertex.m_normal.z = n.z;
@@ -242,9 +252,9 @@ void processMesh(aiMesh* mesh, ModelLoadState& state)
 		// Texture coords
 		if (mesh->mTextureCoords[0])
 		{
-			aiVector3D& t = mesh->mTextureCoords[0][i];
-			vertex.m_texCoord.x = t.x;
-			vertex.m_texCoord.y = t.y;
+			aiVector3D& uv = mesh->mTextureCoords[0][i];
+			vertex.m_texCoord.x = uv.x;
+			vertex.m_texCoord.y = uv.y;
 		}
 		else
 		{
@@ -273,7 +283,7 @@ void processMesh(aiMesh* mesh, ModelLoadState& state)
 	}
 
 	// Load indices array if flat shading is disabled
-	if (!state.m_flatShading)
+	if (!state.m_settings->m_flatShading)
 	{
 		for (Uint32 i = 0; i < mesh->mNumFaces; ++i)
 		{
@@ -287,7 +297,7 @@ void processMesh(aiMesh* mesh, ModelLoadState& state)
 	state.m_meshes->push_back(Pool<Mesh>::alloc());
 
 	// Add material
-	if (mesh->mMaterialIndex >= 0)
+	if (state.m_settings->m_loadMaterials && mesh->mMaterialIndex >= 0)
 		processMaterial(state.m_scene->mMaterials[mesh->mMaterialIndex], state);
 }
 
@@ -433,9 +443,9 @@ Model::Model()
 
 
 ///////////////////////////////////////////////////////////
-Model::Model(const std::string& fname, bool flatShading)
+Model::Model(const std::string& fname, const ModelLoadSettings& settings)
 {
-	load(fname, flatShading);
+	load(fname, settings);
 }
 
 
@@ -448,11 +458,14 @@ Model::~Model()
 
 
 ///////////////////////////////////////////////////////////
-bool Model::load(const std::string& fname, bool flatShading)
+bool Model::load(const std::string& fname, const ModelLoadSettings& settings)
 {
 	// Load the model scene
 	Assimp::Importer importer;
-	const aiScene* scene = importer.ReadFile(fname, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
+	const aiScene* scene = importer.ReadFile(fname,
+		aiProcess_Triangulate |
+		aiProcess_FlipUVs |
+		aiProcess_CalcTangentSpace);
 
 	// Check for errors
 	if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
@@ -466,7 +479,7 @@ bool Model::load(const std::string& fname, bool flatShading)
 	state.m_scene = scene;
 	state.m_directory = fname.substr(0, fname.find_last_of("/\\"));
 	state.m_meshes = &m_meshes;
-	state.m_flatShading = flatShading;
+	state.m_settings = &settings;
 
 	// Process bone data
 	int numBones = 0;
@@ -477,24 +490,54 @@ bool Model::load(const std::string& fname, bool flatShading)
 	priv::processNode(scene->mRootNode, state);
 
 
-	// Get a default shader
-	Shader* shader = state.m_skeletalData.size() ? &getAnimatedShader() : &getDefaultShader();
-
 	// Create vertex buffer
 	m_vertices = std::move(state.m_vertices);
 	m_indices = std::move(state.m_indices);
+
+	// Create bounding box
+	m_boundingBox = priv::calcBoundingBox(m_vertices);
+
+	// Create bounding sphere
+	m_boundingSphere.m_position = m_boundingBox.getCenter();
+	m_boundingSphere.m_radius = length(m_boundingBox.getDimensions()) * 0.5f;
+
+	// Move the state data into temporary lists
+	m_skeletalData = std::move(state.m_skeletalData);
+	m_meshVertexOffsets = std::move(state.m_vertexOffsets);
+
+	// Finish loading model
+	finish();
+
+	LOG("Loaded model: %s", fname.c_str());
+	return true;
+}
+
+
+///////////////////////////////////////////////////////////
+bool Model::finish()
+{
+	// Don't finish if vertex buffer is already created
+	if (m_vertexBuffer.getId())
+		return true;
+
+	if (!Window::isContextActive())
+		return false;
+
+	// Get a default shader
+	Shader* shader = m_skeletalData.size() ? &getAnimatedShader() : &getDefaultShader();
+
 	m_vertexBuffer.create(m_vertices);
 
 	// Setup indices array if smooth shading enabled
-	if (!flatShading)
+	if (m_indices.size())
 		m_indicesBuffer.create(m_indices);
 
 	// Create skeletal data buffer
 	// NOTE : Skeletal data for only a single mesh is supported atm
-	if (state.m_skeletalData.size())
+	if (m_skeletalData.size())
 	{
 		// Create vertex buffer
-		m_skeletalVertexBuffer.create(state.m_skeletalData);
+		m_skeletalVertexBuffer.create(m_skeletalData);
 
 		// Add attributes
 		for (Uint32 i = 0; i < m_meshes.size(); ++i)
@@ -509,8 +552,8 @@ bool Model::load(const std::string& fname, bool flatShading)
 	for (Uint32 i = 0; i < m_meshes.size(); ++i)
 	{
 		// Calculate buffer offset
-		Uint32 offset = state.m_vertexOffsets[i];
-		Uint32 size = (i == m_meshes.size() - 1 ? m_vertices.size() - offset : state.m_vertexOffsets[i + 1] - offset);
+		Uint32 offset = m_meshVertexOffsets[i];
+		Uint32 size = (i == m_meshes.size() - 1 ? m_vertices.size() - offset : m_meshVertexOffsets[i + 1] - offset);
 		offset *= sizeof(Vertex);
 
 		VertexArray& vao = m_meshes[i]->m_vertexArray;
@@ -520,30 +563,35 @@ bool Model::load(const std::string& fname, bool flatShading)
 		vao.addBuffer(m_vertexBuffer, 3, 4, sizeof(Vertex), offset + 8 * sizeof(float));
 		vao.addBuffer(m_vertexBuffer, 4, 3, sizeof(Vertex), offset + 12 * sizeof(float));
 
-		if (!flatShading)
+		if (m_indices.size())
 			vao.setElementBuffer(m_indicesBuffer);
 
 		// Set vertex info
 		vao.setNumVertices(size);
 		vao.setVertexOffset(0);
 
-		// Set the default shader
-		m_meshes[i]->m_shader = shader;
+		// Set the default shader if it has no shader
+		if (!m_meshes[i]->m_shader)
+			m_meshes[i]->m_shader = shader;
+
+		// Finish loading textures
+		Material& material = m_meshes[i]->m_material;
+		if (material.getDiffTexture())
+			material.getDiffTexture()->finish();
+		if (material.getSpecTexture())
+			material.getSpecTexture()->finish();
+		if (material.getNormalTexture())
+			material.getNormalTexture()->finish();
 	}
 
 	// Unbind indices buffer to reset state
-	if (!flatShading)
+	if (m_indices.size())
 		m_indicesBuffer.unbind();
 
-	// Create bounding box
-	m_boundingBox = priv::calcBoundingBox(m_vertices);
+	// Clear the temporary data
+	m_skeletalData.clear();
+	m_meshVertexOffsets.clear();
 
-	// Create bounding sphere
-	m_boundingSphere.m_position = m_boundingBox.getCenter();
-	m_boundingSphere.m_radius = length(m_boundingBox.getDimensions()) * 0.5f;
-
-
-	LOG("Loaded model: %s", fname.c_str());
 	return true;
 }
 
