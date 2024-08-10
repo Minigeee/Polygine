@@ -1,6 +1,6 @@
 #version 330 core
 
-#include "camera.glsl"
+#include "../camera.glsl"
 
 layout (points) in;
 layout (triangle_strip, max_vertices = 4) out;

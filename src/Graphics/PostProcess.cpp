@@ -5,16 +5,26 @@
 #include <poly/Graphics/Components.h>
 #include <poly/Graphics/GLCheck.h>
 #include <poly/Graphics/PostProcess.h>
+#include <poly/Graphics/Renderer.h>
+
+#include <poly/Graphics/Shaders/postprocess/quad.vert.h>
+#include <poly/Graphics/Shaders/postprocess/pass_through.frag.h>
+#include <poly/Graphics/Shaders/postprocess/color_adjust.frag.h>
+#include <poly/Graphics/Shaders/postprocess/fog.frag.h>
+#include <poly/Graphics/Shaders/postprocess/fxaa.frag.h>
+#include <poly/Graphics/Shaders/postprocess/blur.frag.h>
+#include <poly/Graphics/Shaders/postprocess/threshold.frag.h>
+#include <poly/Graphics/Shaders/postprocess/add.frag.h>
+#include <poly/Graphics/Shaders/postprocess/ssao.frag.h>
+#include <poly/Graphics/Shaders/postprocess/lens_flare.frag.h>
+#include <poly/Graphics/Shaders/postprocess/reflections.frag.h>
 
 namespace poly
 {
 
 
 ///////////////////////////////////////////////////////////
-VertexArray PostProcess::s_quadVao;
-
-///////////////////////////////////////////////////////////
-VertexBuffer PostProcess::s_quadVbo;
+Shader PassThrough::s_shader;
 
 ///////////////////////////////////////////////////////////
 Shader ColorAdjust::s_shader;
@@ -40,32 +50,60 @@ Shader Ssao::s_shader;
 ///////////////////////////////////////////////////////////
 Shader LensFlare::s_shader;
 
+///////////////////////////////////////////////////////////
+Shader Reflections::s_shader;
+
 
 ///////////////////////////////////////////////////////////
-VertexArray& PostProcess::getVertexArray()
+PassThrough::PassThrough()
 {
-	if (!s_quadVao.getId())
+
+}
+
+
+///////////////////////////////////////////////////////////
+void PassThrough::render(FrameBuffer& input, FrameBuffer& output)
+{
+	// Bind output target
+	output.bind();
+
+	// Disable depth test
+	glCheck(glDisable(GL_DEPTH_TEST));
+
+	// Disable cull face
+	glCheck(glDisable(GL_CULL_FACE));
+
+	// Bind shader
+	Shader& shader = getShader();
+
+	shader.bind();
+	shader.setUniform("u_texture", *input.getColorTexture());
+
+	if (input.getDepthTexture())
 	{
-		float vertices[] =
-		{
-			-1.0f,  1.0f,
-			-1.0f, -1.0f,
-			 1.0f,  1.0f,
+		shader.setUniform("u_depth", *input.getDepthTexture());
+		shader.setUniform("u_hasDepth", true);
+	}
+	else
+		shader.setUniform("u_hasDepth", false);
 
-			-1.0f, -1.0f,
-			 1.0f, -1.0f,
-			 1.0f,  1.0f,
-		};
+	// Render vertex array
+	FullscreenQuad::draw();
+}
 
-		// Create vertex buffer
-		s_quadVbo.create(vertices, 12);
 
-		// Create vertex array
-		s_quadVao.bind();
-		s_quadVao.addBuffer(s_quadVbo, 0, 2);
+///////////////////////////////////////////////////////////
+Shader& PassThrough::getShader()
+{
+	if (!s_shader.getId())
+	{
+		// Load shader
+		s_shader.load("poly/postprocess/quad.vert", SHADER_POSTPROCESS_QUAD_VERT, Shader::Vertex);
+		s_shader.load("poly/postprocess/pass_through.frag", SHADER_POSTPROCESS_PASS_THROUGH_FRAG, Shader::Fragment);
+		s_shader.compile();
 	}
 
-	return s_quadVao;
+	return s_shader;
 }
 
 
@@ -105,9 +143,7 @@ void ColorAdjust::render(FrameBuffer& input, FrameBuffer& output)
 	shader.setUniform("u_gamma", m_gamma);
 
 	// Render vertex array
-	VertexArray& vao = PostProcess::getVertexArray();
-	vao.bind();
-	vao.draw();
+	FullscreenQuad::draw();
 }
 
 
@@ -117,8 +153,8 @@ Shader& ColorAdjust::getShader()
 	if (!s_shader.getId())
 	{
 		// Load shader
-		s_shader.load("shaders/postprocess/quad.vert", Shader::Vertex);
-		s_shader.load("shaders/postprocess/color_adjust.frag", Shader::Fragment);
+		s_shader.load("poly/postprocess/quad.vert", SHADER_POSTPROCESS_QUAD_VERT, Shader::Vertex);
+		s_shader.load("poly/postprocess/color_adjust.frag", SHADER_POSTPROCESS_COLOR_ADJUST_FRAG, Shader::Fragment);
 		s_shader.compile();
 	}
 
@@ -142,12 +178,11 @@ float ColorAdjust::getGamma() const
 
 ///////////////////////////////////////////////////////////
 Fog::Fog() :
-	m_scene				(0),
 	m_camera			(0),
 	m_depthTexture		(0),
 	m_color				(0.272f, 0.548f, 0.675f),
 	m_density			(0.0005f),
-	m_scatterStrength	(0.0f),
+	m_scatterStrength	(1.0f),
 	m_applyToSkybox		(true)
 {
 
@@ -180,42 +215,23 @@ void Fog::render(FrameBuffer& input, FrameBuffer& output)
 	shader.setUniform("u_scatterStrength", m_scatterStrength);
 	shader.setUniform("u_applyToSkybox", (int)m_applyToSkybox);
 
+	shader.setUniform("u_invProjView", inverse(m_camera->getProjMatrix() * m_camera->getViewMatrix()));
+
 	m_camera->apply(&shader);
 
-	if (m_scene)
+	if (m_dirLight.isValid())
 	{
-		Vector3f lightDir(0.0);
+		DirLightComponent* light = m_dirLight.get<DirLightComponent>();
 
-		int i = 0;
-		m_scene->system<DirLightComponent>(
-			[&](const Entity::Id id, DirLightComponent& light)
-			{
-				if (i++ == 0)
-				{
-					lightDir = normalize(light.m_direction);
-					shader.setUniform("u_lightDir", lightDir);
-					shader.setUniform("u_lightColor", light.m_diffuse);
-				}
-			}
-		);
-
-		if (i > 0)
+		if (light)
 		{
-			shader.setUniform("u_invProjView", inverse(m_camera->getProjMatrix() * m_camera->getViewMatrix()));
+			shader.setUniform("u_lightDir", normalize(light->m_direction));
+			shader.setUniform("u_lightColor", light->m_diffuse);
 		}
 	}
 
 	// Render vertex array
-	VertexArray& vao = PostProcess::getVertexArray();
-	vao.bind();
-	vao.draw();
-}
-
-
-///////////////////////////////////////////////////////////
-void Fog::setScene(Scene* scene)
-{
-	m_scene = scene;
+	FullscreenQuad::draw();
 }
 
 
@@ -230,6 +246,13 @@ void Fog::setCamera(Camera* camera)
 void Fog::setDepthTexture(Texture* texture)
 {
 	m_depthTexture = texture;
+}
+
+
+///////////////////////////////////////////////////////////
+void Fog::setDirLight(Entity entity)
+{
+	m_dirLight = entity;
 }
 
 
@@ -283,13 +306,20 @@ float Fog::getScatterStrength() const
 
 
 ///////////////////////////////////////////////////////////
+Entity Fog::getDirLight() const
+{
+	return m_dirLight;
+}
+
+
+///////////////////////////////////////////////////////////
 Shader& Fog::getShader()
 {
 	if (!s_shader.getId())
 	{
 		// Load shader
-		s_shader.load("shaders/postprocess/quad.vert", Shader::Vertex);
-		s_shader.load("shaders/postprocess/fog.frag", Shader::Fragment);
+		s_shader.load("poly/postprocess/quad.vert", SHADER_POSTPROCESS_QUAD_VERT, Shader::Vertex);
+		s_shader.load("poly/postprocess/fog.frag", SHADER_POSTPROCESS_FOG_FRAG, Shader::Fragment);
 		s_shader.compile();
 	}
 
@@ -341,9 +371,7 @@ void Fxaa::render(FrameBuffer& input, FrameBuffer& output)
 	shader.setUniform("u_lumaThreshold", m_threshold);
 
 	// Render vertex array
-	VertexArray& vao = PostProcess::getVertexArray();
-	vao.bind();
-	vao.draw();
+	FullscreenQuad::draw();
 }
 
 
@@ -353,8 +381,8 @@ Shader& Fxaa::getShader()
 	if (!s_shader.getId())
 	{
 		// Load shader
-		s_shader.load("shaders/postprocess/quad.vert", Shader::Vertex);
-		s_shader.load("shaders/postprocess/fxaa.frag", Shader::Fragment);
+		s_shader.load("poly/postprocess/quad.vert", SHADER_POSTPROCESS_QUAD_VERT, Shader::Vertex);
+		s_shader.load("poly/postprocess/fxaa.frag", SHADER_POSTPROCESS_FXAA_FRAG, Shader::Fragment);
 		s_shader.compile();
 	}
 
@@ -431,9 +459,7 @@ void Blur::render(FrameBuffer& input, FrameBuffer& output)
 		shader.setUniform("u_weights[" + std::to_string(i) + ']', m_weights[i]);
 
 	// Render vertex array
-	VertexArray& vao = PostProcess::getVertexArray();
-	vao.bind();
-	vao.draw();
+	FullscreenQuad::draw();
 }
 
 
@@ -530,8 +556,8 @@ Shader& Blur::getShader()
 	if (!s_shader.getId())
 	{
 		// Load shader
-		s_shader.load("shaders/postprocess/quad.vert", Shader::Vertex);
-		s_shader.load("shaders/postprocess/blur.frag", Shader::Fragment);
+		s_shader.load("poly/postprocess/quad.vert", SHADER_POSTPROCESS_QUAD_VERT, Shader::Vertex);
+		s_shader.load("poly/postprocess/blur.frag", SHADER_POSTPROCESS_BLUR_FRAG, Shader::Fragment);
 		s_shader.compile();
 	}
 
@@ -541,11 +567,11 @@ Shader& Blur::getShader()
 
 ///////////////////////////////////////////////////////////
 Bloom::Bloom() :
-	m_blurTarget			(0),
-	m_blurTexture			(0),
-	m_intensity				(2.0f),
+	m_blurTargets			{ 0, 0 },
+	m_blurTextures			{ 0, 0 },
+	m_intensity				(1.0f),
 	m_threshold				(1.0f),
-	m_thresholdInterval		(0.8f),
+	m_thresholdInterval		(0.5f),
 	m_radius				(0.05f),
 	m_numBlurs				(3)
 {
@@ -556,14 +582,23 @@ Bloom::Bloom() :
 ///////////////////////////////////////////////////////////
 Bloom::~Bloom()
 {
-	if (m_blurTexture)
-		Pool<Texture>::free(m_blurTexture);
+	if (m_blurTextures[0])
+	{
+		Pool<Texture>::free(m_blurTextures[0]);
+		Pool<Texture>::free(m_blurTextures[1]);
 
-	if (m_blurTexture)
-		Pool<FrameBuffer>::free(m_blurTarget);
+		m_blurTextures[0] = 0;
+		m_blurTextures[1] = 0;
+	}
 
-	m_blurTexture = 0;
-	m_blurTarget = 0;
+	if (m_blurTextures[0])
+	{
+		Pool<FrameBuffer>::free(m_blurTargets[0]);
+		Pool<FrameBuffer>::free(m_blurTargets[1]);
+
+		m_blurTargets[0] = 0;
+		m_blurTargets[1] = 0;
+	}
 }
 
 
@@ -571,25 +606,28 @@ Bloom::~Bloom()
 void Bloom::render(FrameBuffer& input, FrameBuffer& output)
 {
 	// Create the blur framebuffer if it hasn't been created yet
-	if (!m_blurTarget)
+	if (!m_blurTargets[0])
 	{
-		m_blurTarget = Pool<FrameBuffer>::alloc();
-		m_blurTexture = Pool<Texture>::alloc();
+		m_blurTargets[0] = Pool<FrameBuffer>::alloc();
+		m_blurTargets[1] = Pool<FrameBuffer>::alloc();
+		m_blurTextures[0] = Pool<Texture>::alloc();
+		m_blurTextures[1] = Pool<Texture>::alloc();
 
-		m_blurTarget->create(output.getWidth(), output.getHeight());
-		m_blurTarget->attachColor(m_blurTexture, PixelFormat::Rgb, GLType::Uint16);
+		// Blur textures don't need to be big
+		// Need to keep 16-bit though for HDR rendering
+		constexpr Uint32 bloomResW = 480;
+		constexpr Uint32 bloomResH = 270;
+		m_blurTargets[0]->create(bloomResW, bloomResH);
+		m_blurTargets[0]->attachColor(m_blurTextures[0], PixelFormat::Rgb, GLType::Uint16);
+		m_blurTargets[1]->create(bloomResW, bloomResH);
+		m_blurTargets[1]->attachColor(m_blurTextures[1], PixelFormat::Rgb, GLType::Uint16);
 
 		// Update blur settings
-		float spacing = output.getHeight() * m_radius / 11.0f;
+		float spacing = bloomResH * m_radius / 11.0f;
 		m_blurEffect.setKernelSize(11);
 		m_blurEffect.setKernelSpacing(spacing);
 		m_blurEffect.setSpread(3.75f);
-	}
-	else if (m_blurTarget->getWidth() != input.getWidth() || m_blurTarget->getHeight() != input.getHeight())
-	{
-		m_blurTarget->reset();
-		m_blurTarget->create(input.getWidth(), input.getHeight());
-		m_blurTarget->attachColor(m_blurTexture, PixelFormat::Rgb, GLType::Uint16);
+		m_blurEffect.setNoiseFactor(0.1f * spacing);
 	}
 
 	// Disable depth test
@@ -598,30 +636,27 @@ void Bloom::render(FrameBuffer& input, FrameBuffer& output)
 	// Disable cull face
 	glCheck(glDisable(GL_CULL_FACE));
 
-	// Get vertex array
-	VertexArray& vao = PostProcess::getVertexArray();
-
 
 	Shader& thresholdShader = getThresholdShader();
 	Shader& addShader = getAddShader();
 	Uint32 currentTarget = 0;
 
 	// Render threshold stage
-	m_blurTarget->bind();
+	m_blurTargets[0]->bind();
 
 	thresholdShader.bind();
 	thresholdShader.setUniform("u_texture", *input.getColorTexture());
 	thresholdShader.setUniform("u_threshold", m_threshold);
 	thresholdShader.setUniform("u_interval", m_thresholdInterval);
-	vao.draw();
+	FullscreenQuad::draw();
 
 	// Blur the threshold texture
 	for (Uint32 i = 0; i < m_numBlurs; ++i)
 	{
 		m_blurEffect.setVerticalBlur(false);
-		m_blurEffect.render(*m_blurTarget, output);
+		m_blurEffect.render(*m_blurTargets[0], *m_blurTargets[1]);
 		m_blurEffect.setVerticalBlur(true);
-		m_blurEffect.render(output, *m_blurTarget);
+		m_blurEffect.render(*m_blurTargets[1], *m_blurTargets[0]);
 	}
 
 	// Render the bloom effect
@@ -629,10 +664,10 @@ void Bloom::render(FrameBuffer& input, FrameBuffer& output)
 
 	addShader.bind();
 	addShader.setUniform("u_texture1", *input.getColorTexture());
-	addShader.setUniform("u_texture2", *m_blurTarget->getColorTexture());
+	addShader.setUniform("u_texture2", *m_blurTargets[0]->getColorTexture());
 	addShader.setUniform("u_factor1", 1.0f);
 	addShader.setUniform("u_factor2", m_intensity);
-	vao.draw();
+	FullscreenQuad::draw();
 }
 
 
@@ -661,6 +696,15 @@ void Bloom::setThresholdInterval(float interaval)
 void Bloom::setRadius(float radius)
 {
 	m_radius = radius;
+
+	if (m_blurTargets[0])
+	{
+		// Update blur settings
+		float spacing = m_blurTargets[0]->getHeight() * m_radius / 11.0f;
+		m_blurEffect.setKernelSize(11);
+		m_blurEffect.setKernelSpacing(spacing);
+		m_blurEffect.setSpread(3.75f);
+	}
 }
 
 
@@ -711,8 +755,8 @@ Shader& Bloom::getThresholdShader()
 {
 	if (!s_thresholdShader.getId())
 	{
-		s_thresholdShader.load("shaders/postprocess/quad.vert", Shader::Vertex);
-		s_thresholdShader.load("shaders/postprocess/threshold.frag", Shader::Fragment);
+		s_thresholdShader.load("poly/postprocess/quad.vert", SHADER_POSTPROCESS_QUAD_VERT, Shader::Vertex);
+		s_thresholdShader.load("poly/postprocess/threshold.frag", SHADER_POSTPROCESS_THRESHOLD_FRAG, Shader::Fragment);
 		s_thresholdShader.compile();
 	}
 
@@ -725,8 +769,8 @@ Shader& Bloom::getAddShader()
 {
 	if (!s_addShader.getId())
 	{
-		s_addShader.load("shaders/postprocess/quad.vert", Shader::Vertex);
-		s_addShader.load("shaders/postprocess/add.frag", Shader::Fragment);
+		s_addShader.load("poly/postprocess/quad.vert", SHADER_POSTPROCESS_QUAD_VERT, Shader::Vertex);
+		s_addShader.load("poly/postprocess/add.frag", SHADER_POSTPROCESS_ADD_FRAG, Shader::Fragment);
 		s_addShader.compile();
 	}
 
@@ -778,12 +822,11 @@ void Ssao::render(FrameBuffer& input, FrameBuffer& output)
 	shader.setUniform("u_noiseFactor", m_noiseFactor);
 
 	m_camera->apply(&shader);
-	shader.setUniform("u_invProjView", inverse(m_camera->getProjMatrix() * m_camera->getViewMatrix()));
+	shader.setUniform("u_proj", m_camera->getProjMatrix());
+	shader.setUniform("u_invProj", inverse(m_camera->getProjMatrix()));
 
 	// Render vertex array
-	VertexArray& vao = PostProcess::getVertexArray();
-	vao.bind();
-	vao.draw();
+	FullscreenQuad::draw();
 }
 
 
@@ -891,8 +934,8 @@ Shader& Ssao::getShader()
 	if (!s_shader.getId())
 	{
 		// Load shader
-		s_shader.load("shaders/postprocess/quad.vert", Shader::Vertex);
-		s_shader.load("shaders/postprocess/ssao.frag", Shader::Fragment);
+		s_shader.load("poly/postprocess/quad.vert", SHADER_POSTPROCESS_QUAD_VERT, Shader::Vertex);
+		s_shader.load("poly/postprocess/ssao.frag", SHADER_POSTPROCESS_SSAO_FRAG, Shader::Fragment);
 		s_shader.compile();
 	}
 
@@ -964,9 +1007,7 @@ void LensFlare::render(FrameBuffer& input, FrameBuffer& output)
 	shader.setUniform("u_luminosityFactor", m_luminosityFactor);
 
 	// Render vertex array
-	VertexArray& vao = PostProcess::getVertexArray();
-	vao.bind();
-	vao.draw();
+	FullscreenQuad::draw();
 }
 
 
@@ -1053,12 +1094,195 @@ Shader& LensFlare::getShader()
 	if (!s_shader.getId())
 	{
 		// Load shader
-		s_shader.load("shaders/postprocess/quad.vert", Shader::Vertex);
-		s_shader.load("shaders/postprocess/lens_flare.frag", Shader::Fragment);
+		s_shader.load("poly/postprocess/quad.vert", SHADER_POSTPROCESS_QUAD_VERT, Shader::Vertex);
+		s_shader.load("poly/postprocess/lens_flare.frag", SHADER_POSTPROCESS_LENS_FLARE_FRAG, Shader::Fragment);
 		s_shader.compile();
 	}
 
 	return s_shader;
+}
+
+
+///////////////////////////////////////////////////////////
+Reflections::Reflections() :
+	m_gBuffer			(0),
+	m_camera			(0),
+	m_proceduralSkybox	(0),
+	m_maxSteps			(100),
+	m_stepSize			(5.0f),
+	m_maxDepth			(0.99998f),
+	m_maxDepthDiff		(0.001f),
+	m_fresnelFactor		(1.0f),
+	m_fresnelFactorMin	(0.0f)
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
+void Reflections::render(FrameBuffer& input, FrameBuffer& output)
+{
+	// A g-buffer and camera are needed to render reflections
+	if (!m_gBuffer || !m_camera) return;
+
+	// Bind output target
+	output.bind();
+
+	// Disable depth test
+	glCheck(glDisable(GL_DEPTH_TEST));
+
+	// Disable cull face
+	glCheck(glDisable(GL_CULL_FACE));
+
+	// Setup shader
+	Shader& shader = getShader();
+	shader.bind();
+
+	// Apply procedural skybox if being used
+	if (m_proceduralSkybox)
+	{
+		m_proceduralSkybox->apply(&shader);
+		shader.setUniform("u_usesProceduralSkybox", true);
+	}
+	else
+	{
+		shader.setUniform("u_usesProceduralSkybox", false);
+	}
+
+	// Bind textures
+	shader.setUniform("u_color", *input.getColorTexture());
+	shader.setUniform("u_normalShininess", *m_gBuffer->getColorTexture(0));
+	shader.setUniform("u_specularReflectivity", *m_gBuffer->getColorTexture(2));
+	shader.setUniform("u_depth", *m_gBuffer->getDepthTexture());
+
+	// Camera matrices
+	shader.setUniform("u_viewMat", Matrix3f(m_camera->getViewMatrix()));
+	shader.setUniform("u_projMat", m_camera->getProjMatrix());
+	shader.setUniform("u_invView", Matrix3f(inverse(m_camera->getViewMatrix())));
+	shader.setUniform("u_invProj", inverse(m_camera->getProjMatrix()));
+
+	// Properties
+	shader.setUniform("u_maxSteps", (int)m_maxSteps);
+	shader.setUniform("u_stepSize", m_stepSize);
+	shader.setUniform("u_maxDepth", m_maxDepth);
+	shader.setUniform("u_maxDepthDiff", m_maxDepthDiff);
+	shader.setUniform("u_fresnelFactor", m_fresnelFactor);
+	shader.setUniform("u_fresnelFactorMin", m_fresnelFactorMin);
+
+	// Render vertex array
+	FullscreenQuad::draw();
+}
+
+
+///////////////////////////////////////////////////////////
+Shader& Reflections::getShader()
+{
+	if (!s_shader.getId())
+	{
+		s_shader.load("poly/postprocess/quad.vert", SHADER_POSTPROCESS_QUAD_VERT, Shader::Vertex);
+		s_shader.load("poly/postprocess/reflections.frag", SHADER_POSTPROCESS_REFLECTIONS_FRAG, Shader::Fragment);
+		s_shader.compile();
+	}
+
+	return s_shader;
+}
+
+
+///////////////////////////////////////////////////////////
+void Reflections::setGBuffer(FrameBuffer* buffer)
+{
+	m_gBuffer = buffer;
+}
+
+
+///////////////////////////////////////////////////////////
+void Reflections::setCamera(Camera* camera)
+{
+	m_camera = camera;
+}
+
+
+///////////////////////////////////////////////////////////
+void Reflections::setCubemap(ProceduralSkybox* skybox)
+{
+	m_proceduralSkybox = skybox;
+}
+
+
+///////////////////////////////////////////////////////////
+void Reflections::setMaxSteps(Uint32 steps)
+{
+	m_maxSteps = steps;
+}
+
+
+///////////////////////////////////////////////////////////
+void Reflections::setStepSize(float size)
+{
+	m_stepSize = size;
+}
+
+
+///////////////////////////////////////////////////////////
+void Reflections::setMaxDepth(float depth)
+{
+	m_maxDepth = depth;
+}
+
+
+///////////////////////////////////////////////////////////
+void Reflections::setMaxDepthDiff(float diff)
+{
+	m_maxDepthDiff = diff;
+}
+
+
+///////////////////////////////////////////////////////////
+void Reflections::setFresnelFactor(float factor)
+{
+	m_fresnelFactor = factor;
+}
+
+
+///////////////////////////////////////////////////////////
+void Reflections::setFresnelFactorMin(float min)
+{
+	m_fresnelFactorMin = min;
+}
+
+
+///////////////////////////////////////////////////////////
+Uint32 Reflections::getMaxSteps() const
+{
+	return m_maxSteps;
+}
+
+
+///////////////////////////////////////////////////////////
+float Reflections::getStepSize() const
+{
+	return m_stepSize;
+}
+
+
+///////////////////////////////////////////////////////////
+float Reflections::getMaxDepth() const
+{
+	return m_maxDepth;
+}
+
+
+///////////////////////////////////////////////////////////
+float Reflections::getMaxDepthDiff() const
+{
+	return m_maxDepthDiff;
+}
+
+
+///////////////////////////////////////////////////////////
+float Reflections::getFresnelFactor() const
+{
+	return m_fresnelFactor;
 }
 
 

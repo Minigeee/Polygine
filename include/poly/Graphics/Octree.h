@@ -17,8 +17,15 @@ namespace poly
 {
 
 class Camera;
+class Material;
 class Model;
+class Renderable;
 class Shader;
+class Skeleton;
+
+struct RenderComponent;
+struct TransformComponent;
+
 
 ///////////////////////////////////////////////////////////
 /// \brief A class that spatially organizes entities into a dynamic octree structure
@@ -145,9 +152,34 @@ public:
 	///
 	/// \param camera The camera to render from the perspective of
 	/// \param pass The render pass that is being executed
+	/// \param settings The render settings to apply
 	///
 	///////////////////////////////////////////////////////////
-	void render(Camera& camera, RenderPass pass) override;
+	void render(Camera& camera, RenderPass pass, const RenderSettings& settings) override;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Octrees render opaque objects during the deferred render pass
+	///
+	/// \return True
+	///
+	///////////////////////////////////////////////////////////
+	bool hasDeferredPass() const override;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Octrees render transparent objects during the forward pass
+	///
+	/// \return True
+	///
+	///////////////////////////////////////////////////////////
+	bool hasForwardPass() const override;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the number of entities currently in the octree
+	///
+	/// \return The number of entities in the octree
+	///
+	///////////////////////////////////////////////////////////
+	Uint32 getNumEntities() const;
 
 private:
 	struct Node;
@@ -156,9 +188,9 @@ private:
 	{
 		Uint32 m_group;
 		Node* m_node;
-		bool m_castsShadows;
 		BoundingBox m_boundingBox;
 		Matrix4f m_transform;
+		bool m_castsShadows;
 	};
 
 	struct Node
@@ -185,9 +217,10 @@ private:
 		Material* m_material;
 		Shader* m_shader;
 		Skeleton* m_skeleton;
+		float m_dist;
 		Uint32 m_offset;
 		Uint32 m_instances;
-		bool m_transparent;
+		bool m_isTransparent;
 	};
 
 	void expand();
@@ -196,25 +229,39 @@ private:
 
 	void insert(EntityData* data);
 
+	void merge(Node* node);
+
 	void update(const Entity::Id& id, RenderComponent& r, TransformComponent& t);
 
-	void getRenderData(Node* node, const Frustum& frustum, std::vector<std::vector<EntityData*>>& entityData, const Vector3f& cameraPos, RenderPass pass);
+	void getRenderData(
+		Node* node,
+		const Frustum& frustum,
+		std::vector<std::vector<EntityData*>>& entityData,
+		std::vector<double>& groupAvgDists,
+		const Vector3f& cameraPos,
+		RenderPass pass
+	);
 
 	Uint32 getRenderGroup(Renderable* renderable, Skeleton* skeleton);
+
+	void bindShader(Shader* shader, Camera& camera, Scene* scene, RenderPass pass);
 
 private:
 	std::mutex m_mutex;									//!< Mutex for accessing node data
 	TypePool<Node> m_nodePool;							//!< The object pool that holds node data
 	ObjectPool m_dataPool;								//!< The object pool that holds render data
+	Clock m_clock;										//!< Used for applying time dependent renderables
 
 	Node* m_root;										//!< A pointer to the root node
 	float m_size;										//!< The size of the highest octree level
 	Uint32 m_maxPerCell;								//!< The max number of entities allowed per cell
+	Uint32 m_numEntitites;								//!< The total number of entitites in the octree
 	HashMap<Entity::Id, EntityData*> m_dataMap;			//!< A map of entity id to its cached data
 
 	VertexBuffer m_instanceBuffer;						//!< The instance buffer that stores instance transform data
 	Uint32 m_instanceBufferOffset;						//!< The offset of the valid range of the instance buffer
 	std::vector<RenderGroup> m_renderGroups;			//!< A list of render groups
+	std::vector<RenderData> m_transparentData;			//!< Transparent render data (cached from deferred render pass)
 
 	static Vector3f nodeOffsets[8];
 };
@@ -240,7 +287,8 @@ private:
 /// destroyed. Upon adding it to the scene, all existing entities
 /// with both a TransformComponent and a RenderComponent will
 /// be added to the octree, and all future entities that match
-/// the requirement will be added as well.
+/// the requirement will be added as well. Removing an entity from
+/// the scene will also automatically remove it from the octree.
 ///
 /// If an entity has the DynamicTag component, its transform matrix
 /// and containing cell will be updated every time update() is called.

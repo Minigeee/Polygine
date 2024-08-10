@@ -2,6 +2,7 @@
 #define POLY_TEXTURE_H
 
 #include <poly/Core/DataTypes.h>
+#include <poly/Core/NonCopyable.h>
 
 #include <poly/Graphics/GLType.h>
 #include <poly/Graphics/Image.h>
@@ -36,17 +37,9 @@ enum class PixelFormat
 /// \brief A class that creates renderable images on the GPU
 ///
 ///////////////////////////////////////////////////////////
-class Texture
+class Texture : public NonMoveable
 {
 public:
-
-#ifndef DOXYGEN_SKIP
-	Texture(const Texture&) = delete;
-	Texture& operator=(const Texture&) = delete;
-	Texture(Texture&&) = default;
-	Texture& operator=(Texture&&) = default;
-#endif
-
 	///////////////////////////////////////////////////////////
 	/// \brief Default constructor
 	///
@@ -58,12 +51,22 @@ public:
 	///
 	/// \param fname The relative path to the image file
 	/// \param dtype The data type to use when loading the image
+	/// \param filter The sampling filter type for choosing a pixel when in between pixels
+	/// \param wrap The sampling wrap type for when sampling outside the texture bounds
 	/// \param mipmap Determines if mipmaps should be generated for the texture
+	/// \param adjustForGamma The gamma factor that is used in post-processing
 	///
 	/// \see load
 	///
 	///////////////////////////////////////////////////////////
-	Texture(const std::string& fname, GLType dtype = GLType::Uint8, bool mipmap = false);
+	Texture(
+		const std::string& fname,
+		GLType dtype = GLType::Uint8,
+		TextureFilter filter = TextureFilter::Linear,
+		TextureWrap wrap = TextureWrap::ClampToEdge,
+		bool mipmap = true,
+		float adjustForGamma = 1.0f
+	);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Destructor
@@ -94,12 +97,35 @@ public:
 	///
 	/// \param fname The relative path to the image file
 	/// \param dtype The data type to use when loading the image
+	/// \param filter The sampling filter type for choosing a pixel when in between pixels
+	/// \param wrap The sampling wrap type for when sampling outside the texture bounds
 	/// \param mipmap Determines if mipmaps should be generated for the texture
+	/// \param adjustForGamma The gamma factor that is used in post-processing
 	///
 	/// \return True if the file was successfully loaded
 	///
 	///////////////////////////////////////////////////////////
-	bool load(const std::string& fname, GLType dtype = GLType::Uint8, bool mipmap = false);
+	bool load(
+		const std::string& fname,
+		GLType dtype = GLType::Uint8,
+		TextureFilter filter = TextureFilter::Linear,
+		TextureWrap wrap = TextureWrap::ClampToEdge,
+		bool mipmap = true,
+		float adjustForGamma = 1.0f
+	);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Finish loading a texture from an image file
+	///
+	/// This function should be used if a texture is loaded from
+	/// a thread that does not have an active OpenGL context. This
+	/// function should be called from a thread with an active OpenGL
+	/// context.
+	///
+	/// \return True if the texture finished loading successfully
+	///
+	///////////////////////////////////////////////////////////
+	bool finish();
 
 	///////////////////////////////////////////////////////////
 	/// \brief Create a new texture from pixel data
@@ -174,8 +200,11 @@ public:
 	/// This will cause data from only the subregion to be updated,
 	/// where pos is pixel offset of the subregion from the top left
 	/// of the texture, and size is the region size in pixels.
+	/// The pixel data must be layed out in continuous row-major order.
 	///
 	/// \param data A pointer to the new texture data
+	/// \param pos The position of the section to update (x)
+	/// \param size The dimensions of the section to update (w)
 	///
 	///////////////////////////////////////////////////////////
 	void update(void* data, Uint32 pos, Uint32 size);
@@ -186,8 +215,13 @@ public:
 	/// This will cause data from only the subregion to be updated,
 	/// where pos is pixel offset of the subregion from the top left
 	/// of the texture, and size is the region size in pixels.
+	/// The pixel data must be layed out in continuous row-major order.
+	///
+	/// \note \a pos must be specified in (x, y) coordinates
 	///
 	/// \param data A pointer to the new texture data
+	/// \param pos The position of the section to update (x, y)
+	/// \param size The dimensions of the section to update (w, h)
 	///
 	///////////////////////////////////////////////////////////
 	void update(void* data, const Vector2u& pos, const Vector2u& size);
@@ -198,11 +232,49 @@ public:
 	/// This will cause data from only the subregion to be updated,
 	/// where pos is pixel offset of the subregion from the top left
 	/// of the texture, and size is the region size in pixels.
+	/// The pixel data must be layed out in continuous row-major order.
 	///
 	/// \param data A pointer to the new texture data
+	/// \param pos The position of the section to update (x, y, z)
+	/// \param size The dimensions of the section to update (w, h, d)
 	///
 	///////////////////////////////////////////////////////////
 	void update(void* data, const Vector3u& pos, const Vector3u& size);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the texture filter method
+	///
+	/// This property determines how to choose the value of a sampled pixel
+	/// when sampling between pixels. When TextureFilter::Linear is used,
+	/// pixels will be linearly interpolated when sampling between
+	/// two pixels, and when TextureFilter::Linear is used, the nearest
+	/// pixel to the sample location will be used.
+	///
+	/// This property can be:
+	/// * TextureFilter::Linear
+	/// * TextureFilter::Nearest
+	///
+	/// \param filter The texture filter type to use
+	///
+	///////////////////////////////////////////////////////////
+	void setFilter(TextureFilter filter);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the texture wrap method
+	///
+	/// This property determines how the value of a pixel is chosen
+	/// when sampling outside the bounds of the texture
+	///
+	/// This property can be:
+	/// * TextureWrap::Repeat
+	/// * TextureWrap::MirroredRepeat
+	/// * TextureWrap::ClampToEdge
+	/// * TextureWrap::ClampToBorder
+	///
+	/// \param wrap The texture wrap method to use
+	///
+	///////////////////////////////////////////////////////////
+	void setWrap(TextureWrap wrap);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the internal texture id
@@ -271,7 +343,7 @@ public:
 	///////////////////////////////////////////////////////////
 	/// \brief Get the filter sampling method
 	///
-	/// \return The filter sampling method for when sampling in between pixels
+	/// \return The filter sampling method for when sampling pixels
 	///
 	///////////////////////////////////////////////////////////
 	TextureFilter getFilter() const;
@@ -284,19 +356,30 @@ public:
 	///////////////////////////////////////////////////////////
 	bool isMultisampled() const;
 
+	///////////////////////////////////////////////////////////
+	/// \brief Check if mipmaps were generated for the texture
+	///
+	/// \return True if mipmaps were generated for the texture
+	///
+	///////////////////////////////////////////////////////////
+	bool hasMipmaps() const;
+
 private:
 	Uint32 m_id;			//!< The texture id
 	Uint32 m_width;			//!< Texture width
 	Uint32 m_height;		//!< Texture height
 	Uint32 m_depth;			//!< Texture depth
-	Uint32 m_dimensions;	//!< Number of dimensions
-	PixelFormat m_format;	//!< The pixel format
+	Uint16 m_dimensions;	//!< Number of dimensions
+	Uint16 m_format;		//!< The pixel format
 	GLType m_dataType;		//!< The pixel data type
-	TextureWrap m_wrap;		//!< The wrap sampling method
-	TextureFilter m_filter;	//!< The filter sampling method
+	Uint16 m_wrap;			//!< The wrap sampling method
+	Uint16 m_filter;		//!< The filter sampling method
+	void* m_data;			//!< A pointer to image data (in case loading image was not on OpenGL thread)
 	bool m_multisampled;	//!< True if the texture is multisampled
+	bool m_hasMipmaps;		//!< True if mipmaps were generated for the texture
 
-	static Uint32 currentBound[100];
+	static Uint32 s_currentSlot;
+	static Uint32 s_currentBound[100];
 };
 
 }

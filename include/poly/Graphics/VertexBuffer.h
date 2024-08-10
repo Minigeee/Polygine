@@ -2,6 +2,7 @@
 #define POLY_VERTEX_BUFFER_H
 
 #include <poly/Core/DataTypes.h>
+#include <poly/Core/NonCopyable.h>
 
 #include <poly/Graphics/GLType.h>
 
@@ -110,19 +111,11 @@ MapBufferFlags& operator|=(MapBufferFlags& a, MapBufferFlags b);
 /// \brief A class that stores and manages vertex data on the GPU
 ///
 ///////////////////////////////////////////////////////////
-class VertexBuffer
+class VertexBuffer : public NonMoveable
 {
 	friend VertexArray;
 
 public:
-
-#ifndef DOXYGEN_SKIP
-	VertexBuffer(const VertexBuffer& other) = delete;
-	VertexBuffer& operator=(const VertexBuffer& other) = delete;
-	VertexBuffer(VertexBuffer&& other) = default;
-	VertexBuffer& operator=(VertexBuffer && other) = default;
-#endif
-
 	///////////////////////////////////////////////////////////
 	/// \brief Default constructor
 	///

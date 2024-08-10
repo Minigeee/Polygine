@@ -8,8 +8,7 @@ namespace poly
 
 
 ///////////////////////////////////////////////////////////
-PhysicsShape::PhysicsShape() :
-	m_position		(0.0f)
+PhysicsShape::PhysicsShape()
 {
 
 }

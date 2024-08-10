@@ -1,0 +1,58 @@
+#ifndef POLY_HEIGHT_MAP_COLLIDER_H
+#define POLY_HEIGHT_MAP_COLLIDER_H
+
+#include <poly/Physics/Collider.h>
+
+namespace poly
+{
+
+
+///////////////////////////////////////////////////////////
+/// \brief A collider object that uses a height map shape
+/// \ingroup Physics
+///
+/// See Collider to see a short usage example for colliders.
+///
+///////////////////////////////////////////////////////////
+class HeightMapCollider : public Collider
+{
+public:
+	///////////////////////////////////////////////////////////
+	/// \brief Set height map scale
+	///
+	/// \param dims The new scale of the height map
+	///
+	///////////////////////////////////////////////////////////
+	void setScale(const Vector3f& scale);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set height map scale
+	///
+	/// \param x The x-component of the scale
+	/// \param y The y-component of the scale
+	/// \param z The z-component of the scale
+	///
+	///////////////////////////////////////////////////////////
+	void setScale(float x, float y, float z);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the scale of the height map
+	///
+	/// \return The scale of the height map
+	///
+	///////////////////////////////////////////////////////////
+	Vector3f getScale() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the size of the height map in pixels
+	///
+	/// \return The size of the height map in pixels
+	///
+	///////////////////////////////////////////////////////////
+	Vector2f getMapSize() const;
+};
+
+
+}
+
+#endif

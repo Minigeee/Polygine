@@ -1,40 +1,109 @@
 #ifndef POLY_TERRAIN_H
 #define POLY_TERRAIN_H
 
-#include <poly/Graphics/Shader.h>
+#include <poly/Engine/Entity.h>
+
+#include <poly/Graphics/Material.h>
 #include <poly/Graphics/RenderSystem.h>
+#include <poly/Graphics/Shader.h>
 #include <poly/Graphics/Texture.h>
 #include <poly/Graphics/UniformBuffer.h>
 #include <poly/Graphics/VertexArray.h>
 #include <poly/Graphics/VertexBuffer.h>
 
+#include <poly/Physics/Collider.h>
+
+#include <future>
+#include <stack>
+
 namespace poly
 {
 
 
-#ifndef DOXYGEN_SKIP
-
 ///////////////////////////////////////////////////////////
-struct UniformBlock_Terrain
+class TerrainBase : public RenderSystem
 {
-	UniformBufferType<Vector4f> m_clipPlanes[4];
+public:
+	TerrainBase();
 
-	UniformBufferType<float> m_size;
-	UniformBufferType<float> m_height;
-	UniformBufferType<float> m_tileScale;
-	UniformBufferType<float> m_blendLodDist;
-	UniformBufferType<bool> m_useFlatShading;
+	virtual ~TerrainBase();
+
+	virtual void init(Scene* scene) override;
+
+	void render(Camera& camera, RenderPass pass, const RenderSettings& settings) override;
+
+	void create(float size, float maxHeight, float maxBaseSize = 50.0f);
+
+	void setShader(Shader* shader);
+
+	Entity getEntity() const;
+
+	float getSize() const;
+
+	float getMaxHeight() const;
+
+protected:
+	///////////////////////////////////////////////////////////
+	/// \brief This function is called before rendering
+	///
+	/// This function should be responsible for binding the shader,
+	/// setting any uniforms and textures needed to render the terrain,
+	/// and potentially any terrain updates that need to occur.
+	///
+	///////////////////////////////////////////////////////////
+	virtual void onRender(Camera& camera) = 0;
+
+protected:
+	///////////////////////////////////////////////////////////
+	/// \brief A struct containing data for terrain lod levels
+	///
+	///////////////////////////////////////////////////////////
+	struct LodLevel
+	{
+		float m_dist;									//!< The distance this lod level ends at
+		ImageBuffer<Vector2<Uint16>> m_heightBounds;	//!< An image buffer of height bounds values for each terrain tile
+	};
+
+	///////////////////////////////////////////////////////////
+	/// \brief Make render list from quadtree nodes
+	///
+	///////////////////////////////////////////////////////////
+	void makeRenderList(const Vector2u& node, Uint32 lod, const Frustum& frustum, std::vector<Vector4f>& renderList);
+
+protected:
+	Entity m_entity;					//!< The scene entity that will be used for terrain colliders
+	float m_size;						//!< The size of each side of the terrain (world units)
+	float m_maxHeight;					//!< The maximum height of the terrain (world units)
+
+	Vector3f m_viewpoint;				//!< The player viewpoint (determins lod level of each tile)
+	float m_baseScale;					//!< The scale of the base level tile
+
+	Shader* m_shader;					//!< A pointer to the terrain shader
+	VertexBuffer m_instanceBuffer;		//!< The tile instance buffer
+	VertexBuffer m_vertexBuffer;		//!< The tile vertex buffer
+	VertexBuffer m_indexBuffer;			//!< The tile index buffer
+	VertexArray m_vertexArray;			//!< The render vertex array
+	Uint32 m_instanceDataOffset;		//!< The offset of the instance buffer in bytes
+
+	std::mutex m_mutex;					//!< Protect potentially multithreaded parts of terrain
+	Uint32 m_numLevels;					//!< The number of quadtree levels
+	std::vector<LodLevel> m_lodLevels;	//!< A list of terrain lod levels (where 0 is the largest level)
+
+	bool m_viewpointChanged;			//!< True if viewpoint has changed (this is set in render loop, must be reset when used)
+	bool m_lodDistsChanged;				//!< True if lod distances changed
 };
-
-#endif
 
 
 ///////////////////////////////////////////////////////////
 /// \brief A render system that render low-poly style terrain
 ///
 ///////////////////////////////////////////////////////////
-class Terrain : public RenderSystem
+class Terrain : public TerrainBase
 {
+public:
+	typedef ImageBuffer<float>				HeightMap;
+	typedef ImageBuffer<Vector3<Uint16>>	NormalMap;
+
 public:
 	///////////////////////////////////////////////////////////
 	/// \brief Default constructor
@@ -48,316 +117,277 @@ public:
 	///////////////////////////////////////////////////////////
 	~Terrain();
 
-	///////////////////////////////////////////////////////////
-	/// \brief Initialize the terrain for a scene
-	///
-	/// This stores a pointer to the scene, and is automatically called
-	/// when the terrain is added to a scene with Scene::addRenderSystem().
-	///
-	/// \param scene A pointer to the scene to initialize with
-	///
-	///////////////////////////////////////////////////////////
 	void init(Scene* scene) override;
 
-	///////////////////////////////////////////////////////////
-	/// \brief Create the low-poly terrain with the specified parameters
-	///
-	/// The terrain can be thought of as a large square mesh, where each
-	/// side of the square is \a size units long, and the height at each
-	/// point in the mesh is sampled from a height map.
-	///
-	/// The terrain is made up of small tiles that slowly get larger
-	/// as their distance to the camera increases (terrain lod). The default
-	/// tile size is 2.0 units, but this can be scaled with /a tileScale.
-	/// The distances at which the tiles start growing in size are defined
-	/// by the lod distances. By default, these distances are [20.0, 100.0,
-	/// 200.0, maxDist], but these distances can be scaled with \a lodScale.
-	///
-	/// \param size The size of a terrain edge, where the terrain is a large square mesh
-	/// \param height The max height of the terrain
-	/// \param tileScale The factor to scale a single tile scale at lod 0 (Default size is 2.0 units)
-	/// \param lodScale The factor to scale terrain lod distances (Default lod distances are: [20, 100, 200, maxDist])
-	/// \param maxDist The maximum distance the terrain should still be visible
-	///
-	///////////////////////////////////////////////////////////
-	void create(float size, float height, float tileScale = 1.0f, float lodScale = 1.0f, float maxDist = 800.0f);
+	void setHeightMap(const Image& hmap);
 
-	///////////////////////////////////////////////////////////
-	/// \brief Render the terrain from the perspective of the camera
-	///
-	/// This function will be called by the scene, so in most cases,
-	/// this function will not be directly called.
-	///
-	/// \param camera The camera to render from the perspective of
-	/// \param pass The render pass that is being executed
-	///
-	///////////////////////////////////////////////////////////
-	void render(Camera& camera, RenderPass pass) override;
+	void setBounciness(float bounciness);
 
-	///////////////////////////////////////////////////////////
-	/// \brief Set the size of the terrain
-	///
-	/// The size of the terrain is the length of one of its sides
-	///
-	/// \param size The size
-	///
-	///////////////////////////////////////////////////////////
-	void setSize(float size);
+	void setFrictionCoefficient(float coefficient);
 
-	///////////////////////////////////////////////////////////
-	/// \brief Set the max height of the terrain
-	///
-	/// \param height The height
-	///
-	///////////////////////////////////////////////////////////
-	void setHeight(float height);
+	void setCollisionCategory(Uint16 category);
 
-	///////////////////////////////////////////////////////////
-	/// \brief Set the scale of each tile
-	///
-	/// The default tile size is 2.0, this size can be scaled with
-	/// this function.
-	///
-	/// \param height The tile scale
-	///
-	///////////////////////////////////////////////////////////
-	void setTileScale(float scale);
+	void setCollisionMask(Uint16 mask);
 
-	///////////////////////////////////////////////////////////
-	/// \brief Set the scale of each lod (level of detail) distance
-	///
-	/// The default lod distances are [20.0, 100.0, 200.0, maxDist],
-	/// and those distances can be scaled with this function.
-	///
-	/// \param height The tile scale
-	///
-	///////////////////////////////////////////////////////////
-	void setLodScale(float scale);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Set the maximum distance the terrain is rendered
-	///
-	/// Any terrain sections that are further from the camera than
-	/// this distance will not be rendered.
-	///
-	/// \param maxDist The maximum distance
-	///
-	///////////////////////////////////////////////////////////
-	void setMaxDist(float maxDist);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Set whether the terrain should use flat shading (low-poly style)
-	///
-	/// \param use The boolean controlling whether to use flat shading or not
-	///
-	///////////////////////////////////////////////////////////
-	void setUseFlatShading(bool use);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Set the terrain height map
-	///
-	/// Everytime a new height map is set, the normals are recalculated
-	/// and both the height map and the normal map are pushed
-	/// to the GPU texture. This function may take some time to
-	/// transfer data between the CPU and the GPU.
-	///
-	/// \param map The height map
-	///
-	///////////////////////////////////////////////////////////
-	void setHeightMap(const Image& map);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Set the terrain color map
-	///
-	/// The color map defines the color of the terrain at different
-	/// areas of the terrain. This function may take some time to
-	/// transfer data between the CPU and the GPU.
-	///
-	/// \param map The color map
-	///
-	///////////////////////////////////////////////////////////
-	void setColorMap(const Image& map);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Set the terrain ambient color
-	///
-	/// \param color The ambient color
-	///
-	///////////////////////////////////////////////////////////
-	void setAmbientColor(const Vector3f& color);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Updates a subregion of the height map
-	///
-	/// The provided image containing the new height map data must
-	/// have a size that matches the terrain height map.
-	///
-	/// \param map An image containing the new data (has to be the same size as the current height map)
-	/// \param pos The top-left corner of the rectangle to update (in pixels)
-	/// \param size The size of the rectangle to update (in pixels)
-	///
-	///////////////////////////////////////////////////////////
-	void updateHeightMap(const Image& map, const Vector2i& pos = Vector2i(0), const Vector2u& size = Vector2u(0));
-
-	///////////////////////////////////////////////////////////
-	/// \brief Updates a subregion of the color map
-	///
-	/// The provided image containing the new color map data must
-	/// have a size that matches the terrain color map.
-	///
-	/// \param map An image containing the new data (has to be the same size as the current height map)
-	/// \param pos The top-left corner of the rectangle to update (in pixels)
-	/// \param size The size of the rectangle to update (in pixels)
-	///
-	///////////////////////////////////////////////////////////
-	void updateColorMap(const Image& map, const Vector2i& pos = Vector2i(0), const Vector2u& size = Vector2u(0));
-
-	///////////////////////////////////////////////////////////
-	/// \brief Get terrain size
-	///
-	/// \return Terrain size
-	///
-	///////////////////////////////////////////////////////////
-	float getSize() const;
-
-	///////////////////////////////////////////////////////////
-	/// \brief Get terrain max height
-	///
-	/// \return Terrain max height
-	///
-	///////////////////////////////////////////////////////////
-	float getHeight() const;
-
-	///////////////////////////////////////////////////////////
-	/// \brief Get terrain tile scale
-	///
-	/// \return Terrain tile scale
-	///
-	///////////////////////////////////////////////////////////
-	float getTileScale() const;
-
-	///////////////////////////////////////////////////////////
-	/// \brief Get terrain lod scale
-	///
-	/// \return Terrain lod scale
-	///
-	///////////////////////////////////////////////////////////
-	float getLodScale() const;
-
-	///////////////////////////////////////////////////////////
-	/// \brief Get max view distance
-	///
-	/// \return Max view distance
-	///
-	///////////////////////////////////////////////////////////
-	float getMaxDist() const;
-
-	///////////////////////////////////////////////////////////
-	/// \brief Check if this terrain is rendered using flat shading
-	///
-	/// \return True if the terrain uses flat shading
-	///
-	///////////////////////////////////////////////////////////
-	bool usesFlatShading() const;
-
-	///////////////////////////////////////////////////////////
-	/// \brief Get height map texture
-	///
-	/// \return A reference to the height map texture
-	///
-	///////////////////////////////////////////////////////////
 	Texture& getHeightMap();
 
-	///////////////////////////////////////////////////////////
-	/// \brief Get color map texture
-	///
-	/// \return A reference to the color map texture
-	///
-	///////////////////////////////////////////////////////////
-	Texture& getColorMap();
-
-	///////////////////////////////////////////////////////////
-	/// \brief Get normal map texture
-	///
-	/// \return A reference to the normal map texture
-	///
-	///////////////////////////////////////////////////////////
 	Texture& getNormalMap();
 
+	HeightMap& getHeightData();
+
+	NormalMap& getNormalData();
+
 	///////////////////////////////////////////////////////////
-	/// \brief Get terrain ambient color
+	/// \brief Get the collider bounciness value
 	///
-	/// \return Terrain ambient color
+	/// \return The bounciness value
 	///
 	///////////////////////////////////////////////////////////
-	const Vector3f& getAmbientColor() const;
+	float getBounciness() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the friction coefficient
+	///
+	/// \return The friction coefficient
+	///
+	///////////////////////////////////////////////////////////
+	float getFrictionCoefficient() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the collision category bitfield
+	///
+	/// \return The collision category bitfield
+	///
+	///////////////////////////////////////////////////////////
+	Uint16 getCollisionCategory() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the collision mask bitfield
+	///
+	/// \return The collision mask bitfield
+	///
+	///////////////////////////////////////////////////////////
+	Uint16 getCollisionMask() const;
 
 private:
 	static Shader& getShader();
 
-	struct TerrainTile
-	{
-		BoundingBox m_boundingBox;
-		Vector2f m_position;
-		float m_rotation;
-		float m_scale;
-		Uint32 m_lod;
-	};
+	static Shader s_shader;
 
-	struct InstanceData
-	{
-		float m_lodDist;
-		Matrix4f m_transform;
-	};
+	void onRender(Camera& camera) override;
 
 	///////////////////////////////////////////////////////////
-	/// \brief Create ring layout of terrain, depends on tile scale, lod scale, and max distance
+	/// \brief Update a subrect of the terrain height map
 	///
 	///////////////////////////////////////////////////////////
-	void createTileLayout();
+	void updateHeightMap(const Vector2u& pos, const Vector2u& size);
 
-	///////////////////////////////////////////////////////////
-	/// \brief Calculate normals from height map given a subregion
-	///
-	///////////////////////////////////////////////////////////
-	void calcNormals(const Image& hmap, const Vector2i& pos, const Vector2u& size);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Update normal map, depends on height and size
-	///
-	///////////////////////////////////////////////////////////
-	void updateNormalMap(const Vector3f& scale);
+	void updateHeightBounds(Uint32 nr, Uint32 nc);
 
 private:
-	float m_size;							//!< Terrain size
-	float m_height;							//!< Maximume terrain height
-	float m_tileScale;						//!< Tile scale
-	float m_lodScale;						//!< Lod distance scale
-	float m_maxDist;						//!< Maximum view distance
-	bool m_useFlatShading;					//!< Controls if the terrain should be rendered using flat shading
+	Texture m_heightMap;
+	Texture m_normalMap;
+	HeightMap m_heightMapImg;
+	NormalMap m_normalMapImg;
 
-	Texture m_heightMap;					//!< Height map texture
-	Texture m_normalMap;					//!< Normal map texture
-	Texture m_colorMap;						//!< Color map texture
-	Vector3f* m_normalMapData;				//!< Normal map texture data
+	Collider m_collider;
+	float m_bounciness;
+	float m_friction;
+	Uint16 m_collisionCategory;
+	Uint16 m_collisionMask;
+};
 
-	UniformBuffer m_uniformBuffer;			//!< The uniform buffer used to store terrain uniform data
-	VertexArray m_normalTile;				//!< The mesh for a normal tile
-	VertexArray m_edgeTile;					//!< The mesh for an edge tile
-	VertexBuffer m_normalBuffer;			//!< The data buffer for a normal tile
-	VertexBuffer m_edgeBuffer;				//!< The data buffer for a normal tile
-	VertexBuffer m_instanceBuffer;			//!< The instance buffer for tile transform matrices
-	Uint32 m_instanceBufferOffset;			//!< The current offset in the instance buffer
 
-	std::vector<TerrainTile> m_normalTiles;	//!< A list of normal tiles in their default position
-	std::vector<TerrainTile> m_edgeTiles;	//!< A list of edge tiles in their default position
-	std::vector<float> m_lodDists;			//!< A list of exact lod distances
+///////////////////////////////////////////////////////////
+class LargeTerrain : public TerrainBase
+{
+public:
+	typedef std::function<bool(const Vector2i&, Uint32, Image*)> LoadFunc;
 
-	Vector3f m_ambientColor;				//!< The ambient color
-	bool m_isUniformDirty;					//!< This is true when one of the uniform parameters has changed
+public:
+	LargeTerrain();
+
+	~LargeTerrain();
+
+	void create(float size, float maxHeight, float maxBaseSize = 50.0f, float tileSize = 512.0f);
+
+	void setHeightLoader(const LoadFunc& func);
+
+	void setSplatLoader(const LoadFunc& func);
+
+	void addCustomLoader(const LoadFunc& func);
+
+	void onLoadTile(const std::function<bool(const Vector2i&, Uint32)>& func);
+
+	void onUnloadTile(const std::function<void(const Vector2i&, Uint32)>& func);
+
+	void setSplatTexture(Texture* texture, Uint32 index);
+
+	void applyRedirectMap(Shader* shader);
+
+	void setBounciness(float bounciness);
+
+	void setFrictionCoefficient(float coefficient);
+
+	void setCollisionCategory(Uint16 category);
+
+	void setCollisionMask(Uint16 mask);
+
+	Texture& getRedirectMap();
+
+	Texture& getHeightMap();
+
+	Texture& getNormalMap();
+
+	Texture& getSplatMap();
+
+	Texture* getCustomMap(Uint32 index) const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the collider bounciness value
+	///
+	/// \return The bounciness value
+	///
+	///////////////////////////////////////////////////////////
+	float getBounciness() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the friction coefficient
+	///
+	/// \return The friction coefficient
+	///
+	///////////////////////////////////////////////////////////
+	float getFrictionCoefficient() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the collision category bitfield
+	///
+	/// \return The collision category bitfield
+	///
+	///////////////////////////////////////////////////////////
+	Uint16 getCollisionCategory() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the collision mask bitfield
+	///
+	/// \return The collision mask bitfield
+	///
+	///////////////////////////////////////////////////////////
+	Uint16 getCollisionMask() const;
+
+private:
+	enum class EdgeRow
+	{
+		Left,
+		Right,
+		Top,
+		Bottom,
+		LMid,
+		RMid,
+		TMid,
+		BMid
+	};
+
+	struct MapData
+	{
+		enum Type
+		{
+			Height,
+			Normal,
+			Splat,
+			Custom
+		};
+
+		Texture* m_texture;
+		Image* m_fullImg;
+		Image* m_edgeImg;
+		Uint8 m_edgeResL;
+		Uint8 m_edgeResR;
+		Uint8 m_edgeResT;
+		Uint8 m_edgeResB;
+	};
+
+	struct PreloadTask
+	{
+		std::future<bool> m_task;
+		Vector3<Uint16> m_tileData;
+		Vector2<Int16> m_tileXy;
+	};
+
+	struct LoadTask
+	{
+		std::future<bool> m_task;
+		Image* m_image;
+		Texture* m_texture;
+		MapData::Type m_mapType;
+		Vector3<Uint16> m_tileData;
+	};
+
+	struct Tile
+	{
+		std::vector<MapData> m_mapData;
+		Vector2<Uint8> m_cachePos;
+		Vector3<Uint16> m_tileData;
+		Uint32 m_isLoaded;
+	};
+
+	struct ColliderInfo
+	{
+		Collider m_collider;
+		Vector2<Uint16> m_tile;
+	};
+
+	static Shader& getShader();
 
 	static Shader s_shader;
+
+	void onRender(Camera& camera) override;
+
+	void updateTileMaps(const Vector2u& node, Uint32 lod);
+
+	void addLoadTasks(const Vector2u& node, const Vector2i& tile, Uint32 lod);
+
+	void updateLoadTasks();
+
+	Tile* getAdjTile(const Vector3<Uint16>& tileData);
+
+	bool processHeightTile(Image* hmap, Image* nmap, const Vector3<Uint16>& tile);
+
+private:
+	float m_tileSize;		//!< The size of the area that each tile map covers (per side in world units)
+
+	Texture m_heightMap;
+	Texture m_normalMap;
+	Texture m_splatMap;
+	Texture m_redirectMap;
+	ImageBuffer<Vector3<Uint8>> m_redirectMapImg;
+	std::vector<Texture*> m_customMaps;
+
+	LoadFunc m_heightLoadFunc;
+	LoadFunc m_splatLoadFunc;
+	std::vector<LoadFunc> m_customLoadFuncs;
+	std::function<bool(const Vector2i&, Uint32)> m_loadFunc;
+	std::function<void(const Vector2i&, Uint32)> m_unloadFunc;
+
+	std::vector<Texture*> m_splatTextures;
+
+	std::vector<ColliderInfo> m_colliders;
+	float m_bounciness;
+	float m_friction;
+	Uint16 m_collisionCategory;
+	Uint16 m_collisionMask;
+
+	Uint32 m_baseTileLevel;
+	Vector2u m_cacheMapSize;
+	std::stack<Vector2<Uint8>> m_freeList;
+	HashMap<Vector3<Uint16>, Tile> m_tileMap;
+	std::vector<PreloadTask> m_preloadTasks;
+	std::vector<LoadTask*> m_loadTasks;
+
+	Uint32 m_tileLoadedBitfield;
+	bool m_redirectMapChanged;
 };
+
 
 }
 

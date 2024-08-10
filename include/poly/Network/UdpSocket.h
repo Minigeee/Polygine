@@ -9,6 +9,8 @@
 
 #include <SFML/Network/UdpSocket.hpp>
 
+#include <mutex>
+
 namespace poly
 {
 
@@ -167,7 +169,8 @@ public:
 	bool isBlocking() const override;
 
 private:
-	sf::UdpSocket m_socket;
+	std::mutex m_mutex;				//!< Used to protect from multithread send and receive
+	sf::UdpSocket m_socket;			//!< Internal SFML socket
 };
 
 

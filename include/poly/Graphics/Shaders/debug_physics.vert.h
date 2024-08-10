@@ -1,0 +1,3 @@
+#ifndef SHADER_DEBUG_PHYSICS_VERT
+#define SHADER_DEBUG_PHYSICS_VERT "#version 330 core\n\nlayout (std140) uniform Camera\n{\n    mat4 u_projView;\n    vec3 u_cameraPos;\n    float u_near;\n    float u_far;\n};\n\nlayout (location = 0) in vec3 a_position;\nlayout (location = 1) in vec3 a_color;\n\nout vec3 v_color;\n\nvoid main()\n{\n    gl_Position = u_projView * vec4(a_position, 1.0);\n    v_color = a_color;\n}"
+#endif

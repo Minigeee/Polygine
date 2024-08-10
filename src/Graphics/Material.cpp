@@ -12,29 +12,18 @@ namespace poly
 
 ///////////////////////////////////////////////////////////
 Material::Material() :
-	m_ambient		(1.0f),
-	m_diffuse		(1.0f),
-	m_specular		(0.1f),
-	m_shininess		(16.0f),
-	m_cullFace		(true),
-	m_diffTexture	(0),
-	m_specTexture	(0),
-	m_normalTexture	(0)
+	m_diffuse			(1.0f),
+	m_specular			(0.1f),
+	m_shininess			(16.0f),
+	m_occlusionFactor	(1.0f),
+	m_reflectivity		(0.0f),
+	m_isTransparent		(false),
+	m_cullFace			(true),
+	m_diffTexture		(0),
+	m_specTexture		(0),
+	m_normalTexture		(0),
+	m_renderMask		(RenderPass::All)
 { }
-
-
-///////////////////////////////////////////////////////////
-void Material::setAmbient(const Vector3f& color)
-{
-	m_ambient = color;
-}
-
-
-///////////////////////////////////////////////////////////
-void Material::setAmbient(float r, float g, float b)
-{
-	m_ambient = Vector3f(r, g, b);
-}
 
 
 ///////////////////////////////////////////////////////////
@@ -69,6 +58,20 @@ void Material::setSpecular(float r, float g, float b)
 void Material::setShininess(float shininess)
 {
 	m_shininess = shininess;
+}
+
+
+///////////////////////////////////////////////////////////
+void Material::setOcclusionFactor(float factor)
+{
+	m_occlusionFactor = factor;
+}
+
+
+///////////////////////////////////////////////////////////
+void Material::setReflectivity(float reflectivity)
+{
+	m_reflectivity = reflectivity;
 }
 
 
@@ -108,6 +111,13 @@ void Material::setNormalTexture(Texture* texture)
 
 
 ///////////////////////////////////////////////////////////
+void Material::setRenderMask(RenderPass mask)
+{
+	m_renderMask = mask;
+}
+
+
+///////////////////////////////////////////////////////////
 void Material::setApplyFunc(const std::function<void(Shader*)>& func)
 {
 	m_applyFunc = func;
@@ -126,13 +136,6 @@ void Material::addTexture(const std::string& uniform, Texture* texture)
 void Material::removeTexture(const std::string& uniform)
 {
 	m_textures.erase(uniform);
-}
-
-
-///////////////////////////////////////////////////////////
-Vector3f& Material::getAmbient()
-{
-	return m_ambient;
 }
 
 
@@ -158,6 +161,20 @@ float Material::getShininess() const
 
 
 ///////////////////////////////////////////////////////////
+float Material::getOcclusionFactor() const
+{
+	return m_occlusionFactor;
+}
+
+
+///////////////////////////////////////////////////////////
+float Material::getReflectivity() const
+{
+	return m_reflectivity;
+}
+
+
+///////////////////////////////////////////////////////////
 bool Material::isTransparent() const
 {
 	return m_isTransparent;
@@ -168,6 +185,27 @@ bool Material::isTransparent() const
 bool Material::getCullFace() const
 {
 	return m_cullFace;
+}
+
+
+///////////////////////////////////////////////////////////
+Texture* Material::getDiffTexture() const
+{
+	return m_diffTexture;
+}
+
+
+///////////////////////////////////////////////////////////
+Texture* Material::getSpecTexture() const
+{
+	return m_specTexture;
+}
+
+
+///////////////////////////////////////////////////////////
+Texture* Material::getNormalTexture() const
+{
+	return m_normalTexture;
 }
 
 
@@ -185,13 +223,21 @@ Texture* Material::getTexture(const std::string& uniform) const
 
 
 ///////////////////////////////////////////////////////////
+RenderPass Material::getRenderMask() const
+{
+	return m_renderMask;
+}
+
+
+///////////////////////////////////////////////////////////
 void Material::apply(Shader* shader) const
 {
 	std::string prefix = "u_material.";
-	shader->setUniform(prefix + "ambient", m_ambient);
 	shader->setUniform(prefix + "diffuse", m_diffuse);
 	shader->setUniform(prefix + "specular", m_specular);
 	shader->setUniform(prefix + "shininess", m_shininess);
+	shader->setUniform(prefix + "occlusion", m_occlusionFactor);
+	shader->setUniform(prefix + "reflectivity", m_reflectivity);
 	shader->setUniform(prefix + "hasDiffTexture", (int)m_diffTexture);
 	shader->setUniform(prefix + "hasSpecTexture", (int)m_specTexture);
 	shader->setUniform(prefix + "hasNormalTexture", (int)m_normalTexture);

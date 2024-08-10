@@ -12,8 +12,7 @@ namespace poly
 ///////////////////////////////////////////////////////////
 Lighting::Lighting(Scene* scene) :
 	Extension				(scene),
-	m_ambientColor			(0.02f),
-	m_pointLightMaxDist		(30.0f)
+	m_ambientColor			(0.02f)
 {
 	// Make enough space for 10 blocks
 	Uint32 align = UniformBuffer::getUniformBlockAlignment();
@@ -23,13 +22,14 @@ Lighting::Lighting(Scene* scene) :
 
 
 ///////////////////////////////////////////////////////////
-void Lighting::update(Camera& camera)
+void Lighting::update(Camera& camera, Uint32 maxPointLights)
 {
 	// Need a scene
 	if (!m_scene) return;
 
 	// Create uniform block
 	UniformBlock_Lights block;
+	bool blockChanged = false;
 
 	// Apply main ambient color
 	block.m_ambient = m_ambientColor;
@@ -44,40 +44,67 @@ void Lighting::update(Camera& camera)
 			dst.m_specular = light.m_specular;
 			dst.m_direction = normalize(light.m_direction);
 
+			blockChanged |= (
+				dst.m_diffuse != m_cache.m_dirLights[i].m_diffuse ||
+				dst.m_specular != m_cache.m_dirLights[i].m_specular ||
+				dst.m_direction != m_cache.m_dirLights[i].m_direction
+			);
+
 			++i;
 		}
 	);
 	block.m_numDirLights = i;
+	blockChanged |= (block.m_numDirLights != m_cache.m_numDirLights);
+
+	// Maximum number of point lights allowed
+	int maxNumPointLights = sizeof(UniformBlock_Lights::m_pointLights) / sizeof(UniformStruct_PointLight);
+	maxNumPointLights = std::min((int)maxPointLights, maxNumPointLights);
+
+	// Frustum for culling point lights
+	const Frustum& frustum = camera.getFrustum();
 
 	// Apply point lights
 	i = 0;
 	m_scene->system<TransformComponent, PointLightComponent>(
 		[&](const Entity::Id id, TransformComponent& t, PointLightComponent& light)
 		{
-			float distance = dist(t.m_position, camera.getPosition());
-
-			// Check if the light is within the max range
-			if (distance > m_pointLightMaxDist)
+			// Can't add too many lights
+			if (i >= maxNumPointLights)
 				return;
 
-			// Create a gradual fade out
-			float intensity = 1.0f - (distance - 0.8f * m_pointLightMaxDist) / (0.2f * m_pointLightMaxDist);
-			if (intensity > 1.0f)
-				intensity = 1.0f;
+			// Frustum culling (using sphere of radius where contributed brightness < 5% of vec3(1, 1, 1))
+			const Vector3f& c = light.m_coefficients;
+			float brightness = std::max(light.m_diffuse.r, std::max(light.m_diffuse.g, light.m_diffuse.b));
+			float radius = -c.y + sqrtf(c.y * c.y - 4.0f * c.z * (c.x - 1.0f / 0.02f * brightness)) / (2.0f * c.z);
 
-			UniformStruct_PointLight& dst = block.m_pointLights[i];
-			dst.m_position = t.m_position;
-			dst.m_diffuse = light.m_diffuse * intensity;
-			dst.m_specular = light.m_specular * intensity;
-			dst.m_coefficients = light.m_coefficients;
+			if (frustum.contains(Sphere(t.m_position, radius)))
+			{
+				UniformStruct_PointLight& dst = block.m_pointLights[i];
+				dst.m_position = t.m_position;
+				dst.m_diffuse = light.m_diffuse;
+				dst.m_specular = light.m_specular;
+				dst.m_coefficients = light.m_coefficients;
 
-			++i;
+				blockChanged |= (
+					dst.m_position != m_cache.m_pointLights[i].m_position ||
+					dst.m_diffuse != m_cache.m_pointLights[i].m_diffuse ||
+					dst.m_specular != m_cache.m_pointLights[i].m_specular ||
+					dst.m_coefficients != m_cache.m_pointLights[i].m_coefficients
+					);
+
+				++i;
+			}
 		}
 	);
 	block.m_numPointLights = i;
+	blockChanged |= (block.m_numPointLights != m_cache.m_numPointLights);
 
-	// Push data
-	m_uniformBuffer.pushData(block);
+	// Push data if changed
+	if (blockChanged)
+	{
+		m_uniformBuffer.pushData(block);
+		m_cache = block;
+	}
 }
 
 
@@ -100,13 +127,6 @@ void Lighting::setAmbientColor(const Vector3f& color)
 void Lighting::setAmbientColor(float r, float g, float b)
 {
 	m_ambientColor = Vector3f(r, g, b);
-}
-
-
-///////////////////////////////////////////////////////////
-void Lighting::setPointLightMaxDist(float dist)
-{
-	m_pointLightMaxDist = dist;
 }
 
 

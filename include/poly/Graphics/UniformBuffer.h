@@ -138,11 +138,14 @@ struct UniformBufferType { };
 
 #ifndef DOXYGEN_SKIP
 
+
 ///////////////////////////////////////////////////////////
 template <Uint32 N>
 struct UniformBufferType<bool, N>
 {
-	int& operator=(bool x) { m_data = x; return m_data; }
+	int& operator=(const bool& x) { m_data = x; return m_data; }
+	bool operator==(const UniformBufferType<bool, N>& x) { return m_data == x.m_data; }
+	bool operator!=(const UniformBufferType<bool, N>& x) { return m_data != x.m_data; }
 
 private:
 	int m_data;
@@ -154,7 +157,9 @@ private:
 template <>
 struct UniformBufferType<bool, 0>
 {
-	int& operator=(bool x) { m_data = x; return m_data; }
+	int& operator=(const bool& x) { m_data = x; return m_data; }
+	bool operator==(const UniformBufferType<bool, 0>& x) { return m_data == x.m_data; }
+	bool operator!=(const UniformBufferType<bool, 0>& x) { return m_data != x.m_data; }
 
 private:
 	int m_data;
@@ -165,7 +170,9 @@ private:
 template <Uint32 N>
 struct UniformBufferType<int, N>
 {
-	int& operator=(int x) { m_data = x; return m_data; }
+	int& operator=(const int& x) { m_data = x; return m_data; }
+	bool operator==(const UniformBufferType<int, N>& x) { return m_data == x.m_data; }
+	bool operator!=(const UniformBufferType<int, N>& x) { return m_data != x.m_data; }
 
 private:
 	int m_data;
@@ -177,7 +184,9 @@ private:
 template <>
 struct UniformBufferType<int, 0>
 {
-	int& operator=(int x) { m_data = x; return m_data; }
+	int& operator=(const int& x) { m_data = x; return m_data; }
+	bool operator==(const UniformBufferType<int, 0>& x) { return m_data == x.m_data; }
+	bool operator!=(const UniformBufferType<int, 0>& x) { return m_data != x.m_data; }
 
 private:
 	int m_data;
@@ -188,7 +197,9 @@ private:
 template <Uint32 N>
 struct UniformBufferType<float, N>
 {
-	float& operator=(float x) { m_data = x; return m_data; }
+	float& operator=(const float& x) { m_data = x; return m_data; }
+	bool operator==(const UniformBufferType<float, N>& x) { return m_data == x.m_data; }
+	bool operator!=(const UniformBufferType<float, N>& x) { return m_data != x.m_data; }
 
 private:
 	float m_data;
@@ -200,7 +211,9 @@ private:
 template <>
 struct UniformBufferType<float, 0>
 {
-	float& operator=(float x) { m_data = x; return m_data; }
+	float& operator=(const float& x) { m_data = x; return m_data; }
+	bool operator==(const UniformBufferType<float, 0>& x) { return m_data == x.m_data; }
+	bool operator!=(const UniformBufferType<float, 0>& x) { return m_data != x.m_data; }
 
 private:
 	float m_data;
@@ -211,7 +224,9 @@ private:
 template <Uint32 N>
 struct UniformBufferType<Vector2f, N>
 {
-	Vector2f& operator=(Vector2f x) { m_data = x; return m_data; }
+	Vector2f& operator=(const Vector2f& x) { m_data = x; return m_data; }
+	bool operator==(const UniformBufferType<Vector2f, N>& x) { return m_data == x.m_data; }
+	bool operator!=(const UniformBufferType<Vector2f, N>& x) { return m_data != x.m_data; }
 
 private:
 	Vector2f m_data;
@@ -223,7 +238,9 @@ private:
 template <>
 struct UniformBufferType<Vector2f, 0>
 {
-	Vector2f& operator=(Vector2f x) { m_data = x; return m_data; }
+	Vector2f& operator=(const Vector2f& x) { m_data = x; return m_data; }
+	bool operator==(const UniformBufferType<Vector2f, 0>& x) { return m_data == x.m_data; }
+	bool operator!=(const UniformBufferType<Vector2f, 0>& x) { return m_data != x.m_data; }
 
 private:
 	Vector2f m_data;
@@ -234,7 +251,9 @@ private:
 template <Uint32 N>
 struct UniformBufferType<Vector3f, N>
 {
-	Vector3f& operator=(Vector3f x) { m_data = x; return m_data; }
+	Vector3f& operator=(const Vector3f& x) { m_data = x; return m_data; }
+	bool operator==(const UniformBufferType<Vector3f, N>& x) { return m_data == x.m_data; }
+	bool operator!=(const UniformBufferType<Vector3f, N>& x) { return m_data != x.m_data; }
 
 private:
 	Vector3f m_data;
@@ -246,7 +265,9 @@ private:
 template <>
 struct UniformBufferType<Vector3f, 0>
 {
-	Vector3f& operator=(Vector3f x) { m_data = x; return m_data; }
+	Vector3f& operator=(const Vector3f& x) { m_data = x; return m_data; }
+	bool operator==(const UniformBufferType<Vector3f, 0>& x) { return m_data == x.m_data; }
+	bool operator!=(const UniformBufferType<Vector3f, 0>& x) { return m_data != x.m_data; }
 
 private:
 	Vector3f m_data;
@@ -257,7 +278,9 @@ private:
 template <Uint32 N>
 struct UniformBufferType<Vector4f, N>
 {
-	Vector4f& operator=(Vector4f x) { m_data = x; return m_data; }
+	Vector4f& operator=(const Vector4f& x) { m_data = x; return m_data; }
+	bool operator==(const UniformBufferType<Vector4f, N>& x) { return m_data == x.m_data; }
+	bool operator!=(const UniformBufferType<Vector4f, N>& x) { return m_data != x.m_data; }
 
 private:
 	Vector4f m_data;
@@ -269,7 +292,9 @@ private:
 template <>
 struct UniformBufferType<Vector4f, 0>
 {
-	Vector4f& operator=(Vector4f x) { m_data = x; return m_data; }
+	Vector4f& operator=(const Vector4f& x) { m_data = x; return m_data; }
+	bool operator==(const UniformBufferType<Vector4f, 0>& x) { return m_data == x.m_data; }
+	bool operator!=(const UniformBufferType<Vector4f, 0>& x) { return m_data != x.m_data; }
 
 private:
 	Vector4f m_data;
@@ -280,7 +305,9 @@ private:
 template <Uint32 N>
 struct UniformBufferType<Matrix2f, N>
 {
-	UniformBufferType<Matrix2f, N>& operator=(Matrix2f a) { x = a.x; y = a.y; return *this; }
+	UniformBufferType<Matrix2f, N>& operator=(const Matrix2f& a) { x = a.x; y = a.y; return *this; }
+	bool operator==(const UniformBufferType<Matrix2f, N>& x) { return m_p1 == x.m_p1 && m_p2 == x.m_p2; }
+	bool operator!=(const UniformBufferType<Matrix2f, N>& x) { return m_p1 != x.m_p1 || m_p2 != x.m_p2; }
 
 private:
 	Vector2f x;
@@ -294,7 +321,9 @@ private:
 template <>
 struct UniformBufferType<Matrix2f, 0>
 {
-	UniformBufferType<Matrix2f, 0>& operator=(Matrix2f a) { x = a.x; y = a.y; return *this; }
+	UniformBufferType<Matrix2f, 0>& operator=(const Matrix2f& a) { x = a.x; y = a.y; return *this; }
+	bool operator==(const UniformBufferType<Matrix2f, 0>& x) { return m_p1 == x.m_p1 && m_p2 == x.m_p2; }
+	bool operator!=(const UniformBufferType<Matrix2f, 0>& x) { return m_p1 != x.m_p1 || m_p2 != x.m_p2; }
 
 private:
 	Vector2f x;
@@ -308,7 +337,9 @@ private:
 template <Uint32 N>
 struct UniformBufferType<Matrix3f, N>
 {
-	UniformBufferType<Matrix3f, N>& operator=(Matrix3f a) { x = a.x; y = a.y; z = a.z; return *this; }
+	UniformBufferType<Matrix3f, N>& operator=(const Matrix3f& a) { x = a.x; y = a.y; z = a.z; return *this; }
+	bool operator==(const UniformBufferType<Matrix3f, N>& x) { return m_p1 == x.m_p1 && m_p2 == x.m_p2 && m_p3 == x.m_p3; }
+	bool operator!=(const UniformBufferType<Matrix3f, N>& x) { return m_p1 != x.m_p1 || m_p2 != x.m_p2 || m_p3 != x.m_p3; }
 
 private:
 	Vector3f x;
@@ -324,7 +355,9 @@ private:
 template <>
 struct UniformBufferType<Matrix3f, 0>
 {
-	UniformBufferType<Matrix3f, 0>& operator=(Matrix3f a) { x = a.x; y = a.y; z = a.z; return *this; }
+	UniformBufferType<Matrix3f, 0>& operator=(const Matrix3f& a) { x = a.x; y = a.y; z = a.z; return *this; }
+	bool operator==(const UniformBufferType<Matrix3f, 0>& x) { return m_p1 == x.m_p1 && m_p2 == x.m_p2 && m_p3 == x.m_p3; }
+	bool operator!=(const UniformBufferType<Matrix3f, 0>& x) { return m_p1 != x.m_p1 || m_p2 != x.m_p2 || m_p3 != x.m_p3; }
 
 private:
 	Vector3f x;
@@ -340,7 +373,9 @@ private:
 template <Uint32 N>
 struct UniformBufferType<Matrix4f, N>
 {
-	UniformBufferType<Matrix4f, N>& operator=(Matrix4f a) { m = a; return *this; }
+	UniformBufferType<Matrix4f, N>& operator=(const Matrix4f& a) { m = a; return *this; }
+	bool operator==(const UniformBufferType<Matrix4f, N>& x) { return m == x.m; }
+	bool operator!=(const UniformBufferType<Matrix4f, N>& x) { return m != x.m; }
 
 private:
 	Matrix4f m;
@@ -352,7 +387,9 @@ private:
 template <>
 struct UniformBufferType<Matrix4f, 0>
 {
-	UniformBufferType<Matrix4f, 0>& operator=(Matrix4f a) { m = a; return *this; }
+	UniformBufferType<Matrix4f, 0>& operator=(const Matrix4f& a) { m = a; return *this; }
+	bool operator==(const UniformBufferType<Matrix4f, 0>& x) { return m == x.m; }
+	bool operator!=(const UniformBufferType<Matrix4f, 0>& x) { return m != x.m; }
 
 private:
 	Matrix4f m;

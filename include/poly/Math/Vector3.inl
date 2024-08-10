@@ -212,92 +212,92 @@ Vector3<T> operator-(const Vector3<T>& v)
 	return Vector3<T>(-v.x, -v.y, -v.z);
 }
 
-template <typename T>
-inline Vector3<T> operator+(const Vector3<T>& v, T s)
+template <typename T, typename U>
+inline Vector3<T> operator+(const Vector3<T>& v, U s)
 {
 	return Vector3<T>(v.x + s, v.y + s, v.z + s);
 }
 
-template <typename T>
-inline Vector3<T> operator+(T s, const Vector3<T>& v)
+template <typename T, typename U>
+inline Vector3<T> operator+(T s, const Vector3<U>& v)
 {
 	return Vector3<T>(s + v.x, s + v.y, s + v.z);
 }
 
-template <typename T>
-inline Vector3<T> operator+(const Vector3<T>& a, const Vector3<T>& b)
+template <typename T, typename U>
+inline Vector3<T> operator+(const Vector3<T>& a, const Vector3<U>& b)
 {
 	return Vector3<T>(a.x + b.x, a.y + b.y, a.z + b.z);
 }
 
-template <typename T>
-inline Vector3<T> operator-(const Vector3<T>& v, T s)
+template <typename T, typename U>
+inline Vector3<T> operator-(const Vector3<T>& v, U s)
 {
 	return Vector3<T>(v.x - s, v.y - s, v.z - s);
 }
 
-template <typename T>
-inline Vector3<T> operator-(T s, const Vector3<T>& v)
+template <typename T, typename U>
+inline Vector3<T> operator-(T s, const Vector3<U>& v)
 {
 	return Vector3<T>(s - v.x, s - v.y, s - v.z);
 }
 
-template <typename T>
-inline Vector3<T> operator-(const Vector3<T>& a, const Vector3<T>& b)
+template <typename T, typename U>
+inline Vector3<T> operator-(const Vector3<T>& a, const Vector3<U>& b)
 {
 	return Vector3<T>(a.x - b.x, a.y - b.y, a.z - b.z);
 }
 
-template <typename T>
-inline Vector3<T> operator*(const Vector3<T>& v, T s)
+template <typename T, typename U>
+inline Vector3<T> operator*(const Vector3<T>& v, U s)
 {
 	return Vector3<T>(v.x * s, v.y * s, v.z * s);
 }
 
-template <typename T>
-inline Vector3<T> operator*(T s, const Vector3<T>& v)
+template <typename T, typename U>
+inline Vector3<T> operator*(T s, const Vector3<U>& v)
 {
 	return Vector3<T>(s * v.x, s * v.y, s * v.z);
 }
 
-template <typename T>
-inline Vector3<T> operator*(const Vector3<T>& a, const Vector3<T>& b)
+template <typename T, typename U>
+inline Vector3<T> operator*(const Vector3<T>& a, const Vector3<U>& b)
 {
 	return Vector3<T>(a.x * b.x, a.y * b.y, a.z * b.z);
 }
 
-template <typename T>
-inline Vector3<T> operator/(const Vector3<T>& v, T s)
+template <typename T, typename U>
+inline Vector3<T> operator/(const Vector3<T>& v, U s)
 {
 	return Vector3<T>(v.x / s, v.y / s, v.z / s);
 }
 
-template <typename T>
-inline Vector3<T> operator/(T s, const Vector3<T>& v)
+template <typename T, typename U>
+inline Vector3<T> operator/(T s, const Vector3<U>& v)
 {
 	return Vector3<T>(s / v.x, s / v.y, s / v.z);
 }
 
-template <typename T>
-inline Vector3<T> operator/(const Vector3<T>& a, const Vector3<T>& b)
+template <typename T, typename U>
+inline Vector3<T> operator/(const Vector3<T>& a, const Vector3<U>& b)
 {
 	return Vector3<T>(a.x / b.x, a.y / b.y, a.z / b.z);
 }
 
-template <typename T>
-inline Vector3<T> operator%(const Vector3<T>& v, T s)
+template <typename T, typename U>
+inline Vector3<T> operator%(const Vector3<T>& v, U s)
 {
 	return Vector3<T>(v.x % s, v.y % s, v.z % s);
 }
 
-template <typename T>
-inline Vector3<T> operator%(T s, const Vector3<T>& v)
+template <typename T, typename U>
+inline Vector3<T> operator%(T s, const Vector3<U>& v)
 {
 	return Vector3<T>(s % v.x, s % v.y, s % v.z);
 }
 
-template <typename T>
-inline Vector3<T> operator%(const Vector3<T>& a, const Vector3<T>& b)
+template <typename T, typename U>
+inline Vector3<T> operator%(const Vector3<T>& a, const Vector3<U>& b)
 {
 	return Vector3<T>(a.x % b.x, a.y % b.y, a.z % b.z);
 }
@@ -353,49 +353,49 @@ inline bool operator!=(const Vector3<T>& a, const Vector3<T>& b)
 ///////////////////////////////////////////////////////////
 
 template <typename T>
-Vector3<T> floor(const Vector3<T>& v)
+inline Vector3<T> floor(const Vector3<T>& v)
 {
 	return Vector3<T>(floor(v.x), floor(v.y), floor(v.z));
 }
 
 template <typename T>
-Vector3<T> ceil(const Vector3<T>& v)
+inline Vector3<T> ceil(const Vector3<T>& v)
 {
 	return Vector3<T>(ceil(v.x), ceil(v.y), ceil(v.z));
 }
 
 template <typename T>
-Vector3<T> round(const Vector3<T>& v)
+inline Vector3<T> round(const Vector3<T>& v)
 {
 	return Vector3<T>(round(v.x), round(v.y), round(v.z));
 }
 
 template <typename T>
-Vector3<int> lround(const Vector3<T>& v)
+inline Vector3<int> lround(const Vector3<T>& v)
 {
 	return Vector3<T>(lround(v.x), lround(v.y), lround(v.z));
 }
 
 template <typename T>
-Vector3<T> abs(const Vector3<T>& v)
+inline Vector3<T> abs(const Vector3<T>& v)
 {
 	return Vector3<T>(abs(v.x), abs(v.y), abs(v.z));
 }
 
 template <typename T>
-Vector3<T> pow(const Vector3<T>& b, T p)
+inline Vector3<T> pow(const Vector3<T>& b, T p)
 {
 	return Vector3<T>(pow(b.x, p), pow(b.y, p), pow(b.z, p));
 }
 
 template <typename T>
-Vector3<T> pow(const Vector3<T>& b, const Vector3<T>& p)
+inline Vector3<T> pow(const Vector3<T>& b, const Vector3<T>& p)
 {
 	return Vector3<T>(pow(b.x, p.x), pow(b.y, p.y), pow(b.z, p.z));
 }
 
 template <typename T>
-Vector3<T> sqrt(const Vector3<T>& v)
+inline Vector3<T> sqrt(const Vector3<T>& v)
 {
 	return Vector3<T>(sqrt(v.x), sqrt(v.y), sqrt(v.z));
 }
@@ -403,44 +403,44 @@ Vector3<T> sqrt(const Vector3<T>& v)
 ///////////////////////////////////////////////////////////
 
 template <typename T>
-T length(const Vector3<T>& v)
+inline T length(const Vector3<T>& v)
 {
 	return ::sqrt(sum(v * v));
 }
 
 template <typename T>
-T dist(const Vector3<T>& a, const Vector3<T>& b)
+inline T dist(const Vector3<T>& a, const Vector3<T>& b)
 {
 	return length(a - b);
 }
 
 template <typename T>
-T distSquared(const Vector3<T>& a, const Vector3<T>& b)
+inline T distSquared(const Vector3<T>& a, const Vector3<T>& b)
 {
 	Vector3<T> d(a - b);
 	return sum(d * d);
 }
 
 template <typename T>
-Vector3<T> normalize(const Vector3<T>& v)
+inline Vector3<T> normalize(const Vector3<T>& v)
 {
 	return v / length(v);
 }
 
 template <typename T>
-T sum(const Vector3<T>& v)
+inline T sum(const Vector3<T>& v)
 {
 	return v.x + v.y + v.z;
 }
 
 template <typename T>
-T dot(const Vector3<T>& a, const Vector3<T>& b)
+inline T dot(const Vector3<T>& a, const Vector3<T>& b)
 {
 	return sum(a * b);
 }
 
 template <typename T>
-Vector3<T> cross(const Vector3<T>& a, const Vector3<T>& b)
+inline Vector3<T> cross(const Vector3<T>& a, const Vector3<T>& b)
 {
 	return Vector3<T>(
 		a.y * b.z - a.z * b.y,
@@ -449,6 +449,13 @@ Vector3<T> cross(const Vector3<T>& a, const Vector3<T>& b)
 		);
 }
 
+
 ///////////////////////////////////////////////////////////
+template <typename T>
+inline Vector3<T> mix(const Vector3<T>& a, const Vector3<T>& b, float factor)
+{
+	return Vector3<T>(a + (b - a) * factor);
+}
+
 
 }

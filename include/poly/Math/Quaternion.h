@@ -32,6 +32,14 @@ public:
 	///////////////////////////////////////////////////////////
 	/// \brief Create a quartnion from euler angles
 	///
+	/// \param x The euler angle rotation
+	///
+	///////////////////////////////////////////////////////////
+	Quaternion(const Vector3f& rot);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Create a quartnion from euler angles
+	///
 	/// \param x The rotation around the x-axis in degrees
 	/// \param y The rotation around the y-axis in degrees
 	/// \param z The rotation around the z-axis in degrees
@@ -58,6 +66,12 @@ public:
 	///////////////////////////////////////////////////////////
 	Quaternion(const Matrix4f& m);
 
+	///////////////////////////////////////////////////////////
+	/// \brief Convert quaternion into Euler angles
+	///
+	///////////////////////////////////////////////////////////
+	operator Vector3f() const;
+
 	Quaternion& operator+=(const Quaternion& x);
 
 	Quaternion operator+(const Quaternion& x) const;
@@ -73,8 +87,20 @@ public:
 	bool operator!=(const Quaternion& q) const;
 
 	float x, y, z, w;
+
+	static Quaternion Identity;		//!< The identity quaternion
 };
 
+
+///////////////////////////////////////////////////////////
+/// \brief Convert a normalized quaternion into an axis of rotation and rotation
+///
+/// \param q The normalized quaternion to convert
+/// \param axis The output variable where the normalized axis will be written to
+/// \param rotation The output variable where the rotation will be written to (degrees)
+///
+///////////////////////////////////////////////////////////
+void toAxisAngle(const Quaternion& q, Vector3f& axis, float& rotation);
 
 
 ///////////////////////////////////////////////////////////

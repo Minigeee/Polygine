@@ -1,5 +1,9 @@
 #include <poly/Math/Functions.h>
 
+#include <poly/Graphics/Shaders/ui.vert.h>
+#include <poly/Graphics/Shaders/ui.geom.h>
+#include <poly/Graphics/Shaders/text.frag.h>
+
 #include <poly/UI/Font.h>
 #include <poly/UI/Text.h>
 #include <poly/UI/UIParser.h>
@@ -361,7 +365,8 @@ void Text::updateQuads()
 			updateQuads();
 
 		// Update texture height;
-		m_textureHeight = m_texture->getHeight();
+		if (m_texture)
+			m_textureHeight = m_texture->getHeight();
 
 		m_stringChanged = false;
 	}
@@ -420,9 +425,9 @@ Shader* Text::getTextShader()
 {
 	if (!s_textShader.getId())
 	{
-		s_textShader.load("shaders/ui.vert", Shader::Vertex);
-		s_textShader.load("shaders/ui.geom", Shader::Geometry);
-		s_textShader.load("shaders/text.frag", Shader::Fragment);
+		s_textShader.load("poly/ui.vert", SHADER_UI_VERT, Shader::Vertex);
+		s_textShader.load("poly/ui.geom", SHADER_UI_GEOM, Shader::Geometry);
+		s_textShader.load("poly/text.frag", SHADER_TEXT_FRAG, Shader::Fragment);
 		s_textShader.compile();
 	}
 

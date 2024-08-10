@@ -9,6 +9,10 @@ namespace poly
 
 
 ///////////////////////////////////////////////////////////
+class Collider;
+
+
+///////////////////////////////////////////////////////////
 /// \brief An enum describing a rigid body type
 ///
 ///////////////////////////////////////////////////////////
@@ -75,6 +79,8 @@ struct RigidBodyComponent
 	Vector3f m_force;				//!< The total force to apply to the body during the next physics update, this value is reset to zero after every update
 	Vector3f m_torque;				//!< The total torque to apply to the body during the next physics update, this value is reset to zero after every update
 	RigidBodyType m_type;			//!< The type of the rigid body
+	Collider* m_colliders;			//!< A pointer to the list of colliders attached to the body
+	Uint32 m_numColliders;			//!< The number of colliders attached to the body
 };
 
 
@@ -99,6 +105,8 @@ struct CollisionBodyComponent
 
 	Vector3f m_position;			//!< The position
 	Quaternion m_rotation;			//!< The rotation orientation
+	Collider* m_colliders;			//!< A pointer to the list of colliders attached to the body
+	Uint32 m_numColliders;			//!< The number of colliders attached to the body
 };
 
 

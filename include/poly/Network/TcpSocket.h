@@ -9,6 +9,8 @@
 
 #include <SFML/Network/TcpSocket.hpp>
 
+#include <mutex>
+
 namespace poly
 {
 
@@ -182,6 +184,7 @@ public:
 	bool isBlocking() const override;
 
 private:
+	std::mutex m_mutex;				//!< Used to protect from multithread send and receive
 	sf::TcpSocket m_socket;			//!< The internal SFML tcp socket
 };
 

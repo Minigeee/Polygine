@@ -39,7 +39,7 @@ struct UniformBlock_Lights
 {
 	UniformBufferType<Vector3f, 4>	m_ambient;
 	UniformStruct_DirLight			m_dirLights[2];
-	UniformStruct_PointLight		m_pointLights[32];
+	UniformStruct_PointLight		m_pointLights[100];
 	UniformBufferType<int>			m_numDirLights;
 	UniformBufferType<int>			m_numPointLights;
 };
@@ -73,8 +73,11 @@ public:
 	/// because the scene automatically calls this at the beginning
 	/// of each render.
 	///
+	/// \param camera The camera to update lighting system for (culling point lights)
+	/// \param maxPointLights The maximum number of point lights to apply
+	///
 	///////////////////////////////////////////////////////////
-	void update(Camera& camera);
+	void update(Camera& camera, Uint32 maxPointLights = 100);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Apply lighting parameters to a shader
@@ -112,22 +115,6 @@ public:
 	void setAmbientColor(float r, float g, float b);
 
 	///////////////////////////////////////////////////////////
-	/// \brief Set the maximum distance away from the camera at which point lights are enabled
-	///
-	/// Whenever a point light is greater than 80% of the maximum
-	/// distance away from the camera, its intensity will start
-	/// fading out, and when its distance is greater than the maximum
-	/// distance, it will be completely disabled from rendering until
-	/// it enters the range again.
-	///
-	/// The default max distance is 30.
-	///
-	/// \param dist The maximum distance point lights are enabled
-	///
-	///////////////////////////////////////////////////////////
-	void setPointLightMaxDist(float dist);
-
-	///////////////////////////////////////////////////////////
 	/// \brief Get the scene ambient color
 	///
 	/// \return The scene ambient color
@@ -136,9 +123,9 @@ public:
 	const Vector3f& getAmbientColor() const;
 
 private:
+	UniformBlock_Lights m_cache;	//!< Cache data to only update when the data changes
 	UniformBuffer m_uniformBuffer;	//!< A uniform buffer for storing lighting uniform data
 	Vector3f m_ambientColor;		//!< The ambient color
-	float m_pointLightMaxDist;		//!< The maximum distance at which point lights are enabled
 };
 
 }

@@ -159,6 +159,18 @@ public:
 	///////////////////////////////////////////////////////////
 	bool isEmpty() const;
 
+	///////////////////////////////////////////////////////////
+	/// \brief Check if a handle is valid
+	///
+	/// A handle is invalid when its index is out of bounds, or
+	/// when the handle counter does not match its entry counter.
+	///
+	/// \param handle The handle to check validity of
+	///
+	/// \return True if the handle is valid
+	///
+	///////////////////////////////////////////////////////////
+	bool isValid(Handle handle) const;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the contiguous internal array

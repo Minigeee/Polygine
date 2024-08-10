@@ -24,6 +24,7 @@
 #include <poly/Graphics/Model.h>
 #include <poly/Graphics/Octree.h>
 
+#include <poly/Graphics/GLCheck.h>
 #include <poly/Graphics/ParticleSystem.h>
 #include <poly/Graphics/PostProcess.h>
 #include <poly/Graphics/Shader.h>
@@ -45,6 +46,7 @@
 #include <poly/Network/TcpSocket.h>
 #include <poly/Network/UdpSocket.h>
 
+#include <poly/Physics/BoxCollider.h>
 #include <poly/Physics/Components.h>
 #include <poly/Physics/Events.h>
 #include <poly/Physics/Physics.h>
@@ -63,6 +65,7 @@
 #include <poly/UI/UISystem.h>
 
 #include <iostream>
+#include <thread>
 
 using namespace poly;
 
@@ -77,6 +80,29 @@ void onSubmit(const Utf32String& text)
 {
     std::cout << text.c_str() << '\n';
 }
+
+///////////////////////////////////////////////////////////
+float remap(float val, float min1, float max1, float min2, float max2)
+{
+	return min2 + (((val - min1) / (max1 - min1)) * (max2 - min2));
+}
+
+
+///////////////////////////////////////////////////////////
+float getDistToSphere(float r, float mu, float r1)
+{
+    r = r < r1 ? r : r1;
+    return -r * mu + sqrt(r * r * (mu * mu - 1.0f) + r1 * r1);
+}
+
+
+void testBuffer()
+{
+    Uint32 testBuffer;
+    Uint32* test = &testBuffer;
+    glCheck(glGenVertexArrays(1, test));
+}
+
 
 int main()
 {
@@ -142,6 +168,7 @@ int main()
 
     Model box;
     box.addMesh(vertices);
+    // box.getMesh()->m_material.setRenderMask(RenderPass::All & ~RenderPass::Default);
 
     Model model("examples/models/character/character_flat.dae");
 
@@ -149,10 +176,13 @@ int main()
     Animation animation("examples/models/character/character_flat.dae", "Armature");
     skeleton.load("examples/models/character/character_flat.dae");
     skeleton.setAnimation(&animation);
+    // skeleton.setAnimationSpeed(0.0f);
+    // skeleton.setAnimationTime(0.5f);
 
     Camera camera;
     camera.setPosition(0.0f, 50.0f, 0.0f);
     camera.setRotation(0.0f, 0.0f);
+    camera.setFar(10000.0f);
 
     // UI
     Font font;
@@ -174,8 +204,7 @@ int main()
     Scene scene;
 
     Terrain terrain;
-    terrain.create(4000.0f, 200.0f, 1.0f);
-    terrain.setUseFlatShading(false);
+    terrain.create(4000.0f, 200.0f);
     scene.addRenderSystem(&terrain);
 
     FractalNoise noise;
@@ -206,36 +235,39 @@ int main()
         }
     }
     colorMap.create(colorMapData, 1024, 1024, 3, GLType::Uint8, true);
-    terrain.setColorMap(colorMap);
+    // terrain.setColorMap(colorMap);
 
     Octree octree;
     octree.create();
-    scene.addRenderSystem(&octree);
 
     ProceduralSkybox skybox;
     skybox.setZenithColor(Vector3f(0.25f, 0.5f, 0.9f));
     skybox.setHorizonColor(Vector3f(0.6f, 0.8f, 0.6f));
-    scene.addRenderSystem(&skybox);
     scene.getExtension<Lighting>()->setAmbientColor(0.3f * skybox.getAmbientColor());
+
+    scene.addRenderSystem(&skybox);
+    scene.addRenderSystem(&octree);
 
     DirLightComponent sun;
     // sun.m_diffuse = Vector3f(0.08f, 0.15f, 0.25f) * 0.4f;
     sun.m_diffuse = Vector3f(0.9f, 0.8f, 0.45f);
     sun.m_specular = sun.m_diffuse * 0.2f;
     sun.m_direction.z = 2.0f;
+    // sun.m_shadowDistance = 150.0f;
     // sun.m_shadowsEnabled = false;
     Entity sunEntity = scene.createEntity(sun);
+    skybox.setDirLight(sunEntity);
 
     PointLightComponent light;
     light.m_diffuse = Vector3f(1.0f, 0.95f, 0.85f);
     light.m_specular = light.m_diffuse * 0.4f;
     TransformComponent lightT;
     lightT.m_position.y = 55.0f;
-    scene.createEntity(lightT, light);
 
     // Activate physics extension
     Physics* physics = scene.getExtension<Physics>();
     physics->setGravity(0.0f, -12.0f, 0.0f);
+    physics->setDebugRenderEnabled(true);
 
     TransformComponent t;
     t.m_position.y = 52.0f;
@@ -246,10 +278,9 @@ int main()
     rbody.m_position.y = 55.0f;
     rbody.m_mass = 65.0f;
     rbody.m_inertiaTensor = Vector3f(INFINITY);
-    Entity player = scene.createEntity(t, r, AnimationComponent(&skeleton), rbody, DynamicTag());
+    Entity player = scene.createEntity(&t, r, AnimationComponent(&skeleton), rbody, DynamicTag());
     CapsuleShape capsule(0.4f, 1.0f);
-    capsule.m_position = Vector3f(0.0f, 0.9f, 0.0f);
-    Collider playerCollider = physics->addCollider(player, capsule);
+    Collider playerCollider = physics->addCollider(player, capsule, Vector3f(0.0f, 0.9f, 0.0f));
     playerCollider.setFrictionCoefficient(1.0f);
 
     t.m_scale = Vector3f(1.0f);
@@ -261,14 +292,9 @@ int main()
         rbody.m_mass = 10.0f;
         Entity boxEntity1 = scene.createEntity(t, RenderComponent(&box), rbody, DynamicTag());
         physics->addCollider(boxEntity1, BoxShape(1.0f, 1.0f, 1.0f));
-    }
 
-    rbody.m_position = Vector3f(0.0f, 0.0f, 0.0f);
-    rbody.m_type = RigidBodyType::Static;
-    Entity terrainEntity = scene.createEntity(t, rbody, DynamicTag());
-    HeightMapShape terrainShape(heightMap, Vector3f(4000.0f, 200.0f, 4000.0f));
-    Collider terrainCollider = physics->addCollider(terrainEntity, terrainShape);
-    terrainCollider.setFrictionCoefficient(2.0f);
+        scene.removeEntity(boxEntity1);
+    }
 
 
     Clock clock;
@@ -288,20 +314,20 @@ int main()
     ColorAdjust colorAdjust;
     Fog fog;
     fog.setCamera(&camera);
-    fog.setScene(&scene);
     fog.setDepthTexture(framebuffers[0].getDepthTexture());
+    fog.setDirLight(sunEntity);
     fog.setColor(0.25f, 0.5f, 0.9f);
-    fog.setScatterStrength(0.5f);
     fog.setSkyboxFog(false);
 
     Ssao ssao;
     ssao.setCamera(&camera);
     ssao.setDepthTexture(framebuffers[0].getDepthTexture());
+    ssao.setIntensity(1.0f);
+    ssao.setRadius(0.3f);
 
     Bloom bloom;
     bloom.setRadius(0.2f);
     bloom.setNumBlurs(3);
-    bloom.setIntensity(2.5f);
     bloom.setThresholdInterval(0.5f);
 
     Fxaa fxaa;
@@ -309,6 +335,10 @@ int main()
     LensFlare flare;
     flare.setScene(&scene);
     flare.setCamera(&camera);
+
+    Reflections ssr;
+    ssr.setCamera(&camera);
+    ssr.setCubemap(&skybox);
 
     // Sky colors
     std::vector<float> angles =
@@ -351,6 +381,9 @@ int main()
         Vector3f(0.7f, 0.5f, 0.3f),
         Vector3f(0.02f, 0.06f, 0.12f)
     };
+
+    std::thread thread(testBuffer);
+    thread.join();
 
 
     HashSet<Entity::Id> touchingFeet;
@@ -660,17 +693,23 @@ int main()
         octree.update();
         scene.getExtension<Shadows>()->render(camera);
         scene.render(camera, framebuffers[0]);
+        // physics->render(camera, framebuffers[0]);
 
-        ssao.render(framebuffers[0], framebuffers[1]);
-        fog.render(framebuffers[1], framebuffers[0]);
-        bloom.render(framebuffers[0], framebuffers[1]);
-        flare.render(framebuffers[1], framebuffers[0]);
-        colorAdjust.render(framebuffers[0], framebuffers[1]);
-        fxaa.render(framebuffers[1]);
+        ssr.setGBuffer(scene.getRenderer().getGBuffer(framebuffers[0]));
+
+        ssr.render(framebuffers[0], framebuffers[1]);
+        ssao.render(framebuffers[1], framebuffers[0]);
+        fog.render(framebuffers[0], framebuffers[1]);
+        bloom.render(framebuffers[1], framebuffers[0]);
+        flare.render(framebuffers[0], framebuffers[1]);
+        colorAdjust.render(framebuffers[1], framebuffers[0]);
+        fxaa.render(framebuffers[0]);
 
         ui.render();
 
         STOP_PROFILING(GameLoop);
+
+        scene.removeQueuedEntities();
 
         // Display (swap buffers)
         window.display();
@@ -681,21 +720,19 @@ int main()
         std::cout << "Game loop: " << data.mean().toMicroseconds() << '\n';
     }
     {
-        const ProfilerData& data = Profiler::getData("poly::Physics::update", "copyToEngine");
-        std::cout << "Copy to physics engine: " << data.mean().toMicroseconds() << '\n';
+        const ProfilerData& data = Profiler::getData("poly::Octree::update");
+        std::cout << "Octree update: " << data.mean().toMicroseconds() << '\n';
     }
     {
-        const ProfilerData& data = Profiler::getData("poly::Physics::update", "copyFromEngine");
-        std::cout << "Copy from physics engine: " << data.mean().toMicroseconds() << '\n';
-    }
-    {
-        const ProfilerData& data = Profiler::getData("poly::Physics::update");
-        std::cout << "Physics update: " << data.mean().toMicroseconds() << '\n';
-    }
-    {
-        const ProfilerData& data = Profiler::getData("poly::UISystem::render");
-        std::cout << "UISystem render: " << data.mean().toMicroseconds() << '\n';
+        const ProfilerData& data = Profiler::getData("poly::Terrain::render");
+        std::cout << "Terrain render: " << data.mean().toMicroseconds() << '\n';
     }
 
     return 0;
 }
+
+// TODO : Consider switching to a different physics engine in the future if there are too many bugs
+// TODO : Handle rendering transparent objects in octree
+// TODO : Add a custom scene render (for more customization in deferred pipeline)
+// TODO : Environment cubemaps + integrate them into reflections effect
+// TODO : Optimize height bounds map for LargeTerrain to handle even larger terrains (this is currently the limiting factor)

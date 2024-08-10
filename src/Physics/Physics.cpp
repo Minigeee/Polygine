@@ -3,6 +3,7 @@
 
 #include <poly/Engine/Scene.h>
 
+#include <poly/Graphics/GLCheck.h>
 #include <poly/Graphics/Model.h>
 
 #include <poly/Math/Functions.h>
@@ -10,6 +11,9 @@
 #include <poly/Physics/Components.h>
 #include <poly/Physics/Events.h>
 #include <poly/Physics/Physics.h>
+
+#include <poly/Graphics/Shaders/debug_physics.vert.h>
+#include <poly/Graphics/Shaders/debug_physics.frag.h>
 
 #include <reactphysics3d/reactphysics3d.h>
 
@@ -85,19 +89,15 @@ public:
 
 			// Create the collider objects
 			reactphysics3d::Collider* c1 = contactPair.getCollider1();
-			reactphysics3d::Collider* c2 = contactPair.getCollider1();
+			reactphysics3d::Collider* c2 = contactPair.getCollider2();
 
-			e.m_colliders[0].m_bounciness = c1->getMaterial().getBounciness();
-			e.m_colliders[0].m_frictionCoefficient = c1->getMaterial().getFrictionCoefficient();
-			e.m_colliders[0].m_rollingResistance = c1->getMaterial().getRollingResistance();
-			e.m_colliders[0].m_collisionCategory = c1->getCollisionCategoryBits();
-			e.m_colliders[0].m_collisionMask = c1->getCollideWithMaskBits();
+			e.m_colliders[0].m_collider = c1;
+			e.m_colliders[0].m_material = &c1->getMaterial();
+			e.m_colliders[0].m_shape = c1->getCollisionShape();
 
-			e.m_colliders[1].m_bounciness = c2->getMaterial().getBounciness();
-			e.m_colliders[1].m_frictionCoefficient = c2->getMaterial().getFrictionCoefficient();
-			e.m_colliders[1].m_rollingResistance = c2->getMaterial().getRollingResistance();
-			e.m_colliders[1].m_collisionCategory = c2->getCollisionCategoryBits();
-			e.m_colliders[1].m_collisionMask = c2->getCollideWithMaskBits();
+			e.m_colliders[1].m_collider = c2;
+			e.m_colliders[1].m_material = &c2->getMaterial();
+			e.m_colliders[1].m_shape = c2->getCollisionShape();
 
 			// Set contact point info
 			e.m_numContacts = contactPair.getNbContactPoints();
@@ -135,19 +135,15 @@ public:
 
 			// Create the collider objects
 			reactphysics3d::Collider* c1 = overlapPair.getCollider1();
-			reactphysics3d::Collider* c2 = overlapPair.getCollider1();
+			reactphysics3d::Collider* c2 = overlapPair.getCollider2();
 
-			e.m_colliders[0].m_bounciness = c1->getMaterial().getBounciness();
-			e.m_colliders[0].m_frictionCoefficient = c1->getMaterial().getFrictionCoefficient();
-			e.m_colliders[0].m_rollingResistance = c1->getMaterial().getRollingResistance();
-			e.m_colliders[0].m_collisionCategory = c1->getCollisionCategoryBits();
-			e.m_colliders[0].m_collisionMask = c1->getCollideWithMaskBits();
+			e.m_colliders[0].m_collider = c1;
+			e.m_colliders[0].m_material = &c1->getMaterial();
+			e.m_colliders[0].m_shape = c1->getCollisionShape();
 
-			e.m_colliders[1].m_bounciness = c2->getMaterial().getBounciness();
-			e.m_colliders[1].m_frictionCoefficient = c2->getMaterial().getFrictionCoefficient();
-			e.m_colliders[1].m_rollingResistance = c2->getMaterial().getRollingResistance();
-			e.m_colliders[1].m_collisionCategory = c2->getCollisionCategoryBits();
-			e.m_colliders[1].m_collisionMask = c2->getCollideWithMaskBits();
+			e.m_colliders[1].m_collider = c2;
+			e.m_colliders[1].m_material = &c2->getMaterial();
+			e.m_colliders[1].m_shape = c2->getCollisionShape();
 
 			// Set event type
 			if (overlapPair.getEventType() == reactphysics3d::OverlapCallback::OverlapPair::EventType::OverlapStart)
@@ -171,11 +167,9 @@ public:
 
 		// Create collider object
 		reactphysics3d::Collider* c = rp3dInfo.collider;
-		info.m_collider.m_bounciness = c->getMaterial().getBounciness();
-		info.m_collider.m_frictionCoefficient = c->getMaterial().getFrictionCoefficient();
-		info.m_collider.m_rollingResistance = c->getMaterial().getRollingResistance();
-		info.m_collider.m_collisionCategory = c->getCollisionCategoryBits();
-		info.m_collider.m_collisionMask = c->getCollideWithMaskBits();
+		info.m_collider.m_collider = c;
+		info.m_collider.m_material = &c->getMaterial();
+		info.m_collider.m_shape = c->getCollisionShape();
 
 		// Copy scalar and vector properties
 		info.m_point = POLY_VEC3(rp3dInfo.worldPoint);
@@ -210,12 +204,6 @@ private:
 reactphysics3d::PhysicsCommon g_common;
 
 ///////////////////////////////////////////////////////////
-HashMap<float, void*> Physics::s_boxShapes;
-
-///////////////////////////////////////////////////////////
-HashMap<float, void*> Physics::s_capsuleShapes;
-
-///////////////////////////////////////////////////////////
 HashMap<void*, Physics::ConcaveMeshData> Physics::s_concaveMeshShapes;
 
 ///////////////////////////////////////////////////////////
@@ -225,7 +213,7 @@ HashMap<void*, Physics::ConvexMeshData> Physics::s_convexMeshShapes;
 HashMap<float*, void*> Physics::s_heightMapShapes;
 
 ///////////////////////////////////////////////////////////
-HashMap<float, void*> Physics::s_sphereShapes;
+Shader Physics::s_debugShader;
 
 
 ///////////////////////////////////////////////////////////
@@ -245,20 +233,31 @@ Physics::RigidBodyData::RigidBodyData(const Entity::Id& id, void* body) :
 
 ///////////////////////////////////////////////////////////
 Physics::Physics(Scene* scene) :
-	Extension		(scene),
-	m_world			(g_common.createPhysicsWorld()),
-	m_eventHandler	(new priv::PhysicsEventHandler(this, scene))
+	Extension				(scene),
+	m_world					(g_common.createPhysicsWorld()),
+	m_eventHandler			(new priv::PhysicsEventHandler(this, scene)),
+	m_debugBufferOffset		(0)
 {
+	setDebugRenderEnabled(false);
+
 	// Add all current rigid and collision bodies
 	scene->system<RigidBodyComponent>(
 		[&](const Entity::Id& id, RigidBodyComponent& body)
 		{
+			// Lock mutex
+			std::unique_lock<std::mutex> lock1(m_mutex);
+			std::unique_lock<std::mutex> lock2(m_dataMutex);
+
 			addRigidBody(id);
 		}
 	);
 	scene->system<CollisionBodyComponent>(
 		[&](const Entity::Id& id, CollisionBodyComponent& body)
 		{
+			// Lock mutex
+			std::unique_lock<std::mutex> lock1(m_mutex);
+			std::unique_lock<std::mutex> lock2(m_dataMutex);
+
 			addCollisionBody(id);
 		}
 	);
@@ -267,6 +266,10 @@ Physics::Physics(Scene* scene) :
 	scene->addListener<E_EntitiesCreated>(
 		[&](const E_EntitiesCreated& e)
 		{
+			// Lock mutex
+			std::unique_lock<std::mutex> lock1(m_mutex);
+			std::unique_lock<std::mutex> lock2(m_dataMutex);
+
 			if (e.m_entities->has<RigidBodyComponent>())
 			{
 				for (Uint32 i = 0; i < e.m_numEntities; ++i)
@@ -283,6 +286,10 @@ Physics::Physics(Scene* scene) :
 	scene->addListener<E_EntitiesRemoved>(
 		[&](const E_EntitiesRemoved& e)
 		{
+			// Lock mutex
+			std::unique_lock<std::mutex> lock1(m_mutex);
+			std::unique_lock<std::mutex> lock2(m_dataMutex);
+
 			if (e.m_entities->has<RigidBodyComponent>())
 			{
 				for (Uint32 i = 0; i < e.m_numEntities; ++i)
@@ -402,6 +409,13 @@ void Physics::removeCollisionBody(Entity::Id id)
 
 
 ///////////////////////////////////////////////////////////
+std::unique_lock<std::mutex> Physics::lock()
+{
+	return std::unique_lock<std::mutex>(m_mutex);
+}
+
+
+///////////////////////////////////////////////////////////
 void Physics::update(float dt)
 {
 	START_PROFILING_FUNC;
@@ -417,9 +431,10 @@ void Physics::update(float dt)
 	Uint32 groupId = 0;
 	Uint32 localIndex = 0;
 
-	START_PROFILING(copyToEngine);
-
 	// Rigid bodies
+	std::unique_lock<std::mutex> lock1(m_dataMutex);
+	std::unique_lock<std::mutex> lock2(m_mutex);
+
 	m_scene->system<RigidBodyComponent>(
 		[&](const Entity::Id& id, RigidBodyComponent& body)
 		{
@@ -456,8 +471,6 @@ void Physics::update(float dt)
 			{
 				body.m_linearVelocity = Vector3f(0.0f);
 				body.m_angularVelocity = Vector3f(0.0f);
-				body.m_inertiaTensor = Vector3f(INFINITY);
-				body.m_mass = INFINITY;
 				invInertiaTensor = Vector3f(0.0f);
 				invMass = 0.0f;
 
@@ -465,8 +478,6 @@ void Physics::update(float dt)
 			}
 			else if (body.m_type == RigidBodyType::Kinematic)
 			{
-				body.m_inertiaTensor = Vector3f(INFINITY);
-				body.m_mass = INFINITY;
 				invInertiaTensor = Vector3f(0.0f);
 				invMass = 0.0f;
 
@@ -557,6 +568,10 @@ void Physics::update(float dt)
 			data.m_linearVelocity = body.m_linearVelocity;
 			data.m_angularVelocity = body.m_angularVelocity;
 
+			// Forces are reset to zero
+			body.m_force = Vector3f(0.0f);
+			body.m_torque = Vector3f(0.0f);
+
 			++localIndex;
 		}
 	);
@@ -589,15 +604,19 @@ void Physics::update(float dt)
 		}
 	);
 
-	STOP_PROFILING(copyToEngine);
+	lock1.unlock();
+	lock2.unlock();
 
 
 	// Do the physics update
+	lock2.lock();
 	world->update(dt);
+	lock2.unlock();
 
 
 	// Copy the data back from the physics engine
-	START_PROFILING(copyFromEngine);
+	lock1.lock();
+	lock2.lock();
 
 	// Rigid bodies
 	group = 0;
@@ -634,15 +653,9 @@ void Physics::update(float dt)
 			if (body.m_angularVelocity == data.m_angularVelocity)
 				body.m_angularVelocity = POLY_VEC3(rbodyComponents.mAngularVelocities[bodyIndex]);
 
-			// Forces are reset to zero
-			body.m_force = Vector3f(0.0f);
-			body.m_torque = Vector3f(0.0f);
-
 			++localIndex;
 		}
 	);
-
-	STOP_PROFILING(copyFromEngine);
 }
 
 
@@ -657,8 +670,13 @@ std::vector<RaycastInfo>& Physics::raycast(const Ray& ray, float dist, Uint16 ma
 	m_maxRaycastIntersects = maxIntersects;
 	m_raycastInfo.clear();
 
-	// Raycast test
-	WORLD_CAST(m_world)->raycast(rp3dRay, m_eventHandler, mask);
+	{
+		// Lock mutex
+		std::unique_lock<std::mutex> lock(m_mutex);
+
+		// Raycast test
+		WORLD_CAST(m_world)->raycast(rp3dRay, m_eventHandler, mask);
+	}
 
 	return m_raycastInfo;
 }
@@ -667,6 +685,9 @@ std::vector<RaycastInfo>& Physics::raycast(const Ray& ray, float dist, Uint16 ma
 ///////////////////////////////////////////////////////////
 void Physics::setGravity(const Vector3f& gravity)
 {
+	// Lock mutex
+	std::unique_lock<std::mutex> lock(m_mutex);
+
 	m_gravity = gravity;
 	WORLD_CAST(m_world)->setGravity(RP3D_VEC3(m_gravity));
 }
@@ -675,6 +696,9 @@ void Physics::setGravity(const Vector3f& gravity)
 ///////////////////////////////////////////////////////////
 void Physics::setGravity(float x, float y, float z)
 {
+	// Lock mutex
+	std::unique_lock<std::mutex> lock(m_mutex);
+
 	m_gravity = Vector3f(x, y, z);
 	WORLD_CAST(m_world)->setGravity(RP3D_VEC3(m_gravity));
 }
@@ -683,6 +707,9 @@ void Physics::setGravity(float x, float y, float z)
 ///////////////////////////////////////////////////////////
 void Physics::setSleepAllowed(const Entity& entity, bool allowed)
 {
+	// Lock mutex
+	std::unique_lock<std::mutex> lock1(m_dataMutex);
+
 	BodyData* data = 0;
 	{
 		auto it = m_rigidBodies.find(entity.getId());
@@ -692,9 +719,14 @@ void Physics::setSleepAllowed(const Entity& entity, bool allowed)
 			return;
 	}
 
-	// Change option in engine
-	reactphysics3d::RigidBody* body = RBODY_CAST(data->m_body);
-	body->setIsAllowedToSleep(allowed);
+	{
+		// Lock mutex
+		std::unique_lock<std::mutex> lock2(m_mutex);
+
+		// Change option in engine
+		reactphysics3d::RigidBody* body = RBODY_CAST(data->m_body);
+		body->setIsAllowedToSleep(allowed);
+	}
 
 	// Update cache
 	RigidBodyData& group = m_groupedRigidBodies[data->m_group][data->m_index];
@@ -710,11 +742,13 @@ const Vector3f& Physics::getGravity() const
 
 
 ///////////////////////////////////////////////////////////
-Collider Physics::createCollider(const Entity& entity, const PhysicsShape& shape, void* rp3dShape)
+void Physics::createCollider(Collider& collider, const Entity& entity, void* rp3dShape, const Vector3f& pos, const Quaternion& rot, Collider::Type type)
 {
 	// Create transform
-	reactphysics3d::Transform transform(RP3D_VEC3(shape.m_position), RP3D_QUAT(shape.m_rotation));
-	Collider collider;
+	reactphysics3d::Transform transform(RP3D_VEC3(pos), RP3D_QUAT(rot));
+
+	// Set type
+	collider.m_type = type;
 
 	if (entity.has<RigidBodyComponent>())
 	{
@@ -723,9 +757,21 @@ Collider Physics::createCollider(const Entity& entity, const PhysicsShape& shape
 		reactphysics3d::RigidBody* body = (reactphysics3d::RigidBody*)data.m_body;
 
 		// Add the collider
-		collider.setCollider(body->addCollider((reactphysics3d::CollisionShape*)rp3dShape, transform));
+		reactphysics3d::Collider* rp3dCollider = body->addCollider((reactphysics3d::CollisionShape*)rp3dShape, transform);
 		body->updateMassPropertiesFromColliders();
+
+		// Setup poly collider
+		collider.init(rp3dCollider);
+
 		m_groupedRigidBodies[data.m_group][data.m_index].m_massPropertiesUpdated = true;
+
+		// Add the collider to the list
+		auto locks = lockComponents<RigidBodyComponent>();
+
+		data.m_colliders.push_back(collider);
+		RigidBodyComponent* component = entity.get<RigidBodyComponent>();
+		component->m_colliders = &data.m_colliders[0];
+		component->m_numColliders = data.m_colliders.size();
 	}
 	else
 	{
@@ -734,100 +780,150 @@ Collider Physics::createCollider(const Entity& entity, const PhysicsShape& shape
 		reactphysics3d::CollisionBody* body = (reactphysics3d::CollisionBody*)data.m_body;
 
 		// Add the collider
-		collider.setCollider(body->addCollider((reactphysics3d::CollisionShape*)rp3dShape, transform));
-	}
+		reactphysics3d::Collider* rp3dCollider = body->addCollider((reactphysics3d::CollisionShape*)rp3dShape, transform);
 
-	return collider;
+		// Setup poly collider
+		collider.init(rp3dCollider);
+
+		// Add the collider to the list
+		auto locks = lockComponents<CollisionBodyComponent>();
+
+		data.m_colliders.push_back(collider);
+		CollisionBodyComponent* component = entity.get<CollisionBodyComponent>();
+		component->m_colliders = &data.m_colliders[0];
+		component->m_numColliders = data.m_colliders.size();
+	}
 }
 
 
 ///////////////////////////////////////////////////////////
-Collider Physics::addCollider(const Entity& entity, const PhysicsShape& shape, float bounciness, float friction)
+BoxCollider Physics::addCollider(const Entity& entity, const BoxShape& shape, const Vector3f& position, const Quaternion& rotation)
 {
 	ASSERT(entity.has<RigidBodyComponent>() || entity.has<CollisionBodyComponent>(), "A collider can only be added to an entity with a rigid body or a collision body");
 
-	const BoxShape* box = 0;
-	const CapsuleShape* capsule = 0;
-	const ConcaveMeshShape* concave = 0;
-	const ConvexMeshShape* convex = 0;
-	const HeightMapShape* hmap = 0;
-	const SphereShape* sphere = 0;
+	// Lock mutexes
+	std::unique_lock<std::mutex> lock1(m_dataMutex);
+	std::unique_lock<std::mutex> lock2(m_mutex);
 
-	reactphysics3d::CollisionShape* rp3dShape = 0;
-
-	// Create the collider shape
-	if (box = dynamic_cast<const BoxShape*>(&shape))
-		rp3dShape = (reactphysics3d::BoxShape*)getBoxShape(box->m_dimensions);
-
-	else if (capsule = dynamic_cast<const CapsuleShape*>(&shape))
-		rp3dShape = (reactphysics3d::CapsuleShape*)getCapsuleShape(Vector2f(capsule->m_radius, capsule->m_height));
-	
-	else if (concave = dynamic_cast<const ConcaveMeshShape*>(&shape))
-		rp3dShape = (reactphysics3d::ConcaveMeshShape*)getConcaveMeshShape(*concave);
-
-	else if (convex = dynamic_cast<const ConvexMeshShape*>(&shape))
-		rp3dShape = (reactphysics3d::ConvexMeshShape*)getConvexMeshShape(*convex);
-
-	else if (hmap = dynamic_cast<const HeightMapShape*>(&shape))
-	{
-		// Create a height field shape
-		reactphysics3d::CollisionShape* rp3dShape = (reactphysics3d::HeightFieldShape*)getHeightMapShape(*hmap);
-
-		// Adjust y-position of height shape
-		HeightMapShape newShape(*hmap);
-		newShape.m_position.y += 0.5f * hmap->m_dimensions.y;
-
-		Collider collider = createCollider(entity, newShape, rp3dShape);
-		collider.setBounciness(bounciness);
-		collider.setFrictionCoefficient(friction);
-		return collider;
-	}
-
-	else if (sphere = dynamic_cast<const SphereShape*>(&shape))
-		rp3dShape = (reactphysics3d::SphereShape*)getSphereShape(sphere->m_radius);
+	// Create shape
+	reactphysics3d::BoxShape* rp3dShape = (reactphysics3d::BoxShape*)createBoxShape(shape.m_dimensions);
 
 	// Create collider
-	Collider collider = createCollider(entity, shape, rp3dShape);
-	collider.setBounciness(bounciness);
-	collider.setFrictionCoefficient(friction);
+	BoxCollider collider;
+	createCollider(collider, entity, rp3dShape, position, rotation, Collider::Box);
+
 	return collider;
 }
 
 
 ///////////////////////////////////////////////////////////
-void Physics::removeCollider(const Entity& entity, Uint32 index)
+CapsuleCollider Physics::addCollider(const Entity& entity, const CapsuleShape& shape, const Vector3f& position, const Quaternion& rotation)
 {
-	BodyData* data = 0;
-	reactphysics3d::CollisionBody* body = 0;
-	{
-		auto it = m_rigidBodies.find(entity.getId());
-		if (it != m_rigidBodies.end())
-		{
-			data = &it.value();
-			body = dynamic_cast<reactphysics3d::CollisionBody*>(RBODY_CAST(data->m_body));
-		}
-		else
-		{
-			it = m_collisionBodies.find(entity.getId());
-			if (it != m_collisionBodies.end())
-			{
-				data = &it.value();
-				body = CBODY_CAST(data->m_body);
-			}
-			else
-				return;
-		}
-	}
+	ASSERT(entity.has<RigidBodyComponent>() || entity.has<CollisionBodyComponent>(), "A collider can only be added to an entity with a rigid body or a collision body");
 
-	// Remove the collider
-	reactphysics3d::Collider* collider = body->getCollider(index);
-	body->removeCollider(collider);
+	// Lock mutexes
+	std::unique_lock<std::mutex> lock1(m_dataMutex);
+	std::unique_lock<std::mutex> lock2(m_mutex);
+
+	// Create shape
+	reactphysics3d::CapsuleShape* rp3dShape = (reactphysics3d::CapsuleShape*)createCapsuleShape(Vector2f(shape.m_radius, shape.m_height));
+
+	// Create collider
+	CapsuleCollider collider;
+	createCollider(collider, entity, rp3dShape, position, rotation, Collider::Capsule);
+
+	return collider;
+}
+
+
+///////////////////////////////////////////////////////////
+ConcaveMeshCollider Physics::addCollider(const Entity& entity, const ConcaveMeshShape& shape, const Vector3f& position, const Quaternion& rotation)
+{
+	ASSERT(entity.has<RigidBodyComponent>() || entity.has<CollisionBodyComponent>(), "A collider can only be added to an entity with a rigid body or a collision body");
+
+	// Lock mutexes
+	std::unique_lock<std::mutex> lock1(m_dataMutex);
+	std::unique_lock<std::mutex> lock2(m_mutex);
+
+	// Create shape
+	reactphysics3d::ConcaveMeshShape* rp3dShape = (reactphysics3d::ConcaveMeshShape*)createConcaveMeshShape(shape);
+
+	// Create collider
+	ConcaveMeshCollider collider;
+	createCollider(collider, entity, rp3dShape, position, rotation, Collider::ConcaveMesh);
+
+	return collider;
+}
+
+
+///////////////////////////////////////////////////////////
+ConvexMeshCollider Physics::addCollider(const Entity& entity, const ConvexMeshShape& shape, const Vector3f& position, const Quaternion& rotation)
+{
+	ASSERT(entity.has<RigidBodyComponent>() || entity.has<CollisionBodyComponent>(), "A collider can only be added to an entity with a rigid body or a collision body");
+
+	// Lock mutexes
+	std::unique_lock<std::mutex> lock1(m_dataMutex);
+	std::unique_lock<std::mutex> lock2(m_mutex);
+
+	// Create shape
+	reactphysics3d::ConvexMeshShape* rp3dShape = (reactphysics3d::ConvexMeshShape*)createConvexMeshShape(shape);
+
+	// Create collider
+	ConvexMeshCollider collider;
+	createCollider(collider, entity, rp3dShape, position, rotation, Collider::ConvexMesh);
+
+	return collider;
+}
+
+
+///////////////////////////////////////////////////////////
+HeightMapCollider Physics::addCollider(const Entity& entity, const HeightMapShape& shape, const Vector3f& position, const Quaternion& rotation)
+{
+	ASSERT(entity.has<RigidBodyComponent>() || entity.has<CollisionBodyComponent>(), "A collider can only be added to an entity with a rigid body or a collision body");
+
+	// Lock mutexes
+	std::unique_lock<std::mutex> lock1(m_dataMutex);
+	std::unique_lock<std::mutex> lock2(m_mutex);
+
+	// Create shape
+	reactphysics3d::HeightFieldShape* rp3dShape = (reactphysics3d::HeightFieldShape*)createHeightMapShape(shape);
+	Vector3f newPos(position);
+	newPos.y += 0.5f * shape.m_dimensions.y;
+
+	// Create collider
+	HeightMapCollider collider;
+	createCollider(collider, entity, rp3dShape, newPos, rotation, Collider::HeightMap);
+
+	return collider;
+}
+
+
+///////////////////////////////////////////////////////////
+SphereCollider Physics::addCollider(const Entity& entity, const SphereShape& shape, const Vector3f& position, const Quaternion& rotation)
+{
+	ASSERT(entity.has<RigidBodyComponent>() || entity.has<CollisionBodyComponent>(), "A collider can only be added to an entity with a rigid body or a collision body");
+
+	// Lock mutexes
+	std::unique_lock<std::mutex> lock1(m_dataMutex);
+	std::unique_lock<std::mutex> lock2(m_mutex);
+
+	// Create shape
+	reactphysics3d::HeightFieldShape* rp3dShape = (reactphysics3d::HeightFieldShape*)createSphereShape(shape.m_radius);
+
+	// Create collider
+	SphereCollider collider;
+	createCollider(collider, entity, rp3dShape, position, rotation, Collider::Sphere);
+
+	return collider;
 }
 
 
 ///////////////////////////////////////////////////////////
 void Physics::removeCollider(const Entity& entity, const Collider& collider)
 {
+	// Lock mutex
+	std::unique_lock<std::mutex> lock1(m_dataMutex);
+
 	BodyData* data = 0;
 	reactphysics3d::CollisionBody* body = 0;
 	{
@@ -836,6 +932,23 @@ void Physics::removeCollider(const Entity& entity, const Collider& collider)
 		{
 			data = &it.value();
 			body = dynamic_cast<reactphysics3d::CollisionBody*>(RBODY_CAST(data->m_body));
+
+			// Remove it from list
+			std::vector<Collider>& colliders = data->m_colliders;
+			for (Uint32 i = 0; i < colliders.size(); ++i)
+			{
+				if (colliders[i].m_collider == collider.m_collider)
+				{
+					colliders.erase(colliders.begin() + i);
+
+					// Update component data
+					auto locks = lockComponents<RigidBodyComponent>();
+
+					RigidBodyComponent* component = entity.get<RigidBodyComponent>();
+					component->m_colliders = &colliders[0];
+					component->m_numColliders = colliders.size();
+				}
+			}
 		}
 		else
 		{
@@ -844,11 +957,31 @@ void Physics::removeCollider(const Entity& entity, const Collider& collider)
 			{
 				data = &it.value();
 				body = CBODY_CAST(data->m_body);
+
+				// Remove it from list
+				std::vector<Collider>& colliders = data->m_colliders;
+				for (Uint32 i = 0; i < colliders.size(); ++i)
+				{
+					if (colliders[i].m_collider == collider.m_collider)
+					{
+						colliders.erase(colliders.begin() + i);
+
+						// Update component data
+						auto locks = lockComponents<RigidBodyComponent>();
+
+						CollisionBodyComponent* component = entity.get<CollisionBodyComponent>();
+						component->m_colliders = &colliders[0];
+						component->m_numColliders = colliders.size();
+					}
+				}
 			}
 			else
 				return;
 		}
 	}
+
+	// Lock mutex
+	std::unique_lock<std::mutex> lock(m_mutex);
 
 	// Remove the collider
 	body->removeCollider(reinterpret_cast<reactphysics3d::Collider*>(collider.m_collider));
@@ -856,45 +989,26 @@ void Physics::removeCollider(const Entity& entity, const Collider& collider)
 
 
 ///////////////////////////////////////////////////////////
-void* Physics::getBoxShape(const Vector3f& dims)
+void* Physics::createBoxShape(const Vector3f& dims)
 {
 	// Create a new shape that will be shareable
 	void* shape = 0;
 
 	// Use half dimensions
 	Vector3f halfDims = 0.5f * dims;
-	float hash = dot(Vector3f(0.5f, 1.0f, 2.0f), dims);
-
-	auto it = s_boxShapes.find(hash);
-	if (it == s_boxShapes.end())
-		shape = s_boxShapes[hash] = g_common.createBoxShape(RP3D_VEC3(halfDims));
-	else
-		shape = it.value();
-
-	return shape;
+	return g_common.createBoxShape(RP3D_VEC3(halfDims));
 }
 
 
 ///////////////////////////////////////////////////////////
-void* Physics::getCapsuleShape(const Vector2f& dims)
+void* Physics::createCapsuleShape(const Vector2f& dims)
 {
-	// Create a new shape that will be shareable
-	void* shape = 0;
-
-	float hash = dot(Vector2f(0.5f, 1.0f), dims);
-
-	auto it = s_capsuleShapes.find(hash);
-	if (it == s_capsuleShapes.end())
-		shape = s_capsuleShapes[hash] = g_common.createCapsuleShape(dims.x, dims.y);
-	else
-		shape = it.value();
-
-	return shape;
+	return g_common.createCapsuleShape(dims.x, dims.y);
 }
 
 
 ///////////////////////////////////////////////////////////
-void* Physics::getConcaveMeshShape(const ConcaveMeshShape& shape)
+void* Physics::createConcaveMeshShape(const ConcaveMeshShape& shape)
 {
 	// Create a new shape that will be shareable
 	void* rp3d = 0;
@@ -958,7 +1072,7 @@ void* Physics::getConcaveMeshShape(const ConcaveMeshShape& shape)
 
 
 ///////////////////////////////////////////////////////////
-void* Physics::getHeightMapShape(const HeightMapShape& shape)
+void* Physics::createHeightMapShape(const HeightMapShape& shape)
 {
 	// Create a new shape that will be shareable
 	void* rp3d = 0;
@@ -990,18 +1104,9 @@ void* Physics::getHeightMapShape(const HeightMapShape& shape)
 
 
 ///////////////////////////////////////////////////////////
-void* Physics::getSphereShape(float radius)
+void* Physics::createSphereShape(float radius)
 {
-	// Create a new shape that will be shareable
-	void* shape = 0;
-
-	auto it = s_sphereShapes.find(radius);
-	if (it == s_sphereShapes.end())
-		shape = s_sphereShapes[radius] = g_common.createSphereShape(radius);
-	else
-		shape = it.value();
-
-	return shape;
+	return g_common.createSphereShape(radius);
 }
 
 
@@ -1012,9 +1117,16 @@ Joint Physics::addJoint(const Entity& e1, const Entity& e2, Joint::Type type, co
 
 	Joint joint;
 
+	// Lock mutexes
+	std::unique_lock<std::mutex> lock1(m_dataMutex);
+	std::unique_lock<std::mutex> lock2(m_mutex);
+
+	std::cout << "Lock mutex\n";
+
 	// Get the two bodies
 	reactphysics3d::RigidBody* b1 = RBODY_CAST(m_rigidBodies[e1.getId()].m_body);
 	reactphysics3d::RigidBody* b2 = RBODY_CAST(m_rigidBodies[e2.getId()].m_body);
+	lock1.unlock();
 
 	if (type == Joint::BallAndSocket)
 	{
@@ -1048,6 +1160,9 @@ Joint Physics::addJoint(const Entity& e1, const Entity& e2, Joint::Type type, co
 ///////////////////////////////////////////////////////////
 void Physics::removeJoint(const Joint& joint)
 {
+	// Lock mutex
+	std::unique_lock<std::mutex> lock(m_mutex);
+
 	if (joint.m_type == Joint::BallAndSocket)
 	{
 		auto rp3d = reinterpret_cast<reactphysics3d::BallAndSocketJoint*>(joint.m_joint);
@@ -1468,7 +1583,7 @@ std::vector<ConvexMeshFaceInfo> mergeFaces(std::vector<Vector3f>& vertices, std:
 
 
 ///////////////////////////////////////////////////////////
-void* Physics::getConvexMeshShape(const ConvexMeshShape& shape)
+void* Physics::createConvexMeshShape(const ConvexMeshShape& shape)
 {
 	// Create a new shape that will be shareable
 	void* rp3d = 0;
@@ -1547,6 +1662,219 @@ void* Physics::getConvexMeshShape(const ConvexMeshShape& shape)
 		rp3d = it.value().m_shape;
 
 	return rp3d;
+}
+
+
+///////////////////////////////////////////////////////////
+void Physics::setDebugRenderEnabled(bool enabled)
+{
+	// Lock mutex
+	std::unique_lock<std::mutex> lock(m_mutex);
+
+	WORLD_CAST(m_world)->setIsDebugRenderingEnabled(enabled);
+
+	if (enabled)
+	{
+		reactphysics3d::DebugRenderer& debugRenderer = WORLD_CAST(m_world)->getDebugRenderer();
+		debugRenderer.setIsDebugItemDisplayed(reactphysics3d::DebugRenderer::DebugItem::COLLIDER_AABB, true);
+		debugRenderer.setIsDebugItemDisplayed(reactphysics3d::DebugRenderer::DebugItem::COLLISION_SHAPE, true);
+		debugRenderer.setIsDebugItemDisplayed(reactphysics3d::DebugRenderer::DebugItem::CONTACT_NORMAL, true);
+
+		if (!m_debugRenderArray.getId())
+		{
+			// Create vertex buffer
+			m_debugRenderBuffer.create((float*)0, 100 * 1024, BufferUsage::Stream);
+
+			// Create vao
+			m_debugRenderArray.bind();
+		}
+	}
+}
+
+
+///////////////////////////////////////////////////////////
+bool Physics::isDebugRenderEnabled()
+{
+	// Lock mutex
+	std::unique_lock<std::mutex> lock(m_mutex);
+	return WORLD_CAST(m_world)->getIsDebugRenderingEnabled();
+}
+
+
+///////////////////////////////////////////////////////////
+void Physics::render(Camera& camera, FrameBuffer& target)
+{
+	START_PROFILING_FUNC;
+
+	// Enable debug rendering
+	if (!isDebugRenderEnabled())
+		setDebugRenderEnabled(true);
+
+	reactphysics3d::PhysicsWorld* world = WORLD_CAST(m_world);
+	reactphysics3d::DebugRenderer& debugRenderer = WORLD_CAST(m_world)->getDebugRenderer();
+
+	// Cull and decide which geometries are in the frustum
+	const Frustum& frustum = camera.getFrustum();
+
+	std::vector<DebugRenderPoint> triangles, lines;
+	triangles.reserve(debugRenderer.getNbTriangles() * 3);
+	lines.reserve(debugRenderer.getNbLines() * 2);
+
+	{
+		std::unique_lock<std::mutex> lock(m_mutex);
+
+		// Lines
+		for (Uint32 i = 0; i < debugRenderer.getNbLines(); ++i)
+		{
+			const reactphysics3d::DebugRenderer::DebugLine& line = debugRenderer.getLinesArray()[i];
+
+			DebugRenderPoint p1, p2;
+			p1.m_point = POLY_VEC3(line.point1);
+			p2.m_point = POLY_VEC3(line.point2);
+
+			BoundingBox box;
+			box.m_min.x = std::min(p1.m_point.x, p2.m_point.x);
+			box.m_min.y = std::min(p1.m_point.y, p2.m_point.y);
+			box.m_min.z = std::min(p1.m_point.z, p2.m_point.z);
+			box.m_max.x = std::max(p1.m_point.x, p2.m_point.x);
+			box.m_max.y = std::max(p1.m_point.y, p2.m_point.y);
+			box.m_max.z = std::max(p1.m_point.z, p2.m_point.z);
+
+			// Only add to list if the line is in frustum
+			if (frustum.contains(box))
+			{
+				p1.m_color = Vector3f((line.color1 >> 16) & 0xFF, (line.color1 >> 8) & 0xFF, (line.color1 >> 0) & 0xFF) / 255.0f;
+				p2.m_color = Vector3f((line.color2 >> 16) & 0xFF, (line.color2 >> 8) & 0xFF, (line.color2 >> 0) & 0xFF) / 255.0f;
+
+				lines.push_back(p1);
+				lines.push_back(p2);
+			}
+		}
+
+		// Triangles
+		for (Uint32 i = 0; i < debugRenderer.getNbTriangles(); ++i)
+		{
+			const reactphysics3d::DebugRenderer::DebugTriangle& triangle = debugRenderer.getTrianglesArray()[i];
+
+			DebugRenderPoint p[3];
+			p[0].m_point = POLY_VEC3(triangle.point1);
+			p[1].m_point = POLY_VEC3(triangle.point2);
+			p[2].m_point = POLY_VEC3(triangle.point3);
+
+			BoundingBox box;
+			box.m_min = p[0].m_point;
+			box.m_max = p[0].m_point;
+			for (Uint32 i = 1; i < 3; ++i)
+			{
+				if (p[i].m_point.x < box.m_min.x)
+					box.m_min.x = p[i].m_point.x;
+				else if (p[i].m_point.x > box.m_max.x)
+					box.m_max.x = p[i].m_point.x;
+
+				if (p[i].m_point.y < box.m_min.y)
+					box.m_min.y = p[i].m_point.y;
+				else if (p[i].m_point.y > box.m_max.y)
+					box.m_max.y = p[i].m_point.y;
+
+				if (p[i].m_point.z < box.m_min.z)
+					box.m_min.z = p[i].m_point.z;
+				else if (p[i].m_point.z > box.m_max.z)
+					box.m_max.z = p[i].m_point.z;
+			}
+
+			// Only add to list if the line is in frustum
+			if (frustum.contains(box))
+			{
+				p[0].m_color = Vector3f((triangle.color1 >> 16) & 0xFF, (triangle.color1 >> 8) & 0xFF, (triangle.color1 >> 0) & 0xFF) / 255.0f;
+				p[1].m_color = Vector3f((triangle.color2 >> 16) & 0xFF, (triangle.color2 >> 8) & 0xFF, (triangle.color2 >> 0) & 0xFF) / 255.0f;
+				p[2].m_color = Vector3f((triangle.color3 >> 16) & 0xFF, (triangle.color3 >> 8) & 0xFF, (triangle.color3 >> 0) & 0xFF) / 255.0f;
+
+				triangles.push_back(p[0]);
+				triangles.push_back(p[1]);
+				triangles.push_back(p[2]);
+			}
+		}
+	}
+
+	if (lines.size() + triangles.size() == 0)
+		return;
+
+
+	// Stream instance data
+	Uint32 size = (lines.size() + triangles.size()) * sizeof(DebugRenderPoint);
+	MapBufferFlags flags = MapBufferFlags::Write | MapBufferFlags::Unsynchronized;
+
+	// Choose different flags based on how much space is left
+	if (m_debugBufferOffset + size > m_debugRenderBuffer.getSize())
+	{
+		flags |= MapBufferFlags::InvalidateBuffer;
+		m_debugBufferOffset = 0;
+	}
+
+	// Map the buffer
+	DebugRenderPoint* buffer = (DebugRenderPoint*)m_debugRenderBuffer.map(m_debugBufferOffset, size, flags);
+
+	Uint32 lineOffset = m_debugBufferOffset;
+	for (Uint32 i = 0; i < lines.size(); ++i)
+		buffer[i] = lines[i];
+	m_debugBufferOffset += lines.size() * sizeof(DebugRenderPoint);
+
+	Uint32 triangleOffset = m_debugBufferOffset;
+	for (Uint32 i = 0; i < triangles.size(); ++i)
+		buffer[i + lines.size()] = triangles[i];
+	m_debugBufferOffset += triangles.size() * sizeof(DebugRenderPoint);
+
+	// After pushing all instance data, unmap the buffer
+	m_debugRenderBuffer.unmap();
+
+
+	// Bind target
+	target.bind();
+
+	// Get shader and bind
+	Shader& shader = getDebugShader();
+	shader.bind();
+
+	camera.apply(&shader);
+
+	// Enable depth testing
+	glCheck(glEnable(GL_DEPTH_TEST));
+
+	// Use wireframe mode
+	glCheck(glPolygonMode(GL_FRONT_AND_BACK, GL_LINE));
+
+	m_debugRenderArray.bind();
+
+	// Lines
+	m_debugRenderArray.addBuffer(m_debugRenderBuffer, 0, 3, sizeof(DebugRenderPoint), lineOffset);
+	m_debugRenderArray.addBuffer(m_debugRenderBuffer, 1, 3, sizeof(DebugRenderPoint), lineOffset + sizeof(Vector3f));
+	m_debugRenderArray.setNumVertices(lines.size());
+	m_debugRenderArray.setDrawMode(DrawMode::Lines);
+	m_debugRenderArray.draw();
+
+	// Triangles
+	m_debugRenderArray.addBuffer(m_debugRenderBuffer, 0, 3, sizeof(DebugRenderPoint), triangleOffset);
+	m_debugRenderArray.addBuffer(m_debugRenderBuffer, 1, 3, sizeof(DebugRenderPoint), triangleOffset + sizeof(Vector3f));
+	m_debugRenderArray.setNumVertices(triangles.size());
+	m_debugRenderArray.setDrawMode(DrawMode::Triangles);
+	m_debugRenderArray.draw();
+
+	// Change back to fill mode
+	glCheck(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));
+}
+
+
+///////////////////////////////////////////////////////////
+Shader& Physics::getDebugShader()
+{
+	if (!s_debugShader.getId())
+	{
+		s_debugShader.load("poly/debug_physics.vert", SHADER_DEBUG_PHYSICS_VERT, Shader::Vertex);
+		s_debugShader.load("poly/debug_physics.frag", SHADER_DEBUG_PHYSICS_FRAG, Shader::Fragment);
+		s_debugShader.compile();
+	}
+
+	return s_debugShader;
 }
 
 

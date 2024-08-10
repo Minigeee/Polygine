@@ -4,8 +4,7 @@
 #include <poly/Core/Logger.h>
 
 #include <poly/Graphics/OpenGL.h>
-
-#include <GLFW/glfw3.h>
+#include <poly/Graphics/Window.h>
 
 #include <string>
 
@@ -25,7 +24,7 @@ do \
 { \
 	expr; \
 	Uint32 err = glGetError(); \
-	if (err != GL_NO_ERROR && glfwGetCurrentContext()) \
+	if (err != GL_NO_ERROR && Window::isContextActive()) \
 		LOG_ERROR("[%s] - %s", STR(expr), poly::priv::getGLErrorMsg(err).c_str()); \
 } while (false)
 #else

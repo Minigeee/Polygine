@@ -26,7 +26,8 @@ void getBoneOffsets(aiNode* node, const aiScene* scene, HashMap<std::string, Mat
 		{
 			// Add bone name
 			aiBone* bone = mesh->mBones[b];
-			offsets[bone->mName.C_Str()] = aiMatrixToMatrix4f(bone->mOffsetMatrix);
+			const aiMatrix4x4& t = bone->mOffsetMatrix;
+			offsets[bone->mName.C_Str()] = ASSIMP_TO_POLY_MAT4(t);
 		}
 	}
 
@@ -49,7 +50,8 @@ void addBones(aiNode* node, Bone* parent, const aiScene* scene, Skeleton* skelet
 		bone = skeleton->createBone(name);
 
 		// Start with bind pose
-		Matrix4f transform = aiMatrixToMatrix4f(node->mTransformation);
+		const aiMatrix4x4& t = node->mTransformation;
+		Matrix4f transform = ASSIMP_TO_POLY_MAT4(t);
 		bone->setTransform(transform);
 
 		// Set offset matrix
@@ -257,9 +259,10 @@ void Skeleton::update(float dt)
 	{
 		// Update animation time
 		float duration = m_animation->getDuration() / m_animation->getTicksPerSecond();
-		m_animTime += fmodf(dt * m_animSpeed, duration);
+		m_animTime += dt * m_animSpeed;
 		if (m_animTime < 0.0f)
 			m_animTime += duration;
+		m_animTime = fmodf(m_animTime, duration);
 
 		// Recursively apply animation
 		priv::applyAnimation(m_root, m_animation, m_animTime);

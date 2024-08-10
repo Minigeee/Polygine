@@ -8,8 +8,10 @@
 
 ///////////////////////////////////////////////////////////
 
+#ifndef DEFERRED_SHADING
 in vec4 v_clipSpacePos;
 in vec4 v_lightClipSpacePos[MAX_NUM_SHADOW_MAPS];
+#endif
 
 uniform sampler2D u_shadowMaps[MAX_NUM_SHADOW_MAPS];
 
@@ -17,10 +19,14 @@ uniform sampler2D u_shadowMaps[MAX_NUM_SHADOW_MAPS];
 ///////////////////////////////////////////////////////////
 float getShadowFactor(int lightNum, vec3 normal, int kernelSize)
 {
+    // Return full light if shadows disabled
+    if (!u_shadowsEnabled[lightNum])
+        return 1.0f;
+
     int lightIndex = lightNum * MAX_NUM_SHADOW_CASCADES;
 
     // Get correct light parameters
-    int numCascades = u_numShadowCascades[lightIndex];
+    int numCascades = u_numShadowCascades[lightNum];
     float clipSpaceDepth = v_clipSpacePos.z;
 
     // Find which region the pixel is in
@@ -40,7 +46,7 @@ float getShadowFactor(int lightNum, vec3 normal, int kernelSize)
 
     // Get shadow map depth
     float shadow = 0.0f;
-    int kernelHalfSize = (regionNum == 0 ? kernelSize / 2 : 0);
+    int kernelHalfSize = kernelSize / 2;
     vec2 texelSize = 1.0f / textureSize(u_shadowMaps[mapIndex], 0);
 
     for (int r = -kernelHalfSize; r <= kernelHalfSize; ++r)

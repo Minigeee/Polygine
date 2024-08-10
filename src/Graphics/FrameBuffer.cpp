@@ -66,6 +66,24 @@ void FrameBuffer::bind(Uint32 z)
 {
 	if (currentBound != m_id)
 	{
+		// Check if the size of the internal textures has changed
+		if (m_colorTextures.size() && m_colorTextures[0]->getId())
+		{
+			if (m_colorTextures[0]->getWidth() != m_size.x || m_colorTextures[0]->getHeight() != m_size.y)
+			{
+				m_size.x = m_colorTextures[0]->getWidth();
+				m_size.y = m_colorTextures[0]->getHeight();
+			}
+		}
+		else if (m_depthTexture && m_depthTexture->getId())
+		{
+			if (m_depthTexture->getWidth() != m_size.x || m_depthTexture->getHeight() != m_size.y)
+			{
+				m_size.x = m_depthTexture->getWidth();
+				m_size.y = m_depthTexture->getHeight();
+			}
+		}
+
 		// Bind framebuffer
 		glCheck(glBindFramebuffer(GL_FRAMEBUFFER, m_id));
 
@@ -148,8 +166,9 @@ void FrameBuffer::attachColor(Texture* texture, PixelFormat fmt, GLType dtype, T
 	// Decide to use texture or renderbuffer attachment
 	if (texture)
 	{
-		// Create an empty texture
-		texture->create(0, fmt, m_size.x, m_size.y, m_size.z, dtype, filter, wrap, false, m_multisampled);
+		if (!texture->getId() || texture->getWidth() != m_size.x || texture->getHeight() != m_size.y)
+			// Create an empty texture
+			texture->create(0, fmt, m_size.x, m_size.y, m_size.z, dtype, filter, wrap, false, m_multisampled);
 
 		// Attach to color attachment target using correct number of dimensions
 		if (m_size.z == 0)
@@ -197,8 +216,9 @@ void FrameBuffer::attachDepth(Texture* texture, GLType dtype, TextureFilter filt
 	// Decide to use texture or renderbuffer attachment
 	if (texture)
 	{
-		// Create an empty texture
-		texture->create(0, PixelFormat::Depth, m_size.x, m_size.y, m_size.z, dtype, filter, wrap, false, m_multisampled);
+		if (!texture->getId() || texture->getWidth() != m_size.x || texture->getHeight() != m_size.y)
+			// Create an empty texture
+			texture->create(0, PixelFormat::Depth, m_size.x, m_size.y, m_size.z, dtype, filter, wrap, false, m_multisampled);
 
 		// Attach to depth attachment target using correct number of dimensions
 		if (m_size.z == 0)

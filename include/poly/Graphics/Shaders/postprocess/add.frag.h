@@ -1,0 +1,3 @@
+#ifndef SHADER_POSTPROCESS_ADD_FRAG
+#define SHADER_POSTPROCESS_ADD_FRAG "#version 330 core\n\n///////////////////////////////////////////////////////////////////////////////\n\nin vec2 v_texCoord;\n\nout vec4 f_color;\n\nuniform sampler2D u_texture1;\nuniform sampler2D u_texture2;\nuniform float u_factor1;\nuniform float u_factor2;\n\n///////////////////////////////////////////////////////////////////////////////\n\nvoid main()\n{\n    vec4 result1 = texture(u_texture1, v_texCoord);\n    vec4 result2 = texture(u_texture2, v_texCoord);\n\n    f_color.rgb = result1.rgb * u_factor1 + result2.rgb * u_factor2;\n    f_color.a = max(result1.a, result2.a);\n}"
+#endif

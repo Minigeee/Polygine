@@ -3,6 +3,11 @@
 #include <poly/Graphics/Billboard.h>
 #include <poly/Graphics/Material.h>
 #include <poly/Graphics/Texture.h>
+#include <poly/Graphics/Window.h>
+
+#include <poly/Graphics/Shaders/billboard.vert.h>
+#include <poly/Graphics/Shaders/billboard.geom.h>
+#include <poly/Graphics/Shaders/billboard.frag.h>
 
 namespace poly
 {
@@ -34,9 +39,9 @@ Shader& Billboard::getDefaultShader()
 {
 	if (!s_shader.getId())
 	{
-		s_shader.load("shaders/billboard.vert", Shader::Vertex);
-		s_shader.load("shaders/billboard.geom", Shader::Geometry);
-		s_shader.load("shaders/billboard.frag", Shader::Fragment);
+		s_shader.load("poly/billboard.vert", SHADER_BILLBOARD_VERT, Shader::Vertex);
+		s_shader.load("poly/billboard.geom", SHADER_BILLBOARD_GEOM, Shader::Geometry);
+		s_shader.load("poly/billboard.frag", SHADER_BILLBOARD_FRAG, Shader::Fragment);
 		s_shader.compile();
 	}
 

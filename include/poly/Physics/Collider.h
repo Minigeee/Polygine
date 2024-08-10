@@ -29,10 +29,57 @@ class Collider
 
 public:
 	///////////////////////////////////////////////////////////
+	/// \brief Colider type enum for collider shapes
+	///
+	///////////////////////////////////////////////////////////
+	enum Type
+	{
+		Box,			//!< A box collider
+		Capsule,		//!< A cpasule collider
+		ConcaveMesh,	//!< A concave mesh collider
+		ConvexMesh,		//!< A convex mesh collider
+		HeightMap,		//!< A height map collider
+		Sphere			//!< A sphere collider
+	};
+
+public:
+	///////////////////////////////////////////////////////////
 	/// \brief The default constructor
 	///
 	///////////////////////////////////////////////////////////
 	Collider();
+
+	///////////////////////////////////////////////////////////
+	/// \brief Virtual destructor
+	///
+	///////////////////////////////////////////////////////////
+	virtual ~Collider();
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the position of the collider in the local space of the collision body
+	///
+	/// \param pos The new position of the collider in the local space of the collision body
+	///
+	///////////////////////////////////////////////////////////
+	void setPosition(const Vector3f& pos);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the position of the collider in the local space of the collision body
+	///
+	/// \param x The x-component of the position
+	/// \param y The y-component of the position
+	/// \param z The z-component of the position
+	///
+	///////////////////////////////////////////////////////////
+	void setPosition(float x, float y, float z);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the rotation of the collider in the local space of the collision body
+	///
+	/// \param pos The new rotation of the collider in the local space of the collision body
+	///
+	///////////////////////////////////////////////////////////
+	void setRotation(const Quaternion& quat);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the bounciness of the collider
@@ -142,6 +189,35 @@ public:
 	void setIsTrigger(bool trigger);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Get the collider shape type
+	///
+	/// This can be used to infer which collider subtype this collider
+	/// is. This should be used when accessing colliders from physics body,
+	/// as the way the colliders are stored remove their ability to be
+	/// dynamically casted.
+	///
+	/// \return The collider shape type
+	///
+	///////////////////////////////////////////////////////////
+	Type getType() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the collider position in the local space of the physics body
+	///
+	/// \return The collider position
+	///
+	///////////////////////////////////////////////////////////
+	Vector3f getPosition() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the collider rotation in the local space of the physics body
+	///
+	/// \return The collider rotation
+	///
+	///////////////////////////////////////////////////////////
+	Quaternion getRotation() const;
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the collider bounciness value
 	///
 	/// \return The bounciness value
@@ -189,17 +265,20 @@ public:
 	///////////////////////////////////////////////////////////
 	bool isTrigger() const;
 
-private:
-	void setCollider(void* collider);
+protected:
+	void init(void* collider);
 
-private:
+	///////////////////////////////////////////////////////////
+	/// \brief Awaken collider body if asleep
+	///
+	///////////////////////////////////////////////////////////
+	void awakenBody();
+
+protected:
+	Type m_type;					//!< The collider shape type
 	void* m_collider;				//!< A pointer to the internal collider object
-	float m_bounciness;				//!< The bounciness
-	float m_frictionCoefficient;	//!< The friction coefficient
-	float m_rollingResistance;		//!< The rolling resistance
-	Uint16 m_collisionCategory;		//!< The collision category bitfield
-	Uint16 m_collisionMask;			//!< The collision mask bitfield
-	bool m_isTrigger;				//!< The trigger flag
+	void* m_material;				//!< A pointer to the internal material object
+	void* m_shape;					//!< A pointer to the internal shape object
 };
 
 
@@ -218,6 +297,8 @@ private:
 /// by the Physics extension using Physics::addCollider(), and
 /// the collider object can be used to change its properties or
 /// change its collision mask after the initial collider was created.
+/// It is not possible to use the collider class by itself, instead,
+/// one of its subclasses will always be returned.
 ///
 /// Usage example:
 /// \code
@@ -240,7 +321,7 @@ private:
 ///		Entity e = scene.createEntity(TransformComponent(), rbody, RenderComponent(&model), DynamicTag());
 ///
 ///		// Create a collider
-///		Collider collider = physics->addCollider(e, BoxShape(1.0f, 1.0f, 1.0f));
+///		BoxCollider collider = physics->addCollider(e, BoxShape(1.0f, 1.0f, 1.0f));
 ///		// Set properties
 ///		collider.setRollingResistance(0.1f);
 ///		collider.setCollisionCategory(2);

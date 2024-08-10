@@ -1,5 +1,9 @@
 #include <poly/Graphics/ParticleSystem.h>
 
+#include <poly/Graphics/Shaders/particles/particle.vert.h>
+#include <poly/Graphics/Shaders/particles/particle.geom.h>
+#include <poly/Graphics/Shaders/particles/particle.frag.h>
+
 
 namespace poly
 {
@@ -12,9 +16,9 @@ Shader& getDefaultParticleShader()
 
 	if (!shader.getId())
 	{
-		shader.load("shaders/particles/particle.vert", Shader::Vertex);
-		shader.load("shaders/particles/particle.geom", Shader::Geometry);
-		shader.load("shaders/particles/particle.frag", Shader::Fragment);
+		shader.load("poly/particles/particle.vert", SHADER_PARTICLES_PARTICLE_VERT, Shader::Vertex);
+		shader.load("poly/particles/particle.geom", SHADER_PARTICLES_PARTICLE_GEOM, Shader::Geometry);
+		shader.load("poly/particles/particle.frag", SHADER_PARTICLES_PARTICLE_VERT, Shader::Fragment);
 		shader.compile();
 	}
 

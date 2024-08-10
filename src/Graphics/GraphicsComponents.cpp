@@ -47,7 +47,6 @@ DirLightComponent::DirLightComponent() :
 	m_shadowDistance		(50.0f),
 	m_shadowStrength		(1.0f),
 	m_shadowCascades		(3),
-	m_cascadeResMultiplier	(0.5f),
 	m_cascadeDistMultiplier	(1.5f),
 	m_shadowsEnabled		(true)
 {

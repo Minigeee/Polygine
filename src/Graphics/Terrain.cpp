@@ -1,4 +1,5 @@
 #include <poly/Core/Allocate.h>
+#include <poly/Core/ObjectPool.h>
 #include <poly/Core/Profiler.h>
 
 #include <poly/Engine/Scene.h>
@@ -9,50 +10,463 @@
 #include <poly/Graphics/Shadows.h>
 #include <poly/Graphics/Terrain.h>
 
+#include <poly/Graphics/Shaders/terrain.vert.h>
+#include <poly/Graphics/Shaders/terrain.frag.h>
+
+#include <poly/Math/Functions.h>
 #include <poly/Math/Transform.h>
 #include <poly/Math/Vector2.h>
 #include <poly/Math/Vector4.h>
 
+#include <poly/Physics/Components.h>
+#include <poly/Physics/Physics.h>
+#include <poly/Physics/Shapes.h>
+
+#include <chrono>
+
+
+#define TEXTURE_CAST(x) reinterpret_cast<Texture*>(x)
+#define TMAP_CAST(x) reinterpret_cast<TerrainMap*>(x)
+
+
 namespace poly
 {
 
-namespace priv
-{
-
-#ifndef DOXYGEN_SKIP
 
 ///////////////////////////////////////////////////////////
-struct TerrainVertex
+bool intersects(const Vector3f& p, float r, const BoundingBox& bbox)
 {
-	TerrainVertex() = default;
-	TerrainVertex(const Vector2f& pos, const Vector2f& nearTexCoord, const Vector2f& farTexCoord) :
-		m_position		(pos),
-		m_nearTexCoord	(nearTexCoord),
-		m_farTexCoord	(farTexCoord)
-	{ }
+	float dmin = 0.0f;
+	if (p.x < bbox.m_min.x)
+		dmin += powf(p.x - bbox.m_min.x, 2.0f);
+	else if (p.x > bbox.m_max.x)
+		dmin += powf(p.x - bbox.m_max.x, 2.0f);
 
-	Vector2f m_position;
-	Vector2f m_nearTexCoord;
-	Vector2f m_farTexCoord;
-};
+	if (p.y < bbox.m_min.y)
+		dmin += powf(p.y - bbox.m_min.y, 2.0f);
+	else if (p.y > bbox.m_max.y)
+		dmin += powf(p.y - bbox.m_max.y, 2.0f);
 
+	if (p.z < bbox.m_min.z)
+		dmin += powf(p.z - bbox.m_min.z, 2.0f);
+	else if (p.z > bbox.m_max.z)
+		dmin += powf(p.z - bbox.m_max.z, 2.0f);
 
-///////////////////////////////////////////////////////////
-void addTerrainTriangle(
-	std::vector<priv::TerrainVertex>& vertices,
-	const Vector2f& p1, const Vector2f& p2, const Vector2f& p3,
-	const Vector2f& t1, const Vector2f& t2, const Vector2f& t3)
-{
-	Vector2f nearTexCoord = (p1 + p2 + p3) / 3.0f;
-	Vector2f farTexCoord = (t1 + t2 + t3) / 3.0f;
-
-	vertices.push_back(priv::TerrainVertex(p1, nearTexCoord, farTexCoord));
-	vertices.push_back(priv::TerrainVertex(p2, nearTexCoord, farTexCoord));
-	vertices.push_back(priv::TerrainVertex(p3, nearTexCoord, farTexCoord));
+	return dmin <= r * r;
 }
 
-#endif
 
+///////////////////////////////////////////////////////////
+Vector2u estimateCacheSize(Uint32 numLevels)
+{
+	// Get the number of required tiles in the very worst case (this will be the size of cache)
+	Uint32 numTiles = 1;
+	numTiles += numLevels >= 2 ? 4 : 0;
+	numTiles += numLevels >= 3 ? 9 * (numLevels - 2) : 0;
+
+	// Get smallest rectangle that can fit the required number of tiles
+	while (true)
+	{
+		// Keep track of biggest factor (to keep texture as square as possible)
+		Uint32 biggestFactor = 1;
+
+		// Get stopping point
+		Uint32 stop = (Uint32)sqrtf((float)numTiles) + 1;
+
+		for (Uint32 i = 2; i < stop; ++i)
+		{
+			if (numTiles % i == 0)
+				biggestFactor = i;
+		}
+
+		// If biggest factor is not one, found a rectangle
+		if (biggestFactor != 1)
+			return Vector2u(numTiles / biggestFactor, biggestFactor);
+
+		// Otherwise, increment num tiles by 1
+		++numTiles;
+	}
+
+	//Get rid of warning
+	return Vector2u();
+}
+
+
+///////////////////////////////////////////////////////////
+void copyPixel(Image* src, Image* dst, const Vector2f& srcUv, const Vector2u& dstRc)
+{
+	GLType dtype = src->getDataType();
+	Uint32 c = src->getNumChannels();
+
+	if (c == 1)
+	{
+		if (dtype == GLType::Uint8)
+			*(Uint8*)dst->getPixel(dstRc.x, dstRc.y) = src->sample<Uint8>(srcUv);
+		else if (dtype == GLType::Uint16)
+			*(Uint16*)dst->getPixel(dstRc.x, dstRc.y) = src->sample<Uint16>(srcUv);
+		else if (dtype == GLType::Float)
+			*(float*)dst->getPixel(dstRc.x, dstRc.y) = src->sample<float>(srcUv);
+	}
+	else if (c == 2)
+	{
+		if (dtype == GLType::Uint8)
+			*(Vector2<Uint8>*)dst->getPixel(dstRc.x, dstRc.y) = src->sample<Vector2<Uint8>>(srcUv);
+		else if (dtype == GLType::Uint16)
+			*(Vector2<Uint16>*)dst->getPixel(dstRc.x, dstRc.y) = src->sample<Vector2<Uint16>>(srcUv);
+		else if (dtype == GLType::Float)
+			*(Vector2f*)dst->getPixel(dstRc.x, dstRc.y) = src->sample<Vector2f>(srcUv);
+	}
+	else if (c == 3)
+	{
+		if (dtype == GLType::Uint8)
+			*(Vector3<Uint8>*)dst->getPixel(dstRc.x, dstRc.y) = src->sample<Vector3<Uint8>>(srcUv);
+		else if (dtype == GLType::Uint16)
+			*(Vector3<Uint16>*)dst->getPixel(dstRc.x, dstRc.y) = src->sample<Vector3<Uint16>>(srcUv);
+		else if (dtype == GLType::Float)
+			*(Vector3f*)dst->getPixel(dstRc.x, dstRc.y) = src->sample<Vector3f>(srcUv);
+	}
+	else if (c == 4)
+	{
+		if (dtype == GLType::Uint8)
+			*(Vector4<Uint8>*)dst->getPixel(dstRc.x, dstRc.y) = src->sample<Vector4<Uint8>>(srcUv);
+		else if (dtype == GLType::Uint16)
+			*(Vector4<Uint16>*)dst->getPixel(dstRc.x, dstRc.y) = src->sample<Vector4<Uint16>>(srcUv);
+		else if (dtype == GLType::Float)
+			*(Vector4f*)dst->getPixel(dstRc.x, dstRc.y) = src->sample<Vector4f>(srcUv);
+	}
+}
+
+
+///////////////////////////////////////////////////////////
+void fillCorner(Image* img, const Vector2u& cornerRc, const Vector2u& adj1Rc, const Vector2u& adj2Rc)
+{
+	GLType dtype = img->getDataType();
+	Uint32 c = img->getNumChannels();
+
+	if (dtype == GLType::Uint8)
+	{
+		Uint8* corner = (Uint8*)img->getPixel(cornerRc.x, cornerRc.y);
+		Uint8* adj1 = (Uint8*)img->getPixel(adj1Rc.x, adj1Rc.y);
+		Uint8* adj2 = (Uint8*)img->getPixel(adj2Rc.x, adj2Rc.y);
+
+		// Calculate averages
+		for (Uint32 i = 0; i < c; ++i)
+			corner[i] = (Uint8)(((float)adj1[i] + (float)adj2[i]) * 0.5f);
+	}
+	else if (dtype == GLType::Uint16)
+	{
+		Uint16* corner = (Uint16*)img->getPixel(cornerRc.x, cornerRc.y);
+		Uint16* adj1 = (Uint16*)img->getPixel(adj1Rc.x, adj1Rc.y);
+		Uint16* adj2 = (Uint16*)img->getPixel(adj2Rc.x, adj2Rc.y);
+
+		// Calculate averages
+		for (Uint32 i = 0; i < c; ++i)
+			corner[i] = (Uint16)(((float)adj1[i] + (float)adj2[i]) * 0.5f);
+	}
+	else if (dtype == GLType::Float)
+	{
+		float* corner = (float*)img->getPixel(cornerRc.x, cornerRc.y);
+		float* adj1 = (float*)img->getPixel(adj1Rc.x, adj1Rc.y);
+		float* adj2 = (float*)img->getPixel(adj2Rc.x, adj2Rc.y);
+
+		// Calculate averages
+		for (Uint32 i = 0; i < c; ++i)
+			corner[i] = ((float)adj1[i] + (float)adj2[i]) * 0.5f;
+	}
+}
+
+
+///////////////////////////////////////////////////////////
+TerrainBase::TerrainBase() :
+	m_size					(0.0f),
+	m_maxHeight				(0.0f),
+	m_numLevels				(0),
+	m_viewpoint				(0.0f),
+	m_baseScale				(1.0f),
+	m_shader				(0),
+	m_instanceDataOffset	(0),
+	m_viewpointChanged		(false),
+	m_lodDistsChanged		(false)
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
+TerrainBase::~TerrainBase()
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
+void TerrainBase::init(Scene* scene)
+{
+	m_scene = scene;
+
+	// Create entity
+	RigidBodyComponent rbody;
+	rbody.m_type = RigidBodyType::Static;
+	rbody.m_position = Vector3f(0.0f);
+
+	m_entity = m_scene->createEntity(rbody);
+}
+
+
+///////////////////////////////////////////////////////////
+void TerrainBase::create(float size, float maxHeight, float maxNodeSize)
+{
+	m_size = size;
+	m_maxHeight = maxHeight;
+
+	// Create buffer
+	m_instanceBuffer.create((Vector4f*)NULL, 4 * 1024, BufferUsage::Stream);
+	m_instanceDataOffset = 0;
+
+	// Calculate lod related variables
+	Uint32 lodLevel = 0;
+	float currSize = size;
+	while (currSize > 0.5f * maxNodeSize)
+	{
+		// Calculate number of nodes
+		Uint32 numNodes = 1 << (lodLevel++);
+
+		// Add lod level
+		m_lodLevels.push_back(LodLevel());
+		m_lodLevels.back().m_heightBounds.create(numNodes, Vector2<Uint16>(0, (Uint16)(m_maxHeight * 65535.0f)));
+
+		// Update size
+		currSize *= 0.5f;
+	}
+
+	// Calculate lod distances
+	float distUnit = 2.0f * currSize;
+	float prevDist = distUnit;
+
+	for (int i = m_lodLevels.size() - 1; i >= 0; --i)
+	{
+		m_lodLevels[i].m_dist = prevDist;
+		prevDist += powf(2.0f, (float)(m_lodLevels.size() - i)) * distUnit;
+	}
+
+	m_lodDistsChanged = true;
+
+	// Create mesh
+	constexpr Uint32 MESH_SIZE = 16;
+	m_baseScale = 1.0f * currSize / (float)MESH_SIZE;
+	std::vector<Vector2f> vertices((MESH_SIZE + 1) * (MESH_SIZE + 1));
+	std::vector<Uint32> indices(6 * MESH_SIZE * MESH_SIZE);
+
+	// Vertices
+	for (Uint32 r = 0, i = 0; r < MESH_SIZE + 1; ++r)
+	{
+		for (Uint32 c = 0; c < MESH_SIZE + 1; ++c, ++i)
+			vertices[i] = Vector2f(c, r) - (float)(MESH_SIZE / 2);
+	}
+
+	// Indices
+	for (Uint32 r = 0, i = 0; r < MESH_SIZE; ++r)
+	{
+		for (Uint32 c = 0; c < MESH_SIZE; ++c, i += 6)
+		{
+			indices[i + 0] = (r + 0) * (MESH_SIZE + 1) + (c + 0);
+			indices[i + 1] = (r + 1) * (MESH_SIZE + 1) + (c + 0);
+			indices[i + 2] = (r + 0) * (MESH_SIZE + 1) + (c + 1);
+			indices[i + 3] = (r + 1) * (MESH_SIZE + 1) + (c + 0);
+			indices[i + 4] = (r + 1) * (MESH_SIZE + 1) + (c + 1);
+			indices[i + 5] = (r + 0) * (MESH_SIZE + 1) + (c + 1);
+		}
+	}
+
+	// Vertex buffers
+	m_vertexBuffer.create(vertices);
+	m_indexBuffer.create(indices);
+
+	// Vertex array
+	m_vertexArray.addBuffer(m_vertexBuffer, 0, 2);
+	m_vertexArray.setElementBuffer(m_indexBuffer);
+}
+
+
+///////////////////////////////////////////////////////////
+void TerrainBase::render(Camera& camera, RenderPass pass, const RenderSettings& settings)
+{
+	// The terrain should be rendered regardless of render pass
+
+	ASSERT(m_scene, "The terrain must be initialized before using, by calling the init() function");
+
+	START_PROFILING_FUNC;
+
+
+	// Update view point if using default render pass
+	if (pass == RenderPass::Default)
+	{
+		// Set flag if viewpoint changes
+		if (m_viewpoint != camera.getPosition())
+			m_viewpointChanged = true;
+
+		m_viewpoint = camera.getPosition();
+	}
+
+	// Get lod nodes
+	std::vector<Vector4f> renderList;
+	makeRenderList(Vector2u(0), 0, camera.getFrustum(), renderList);
+
+	// Quit if no nodes are being rendered
+	if (!renderList.size()) return;
+
+
+	// Stream to instance buffer
+	Uint32 size = renderList.size() * sizeof(Vector4f);
+	MapBufferFlags flags = MapBufferFlags::Write | MapBufferFlags::Unsynchronized;
+
+	// Choose different flags based on how much space is left
+	if (m_instanceDataOffset + size > m_instanceBuffer.getSize())
+	{
+		flags |= MapBufferFlags::InvalidateBuffer;
+		m_instanceDataOffset = 0;
+	}
+
+	// Map the buffer
+	Vector4f* buffer = (Vector4f*)m_instanceBuffer.map(m_instanceDataOffset, size, flags);
+
+	for (Uint32 i = 0; i < renderList.size(); ++i)
+		buffer[i] = renderList[i];
+
+	// After pushing all instance data, unmap the buffer
+	m_instanceBuffer.unmap();
+
+	// Update offset
+	Uint32 offset = m_instanceDataOffset;
+	m_instanceDataOffset += renderList.size() * sizeof(Vector4f);
+
+
+	// Custom render procedure
+	onRender(camera);
+
+	// Terrain
+	m_shader->setUniform("u_size", m_size);
+	m_shader->setUniform("u_maxHeight", m_maxHeight);
+
+	if (m_lodDistsChanged)
+	{
+		// Set lod distances
+		for (Uint32 i = 0; i < m_lodLevels.size(); ++i)
+			m_shader->setUniform("u_lodRanges[" + std::to_string(i) + ']', m_lodLevels[i].m_dist);
+		m_shader->setUniform("u_lodRanges[" + std::to_string(m_lodLevels.size()) + ']', 0.0f);
+
+		m_lodDistsChanged = false;
+	}
+
+	// Camera
+	camera.apply(m_shader);
+
+	// Enable depth testing
+	glCheck(glEnable(GL_DEPTH_TEST));
+
+	// Single side render
+	glCheck(glEnable(GL_CULL_FACE));
+	glCheck(glCullFace(pass == RenderPass::Shadow ? GL_FRONT : GL_BACK));
+
+	// glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+	// Attach instance buffer and render
+	m_vertexArray.bind();
+	m_vertexArray.addBuffer(m_instanceBuffer, 1, 4, sizeof(Vector4f), offset, 1);
+	m_vertexArray.draw(renderList.size());
+
+	// glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+}
+
+
+///////////////////////////////////////////////////////////
+void TerrainBase::makeRenderList(const Vector2u& node, Uint32 lod, const Frustum& frustum, std::vector<Vector4f>& renderList)
+{
+	// Calculate node properties
+	Uint32 numNodesPerEdge = 1 << lod;
+	float nodeSize = m_size / (float)numNodesPerEdge;
+	float halfNodeSize = 0.5f * nodeSize;
+	Vector2f center = nodeSize * (Vector2f(node.y, node.x) - (float)(numNodesPerEdge / 2) + 0.5f);
+	if (lod == 0)
+		center = Vector2f(0.0f);
+
+	// Get bounding box
+	BoundingBox bbox;
+	{
+		std::unique_lock<std::mutex> lock(m_mutex);
+
+		const Vector2<Uint16>& hbounds = m_lodLevels[lod].m_heightBounds[node.x][node.y];
+
+		bbox.m_min = Vector3f(center.x - halfNodeSize, (float)hbounds.x / 65535.0f * m_maxHeight, center.y - halfNodeSize);
+		bbox.m_max = Vector3f(center.x + halfNodeSize, (float)hbounds.y / 65535.0f * m_maxHeight, center.y + halfNodeSize);
+	}
+
+	// Check if bounding box is inside frustum
+	if (!frustum.contains(bbox)) return;
+
+	// Check if bounding box is inside the current lod range
+	if (intersects(m_viewpoint, m_lodLevels[lod].m_dist, bbox))
+	{
+		// Check if this node is inside a more detailed lod level
+		if (lod == m_lodLevels.size() - 1 || !intersects(m_viewpoint, m_lodLevels[lod + 1].m_dist, bbox))
+		{
+			// If it's not, then add entire node at the current lod level
+			float fourthSize = 0.25f * nodeSize;
+			float scale = (float)(1 << (m_lodLevels.size() - lod - 1));
+			renderList.push_back(Vector4f(center + Vector2f(-fourthSize, -fourthSize), scale * m_baseScale, (float)lod + 0.5f));
+			renderList.push_back(Vector4f(center + Vector2f(-fourthSize, fourthSize), scale * m_baseScale, (float)lod + 0.5f));
+			renderList.push_back(Vector4f(center + Vector2f(fourthSize, -fourthSize), scale * m_baseScale, (float)lod + 0.5f));
+			renderList.push_back(Vector4f(center + Vector2f(fourthSize, fourthSize), scale * m_baseScale, (float)lod + 0.5f));
+		}
+		else
+		{
+			// If current node is inside a more detailed lod level, add children nodes
+			Vector2u childNode = 2u * node;
+			makeRenderList(childNode + Vector2u(0, 0), lod + 1, frustum, renderList);
+			makeRenderList(childNode + Vector2u(0, 1), lod + 1, frustum, renderList);
+			makeRenderList(childNode + Vector2u(1, 0), lod + 1, frustum, renderList);
+			makeRenderList(childNode + Vector2u(1, 1), lod + 1, frustum, renderList);
+		}
+	}
+	else
+	{
+		// If this node is outside the lod range, this means the parent
+		// node was inside its own range, but this child node is not
+		// In this case, add the current node, but don't attempt to add children nodes
+		--lod;
+		float scale = (float)(1 << (m_lodLevels.size() - lod - 1));
+		renderList.push_back(Vector4f(center, scale * m_baseScale, (float)lod + 0.5f));
+
+		return;
+	}
+}
+
+
+///////////////////////////////////////////////////////////
+void TerrainBase::setShader(Shader* shader)
+{
+	m_shader = shader;
+}
+
+
+///////////////////////////////////////////////////////////
+Entity TerrainBase::getEntity() const
+{
+	return m_entity;
+}
+
+
+///////////////////////////////////////////////////////////
+float TerrainBase::getSize() const
+{
+	return m_size;
+}
+
+
+///////////////////////////////////////////////////////////
+float TerrainBase::getMaxHeight() const
+{
+	return m_maxHeight;
 }
 
 
@@ -76,807 +490,321 @@ Shader& Terrain::getShader()
 
 ///////////////////////////////////////////////////////////
 Terrain::Terrain() :
-	m_size					(0.0f),
-	m_height				(0.0f),
-	m_tileScale				(0.0f),
-	m_lodScale				(0.0f),
-	m_maxDist				(0.0f),
-	m_useFlatShading		(true),
-	m_normalMapData			(0),
-	m_instanceBufferOffset	(0),
-	m_ambientColor			(0.02f),
-	m_isUniformDirty		(true)
+	m_bounciness			(0.1f),
+	m_friction				(0.2f),
+	m_collisionCategory		(0x0001),
+	m_collisionMask			(0xFFFF)
 {
-	m_uniformBuffer.create(sizeof(UniformBlock_Terrain), BufferUsage::Static);
+
 }
 
 
 ///////////////////////////////////////////////////////////
 Terrain::~Terrain()
 {
-	if (m_normalMapData)
-		FREE_DBG(m_normalMapData);
 
-	m_normalMapData = 0;
 }
 
 
 ///////////////////////////////////////////////////////////
 void Terrain::init(Scene* scene)
 {
-	m_scene = scene;
-}
+	// Call base function
+	TerrainBase::init(scene);
 
-
-///////////////////////////////////////////////////////////
-void Terrain::create(float size, float height, float tileScale, float lodScale, float maxDist)
-{
-	// Only create once
-	if (m_instanceBuffer.getId()) return;
-
-	m_size = size;
-	m_height = height;
-	m_tileScale = tileScale;
-	m_lodScale = lodScale;
-	m_maxDist = maxDist;
-
-	std::vector<priv::TerrainVertex> vertices;
-
-	Uint32 edgeTileOffset = 0;
-	float tileSize = 2.0f;
-
-	// Create vertices for tiles
-	for (int i = 0; i < 2; ++i)
-	{
-		for (int row = -4; row < 4; row += 2)
-		{
-			for (int col = -4; col < 4; col += 2)
-			{
-				// Vertex positions
-				float l = col * tileSize;
-				float r = (col + 1) * tileSize;
-				float t = row * tileSize;
-				float b = (row + 1) * tileSize;
-				Vector2f m = Vector2f(l, t) + 0.5f * tileSize;
-
-				// Top left square
-				priv::addTerrainTriangle(
-					vertices,
-					Vector2f(l, t), Vector2f(l, b), m,
-					Vector2f(l, t), Vector2f(l, b + tileSize), Vector2f(r, b));
-
-				priv::addTerrainTriangle(
-					vertices,
-					Vector2f(l, b), Vector2f(r, b), m,
-					Vector2f(l, t), Vector2f(l, b + tileSize), Vector2f(r, b));
-
-				priv::addTerrainTriangle(
-					vertices,
-					Vector2f(r, b), Vector2f(r, t), m,
-					Vector2f(l, t), Vector2f(r + tileSize, t), Vector2f(r, b));
-
-				priv::addTerrainTriangle(
-					vertices,
-					Vector2f(r, t), Vector2f(l, t), m,
-					Vector2f(l, t), Vector2f(r + tileSize, t), Vector2f(r, b));
-
-				// Top right square
-				++col;
-				l = col * tileSize;
-				r = (col + 1) * tileSize;
-				t = row * tileSize;
-				b = (row + 1) * tileSize;
-				m = Vector2f(l, t) + 0.5f * tileSize;
-
-				priv::addTerrainTriangle(
-					vertices,
-					Vector2f(l, t), Vector2f(l, b), m,
-					Vector2f(l - tileSize, t), Vector2f(r, t), Vector2f(l, b));
-
-				priv::addTerrainTriangle(
-					vertices,
-					Vector2f(l, b), Vector2f(r, b), m,
-					Vector2f(r, t), Vector2f(r, b + tileSize), Vector2f(l, b));
-
-				priv::addTerrainTriangle(
-					vertices,
-					Vector2f(r, b), Vector2f(r, t), m,
-					Vector2f(r, t), Vector2f(r, b + tileSize), Vector2f(l, b));
-
-				priv::addTerrainTriangle(
-					vertices,
-					Vector2f(r, t), Vector2f(l, t), m,
-					Vector2f(l - tileSize, t), Vector2f(r, t), Vector2f(l, b));
-
-				// Bot left square
-				--col, ++row;
-				l = col * tileSize;
-				r = (col + 1) * tileSize;
-				t = row * tileSize;
-				b = (row + 1) * tileSize;
-				m = Vector2f(l, t) + 0.5f * tileSize;
-
-				priv::addTerrainTriangle(
-					vertices,
-					Vector2f(l, t), Vector2f(l, b), m,
-					Vector2f(l, t - tileSize), Vector2f(l, b), Vector2f(r, t));
-
-				if (i == 1 && row == 3)
-				{
-					priv::addTerrainTriangle(
-						vertices,
-						Vector2f(l, b), Vector2f(l + 0.5f * tileSize, b), m,
-						Vector2f(l, b), Vector2f(r + tileSize, b), Vector2f(r, t));
-
-					priv::addTerrainTriangle(
-						vertices,
-						Vector2f(l + 0.5f * tileSize, b), Vector2f(r, b), m,
-						Vector2f(l, b), Vector2f(r + tileSize, b), Vector2f(r, t));
-				}
-				else
-				{
-					priv::addTerrainTriangle(
-						vertices,
-						Vector2f(l, b), Vector2f(r, b), m,
-						Vector2f(l, b), Vector2f(r + tileSize, b), Vector2f(r, t));
-				}
-
-				priv::addTerrainTriangle(
-					vertices,
-					Vector2f(r, b), Vector2f(r, t), m,
-					Vector2f(l, b), Vector2f(r + tileSize, b), Vector2f(r, t));
-
-				priv::addTerrainTriangle(
-					vertices,
-					Vector2f(r, t), Vector2f(l, t), m,
-					Vector2f(l, t - tileSize), Vector2f(l, b), Vector2f(r, t));
-
-				// Bot right square
-				++col;
-				l = col * tileSize;
-				r = (col + 1) * tileSize;
-				t = row * tileSize;
-				b = (row + 1) * tileSize;
-				m = Vector2f(l, t) + 0.5f * tileSize;
-
-				priv::addTerrainTriangle(
-					vertices,
-					Vector2f(l, t), Vector2f(l, b), m,
-					Vector2f(l, b - tileSize), Vector2f(r, b), Vector2f(l, t));
-
-				if (i == 1 && row == 3)
-				{
-					priv::addTerrainTriangle(
-						vertices,
-						Vector2f(l, b), Vector2f(l + 0.5f * tileSize, b), m,
-						Vector2f(l, b - tileSize), Vector2f(r, b), Vector2f(l, t));
-
-					priv::addTerrainTriangle(
-						vertices,
-						Vector2f(l + 0.5f * tileSize, b), Vector2f(r, b), m,
-						Vector2f(l, b - tileSize), Vector2f(r, b), Vector2f(l, t));
-				}
-				else
-				{
-					priv::addTerrainTriangle(
-						vertices,
-						Vector2f(l, b), Vector2f(r, b), m,
-						Vector2f(l, b - tileSize), Vector2f(r, b), Vector2f(l, t));
-				}
-
-				priv::addTerrainTriangle(
-					vertices,
-					Vector2f(r, b), Vector2f(r, t), m,
-					Vector2f(r, b), Vector2f(r, t - tileSize), Vector2f(l, t));
-
-				priv::addTerrainTriangle(
-					vertices,
-					Vector2f(r, t), Vector2f(l, t), m,
-					Vector2f(r, b), Vector2f(r, t - tileSize), Vector2f(l, t));
-
-				// Reset row and column
-				--row, --col;
-			}
-		}
-
-		if (i == 0)
-			edgeTileOffset = vertices.size();
-	}
-
-	// Upload to vertex buffer
-	m_normalBuffer.create(&vertices[0], edgeTileOffset);
-	m_edgeBuffer.create(&vertices[edgeTileOffset], vertices.size() - edgeTileOffset);
-
-	// Add to vertex arrays
-	m_normalTile.addBuffer(m_normalBuffer, 0, 2, sizeof(priv::TerrainVertex), 0 * sizeof(float));
-	m_normalTile.addBuffer(m_normalBuffer, 1, 2, sizeof(priv::TerrainVertex), 2 * sizeof(float));
-	m_normalTile.addBuffer(m_normalBuffer, 2, 2, sizeof(priv::TerrainVertex), 4 * sizeof(float));
-
-	m_edgeTile.addBuffer(m_edgeBuffer, 0, 2, sizeof(priv::TerrainVertex), 0 * sizeof(float));
-	m_edgeTile.addBuffer(m_edgeBuffer, 1, 2, sizeof(priv::TerrainVertex), 2 * sizeof(float));
-	m_edgeTile.addBuffer(m_edgeBuffer, 2, 2, sizeof(priv::TerrainVertex), 4 * sizeof(float));
-
-	// Create tile layout
-	createTileLayout();
-
-	// Create instance buffer
-	m_instanceBuffer.create((Matrix4f*)0, 32768, BufferUsage::Dynamic);
-}
-
-
-///////////////////////////////////////////////////////////
-void Terrain::createTileLayout()
-{
-	// Clear tile lists
-	m_normalTiles.clear();
-	m_edgeTiles.clear();
-	m_lodDists.clear();
-
-	// Set up lod rings
-	int lodLevel = 0;
-	Uint32 numTiles = 0;
-	bool changedLodLevel = false;
-
-	float tileSize = 16.0f * m_tileScale;
-	Vector2f tl = Vector2f(-tileSize);
-
-	float lodDists[] = { 20.0f, 100.0f, 200.0f };
-
-	while (-tl.x < m_maxDist)
-	{
-		numTiles += 2;
-
-		// Get top left
-		Vector2f tr = Vector2f(tl.x + (numTiles - 1) * tileSize, tl.y);
-		Vector2f bl = Vector2f(tl.x, tl.y + (numTiles - 1) * tileSize);
-
-		// Horizontal ring row
-		for (Uint32 c = 0; c < numTiles; ++c)
-		{
-			TerrainTile tile;
-			tile.m_position = Vector2f(tl.x + ((float)c + 0.5f) * tileSize, tl.y + 0.5f * tileSize);
-			tile.m_scale = powf(2.0f, (float)lodLevel) * m_tileScale;
-			tile.m_lod = lodLevel;
-			tile.m_boundingBox.m_min = Vector3f(tile.m_position.x - 0.5f * tileSize, 0.0f, tile.m_position.y - 0.5f * tileSize);
-			tile.m_boundingBox.m_max = Vector3f(tile.m_position.x + 0.5f * tileSize, m_height, tile.m_position.y + 0.5f * tileSize);
-
-			if (changedLodLevel && c != 0 && c != numTiles - 1)
-			{
-				tile.m_rotation = 0.0f;
-				m_edgeTiles.push_back(tile);
-			}
-			else
-			{
-				tile.m_rotation = 0.0f;
-				m_normalTiles.push_back(tile);
-			}
-
-			tile.m_position = Vector2f(tl.x + ((float)c + 0.5f) * tileSize, bl.y + 0.5f * tileSize);
-			tile.m_scale = powf(2.0f, (float)lodLevel) * m_tileScale;
-			tile.m_lod = lodLevel;
-			tile.m_boundingBox.m_min = Vector3f(tile.m_position.x - 0.5f * tileSize, 0.0f, tile.m_position.y - 0.5f * tileSize);
-			tile.m_boundingBox.m_max = Vector3f(tile.m_position.x + 0.5f * tileSize, m_height, tile.m_position.y + 0.5f * tileSize);
-
-			if (changedLodLevel && c != 0 && c != numTiles - 1)
-			{
-				tile.m_rotation = 180.0f;
-				m_edgeTiles.push_back(tile);
-			}
-			else
-			{
-				tile.m_rotation = 0.0f;
-				m_normalTiles.push_back(tile);
-			}
-		}
-
-		// Vertical ring row
-		for (Uint32 r = 1; r < numTiles - 1; ++r)
-		{
-			TerrainTile tile;
-			tile.m_position = Vector2f(tl.x + 0.5f * tileSize, tl.y + ((float)r + 0.5f) * tileSize);
-			tile.m_scale = powf(2.0f, (float)lodLevel) * m_tileScale;
-			tile.m_lod = lodLevel;
-			tile.m_boundingBox.m_min = Vector3f(tile.m_position.x - 0.5f * tileSize, 0.0f, tile.m_position.y - 0.5f * tileSize);
-			tile.m_boundingBox.m_max = Vector3f(tile.m_position.x + 0.5f * tileSize, m_height, tile.m_position.y + 0.5f * tileSize);
-
-			if (changedLodLevel)
-			{
-				tile.m_rotation = 90.0f;
-				m_edgeTiles.push_back(tile);
-			}
-			else
-			{
-				tile.m_rotation = 0.0f;
-				m_normalTiles.push_back(tile);
-			}
-
-			tile.m_position = Vector2f(tr.x + 0.5f * tileSize, tl.y + ((float)r + 0.5f) * tileSize);
-			tile.m_scale = powf(2.0f, (float)lodLevel) * m_tileScale;
-			tile.m_lod = lodLevel;
-			tile.m_boundingBox.m_min = Vector3f(tile.m_position.x - 0.5f * tileSize, 0.0f, tile.m_position.y - 0.5f * tileSize);
-			tile.m_boundingBox.m_max = Vector3f(tile.m_position.x + 0.5f * tileSize, m_height, tile.m_position.y + 0.5f * tileSize);
-
-			if (changedLodLevel)
-			{
-				tile.m_rotation = 270.0f;
-				m_edgeTiles.push_back(tile);
-			}
-			else
-			{
-				tile.m_rotation = 0.0f;
-				m_normalTiles.push_back(tile);
-			}
-		}
-
-		if (changedLodLevel)
-			changedLodLevel = false;
-
-		// Update lod level
-		if (lodLevel < 3 && -tl.x > lodDists[lodLevel] * m_lodScale + tileSize && numTiles % 4 == 0)
-		{
-			++lodLevel;
-			tileSize *= 2.0f;
-			numTiles /= 2;
-			changedLodLevel = true;
-
-			m_lodDists.push_back(-tl.x - tileSize * 0.25f);
-		}
-
-		tl -= Vector2f(tileSize);
-	}
-
-	m_lodDists.push_back(-tl.x);
-}
-
-
-///////////////////////////////////////////////////////////
-void Terrain::render(Camera& camera, RenderPass pass)
-{
-	// The terrain should be rendered regardless of render pass
-
-	ASSERT(m_scene, "The terrain must be initialized before using, by calling the init() function");
-
-	START_PROFILING_FUNC;
-
-	std::vector<TerrainTile*> normalTiles, edgeTiles;
-
-	// Cull and decide which tiles are in the frustum
-	const Frustum& frustum = camera.getFrustum();
-
-	// Snap terrain position
-	float resolutionFactor = 16.0f * m_tileScale;
-	Vector3f pos = camera.getPosition();
-	pos.x = roundf(pos.x / resolutionFactor) * resolutionFactor;
-	pos.z = roundf(pos.z / resolutionFactor) * resolutionFactor;
-	pos.y = 0.0f;
-
-	for (Uint32 i = 0; i < m_normalTiles.size(); ++i)
-	{
-		BoundingBox bbox = m_normalTiles[i].m_boundingBox;
-		bbox.m_min += pos;
-		bbox.m_max += pos;
-
-		// Check if the tile should be rendered
-		Vector2f tilePos = Vector2f(
-			std::min(std::abs(bbox.m_min.x), std::abs(bbox.m_max.x)),
-			std::min(std::abs(bbox.m_min.z), std::abs(bbox.m_max.z))
-		) * 2.0f;
-
-		bool shouldRender =
-			frustum.contains(bbox) &&
-			tilePos.x < m_size&&
-			tilePos.y < m_size;
-
-		if (shouldRender)
-			normalTiles.push_back(&m_normalTiles[i]);
-	}
-
-	for (Uint32 i = 0; i < m_edgeTiles.size(); ++i)
-	{
-		BoundingBox bbox = m_edgeTiles[i].m_boundingBox;
-		bbox.m_min += pos;
-		bbox.m_max += pos;
-
-		// Check if the tile should be rendered
-		Vector2f tilePos = Vector2f(
-			std::min(std::abs(bbox.m_min.x), std::abs(bbox.m_max.x)),
-			std::min(std::abs(bbox.m_min.z), std::abs(bbox.m_max.z))
-		) * 2.0f;
-
-		bool shouldRender =
-			frustum.contains(bbox) &&
-			tilePos.x < m_size &&
-			tilePos.y < m_size;
-
-		if (shouldRender)
-			edgeTiles.push_back(&m_edgeTiles[i]);
-	}
-
-	if (normalTiles.size() + edgeTiles.size() == 0) return;
-
-
-	// Stream instance data
-	Uint32 size = (normalTiles.size() + edgeTiles.size()) * sizeof(InstanceData);
-	MapBufferFlags flags = MapBufferFlags::Write | MapBufferFlags::Unsynchronized;
-
-	// Choose different flags based on how much space is left
-	if (m_instanceBufferOffset + size > m_instanceBuffer.getSize())
-	{
-		flags |= MapBufferFlags::InvalidateBuffer;
-		m_instanceBufferOffset = 0;
-	}
-
-	// Map the buffer
-	InstanceData* buffer = (InstanceData*)m_instanceBuffer.map(m_instanceBufferOffset, size, flags);
-
-	for (Uint32 i = 0; i < normalTiles.size(); ++i)
-	{
-		TerrainTile* tile = normalTiles[i];
-		Vector3f tilePos = Vector3f(tile->m_position.x, 0.0f, tile->m_position.y) + pos;
-
-		InstanceData& data = buffer[i];
-		data.m_lodDist = m_lodDists[tile->m_lod];
-		data.m_transform = toTransformMatrix(tilePos, Vector3f(0.0f, tile->m_rotation, 0.0f), Vector3f(tile->m_scale));
-	}
-
-	for (Uint32 i = 0; i < edgeTiles.size(); ++i)
-	{
-		TerrainTile* tile = edgeTiles[i];
-		Vector3f tilePos = Vector3f(tile->m_position.x, 0.0f, tile->m_position.y) + pos;
-
-		InstanceData& data = buffer[normalTiles.size() + i];
-		data.m_lodDist = m_lodDists[tile->m_lod];
-		data.m_transform = toTransformMatrix(tilePos, Vector3f(0.0f, tile->m_rotation, 0.0f), Vector3f(tile->m_scale));
-	}
-
-	// After pushing all instance data, unmap the buffer
-	m_instanceBuffer.unmap();
-
-
-	// Update uniform buffer
-	if (m_isUniformDirty)
-	{
-		UniformBlock_Terrain block;
-		block.m_clipPlanes[0] = Vector4f(-1.0f, 0.0f, 0.0f, m_size * 0.5f);
-		block.m_clipPlanes[1] = Vector4f(1.0f, 0.0f, 0.0f, m_size * 0.5f);
-		block.m_clipPlanes[2] = Vector4f(0.0f, 0.0f, -1.0f, m_size * 0.5f);
-		block.m_clipPlanes[3] = Vector4f(0.0f, 0.0f, 1.0f, m_size * 0.5f);
-
-		block.m_size = m_size;
-		block.m_height = m_height;
-		block.m_tileScale = m_tileScale;
-		block.m_blendLodDist = m_lodDists[m_lodDists.size() - 2];
-		block.m_useFlatShading = m_useFlatShading;
-
-		// Push data
-		m_uniformBuffer.pushData(block);
-
-		m_isUniformDirty = false;
-	}
-
-
-	// Bind shader and set uniforms
-	Shader& shader = getShader();
-	shader.bind();
-
-	// Terrain
-	shader.bindUniformBlock("Terrain", m_uniformBuffer);
-
-	// Camera
-	camera.apply(&shader);
-
-	// Lighting
-	m_scene->getExtension<Lighting>()->apply(&shader);
-	m_scene->getExtension<Shadows>()->apply(&shader);
-
-	// Terrain maps
+	// Create collider if height map exists
 	if (m_heightMap.getId())
-		shader.setUniform("u_heightMap", m_heightMap);
-	if (m_normalMap.getId())
-		shader.setUniform("u_normalMap", m_normalMap);
-	if (m_colorMap.getId())
-		shader.setUniform("u_colorMap", m_colorMap);
+	{
+		// Create shape
+		HeightMapShape shape;
+		shape.m_data = m_heightMapImg.getData();
+		shape.m_imageSize = Vector2u(m_heightMapImg.getWidth(), m_heightMapImg.getHeight());
+		shape.m_dimensions = Vector3f(m_size, m_maxHeight, m_size);
 
-	// Enable depth testing
-	glCheck(glEnable(GL_DEPTH_TEST));
-
-	// Single side render
-	glCheck(glEnable(GL_CULL_FACE));
-	glCheck(glCullFace(pass == RenderPass::Shadow ? GL_FRONT : GL_BACK));
-
-	// Enable clip planes
-	for (Uint32 i = 0; i < 4; ++i)
-		glCheck(glEnable(GL_CLIP_DISTANCE0 + i));
-
-	// Attach instance buffer and render
-	m_normalTile.bind();
-	m_normalTile.addBuffer(m_instanceBuffer, 3, 1, sizeof(InstanceData), m_instanceBufferOffset, 1);
-	m_normalTile.addBuffer(m_instanceBuffer, 4, 4, sizeof(InstanceData), m_instanceBufferOffset + 4 + 0 * sizeof(Vector4f), 1);
-	m_normalTile.addBuffer(m_instanceBuffer, 5, 4, sizeof(InstanceData), m_instanceBufferOffset + 4 + 1 * sizeof(Vector4f), 1);
-	m_normalTile.addBuffer(m_instanceBuffer, 6, 4, sizeof(InstanceData), m_instanceBufferOffset + 4 + 2 * sizeof(Vector4f), 1);
-	m_normalTile.addBuffer(m_instanceBuffer, 7, 4, sizeof(InstanceData), m_instanceBufferOffset + 4 + 3 * sizeof(Vector4f), 1);
-	m_normalTile.draw(normalTiles.size());
-
-	Uint32 offset = m_instanceBufferOffset + normalTiles.size() * sizeof(InstanceData);
-	m_edgeTile.bind();
-	m_edgeTile.addBuffer(m_instanceBuffer, 3, 1, sizeof(InstanceData), offset, 1);
-	m_edgeTile.addBuffer(m_instanceBuffer, 4, 4, sizeof(InstanceData), offset + 4 + 0 * sizeof(Vector4f), 1);
-	m_edgeTile.addBuffer(m_instanceBuffer, 5, 4, sizeof(InstanceData), offset + 4 + 1 * sizeof(Vector4f), 1);
-	m_edgeTile.addBuffer(m_instanceBuffer, 6, 4, sizeof(InstanceData), offset + 4 + 2 * sizeof(Vector4f), 1);
-	m_edgeTile.addBuffer(m_instanceBuffer, 7, 4, sizeof(InstanceData), offset + 4 + 3 * sizeof(Vector4f), 1);
-	m_edgeTile.draw(edgeTiles.size());
-
-	// Disable clip planes
-	for (Uint32 i = 0; i < 4; ++i)
-		glCheck(glDisable(GL_CLIP_DISTANCE0 + i));
-
-	// Update buffer offset
-	m_instanceBufferOffset += size;
+		// Create collider
+		m_collider = m_scene->getExtension<Physics>()->addCollider(m_entity, shape);
+	}
 }
 
 
 ///////////////////////////////////////////////////////////
-void Terrain::setSize(float size)
+void Terrain::onRender(Camera& camera)
 {
-	// Calculate change in scale
-	Vector3f scale(size / m_size);
-	scale.y = 1.0f;
+	// Get shader
+	if (!m_shader)
+		m_shader = &getShader();
 
-	// Update size
-	m_size = size;
+	// Bind shader
+	m_shader->bind();
 
-	// Update normal map
-	updateNormalMap(scale);
-	m_isUniformDirty = true;
+	// Bind textures
+	m_shader->setUniform("u_heightMap", m_heightMap);
+	m_shader->setUniform("u_normalMap", m_normalMap);
 }
 
 
 ///////////////////////////////////////////////////////////
-void Terrain::setHeight(float height)
+void Terrain::setHeightMap(const Image& hmap)
 {
-	// Calculate change in scale
-	Vector3f scale(1.0f);
-	scale.y = height / m_height;
+	// Make sure image has correct requirements
+	ASSERT(hmap.getWidth() == hmap.getHeight() && hmap.getWidth() != 0, "Height maps must be square with a size greater than 0");
+	ASSERT((hmap.getWidth() & (hmap.getWidth() - 1)) == 0, "Height map size must be a power of two");
+	ASSERT(hmap.getDataType() == GLType::Float || hmap.getDataType() == GLType::Uint16, "Height maps must contain data with either the Float or Uint16 type");
+	ASSERT(hmap.getNumChannels() == 1, "Height maps must contain a single color channel");
 
-	// Update size
-	m_height = height;
+	// Create image
+	if (hmap.getDataType() == GLType::Float)
+		m_heightMapImg = hmap.getBuffer<float>();
 
-	// Update normal map
-	updateNormalMap(scale);
-	m_isUniformDirty = true;
+	else
+		// Convert 16-bit to float
+		m_heightMapImg = ImageBuffer<float>(hmap.getBuffer<Uint16>()) / 65535.0f;
+
+	// Create texture
+	m_heightMap.create(NULL, PixelFormat::R, hmap.getWidth(), hmap.getHeight(), 0, GLType::Float);
+
+	// Update entire map
+	updateHeightMap(Vector2u(0), Vector2u(hmap.getWidth(), hmap.getHeight()));
+
+	// Create collider (if entity has been created)
+	if (m_entity.isValid())
+	{
+		// Create shape
+		HeightMapShape shape;
+		shape.m_data = m_heightMapImg.getData();
+		shape.m_imageSize = Vector2u(m_heightMapImg.getWidth(), m_heightMapImg.getHeight());
+		shape.m_dimensions = Vector3f(m_size, m_maxHeight, m_size);
+
+		// Create collider
+		m_collider = m_scene->getExtension<Physics>()->addCollider(m_entity, shape);
+	}
 }
 
 
 ///////////////////////////////////////////////////////////
-void Terrain::setTileScale(float scale)
+void Terrain::updateHeightMap(const Vector2u& pos, const Vector2u& size)
 {
-	m_tileScale = scale;
+	// Check if full image is being updated
+	bool fullImgUpdate = pos == Vector2u(0) && size.x == m_heightMap.getWidth() && size.x == m_heightMap.getHeight();
 
-	// Update tile layout
-	createTileLayout();
-	m_isUniformDirty = true;
-}
+	// Calculate rectangle in node coordinates
+	Uint32 numTilesPerEdge = 1 << (m_lodLevels.size() - 1);
+	Uint32 pixelsPerTile = m_heightMap.getWidth() / numTilesPerEdge;
+	Uint32 sr = pos.y / pixelsPerTile;
+	Uint32 sc = pos.x / pixelsPerTile;
+	Uint32 fr = (pos.y + size.y - 1) / pixelsPerTile;
+	Uint32 fc = (pos.x + size.x - 1) / pixelsPerTile;
 
+	// Reset height bounds
+	for (int i = m_lodLevels.size() - 1; i >= 0; --i)
+	{
+		LodLevel& level = m_lodLevels[i];
 
-///////////////////////////////////////////////////////////
-void Terrain::setLodScale(float scale)
-{
-	m_lodScale = scale;
+		Uint32 denom = (Uint32)(1 << (m_lodLevels.size() - i - 1));
+		Vector2u start = Vector2u(sr, sc) / denom;
+		Vector2u finish = Vector2u(fr, fc) / denom;
+		Uint32 tilesPerEdge = numTilesPerEdge / denom;
 
-	// Update tile layout
-	createTileLayout();
-	m_isUniformDirty = true;
-}
+		// Reset bounds in the region
+		for (Uint32 r = start.x; r <= finish.x; ++r)
+		{
+			for (Uint32 c = start.y; c <= finish.y; ++c)
+				level.m_heightBounds[r][c] = Vector2<Uint16>(65535, 0);
+		}
+	}
 
+	// Update height bounds
+	for (Uint32 r = sr; r <= fr; ++r)
+	{
+		for (Uint32 c = sc; c <= fc; ++c)
+			updateHeightBounds(r, c);
+	}
 
-///////////////////////////////////////////////////////////
-void Terrain::setMaxDist(float dist)
-{
-	m_maxDist = dist;
+	// Update height map
+	if (fullImgUpdate)
+		m_heightMap.update(m_heightMapImg.getData());
 
-	// Update tile layout
-	createTileLayout();
-}
+	else
+	{
+		Uint32 numPixels = size.x * size.y;
+		float* dst = (float*)malloc(numPixels * sizeof(float));
+		float* src = (float*)m_heightMapImg.getData();
 
+		// Copy row by row
+		for (Uint32 r = 0; r < size.y; ++r)
+			memcpy(dst + r * size.x, src + (pos.x + r) * m_heightMapImg.getWidth() + pos.y, size.x * sizeof(float));
 
-///////////////////////////////////////////////////////////
-void Terrain::setUseFlatShading(bool use)
-{
-	m_useFlatShading = use;
-	m_isUniformDirty = true;
-}
+		// Update texture
+		m_heightMap.update(dst, Vector2u(pos.y, pos.x), size);
 
+		// Free data
+		free(dst);
+	}
 
-///////////////////////////////////////////////////////////
-void Terrain::setHeightMap(const Image& map)
-{
-	ASSERT(map.getDataType() == GLType::Float, "Terrain height maps must use float values");
-	ASSERT(map.getNumChannels() == 1, "Terrain height maps must have only one color channel");
-
-	// Upload data to texture
-	m_heightMap.create(map);
-
-	// Iterate through data and generate normals
-	Vector2u size = Vector2u(map.getWidth(), map.getHeight());
-	if (!m_normalMapData)
-	m_normalMapData = (Vector3f*)MALLOC_DBG(size.x * size.y * sizeof(Vector3f));
-
-	// Calculate normals
-	calcNormals(map, Vector2u(0), size);
-
-	// Upload normal data
-	m_normalMap.create(m_normalMapData, PixelFormat::Rgb, size.x, size.y, 0, GLType::Float);
-}
-
-
-///////////////////////////////////////////////////////////
-void Terrain::calcNormals(const Image& hmap, const Vector2i& pos, const Vector2u& size)
-{
-	Vector2u mapSize = Vector2u(hmap.getWidth(), hmap.getHeight());
+	// Normal map
+	Vector2u mapSize = Vector2u(m_heightMapImg.getWidth(), m_heightMapImg.getHeight());
 	Vector2f sizeFactor = m_size / Vector2f(mapSize);
 
-	for (Uint32 r = pos.y; r < mapSize.y && r < pos.y + size.y; ++r)
+	// If a normal map hasn't been created, create a new one
+	if (!m_normalMap.getId())
 	{
-		for (Uint32 c = pos.x; c < mapSize.x && c < pos.x + size.x; ++c)
+		// Create empty image
+		m_normalMapImg.create(mapSize.x, mapSize.y);
+
+		// Create texture
+		m_normalMap.create(NULL, PixelFormat::Rgb, mapSize.x, mapSize.y, 0, GLType::Uint16);
+	}
+
+	// Calculate normals
+	sr = pos.x;
+	sc = pos.y;
+	fr = pos.x + size.x;
+	fc = pos.y + size.y;
+
+	for (Uint32 r = sr; r < fr; ++r)
+	{
+		for (Uint32 c = sc; c < fc; ++c)
 		{
 			// Calculate normal
-			float h01 = *(float*)hmap.getPixel(r, c - (c == 0 ? 0 : 1)) * m_height;
-			float h21 = *(float*)hmap.getPixel(r, c + (c == mapSize.x - 1 ? 0 : 1)) * m_height;
-			float h10 = *(float*)hmap.getPixel(r + (r == mapSize.y - 1 ? 0 : 1), c) * m_height;
-			float h12 = *(float*)hmap.getPixel(r - (r == 0 ? 0 : 1), c) * m_height;
+			float h01 = m_heightMapImg[r][c - (c == 0 ? 0 : 1)] * m_maxHeight;
+			float h21 = m_heightMapImg[r][c + (c == mapSize.x - 1 ? 0 : 1)] * m_maxHeight;
+			float h10 = m_heightMapImg[r + (r == mapSize.y - 1 ? 0 : 1)][c] * m_maxHeight;
+			float h12 = m_heightMapImg[r - (r == 0 ? 0 : 1)][c] * m_maxHeight;
 
 			Vector3f v1(sizeFactor.x, h21 - h01, 0.0f);
 			Vector3f v2(0.0f, h12 - h10, -sizeFactor.y);
 			Vector3f normal = normalize(cross(v1, v2));
 
-			m_normalMapData[r * hmap.getWidth() + c] = normal;
+			// Adjust for 16-bit
+			normal.x = 0.5f * normal.x + 0.5f;
+			normal.z = 0.5f * normal.z + 0.5f;
+
+			m_normalMapImg[r][c] = Vector3<Uint16>(normal * 65535.0f);
 		}
+	}
+
+	// Update normal map
+	if (fullImgUpdate)
+		m_normalMap.update(m_normalMapImg.getData());
+
+	else
+	{
+		Uint32 numPixels = size.x * size.y;
+		Vector3<Uint16>* dst = (Vector3<Uint16>*)malloc(numPixels * sizeof(Vector3<Uint16>));
+		Vector3<Uint16>* src = (Vector3<Uint16>*)m_normalMapImg.getData();
+
+		// Copy row by row
+		for (Uint32 r = 0; r < size.y; ++r)
+			memcpy(dst + r * size.x, src + (pos.x + r) * m_normalMapImg.getWidth() + pos.y, size.x * sizeof(Vector3<Uint16>));
+
+		// Update texture
+		m_normalMap.update(dst, Vector2u(pos.y, pos.x), size);
+
+		// Free data
+		free(dst);
 	}
 }
 
 
 ///////////////////////////////////////////////////////////
-void Terrain::updateNormalMap(const Vector3f& scale)
+void Terrain::updateHeightBounds(Uint32 nr, Uint32 nc)
 {
-	if (!m_normalMap.getId()) return;
+	// Calculate node bounds in pixels
+	Uint32 numTilesPerEdge = 1 << (m_lodLevels.size() - 1);
+	Uint32 pixelsPerTile = m_heightMap.getWidth() / numTilesPerEdge;
+	Uint32 sr = (nr + 0) * pixelsPerTile;
+	Uint32 sc = (nc + 0) * pixelsPerTile;
+	Uint32 fr = (nr + 1) * pixelsPerTile;
+	Uint32 fc = (nc + 1) * pixelsPerTile;
 
-	// Get normal transform matrix
-	Matrix3f transform = Matrix3f(transpose(inverse(toTransformMatrix(Vector3f(0.0f), Vector3f(0.0f), scale))));
+	Uint16 min = 65535;
+	Uint16 max = 0;
 
-	// Multiply every normal by transform
-	Uint32 size = m_normalMap.getWidth() * m_normalMap.getHeight();
-	for (Uint32 i = 0; i < size; ++i)
-		m_normalMapData[i] = transform * m_normalMapData[i];
-
-	// Update texture data
-	m_normalMap.update(m_normalMapData);
-}
-
-
-///////////////////////////////////////////////////////////
-void Terrain::setColorMap(const Image& map)
-{
-	// Upload data to texture
-	m_colorMap.create(map);
-}
-
-
-///////////////////////////////////////////////////////////
-void Terrain::setAmbientColor(const Vector3f& color)
-{
-	m_ambientColor = color;
-}
-
-
-///////////////////////////////////////////////////////////
-void Terrain::updateHeightMap(const Image& map, const Vector2i& pos, const Vector2u& size)
-{
-	// Get rectangle size
-	Vector2u rectSize = Vector2u(size.x ? size.x : map.getWidth(), size.y ? size.y : map.getHeight());
-
+	// Find height bounds
+	for (Uint32 r = sr; r < fr; ++r)
 	{
-		// Copy data to a separate buffer
-		float* data = (float*)MALLOC_DBG(rectSize.x * rectSize.y * sizeof(float));
-		for (Uint32 r = 0; r < rectSize.y; ++r)
+		for (Uint32 c = sc; c < fc; ++c)
 		{
-			float* src = (float*)map.getData();
-			src += (pos.y + r) * map.getWidth() + pos.x;
-			memcpy(data + r * rectSize.x, src, rectSize.x * sizeof(float));
-		}
+			// Get height value
+			Uint16 value = (Uint16)(m_heightMapImg[r][c] * 65535.0f);
 
-		// Push data
-		m_heightMap.update(data, pos, rectSize);
-		FREE_DBG(data);
+			if (value < min)
+				min = value;
+			if (value > max)
+				max = value;
+		}
 	}
 
+	// Update height bounds for all nodes up to root
+	bool boundsChanged = true;
+	int level = m_lodLevels.size() - 1;
+	Vector2<Uint16> newBounds = Vector2<Uint16>(min, max);
+
+	while (boundsChanged && level >= 0)
 	{
-		Vector2i rectPos = pos - 1;
-		if (rectPos.x < 0)
-			rectPos.x = 0;
-		if (rectPos.y < 0)
-			rectPos.y = 0;
-		rectSize += 2u;
+		// Reset flag to false
+		boundsChanged = false;
 
-		// Update normals
-		calcNormals(map, rectPos, rectSize);
+		// Get current bounds
+		Vector2<Uint16>& currBounds = m_lodLevels[level].m_heightBounds[nr][nc];
 
-		// Copy data to a separate buffer
-		Vector3f* data = (Vector3f*)MALLOC_DBG(rectSize.x * rectSize.y * sizeof(Vector3f));
-		for (Uint32 r = 0; r < rectSize.y; ++r)
+		if (newBounds.x < currBounds.x)
 		{
-			Vector3f* src = m_normalMapData;
-			src += (rectPos.y + r) * map.getWidth() + rectPos.x;
-			memcpy(data + r * rectSize.x, src, rectSize.x * sizeof(Vector3f));
+			currBounds.x = newBounds.x;
+			boundsChanged = true;
+		}
+		if (newBounds.y > currBounds.y)
+		{
+			currBounds.y = newBounds.y;
+			boundsChanged = true;
 		}
 
-		// Push data
-		m_normalMap.update(data, rectPos, rectSize);
-		FREE_DBG(data);
+		// Update state
+		--level;
+		nr /= 2;
+		nc /= 2;
+		numTilesPerEdge /= 2;
 	}
-
 }
 
 
 ///////////////////////////////////////////////////////////
-void Terrain::updateColorMap(const Image& map, const Vector2i& pos, const Vector2u& size)
+void Terrain::setBounciness(float bounciness)
 {
-	// Get rectangle size
-	Vector2u rectSize = Vector2u(size.x ? size.x : map.getWidth(), size.y ? size.y : map.getHeight());
+	m_bounciness = bounciness;
 
-	// Copy data to a separate buffer
-	Vector3<Uint8>* data = (Vector3<Uint8>*)MALLOC_DBG(rectSize.x * rectSize.y * 3);
-	for (Uint32 r = 0; r < rectSize.y; ++r)
-	{
-		Vector3<Uint8>* src = (Vector3<Uint8>*)map.getData();
-		src += (pos.y + r) * map.getWidth() + pos.x;
-		memcpy(data + r * rectSize.x, src, rectSize.x * sizeof(Vector3<Uint8>));
-	}
-
-	// Push data
-	m_colorMap.update(data, pos, rectSize);
-	FREE_DBG(data);
+	if (m_heightMap.getId() && m_entity.isValid())
+		m_collider.setBounciness(bounciness);
 }
 
 
 ///////////////////////////////////////////////////////////
-float Terrain::getSize() const
+void Terrain::setFrictionCoefficient(float coefficient)
 {
-	return m_size;
+	m_friction = coefficient;
+
+	if (m_heightMap.getId() && m_entity.isValid())
+		m_collider.setFrictionCoefficient(coefficient);
 }
 
 
 ///////////////////////////////////////////////////////////
-float Terrain::getHeight() const
+void Terrain::setCollisionCategory(Uint16 category)
 {
-	return m_height;
+	m_collisionCategory = category;
+
+	if (m_heightMap.getId() && m_entity.isValid())
+		m_collider.setCollisionCategory(category);
 }
 
 
 ///////////////////////////////////////////////////////////
-float Terrain::getTileScale() const
+void Terrain::setCollisionMask(Uint16 mask)
 {
-	return m_tileScale;
-}
+	m_collisionMask = mask;
 
-
-///////////////////////////////////////////////////////////
-float Terrain::getLodScale() const
-{
-	return m_lodScale;
-}
-
-
-///////////////////////////////////////////////////////////
-float Terrain::getMaxDist() const
-{
-	return m_maxDist;
-}
-
-
-///////////////////////////////////////////////////////////
-bool Terrain::usesFlatShading() const
-{
-	return m_useFlatShading;
+	if (m_heightMap.getId() && m_entity.isValid())
+		m_collider.setCollisionMask(mask);
 }
 
 
@@ -888,13 +816,6 @@ Texture& Terrain::getHeightMap()
 
 
 ///////////////////////////////////////////////////////////
-Texture& Terrain::getColorMap()
-{
-	return m_colorMap;
-}
-
-
-///////////////////////////////////////////////////////////
 Texture& Terrain::getNormalMap()
 {
 	return m_normalMap;
@@ -902,9 +823,1358 @@ Texture& Terrain::getNormalMap()
 
 
 ///////////////////////////////////////////////////////////
-const Vector3f& Terrain::getAmbientColor() const
+Terrain::HeightMap& Terrain::getHeightData()
 {
-	return m_ambientColor;
+	return m_heightMapImg;
+}
+
+
+///////////////////////////////////////////////////////////
+Terrain::NormalMap& Terrain::getNormalData()
+{
+	return m_normalMapImg;
+}
+
+
+///////////////////////////////////////////////////////////
+float Terrain::getBounciness() const
+{
+	return m_bounciness;
+}
+
+
+///////////////////////////////////////////////////////////
+float Terrain::getFrictionCoefficient() const
+{
+	return m_friction;
+}
+
+
+///////////////////////////////////////////////////////////
+Uint16 Terrain::getCollisionCategory() const
+{
+	return m_collisionCategory;
+}
+
+
+///////////////////////////////////////////////////////////
+Uint16 Terrain::getCollisionMask() const
+{
+	return m_collisionMask;
+}
+
+
+///////////////////////////////////////////////////////////
+Shader LargeTerrain::s_shader;
+
+
+///////////////////////////////////////////////////////////
+Shader& LargeTerrain::getShader()
+{
+	if (!s_shader.getId())
+	{
+		s_shader.load("shaders/large_terrain.vert", Shader::Vertex);
+		s_shader.load("shaders/large_terrain.frag", Shader::Fragment);
+		s_shader.compile();
+	}
+
+	return s_shader;
+}
+
+
+///////////////////////////////////////////////////////////
+LargeTerrain::LargeTerrain() :
+	m_tileSize				(512.0f),
+	m_baseTileLevel			(0),
+	m_cacheMapSize			(0),
+	m_bounciness			(0.1f),
+	m_friction				(0.2f),
+	m_collisionCategory		(0x0001),
+	m_collisionMask			(0xFFFF),
+	m_tileLoadedBitfield	(0),
+	m_redirectMapChanged	(false)
+{
+	// Need to do initial load
+	m_viewpointChanged = true;
+}
+
+
+///////////////////////////////////////////////////////////
+LargeTerrain::~LargeTerrain()
+{
+	// Free all images and edge images
+	for (auto it = m_tileMap.begin(); it != m_tileMap.end(); ++it)
+	{
+		for (Uint32 i = 0; i < it.value().m_mapData.size(); ++i)
+		{
+			MapData& data = it.value().m_mapData[i];
+
+			if (data.m_fullImg)
+				Pool<Image>::free(data.m_fullImg);
+			if (data.m_edgeImg)
+				Pool<Image>::free(data.m_edgeImg);
+
+			data.m_fullImg = 0;
+			data.m_edgeImg = 0;
+		}
+	}
+
+	// Delete all load tasks
+	for (Uint32 i = 0; i < m_loadTasks.size(); ++i)
+		delete m_loadTasks[i];
+
+	m_loadTasks.clear();
+}
+
+
+///////////////////////////////////////////////////////////
+void LargeTerrain::create(float size, float maxHeight, float maxBaseSize, float tileSize)
+{
+	// Standard create routine
+	TerrainBase::create(size, maxHeight, maxBaseSize);
+
+	// Tile properties
+	m_tileSize = tileSize;
+
+	// Round tile size to nearest lod level size
+	float baseSize = m_lodLevels.back().m_dist;
+	m_baseTileLevel = (Uint32)std::max((int)std::lround(std::log2f(m_tileSize / baseSize)), 0);
+	m_tileSize = (float)(1 << m_baseTileLevel) * baseSize;
+	m_baseTileLevel = m_lodLevels.size() - m_baseTileLevel - 1;
+
+	// Create redirect map
+	Uint32 mapSize = 1 << m_baseTileLevel;
+	m_redirectMapImg.create(mapSize);
+
+	// Create texture (nearest filter)
+	m_redirectMap.create(m_redirectMapImg.getData(), PixelFormat::Rgb, mapSize, mapSize, 0, GLType::Uint8, TextureFilter::Nearest);
+
+	// Estimate cache map size
+	m_cacheMapSize = estimateCacheSize(m_baseTileLevel + 1);
+
+	// Create free list (add in reverse)
+	for (int y = m_cacheMapSize.y - 1; y >= 0; --y)
+	{
+		for (int x = m_cacheMapSize.x - 1; x >= 0; --x)
+			m_freeList.push(Vector2<Uint8>(x, y));
+	}
+
+	// The scheduler is used, so initialize it if it has not
+	if (!Scheduler::getNumWorkers())
+		Scheduler::setNumWorkers(std::max((int)std::thread::hardware_concurrency() - 1, 1));
+}
+
+
+///////////////////////////////////////////////////////////
+void LargeTerrain::onRender(Camera& camera)
+{
+	START_PROFILING(LargeTerrainUpdate);
+
+	// Update tile maps if viewpoint changed
+	if (m_viewpointChanged)
+	{
+		// Load and unload tile maps
+		updateTileMaps(Vector2u(0), 0);
+
+		// Must reset flag when using it
+		m_viewpointChanged = false;
+	}
+
+	// Update load tasks in render thread
+	updateLoadTasks();
+
+	// Update redirect map if it has changed
+	if (m_redirectMapChanged)
+	{
+		// Update
+		m_redirectMap.update(m_redirectMapImg.getData());
+
+		m_redirectMapChanged = false;
+	}
+
+	STOP_PROFILING(LargeTerrainUpdate);
+
+	// Get shader
+	if (!m_shader)
+		m_shader = &getShader();
+
+	// Bind shader
+	m_shader->bind();
+
+	m_shader->setUniform("u_cacheMapSize", (Vector2f)m_cacheMapSize);
+
+	// Bind textures
+	m_shader->setUniform("u_redirectMap", m_redirectMap);
+	if (m_heightMap.getId())
+		m_shader->setUniform("u_heightMap", m_heightMap);
+	if (m_normalMap.getId())
+		m_shader->setUniform("u_normalMap", m_normalMap);
+	if (m_splatMap.getId())
+		m_shader->setUniform("u_splatMap", m_splatMap);
+
+	for (Uint32 i = 0; i < m_splatTextures.size(); ++i)
+	{
+		if (m_splatTextures[i] && m_splatTextures[i]->getId())
+			m_shader->setUniform("u_splatTextures[" + std::to_string(i) + ']', *m_splatTextures[i]);
+	}
+}
+
+
+///////////////////////////////////////////////////////////
+void LargeTerrain::updateTileMaps(const Vector2u& node, Uint32 lod)
+{
+	// Calculate node properties
+	Uint32 numNodesPerEdge = 1 << lod;
+	float nodeSize = m_size / (float)numNodesPerEdge;
+	float halfNodeSize = 0.5f * nodeSize;
+	Vector2f center = nodeSize * (Vector2f(node.y, node.x) - (float)(numNodesPerEdge / 2) + 0.5f);
+	if (lod == 0)
+		center = Vector2f(0.0f);
+
+	// Get bounding box
+	BoundingBox bbox;
+	{
+		std::unique_lock<std::mutex> lock(m_mutex);
+
+		const Vector2<Uint16>& hbounds = m_lodLevels[lod].m_heightBounds[node.x][node.y];
+
+		bbox.m_min = Vector3f(center.x - halfNodeSize, (float)hbounds.x / 65535.0f * m_maxHeight, center.y - halfNodeSize);
+		bbox.m_max = Vector3f(center.x + halfNodeSize, (float)hbounds.y / 65535.0f * m_maxHeight, center.y + halfNodeSize);
+	}
+
+	// Check if bounding box is inside the current lod range
+	if (intersects(m_viewpoint, m_lodLevels[lod + 1].m_dist, bbox))
+	{
+		Vector3<Uint16> tileData(node.x, node.y, lod);
+
+		// Check if this tile has already been loaded,
+		// and if there is enough space in the cache texture
+		auto it = m_tileMap.find(tileData);
+		if (m_freeList.size() && it == m_tileMap.end())
+		{
+			// Add mapping
+			Tile tile;
+			tile.m_mapData.resize(3, MapData{ 0, 0, 0 });
+			tile.m_cachePos = m_freeList.top();
+			tile.m_tileData = tileData;
+			tile.m_isLoaded = 0;
+			m_tileMap[tileData] = tile;
+
+			Vector2i tileXy = Vector2i(node.y, node.x) - (int)numNodesPerEdge / 2;
+
+			// Add load tasks
+			if (m_loadFunc)
+			{
+				// Create preload task
+				PreloadTask task;
+				task.m_tileData = Vector3<Uint16>(node.x, node.y, lod);
+				task.m_tileXy = tileXy;
+				task.m_task = std::async(m_loadFunc, tileXy, lod);
+
+				// Add preload task
+				m_preloadTasks.push_back(std::move(task));
+			}
+			else
+				// Add regular load tasks
+				addLoadTasks(node, tileXy, lod);
+
+			// Remove from free list
+			m_freeList.pop();
+		}
+
+		// Check children nodes
+		if (lod < m_baseTileLevel)
+		{
+			Vector2u childNode = 2u * node;
+			updateTileMaps(childNode + Vector2u(0, 0), lod + 1);
+			updateTileMaps(childNode + Vector2u(0, 1), lod + 1);
+			updateTileMaps(childNode + Vector2u(1, 0), lod + 1);
+			updateTileMaps(childNode + Vector2u(1, 1), lod + 1);
+		}
+	}
+
+	// Otherwise, check the lod level
+	else if (lod != 0 && !intersects(m_viewpoint, m_lodLevels[lod + 1].m_dist * 1.1f, bbox))
+	{
+		// The base level tile map should never be freed
+		Vector3<Uint16> tileData(node.x, node.y, lod);
+
+		// Check if this tile is fully loaded
+		auto it = m_tileMap.find(tileData);
+		if (it != m_tileMap.end())
+		{
+			Tile& tile = it.value();
+
+			// Add the cache position to free list
+			m_freeList.push(tile.m_cachePos);
+
+			// Get parent tile cache position
+			Vector2<Uint8> parentCachePos = m_tileMap[Vector3<Uint16>(node.x / 2, node.y / 2, lod - 1)].m_cachePos;
+
+			// Reset redirect map tiles
+			Uint32 tileSize = 1 << (m_baseTileLevel - lod);
+			Uint32 sr = node.x * tileSize;
+			Uint32 sc = node.y * tileSize;
+			Uint32 fr = (node.x + 1) * tileSize;
+			Uint32 fc = (node.y + 1) * tileSize;
+
+			for (Uint32 r = sr; r < fr; ++r)
+			{
+				for (Uint32 c = sc; c < fc; ++c)
+					m_redirectMapImg[r][c] = Vector3<Uint8>(parentCachePos, m_baseTileLevel - lod + 1);
+			}
+
+			// Indicate that redirect map has changed
+			m_redirectMapChanged = true;
+
+			// Remove collider if this tile is base level
+			// This is done before freeing images because colliders depend on images
+			// to work correctly and sometimes, this could cause asynchronous physics loops
+			// to bug out
+			if (lod == m_baseTileLevel)
+			{
+				std::unique_lock<std::mutex> lock(m_mutex);
+
+				for (Uint32 i = 0; i < m_colliders.size(); ++i)
+				{
+					if (m_colliders[i].m_tile.x == node.x && m_colliders[i].m_tile.y == node.y)
+					{
+						// Remove collider
+						m_scene->getExtension<Physics>()->removeCollider(m_entity, m_colliders[i].m_collider);
+
+						// Remove from list
+						m_colliders[i] = std::move(m_colliders.back());
+						m_colliders.pop_back();
+
+						break;
+					}
+				}
+			}
+
+			// Free images
+			for (Uint32 i = 0; i < tile.m_mapData.size(); ++i)
+			{
+				MapData& mapData = tile.m_mapData[i];
+
+				if (mapData.m_fullImg)
+					Pool<Image>::free(mapData.m_fullImg);
+
+				// Free edge image
+				if (mapData.m_edgeImg)
+					Pool<Image>::free(mapData.m_edgeImg);
+
+				mapData.m_fullImg = 0;
+				mapData.m_edgeImg = 0;
+			}
+
+			// Remove mapping
+			m_tileMap.erase(it);
+
+			// Call unload function
+			if (m_unloadFunc)
+			{
+				// Calculate tile coordinates
+				Uint32 numNodesPerEdge = 1 << lod;
+				Vector2i tileXy = Vector2i(node.y, node.x) - (int)numNodesPerEdge / 2;
+
+				m_unloadFunc(tileXy, lod);
+			}
+		}
+	}
+}
+
+
+///////////////////////////////////////////////////////////
+void LargeTerrain::addLoadTasks(const Vector2u& node, const Vector2i& tile, Uint32 lod)
+{
+	if (m_heightLoadFunc)
+	{
+		// Create task
+		LoadTask* task = new LoadTask();
+		task->m_image = Pool<Image>::alloc();
+		task->m_texture = &m_heightMap;
+		task->m_tileData = Vector3<Uint16>(node.x, node.y, lod);
+		task->m_mapType = MapData::Height;
+
+		// Call load function
+		task->m_task = std::async(m_heightLoadFunc, tile, lod, task->m_image);
+
+		// Add to list
+		m_loadTasks.push_back(task);
+	}
+
+	if (m_splatLoadFunc)
+	{
+		// Create task
+		LoadTask* task = new LoadTask();
+		task->m_image = Pool<Image>::alloc();
+		task->m_texture = &m_splatMap;
+		task->m_tileData = Vector3<Uint16>(node.x, node.y, lod);
+		task->m_mapType = MapData::Splat;
+
+		// Call load function
+		task->m_task = std::async(m_splatLoadFunc, tile, lod, task->m_image);
+
+		// Add to list
+		m_loadTasks.push_back(task);
+	}
+
+	for (Uint32 i = 0; i < m_customLoadFuncs.size(); ++i)
+	{
+		// Create task
+		LoadTask* task = new LoadTask();
+		task->m_image = Pool<Image>::alloc();
+		task->m_texture = m_customMaps[i];
+		task->m_tileData = Vector3<Uint16>(node.x, node.y, lod);
+		task->m_mapType = (MapData::Type)(MapData::Custom + i);
+
+		// Call load function
+		task->m_task = std::async(m_customLoadFuncs[i], tile, lod, task->m_image);
+
+		// Add to list
+		m_loadTasks.push_back(task);
+	}
+}
+
+
+///////////////////////////////////////////////////////////
+void LargeTerrain::updateLoadTasks()
+{
+	for (int i = 0; i < (int)m_preloadTasks.size(); ++i)
+	{
+		PreloadTask& task = m_preloadTasks[i];
+
+		// Check if the task is finished
+		if (task.m_task.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+			continue;
+
+		auto currentTileIt = m_tileMap.find(task.m_tileData);
+		if (task.m_task.get() && currentTileIt != m_tileMap.end())
+			// The preload was successful, add the rest of the load tasks
+			addLoadTasks(Vector2u(task.m_tileData), Vector2i(task.m_tileXy), task.m_tileData.z);
+		else
+			LOG_WARNING("Failed to load terrain tile (%d, %d, %d)", task.m_tileData.x, task.m_tileData.y, task.m_tileData.z);
+
+		// Remove task
+		m_preloadTasks.erase(m_preloadTasks.begin() + i);
+
+		// Decrement so that next element is not skipped
+		--i;
+	}
+
+	// Update load tasks
+	for (int i = 0; i < (int)m_loadTasks.size(); ++i)
+	{
+		LoadTask* loadTask = m_loadTasks[i];
+
+		// Check if the task is finished
+		if (loadTask->m_task.valid() && loadTask->m_task.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+			continue;
+
+		// Skip and remove if the image failed to load, and also catches
+		// extreme edge case: the tile went into unload range while it was still loading
+		auto currentTileIt = m_tileMap.find(loadTask->m_tileData);
+		if (loadTask->m_task.valid() && !loadTask->m_task.get() || currentTileIt == m_tileMap.end())
+		{
+			LOG_WARNING("Failed to load terrain tile (%d, %d, %d)", loadTask->m_tileData.x, loadTask->m_tileData.y, loadTask->m_tileData.z);
+
+			// Remove task
+			delete loadTask;
+			m_loadTasks.erase(m_loadTasks.begin() + i);
+
+			// Decrement so that next element is not skipped
+			--i;
+
+			continue;
+		}
+		Tile& tile = currentTileIt.value();
+
+		// The loaded image must be a square
+		Image* loadedImage = loadTask->m_image;
+		ASSERT(loadedImage->getWidth() == loadedImage->getHeight(), "Terrain map tiles must be sqaure");
+
+		// Make sure texture is correct size
+		ASSERT(
+			!loadTask->m_texture->getId() || (
+				loadTask->m_texture->getWidth() / (loadedImage->getWidth() + 2) == m_cacheMapSize.x &&
+				loadTask->m_texture->getHeight() / (loadedImage->getHeight() + 2) == m_cacheMapSize.y),
+			"Terrain map tile sizes must be consistent (%d px)", loadedImage->getWidth());
+
+
+		// The load task is ready to be processed, create the map tile
+		Uint32 mapSize = loadedImage->getWidth();
+
+		// Calculate some metadata
+		Uint32 c = loadedImage->getNumChannels();
+		GLType dtype = loadedImage->getDataType();
+		Uint32 typeSize = 1;
+		if (dtype == GLType::Uint16 || dtype == GLType::Int16)
+			typeSize = 2;
+		else if (dtype == GLType::Uint32 || dtype == GLType::Int32 || dtype == GLType::Float)
+			typeSize = 4;
+
+		Uint32 pixelSize = c * typeSize;
+		Uint32 rowSize = mapSize * pixelSize;
+
+		MapData::Type mapType = loadTask->m_mapType;
+		Uint32 mapTypeBitfield = 1 << mapType;
+		MapData& mapData = tile.m_mapData[mapType];
+
+
+		// Create edge image if it hasn't been created yet
+		if (!mapData.m_edgeImg)
+		{
+			// Create edge image
+			mapData.m_edgeImg = Pool<Image>::alloc();
+			mapData.m_edgeImg->create(NULL, mapSize, 8, c, dtype);
+			Uint8* edgeImgData = (Uint8*)mapData.m_edgeImg->getData();
+
+			// Copy horizontal edges
+			Uint8* src = (Uint8*)loadedImage->getData();
+			memcpy(edgeImgData + (Uint32)EdgeRow::Top * rowSize, src + 0 * rowSize, rowSize);
+			memcpy(edgeImgData + (Uint32)EdgeRow::Bottom * rowSize, src + (mapSize - 1) * rowSize, rowSize);
+			memcpy(edgeImgData + (Uint32)EdgeRow::TMid * rowSize, src + (mapSize / 2 - 1) * rowSize, rowSize);
+			memcpy(edgeImgData + (Uint32)EdgeRow::BMid * rowSize, src + (mapSize / 2) * rowSize, rowSize);
+
+			// Copy vertical edges
+			for (Uint32 x = 0; x < mapSize; ++x)
+			{
+				memcpy(edgeImgData + (Uint32)EdgeRow::Left * rowSize + x * pixelSize, src + x * rowSize + 0 * pixelSize, pixelSize);
+				memcpy(edgeImgData + (Uint32)EdgeRow::Right * rowSize + x * pixelSize, src + x * rowSize + (mapSize - 1) * pixelSize, pixelSize);
+				memcpy(edgeImgData + (Uint32)EdgeRow::LMid * rowSize + x * pixelSize, src + x * rowSize + (mapSize / 2 - 1) * pixelSize, pixelSize);
+				memcpy(edgeImgData + (Uint32)EdgeRow::RMid * rowSize + x * pixelSize, src + x * rowSize + (mapSize / 2) * pixelSize, pixelSize);
+			}
+		}
+
+
+		// Check if surrounding tiles have been loaded
+		const Vector3<Uint16>& tileData = loadTask->m_tileData;
+		Uint32 numTilesPerEdge = 1 << tileData.z;
+		Tile* ltile = 0;
+		Tile* rtile = 0;
+		Tile* ttile = 0;
+		Tile* btile = 0;
+
+		if (tileData.z > 0)
+		{
+			// Top
+			if (tileData.x > 0)
+			{
+				// Get tile
+				ttile = getAdjTile(Vector3<Uint16>(tileData.x - 1, tileData.y, tileData.z));
+				if (!ttile || !ttile->m_mapData[mapType].m_edgeImg)
+					// Skip if the tile hasn't started loading, or if the edge image hasn't been created yet
+					continue;
+			}
+			else
+				ttile = &tile;
+
+			// Bot
+			if (tileData.x < numTilesPerEdge - 1)
+			{
+				btile = getAdjTile(Vector3<Uint16>(tileData.x + 1, tileData.y, tileData.z));
+				if (!btile || !btile->m_mapData[mapType].m_edgeImg)
+					continue;
+			}
+			else
+				btile = &tile;
+
+			// Left
+			if (tileData.y > 0)
+			{
+				ltile = getAdjTile(Vector3<Uint16>(tileData.x, tileData.y - 1, tileData.z));
+				if (!ltile || !ltile->m_mapData[mapType].m_edgeImg)
+					continue;
+			}
+			else
+				ltile = &tile;
+
+			// Right
+			if (tileData.y < numTilesPerEdge - 1)
+			{
+				rtile = getAdjTile(Vector3<Uint16>(tileData.x, tileData.y + 1, tileData.z));
+				if (!rtile || !rtile->m_mapData[mapType].m_edgeImg)
+					continue;
+			}
+			else
+				rtile = &tile;
+		}
+
+
+		// Create a new temporary image with extra padding
+		Image mapTile;
+		mapTile.create(NULL, mapSize + 2, mapSize + 2, loadedImage->getNumChannels(), loadedImage->getDataType());
+
+		// Copy main tile
+		Uint8* src = (Uint8*)loadedImage->getData();
+		Uint8* dst = (Uint8*)mapTile.getData();
+		for (Uint32 r = 0; r < mapSize; ++r)
+			memcpy(dst + ((r + 1) * (mapSize + 2) + 1) * pixelSize, src + (r * mapSize) * pixelSize, rowSize);
+
+		// Set up edge pixels
+		if (tileData.z == 0)
+		{
+			// Set up for base level (clamp to edge)
+			for (Uint32 x = 0; x < mapSize; ++x)
+			{
+				float xf = (float)x / mapSize;
+				copyPixel(loadedImage, &mapTile, Vector2f(0.0f, 1.0f - xf), Vector2u(x + 1, 0));
+				copyPixel(loadedImage, &mapTile, Vector2f(1.0f, 1.0f - xf), Vector2u(x + 1, mapSize + 1));
+				copyPixel(loadedImage, &mapTile, Vector2f(xf, 1.0f), Vector2u(0, x + 1));
+				copyPixel(loadedImage, &mapTile, Vector2f(xf, 0.0f), Vector2u(mapSize + 1, x + 1));
+			}
+
+			// For corners, set value to the mean of the two adjacent tiles (to keep this part simple)
+			fillCorner(&mapTile, Vector2u(0, 0), Vector2u(1, 0), Vector2u(0, 1));
+			fillCorner(&mapTile, Vector2u(mapSize + 1, 0), Vector2u(mapSize, 0), Vector2u(mapSize + 1, 1));
+			fillCorner(&mapTile, Vector2u(0, mapSize + 1), Vector2u(1, mapSize + 1), Vector2u(0, mapSize));
+			fillCorner(&mapTile, Vector2u(mapSize + 1, mapSize + 1), Vector2u(mapSize, mapSize + 1), Vector2u(mapSize + 1, mapSize));
+		}
+		else
+		{
+			// Set up for other levels
+
+			// Determine which edge to sample from for each edge and the offsets/scales
+			const Vector3<Uint16>& ldata = ltile->m_tileData;
+			const Vector3<Uint16>& rdata = rtile->m_tileData;
+			const Vector3<Uint16>& tdata = ttile->m_tileData;
+			const Vector3<Uint16>& bdata = btile->m_tileData;
+
+			bool lIsBigger = ldata.z == tileData.z - 1;
+			bool rIsBigger = rdata.z == tileData.z - 1;
+			bool tIsBigger = tdata.z == tileData.z - 1;
+			bool bIsBigger = bdata.z == tileData.z - 1;
+
+			float loffset = lIsBigger && tileData.x % 2 != 0 ? 0.5f : 0.0f;
+			float roffset = rIsBigger && tileData.x % 2 != 0 ? 0.5f : 0.0f;
+			float toffset = tIsBigger && tileData.y % 2 != 0 ? 0.5f : 0.0f;
+			float boffset = bIsBigger && tileData.y % 2 != 0 ? 0.5f : 0.0f;
+
+			float lscale = lIsBigger ? 0.5f : 1.0f;
+			float rscale = rIsBigger ? 0.5f : 1.0f;
+			float tscale = tIsBigger ? 0.5f : 1.0f;
+			float bscale = bIsBigger ? 0.5f : 1.0f;
+
+			float lrow = (float)(lIsBigger && tileData.y % 2 != 0 ? EdgeRow::LMid : EdgeRow::Right) / 8.0f + 0.5f / 8.0f;
+			float rrow = (float)(!rIsBigger || tileData.y % 2 != 0 ? EdgeRow::Left : EdgeRow::RMid) / 8.0f + 0.5f / 8.0f;
+			float trow = (float)(tIsBigger && tileData.x % 2 != 0 ? EdgeRow::TMid : EdgeRow::Bottom) / 8.0f + 0.5f / 8.0f;
+			float brow = (float)(!bIsBigger || tileData.x % 2 != 0 ? EdgeRow::Top : EdgeRow::BMid) / 8.0f + 0.5f / 8.0f;
+
+			// Correction for when the tile is along the edge of the terrain
+			if (ltile == &tile) lrow = (float)EdgeRow::Left / 8.0f + 0.5f / 8.0f;
+			if (rtile == &tile) rrow = (float)EdgeRow::Right / 8.0f + 0.5f / 8.0f;
+			if (ttile == &tile) trow = (float)EdgeRow::Top / 8.0f + 0.5f / 8.0f;
+			if (btile == &tile) brow = (float)EdgeRow::Bottom / 8.0f + 0.5f / 8.0f;
+
+			MapData& lMapData = ltile->m_mapData[mapType];
+			MapData& rMapData = rtile->m_mapData[mapType];
+			MapData& tMapData = ttile->m_mapData[mapType];
+			MapData& bMapData = btile->m_mapData[mapType];
+
+			Image* limg = lMapData.m_edgeImg;
+			Image* rimg = rMapData.m_edgeImg;
+			Image* timg = tMapData.m_edgeImg;
+			Image* bimg = bMapData.m_edgeImg;
+
+			// Copy pixel by pixel
+			for (Uint32 x = 0; x < mapSize; ++x)
+			{
+				float xf = (float)x + 0.5f;
+				copyPixel(limg, &mapTile, Vector2f(loffset + lscale * xf / mapSize, 1.0f - lrow), Vector2u(x + 1, 0));
+				copyPixel(rimg, &mapTile, Vector2f(roffset + rscale * xf / mapSize, 1.0f - rrow), Vector2u(x + 1, mapSize + 1));
+				copyPixel(timg, &mapTile, Vector2f(toffset + tscale * xf / mapSize, 1.0f - trow), Vector2u(0, x + 1));
+				copyPixel(bimg, &mapTile, Vector2f(boffset + bscale * xf / mapSize, 1.0f - brow), Vector2u(mapSize + 1, x + 1));
+			}
+
+			// For corners, set value to the mean of the two adjacent tiles (to keep this part simple)
+			fillCorner(&mapTile, Vector2u(0, 0), Vector2u(1, 0), Vector2u(0, 1));
+			fillCorner(&mapTile, Vector2u(mapSize + 1, 0), Vector2u(mapSize, 0), Vector2u(mapSize + 1, 1));
+			fillCorner(&mapTile, Vector2u(0, mapSize + 1), Vector2u(1, mapSize + 1), Vector2u(0, mapSize));
+			fillCorner(&mapTile, Vector2u(mapSize + 1, mapSize + 1), Vector2u(mapSize, mapSize + 1), Vector2u(mapSize + 1, mapSize));
+
+			// Update adjacent tiles if a higher edge resolution can be used
+			if (!lIsBigger && (ltile->m_isLoaded & mapTypeBitfield) && lMapData.m_edgeResR < tileData.z)
+			{
+				Vector2u cachePosXy = Vector2u(ltile->m_cachePos) * (mapSize + 2) + Vector2u(mapSize + 1, 1);
+				Uint8* srcRow = (Uint8*)mapData.m_edgeImg->getData() + (int)EdgeRow::Left * rowSize;
+				lMapData.m_texture->update(srcRow, cachePosXy, Vector2u(1, mapSize));
+
+				lMapData.m_edgeResR = (Uint8)tileData.z;
+			}
+
+			if (!rIsBigger && (rtile->m_isLoaded & mapTypeBitfield) && rMapData.m_edgeResL < tileData.z)
+			{
+				Vector2u cachePosXy = Vector2u(rtile->m_cachePos) * (mapSize + 2) + Vector2u(0, 1);
+				Uint8* srcRow = (Uint8*)mapData.m_edgeImg->getData() + (int)EdgeRow::Right * rowSize;
+				rMapData.m_texture->update(srcRow, cachePosXy, Vector2u(1, mapSize));
+
+				rMapData.m_edgeResL = (Uint8)tileData.z;
+			}
+
+			if (!tIsBigger && (ttile->m_isLoaded & mapTypeBitfield) && tMapData.m_edgeResB < tileData.z)
+			{
+				Vector2u cachePosXy = Vector2u(ttile->m_cachePos) * (mapSize + 2) + Vector2u(1, mapSize + 1);
+				Uint8* srcRow = (Uint8*)mapData.m_edgeImg->getData() + (int)EdgeRow::Top * rowSize;
+				tMapData.m_texture->update(srcRow, cachePosXy, Vector2u(mapSize, 1));
+
+				tMapData.m_edgeResB = (Uint8)tileData.z;
+			}
+
+			if (!bIsBigger && (btile->m_isLoaded & mapTypeBitfield) && bMapData.m_edgeResT < tileData.z)
+			{
+				Vector2u cachePosXy = Vector2u(btile->m_cachePos) * (mapSize + 2) + Vector2u(1, 0);
+				Uint8* srcRow = (Uint8*)mapData.m_edgeImg->getData() + (int)EdgeRow::Bottom * rowSize;
+				bMapData.m_texture->update(srcRow, cachePosXy, Vector2u(mapSize, 1));
+
+				bMapData.m_edgeResT = (Uint8)tileData.z;
+			}
+
+			// Set edge resolutions
+			mapData.m_edgeResL = (Uint8)ldata.z;
+			mapData.m_edgeResR = (Uint8)rdata.z;
+			mapData.m_edgeResT = (Uint8)tdata.z;
+			mapData.m_edgeResB = (Uint8)bdata.z;
+
+			// For base level tiles, use more accurate corner pixels
+			if (tileData.z == m_baseTileLevel)
+			{
+				// Get corner tiles
+				if (tileData.x > 0 && tileData.y > 0)
+				{
+					auto it = m_tileMap.find(Vector3<Uint16>(tileData.x - 1, tileData.y - 1, tileData.z));
+					if (it != m_tileMap.end() && (it.value().m_isLoaded & mapTypeBitfield))
+					{
+						MapData& cornerMapData = it.value().m_mapData[mapType];
+
+						// Copy bot-right -> top-left
+						memcpy(mapTile.getPixel(0, 0), cornerMapData.m_edgeImg->getPixel((Uint32)EdgeRow::Bottom, mapSize - 1), pixelSize);
+
+						// Update texture
+						Vector2u cachePos = Vector2u(it.value().m_cachePos) * (mapSize + 2) + Vector2u(mapSize + 1, mapSize + 1);
+						cornerMapData.m_texture->update(mapTile.getPixel(1, 1), cachePos, Vector2u(1));
+					}
+				}
+
+				if (tileData.x > 0 && tileData.y < numTilesPerEdge - 1)
+				{
+					auto it = m_tileMap.find(Vector3<Uint16>(tileData.x - 1, tileData.y + 1, tileData.z));
+					if (it != m_tileMap.end() && (it.value().m_isLoaded & mapTypeBitfield))
+					{
+						MapData& cornerMapData = it.value().m_mapData[mapType];
+
+						// Copy bot-left -> top-right
+						memcpy(mapTile.getPixel(0, mapSize + 1), cornerMapData.m_edgeImg->getPixel((Uint32)EdgeRow::Bottom, 0), pixelSize);
+
+						// Update texture
+						Vector2u cachePos = Vector2u(it.value().m_cachePos) * (mapSize + 2) + Vector2u(mapSize + 1, 0);
+						cornerMapData.m_texture->update(mapTile.getPixel(1, mapSize), cachePos, Vector2u(1));
+					}
+				}
+
+				if (tileData.x < numTilesPerEdge - 1 && tileData.y > 0)
+				{
+					auto it = m_tileMap.find(Vector3<Uint16>(tileData.x + 1, tileData.y - 1, tileData.z));
+					if (it != m_tileMap.end() && (it.value().m_isLoaded & mapTypeBitfield))
+					{
+						MapData& cornerMapData = it.value().m_mapData[mapType];
+
+						// Copy top-right -> bot-left
+						memcpy(mapTile.getPixel(mapSize + 1, 0), it.value().m_mapData[mapType].m_edgeImg->getPixel((Uint32)EdgeRow::Top, mapSize - 1), pixelSize);
+
+						// Update texture
+						Vector2u cachePos = Vector2u(it.value().m_cachePos) * (mapSize + 2) + Vector2u(0, mapSize + 1);
+						cornerMapData.m_texture->update(mapTile.getPixel(mapSize, 1), cachePos, Vector2u(1));
+					}
+				}
+
+				if (tileData.x < numTilesPerEdge - 1 && tileData.y < numTilesPerEdge - 1)
+				{
+					auto it = m_tileMap.find(Vector3<Uint16>(tileData.x + 1, tileData.y + 1, tileData.z));
+					if (it != m_tileMap.end() && (it.value().m_isLoaded & mapTypeBitfield))
+					{
+						MapData& cornerMapData = it.value().m_mapData[mapType];
+
+						// Copy top-left -> bot-right
+						memcpy(mapTile.getPixel(mapSize + 1, mapSize + 1), it.value().m_mapData[mapType].m_edgeImg->getPixel((Uint32)EdgeRow::Top, 0), pixelSize);
+
+						// Update texture
+						Vector2u cachePos = Vector2u(it.value().m_cachePos) * (mapSize + 2) + Vector2u(0, 0);
+						cornerMapData.m_texture->update(mapTile.getPixel(mapSize, mapSize), cachePos, Vector2u(1));
+					}
+				}
+			}
+		}
+
+		// Create texture if it hasn't yet (this is the first time it can be created without wasting loading resources)
+		// because this is the first time the tile size for the texture will be known
+		if (!loadTask->m_texture->getId())
+		{
+			// Get texture pixel format
+			PixelFormat fmt = PixelFormat::R;
+			if (c == 2)
+				fmt = PixelFormat::Rg;
+			else if (c == 3)
+				fmt = PixelFormat::Rgb;
+			else if (c == 4)
+				fmt = PixelFormat::Rgba;
+
+			// Create texture
+			loadTask->m_texture->create(NULL, fmt, (mapSize + 2) * m_cacheMapSize.x, (mapSize + 2) * m_cacheMapSize.y, 0, dtype);
+		}
+
+		// Upload to cache texture (cache position is already in xy coordinates)
+		Vector2u cachePosXy = Vector2u(tile.m_cachePos) * (mapSize + 2);
+		loadTask->m_texture->update(mapTile.getData(), cachePosXy, Vector2u(mapSize + 2));
+
+		// Set map data's texture
+		mapData.m_texture = loadTask->m_texture;
+
+
+		// If the current tile is uploading to the height map, keep the loaded image to generate normal map
+		if (loadTask->m_texture == &m_heightMap)
+		{
+			// Move the map tile image into the loaded image spot
+			*loadedImage = std::move(mapTile);
+
+			// Create new image for normals tile
+			Image* normalImg = Pool<Image>::alloc();
+
+			// Create normals tile task
+			LoadTask* normalsTask = new LoadTask();
+			normalsTask->m_image = normalImg;
+			normalsTask->m_texture = &m_normalMap;
+			normalsTask->m_tileData = tileData;
+			normalsTask->m_mapType = MapData::Normal;
+
+			// Call the generate normals task
+			normalsTask->m_task = std::async(&LargeTerrain::processHeightTile, this, loadedImage, normalImg, tileData);
+
+			// Add to task list
+			m_loadTasks.push_back(normalsTask);
+		}
+		else
+		{
+			// Otherwise, free the loaded image
+			Pool<Image>::free(loadedImage);
+		}
+
+		// Mark this tile as loaded
+		tile.m_isLoaded |= mapTypeBitfield;
+
+		// If all tile maps for the current tile has been loaded, update the redirect map
+		if (tile.m_isLoaded == m_tileLoadedBitfield)
+		{
+			Uint32 tileSize = 1 << (m_baseTileLevel - tileData.z);
+			Uint32 sr = tileData.x * tileSize;
+			Uint32 sc = tileData.y * tileSize;
+			Uint32 fr = (tileData.x + 1) * tileSize;
+			Uint32 fc = (tileData.y + 1) * tileSize;
+
+			for (Uint32 r = sr; r < fr; ++r)
+			{
+				for (Uint32 c = sc; c < fc; ++c)
+					m_redirectMapImg[r][c] = Vector3<Uint8>(tile.m_cachePos, m_baseTileLevel - tileData.z);
+			}
+
+			// Indicate that redirect map has changed
+			m_redirectMapChanged = true;
+		}
+
+		// Remove load task
+		delete loadTask;
+		m_loadTasks.erase(m_loadTasks.begin() + i);
+
+		// Decrement so that next element is not skipped
+		--i;
+	}
+}
+
+
+///////////////////////////////////////////////////////////
+LargeTerrain::Tile* LargeTerrain::getAdjTile(const Vector3<Uint16>& tileData)
+{
+	Tile* tile = 0;
+
+	auto it = m_tileMap.find(tileData);
+	if (it != m_tileMap.end())
+		tile = &it.value();
+	else
+	{
+		it = m_tileMap.find(Vector3<Uint16>(tileData.x / 2, tileData.y / 2, tileData.z - 1));
+		if (it != m_tileMap.end())
+			tile = &it.value();
+	}
+
+	return tile;
+}
+
+
+///////////////////////////////////////////////////////////
+bool LargeTerrain::processHeightTile(Image* hmap, Image* nmap, const Vector3<Uint16>& tile)
+{
+	// Get buffer for height map
+	ImageBuffer<float> heights = hmap->getBuffer<float>();
+
+	// Create normals tile
+	Uint32 mapSize = hmap->getWidth() - 2;
+	nmap->create(NULL, mapSize, mapSize, 3, GLType::Uint16);
+	ImageBuffer<Vector3<Uint16>> normals = nmap->getBuffer<Vector3<Uint16>>();
+
+	// Calculate size factor
+	Uint32 numNodesPerEdge = 1 << tile.z;
+	float sizeFactor = m_size / (mapSize * numNodesPerEdge);
+
+	for (Uint32 r = 0; r < mapSize; ++r)
+	{
+		for (Uint32 c = 0; c < mapSize; ++c)
+		{
+			// Calculate normal
+			float h01 = heights[r + 1][c] * m_maxHeight;
+			float h21 = heights[r + 1][c + 2] * m_maxHeight;
+			float h10 = heights[r + 2][c + 1] * m_maxHeight;
+			float h12 = heights[r][c + 1] * m_maxHeight;
+
+			Vector3f v1(sizeFactor, h21 - h01, 0.0f);
+			Vector3f v2(0.0f, h12 - h10, -sizeFactor);
+			Vector3f normal = normalize(cross(v1, v2));
+
+			// Adjust for 16-bit
+			normal.x = 0.5f * normal.x + 0.5f;
+			normal.z = 0.5f * normal.z + 0.5f;
+
+			normals[r][c] = Vector3<Uint16>(normal * 65535.0f);
+		}
+	}
+
+	// If processing a base level height tile, then do a few extra procedures
+	if (tile.z == m_baseTileLevel)
+	{
+		// Number of base terrain nodes per base map tile edge
+		Uint32 numNodesPerEdge = 1 << (m_lodLevels.size() - m_baseTileLevel - 1);
+
+		// Create a local bounds map to minimize time spent using shared resources
+		ImageBuffer<Vector2<Uint16>> localBounds(numNodesPerEdge, Vector2<Uint16>(65535, 0));
+
+		for (Uint32 r = 0; r < numNodesPerEdge; ++r)
+		{
+			for (Uint32 c = 0; c < numNodesPerEdge; ++c)
+			{
+				// Map map tile coordinates to image coordinates
+				Uint32 rs = (Uint32)std::floor((float)r / numNodesPerEdge * mapSize) + 1;
+				Uint32 cs = (Uint32)std::floor((float)c / numNodesPerEdge * mapSize) + 1;
+				Uint32 rf = (Uint32)std::ceil((float)(r + 1) / numNodesPerEdge * mapSize) + 1;
+				Uint32 cf = (Uint32)std::ceil((float)(c + 1) / numNodesPerEdge * mapSize) + 1;
+
+				Vector2f bounds(1.0f, 0.0f);
+
+				for (Uint32 ri = rs; ri < rf; ++ri)
+				{
+					for (Uint32 ci = cs; ci < cf; ++ci)
+					{
+						// Get height pixel
+						float h = *(float*)hmap->getPixel(ri, ci);
+
+						// Record bounds
+						if (h < bounds.x)
+							bounds.x = h;
+						if (h > bounds.y)
+							bounds.y = h;
+					}
+				}
+
+				// Update bounds value
+				localBounds[r][c] = Vector2<Uint16>(bounds * 65535.0f);
+			}
+		}
+
+		// Copy local bounds map to actual map
+		std::unique_lock<std::mutex> lock(m_mutex);
+
+		// Calculate starting position of tiles
+		ImageBuffer<Vector2<Uint16>>& baseBounds = m_lodLevels.back().m_heightBounds;
+		Uint32 rs = tile.x * numNodesPerEdge;
+		Uint32 cs = tile.y * numNodesPerEdge;
+
+		// Update base bounds
+		for (Uint32 r = 0; r < numNodesPerEdge; ++r)
+		{
+			for (Uint32 c = 0; c < numNodesPerEdge; ++c)
+			{
+				Vector2<Uint16>& base = baseBounds[rs + r][cs + c];
+				Vector2<Uint16>& local = localBounds[r][c];
+
+				if (local.x < base.x)
+					base.x = local.x;
+				if (local.y > base.y)
+					base.y = local.y;
+			}
+		}
+
+		// Propogate up to base map level
+		for (int i = m_lodLevels.size() - 2; i >= (int)m_baseTileLevel; --i)
+		{
+			ImageBuffer<Vector2<Uint16>>& prevBounds = m_lodLevels[i + 1].m_heightBounds;
+			ImageBuffer<Vector2<Uint16>>& currBounds = m_lodLevels[i].m_heightBounds;
+
+			// Update parameters
+			numNodesPerEdge /= 2;
+			rs /= 2;
+			cs /= 2;
+
+			for (Uint32 r = rs; r < rs + numNodesPerEdge; ++r)
+			{
+				for (Uint32 c = cs; c < cs + numNodesPerEdge; ++c)
+				{
+					Vector2<Uint16>& b1 = prevBounds[2 * r + 0][2 * c + 0];
+					Vector2<Uint16>& b2 = prevBounds[2 * r + 0][2 * c + 1];
+					Vector2<Uint16>& b3 = prevBounds[2 * r + 1][2 * c + 0];
+					Vector2<Uint16>& b4 = prevBounds[2 * r + 1][2 * c + 1];
+
+					// Apply mins and maxes
+					Vector2<Uint16>& bounds = currBounds[r][c] = Vector2<Uint16>(65535, 0);
+
+					if (b1.x < bounds.x)
+						bounds.x = b1.x;
+					if (b2.x < bounds.x)
+						bounds.x = b2.x;
+					if (b3.x < bounds.x)
+						bounds.x = b3.x;
+					if (b4.x < bounds.x)
+						bounds.x = b4.x;
+
+					if (b1.y > bounds.y)
+						bounds.y = b1.y;
+					if (b2.y > bounds.y)
+						bounds.y = b2.y;
+					if (b3.y > bounds.y)
+						bounds.y = b3.y;
+					if (b4.y > bounds.y)
+						bounds.y = b4.y;
+				}
+			}
+		}
+
+		// Propogate up to root level
+		for (int i = m_baseTileLevel - 1; i >= 0; --i)
+		{
+			Vector2<Uint16>& prevBounds = m_lodLevels[i + 1].m_heightBounds[rs][cs];
+			Vector2<Uint16>& currBounds = m_lodLevels[i].m_heightBounds[rs / 2][cs / 2];
+
+			// Update parameters
+			rs /= 2;
+			cs /= 2;
+
+			// Apply min and max
+			if (prevBounds.x < currBounds.x)
+				currBounds.x = prevBounds.x;
+			if (prevBounds.y > currBounds.y)
+				currBounds.y = prevBounds.y;
+		}
+
+
+		// Push data needed to create collider
+		m_colliders.push_back(ColliderInfo());
+		ColliderInfo& colliderInfo = m_colliders.back();
+
+		colliderInfo.m_tile = Vector2<Uint16>(tile);
+		
+		// Calculate metadata needed for collider
+		Physics* physics = m_scene->getExtension<Physics>();
+		numNodesPerEdge = 1 << tile.z;
+		float tileSize = m_size / (float)numNodesPerEdge;
+		float metersPerPixel = tileSize / (float)mapSize;
+
+		// Create collider
+		float colliderSize = tileSize + 2.0f * metersPerPixel;
+		HeightMapShape shape = HeightMapShape(*hmap, Vector3f(colliderSize, m_maxHeight, colliderSize));
+
+		// Calculate collider position
+		Vector2f center = tileSize * (Vector2f(tile.y, tile.x) - (float)(numNodesPerEdge / 2) + 0.5f);
+		Vector3f colliderPos = Vector3f(center.x, 0.0f, center.y);
+
+		// Create collider
+		Collider& collider = colliderInfo.m_collider = physics->addCollider(m_entity, shape, colliderPos);
+
+		// Set default collider properties
+		collider.setBounciness(m_bounciness);
+		collider.setFrictionCoefficient(m_friction);
+		collider.setCollisionCategory(m_collisionCategory);
+		collider.setCollisionMask(m_collisionMask);
+
+		// Copy image pointer to map data so it can be freed later
+		m_tileMap[tile].m_mapData[MapData::Height].m_fullImg = hmap;
+	}
+	else
+		// Free height tile only if not a base level tile
+		Pool<Image>::free(hmap);
+
+	return true;
+}
+
+
+///////////////////////////////////////////////////////////
+void LargeTerrain::setHeightLoader(const LoadFunc& func)
+{
+	m_heightLoadFunc = func;
+	m_tileLoadedBitfield |= (1 << MapData::Height) | (1 << MapData::Normal);
+
+	// Load base tile to fill height bounds map with bounds
+	Image hmap;
+	if (m_loadFunc && !m_loadFunc(Vector2i(0), 0))
+		return;
+	if (!m_heightLoadFunc(Vector2i(0), 0, &hmap))
+		return;
+
+	// Make sure tile is correct
+	ASSERT(hmap.getWidth() == hmap.getHeight(), "Terrain map tiles must be sqaure");
+	ASSERT(hmap.getDataType() == GLType::Float, "Large terrain height maps must use the float data type");
+	ASSERT(hmap.getNumChannels() == 1, "Large terrain height maps must use a single color channel");
+
+	// Determine the number of steps each base level tile needs
+	float baseLevelSize = m_size / (float)(1 << (m_lodLevels.size() - 1));
+	float numSteps = baseLevelSize * (float)hmap.getWidth() / m_size;
+
+	// Fill in base bounds
+	std::unique_lock<std::mutex> lock(m_mutex);
+
+	ImageBuffer<Vector2<Uint16>>& baseBounds = m_lodLevels.back().m_heightBounds;
+
+	for (Uint32 r = 0; r < baseBounds.getHeight(); ++r)
+	{
+		for (Uint32 c = 0; c < baseBounds.getWidth(); ++c)
+		{
+			float rs = (float)r * numSteps;
+			float cs = (float)c * numSteps;
+			float rf = (float)(r + 1) * numSteps;
+			float cf = (float)(c + 1) * numSteps;
+
+			Vector2f bounds(1.0, 0.0f);
+
+			for (float ri = rs; ri <= rf;)
+			{
+				for (float ci = cs; ci <= cf;)
+				{
+					// Get height
+					Vector2f uv = Vector2f(ci, ri) / (float)(hmap.getWidth() - 1);
+					uv.y = 1.0f - uv.y;
+					float h = hmap.sample<float>(uv);
+
+					// Record max and min
+					if (h < bounds.x)
+						bounds.x = h;
+					if (h > bounds.y)
+						bounds.y = h;
+
+					// Update c
+					if (ci == cf)
+						break;
+					else
+						ci = std::min(ci + 1.0f, cf);
+				}
+
+				// Update r
+				if (ri == rf)
+					break;
+				else
+					ri = std::min(ri + 1.0f, rf);
+			}
+
+			// Write bounds to map
+			baseBounds[r][c] = Vector2<Uint16>(bounds * 65535.0f);
+		}
+	}
+
+	// Propogate height bounds up the lod levels
+	for (int i = m_lodLevels.size() - 2; i >= 0; --i)
+	{
+		ImageBuffer<Vector2<Uint16>>& prevBounds = m_lodLevels[i + 1].m_heightBounds;
+		ImageBuffer<Vector2<Uint16>>& currBounds = m_lodLevels[i].m_heightBounds;
+
+		for (Uint32 r = 0; r < currBounds.getHeight(); ++r)
+		{
+			for (Uint32 c = 0; c < currBounds.getWidth(); ++c)
+			{
+				Vector2<Uint16>& b1 = prevBounds[2 * r + 0][2 * c + 0];
+				Vector2<Uint16>& b2 = prevBounds[2 * r + 0][2 * c + 1];
+				Vector2<Uint16>& b3 = prevBounds[2 * r + 1][2 * c + 0];
+				Vector2<Uint16>& b4 = prevBounds[2 * r + 1][2 * c + 1];
+
+				// Apply mins and maxes
+				Vector2<Uint16>& bounds = currBounds[r][c] = Vector2<Uint16>(65535, 0);
+
+				if (b1.x < bounds.x)
+					bounds.x = b1.x;
+				if (b2.x < bounds.x)
+					bounds.x = b2.x;
+				if (b3.x < bounds.x)
+					bounds.x = b3.x;
+				if (b4.x < bounds.x)
+					bounds.x = b4.x;
+
+				if (b1.y > bounds.y)
+					bounds.y = b1.y;
+				if (b2.y > bounds.y)
+					bounds.y = b2.y;
+				if (b3.y > bounds.y)
+					bounds.y = b3.y;
+				if (b4.y > bounds.y)
+					bounds.y = b4.y;
+			}
+		}
+	}
+}
+
+
+///////////////////////////////////////////////////////////
+void LargeTerrain::setSplatLoader(const LoadFunc& func)
+{
+	m_splatLoadFunc = func;
+	m_tileLoadedBitfield |= (1 << MapData::Splat);
+}
+
+
+///////////////////////////////////////////////////////////
+void LargeTerrain::addCustomLoader(const LoadFunc& func)
+{
+	m_customLoadFuncs.push_back(func);
+	m_customMaps.push_back(Pool<Texture>::alloc());
+	m_tileLoadedBitfield |= (1 << (MapData::Custom + m_customLoadFuncs.size() - 1));
+}
+
+
+///////////////////////////////////////////////////////////
+void LargeTerrain::setSplatTexture(Texture* texture, Uint32 index)
+{
+	// Add empty pointers until array is the right size
+	while (m_splatTextures.size() <= index)
+		m_splatTextures.push_back(0);
+
+	m_splatTextures[index] = texture;
+}
+
+
+///////////////////////////////////////////////////////////
+void LargeTerrain::applyRedirectMap(Shader* shader)
+{
+	shader->setUniform("u_cacheMapSize", (Vector2f)m_cacheMapSize);
+	shader->setUniform("u_redirectMap", m_redirectMap);
+}
+
+
+///////////////////////////////////////////////////////////
+void LargeTerrain::setBounciness(float bounciness)
+{
+	m_bounciness = bounciness;
+
+	for (Uint32 i = 0; i < m_colliders.size(); ++i)
+		m_colliders[i].m_collider.setBounciness(bounciness);
+}
+
+
+///////////////////////////////////////////////////////////
+void LargeTerrain::setFrictionCoefficient(float coefficient)
+{
+	m_friction = coefficient;
+
+	for (Uint32 i = 0; i < m_colliders.size(); ++i)
+		m_colliders[i].m_collider.setFrictionCoefficient(coefficient);
+}
+
+
+///////////////////////////////////////////////////////////
+void LargeTerrain::setCollisionCategory(Uint16 category)
+{
+	m_collisionCategory = category;
+
+	for (Uint32 i = 0; i < m_colliders.size(); ++i)
+		m_colliders[i].m_collider.setCollisionCategory(category);
+}
+
+
+///////////////////////////////////////////////////////////
+void LargeTerrain::setCollisionMask(Uint16 mask)
+{
+	m_collisionMask = mask;
+
+	for (Uint32 i = 0; i < m_colliders.size(); ++i)
+		m_colliders[i].m_collider.setCollisionMask(mask);
+}
+
+
+///////////////////////////////////////////////////////////
+Texture& LargeTerrain::getRedirectMap()
+{
+	return m_redirectMap;
+}
+
+
+///////////////////////////////////////////////////////////
+Texture& LargeTerrain::getHeightMap()
+{
+	return m_heightMap;
+}
+
+
+///////////////////////////////////////////////////////////
+Texture& LargeTerrain::getNormalMap()
+{
+	return m_normalMap;
+}
+
+
+///////////////////////////////////////////////////////////
+Texture& LargeTerrain::getSplatMap()
+{
+	return m_splatMap;
+}
+
+
+///////////////////////////////////////////////////////////
+Texture* LargeTerrain::getCustomMap(Uint32 index) const
+{
+	return m_customMaps[index];
+}
+
+
+///////////////////////////////////////////////////////////
+void LargeTerrain::onLoadTile(const std::function<bool(const Vector2i&, Uint32)>& func)
+{
+	m_loadFunc = func;
+}
+
+
+///////////////////////////////////////////////////////////
+void LargeTerrain::onUnloadTile(const std::function<void(const Vector2i&, Uint32)>& func)
+{
+	m_unloadFunc = func;
+}
+
+
+///////////////////////////////////////////////////////////
+float LargeTerrain::getBounciness() const
+{
+	return m_bounciness;
+}
+
+
+///////////////////////////////////////////////////////////
+float LargeTerrain::getFrictionCoefficient() const
+{
+	return m_friction;
+}
+
+
+///////////////////////////////////////////////////////////
+Uint16 LargeTerrain::getCollisionCategory() const
+{
+	return m_collisionCategory;
+}
+
+
+///////////////////////////////////////////////////////////
+Uint16 LargeTerrain::getCollisionMask() const
+{
+	return m_collisionMask;
 }
 
 

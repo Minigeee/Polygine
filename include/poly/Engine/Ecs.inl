@@ -2,6 +2,10 @@
 #include <poly/Core/Macros.h>
 #include <poly/Core/TypeInfo.h>
 
+#ifndef _COMPONENT_DECAY
+#define _COMPONENT_DECAY(Cs) typename std::remove_pointer<typename std::decay<Cs>::type>::type
+#endif
+
 namespace poly
 {
 
@@ -35,10 +39,10 @@ inline void EntityGroup::setComponentTypes(Uint32 groupId)
 
 ///////////////////////////////////////////////////////////
 template <typename... Cs>
-inline std::vector<Entity> EntityGroup::createEntities(Uint16 num, const Cs&... components)
+inline std::vector<Entity> EntityGroup::createEntities(Uint16 num, Cs&&... components)
 {
 	// Add components
-	PARAM_EXPAND(ComponentData<Cs>::createComponents(m_sceneId, m_groupId, num, components));
+	PARAM_EXPAND(ComponentData<_COMPONENT_DECAY(Cs)>::createComponents(m_sceneId, m_groupId, num, std::forward<Cs>(components)));
 
 	// Create entities
 	std::vector<Entity> entities;
@@ -69,6 +73,9 @@ inline void EntityGroup::removeEntitiesImpl(const std::vector<Entity>& entities)
 	// Handle array removes using swap-pop, so index of components will change over time
 	// while removing
 
+	// Lock components at beggining because entities are kinda tied to components
+	std::unique_lock<std::mutex> locks[] = { std::unique_lock<std::mutex>(priv::ComponentMutex<Cs>::s_mutex)... };
+
 	// So need to keep track of component indices
 	std::vector<Uint16> indices;
 
@@ -84,7 +91,6 @@ inline void EntityGroup::removeEntitiesImpl(const std::vector<Entity>& entities)
 	}
 
 	// Remove components
-	std::unique_lock<std::mutex> locks[] = { std::unique_lock<std::mutex>(priv::ComponentMutex<Cs>::s_mutex)... };
 	PARAM_EXPAND(ComponentData<Cs>::removeComponents(m_sceneId, m_groupId, indices));
 }
 
@@ -133,6 +139,29 @@ inline void ComponentData<C>::createComponents(Uint16 sceneId, Uint32 groupId, U
 	// Add components
 	for (Uint16 i = 0; i < num; ++i)
 		group.push_back(component);
+}
+
+
+///////////////////////////////////////////////////////////
+template <typename C>
+inline void ComponentData<C>::createComponents(Uint16 sceneId, Uint32 groupId, Uint16 num, const C* component)
+{
+	// Initialize cleanup
+	static bool _init = (ComponentCleanup::registerType<C>(), true);
+
+	// Create enough scene slots
+	if (sceneId >= m_data.size())
+	{
+		while (sceneId >= m_data.size())
+			m_data.push_back(Data());
+	}
+
+	// Get the correct group
+	std::vector<C>& group = m_data[sceneId][groupId];
+
+	// Add components
+	for (Uint16 i = 0; i < num; ++i)
+		group.push_back(component[i]);
 }
 
 
@@ -218,7 +247,7 @@ template <typename... Cs>
 inline std::vector<std::unique_lock<std::mutex>> lockComponents()
 {
 	std::vector<std::unique_lock<std::mutex>> locks;
-	locks.reserve(sizeof(Cs...));
+	locks.reserve(sizeof...(Cs));
 
 	// Lock mutexes
 	PARAM_EXPAND(locks.push_back(std::unique_lock<std::mutex>(priv::ComponentMutex<Cs>::s_mutex)));
@@ -243,7 +272,7 @@ inline ComponentArray<C>::Group::Group(std::vector<C>& data) :
 	m_data		(0),
 	m_size		((Uint16)data.size())
 {
-	if (m_size)
+	if (m_size && data.size())
 		m_data = &data[0];
 }
 
@@ -270,7 +299,7 @@ inline ComponentArray<C>::Iterator::Iterator(ComponentArray<C>* arr) :
 	m_size		(0),
 	m_index		(0)
 {
-	if (m_array)
+	if (m_array && m_array->m_groups.size())
 	{
 		const Group& group = m_array->m_groups[0];
 		m_size = group.m_size;

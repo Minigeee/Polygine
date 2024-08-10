@@ -125,7 +125,8 @@ GLboolean shouldTranspose = GL_TRUE;
 
 ///////////////////////////////////////////////////////////
 Shader::Shader() :
-	m_id		(0)
+	m_id			(0),
+	m_numTextures	(0)
 {
 
 }
@@ -133,7 +134,8 @@ Shader::Shader() :
 
 ///////////////////////////////////////////////////////////
 Shader::Shader(const std::string& vert) :
-	m_id		(0)
+	m_id			(0),
+	m_numTextures	(0)
 {
 	if (!load(vert, Vertex)) return;
 
@@ -143,7 +145,8 @@ Shader::Shader(const std::string& vert) :
 
 ///////////////////////////////////////////////////////////
 Shader::Shader(const std::string& vert, const std::string& frag) :
-	m_id		(0)
+	m_id			(0),
+	m_numTextures	(0)
 {
 	if (!load(vert, Vertex)) return;
 	if (!load(frag, Fragment)) return;
@@ -154,7 +157,8 @@ Shader::Shader(const std::string& vert, const std::string& frag) :
 
 ///////////////////////////////////////////////////////////
 Shader::Shader(const std::string& vert, const std::string& geom, const std::string& frag) :
-	m_id		(0)
+	m_id			(0),
+	m_numTextures	(0)
 {
 	if (!load(vert, Vertex)) return;
 	if (!load(geom, Geometry)) return;
@@ -207,6 +211,24 @@ bool Shader::load(const std::string& fname, Shader::Type type)
 	HashSet<std::string> loadedFiles;
 	std::string code = priv::readShaderFile(fname, loadedFiles);
 
+	return load(fname, code, type);
+}
+
+
+///////////////////////////////////////////////////////////
+bool Shader::load(const std::string& id, const std::string& code, Shader::Type type)
+{
+	// First check if the id has already been loaded
+	{
+		auto it = loadedShaders.find(id);
+		if (it != loadedShaders.end())
+		{
+			// Add the shader object
+			m_shaders.push_back(it->second);
+
+			return true;
+		}
+	}
 
 	// Create shader
 	Uint32 shader = 0;
@@ -222,7 +244,7 @@ bool Shader::load(const std::string& fname, Shader::Type type)
 	if (!success)
 	{
 		glCheck(glGetShaderInfoLog(shader, 512, NULL, infoLog));
-		LOG_ERROR("Failed to compile %s:\n%s", fname.c_str(), infoLog);
+		LOG_ERROR("Failed to compile %s:\n%s", id.c_str(), infoLog);
 		glCheck(glDeleteShader(shader));
 		return false;
 	}
@@ -231,9 +253,9 @@ bool Shader::load(const std::string& fname, Shader::Type type)
 	m_shaders.push_back(shader);
 
 	// Add to loaded map
-	loadedShaders[fname] = shader;
+	loadedShaders[id] = shader;
 
-	LOG("Loaded shader: %s", fname.c_str());
+	LOG("Loaded shader: %s", id.c_str());
 	return true;
 }
 
@@ -526,26 +548,47 @@ void Shader::setUniform(const std::string& name, const std::vector<Matrix4f>& va
 ///////////////////////////////////////////////////////////
 void Shader::setUniform(const std::string& name, Texture& texture)
 {
-	int slot = 0;
+	UniformData* data = 0;
+	bool firstUse = false;
+
+	// First check if the uniform has been used before
+	auto it = m_uniforms.find(name);
+
+	if (it != m_uniforms.end())
+	{
+		// Get location and data
+		data = &it.value();
+
+		// First use so have to set uniform
+		firstUse = true;
+	}
+	else
+	{
+		// Find the location
+		int location = -1;
+		glCheck(location = glGetUniformLocation(m_id, name.c_str()));
+
+		// Check if it was found
+		if (location == -1)
+			LOG_WARNING("Could not find shader uniform: %s", name.c_str());
+
+		// Add it to the map
+		data = &m_uniforms[name];
+		data->m_location = location;
+
+		// Set texture slot
+		*(int*)(data->m_data) = m_numTextures++;
+	}
 
 	// Get texture slot
-	auto it = m_textures.find(texture.getId());
-	if (it == m_textures.end())
-		slot = (int)(m_textures[texture.getId()] = m_textures.size());
-
-	else
-		slot = (int)it->second;
+	int slot = *(int*)(data->m_data);
 
 	// Bind texture
 	texture.bind(slot);
 
-	// Set uniform
-	UniformData& data = getUniformData(name);
-	if (data.m_location != -1 && *(int*)data.m_data != slot)
-	{
-		glCheck(glUniform1iv(data.m_location, 1, &slot));
-		*(int*)data.m_data = slot;
-	}
+	// Set uniform only on first use
+	if (firstUse && data->m_location != -1)
+		glCheck(glUniform1iv(data->m_location, 1, &slot));
 }
 
 

@@ -36,10 +36,6 @@ UISystem::UISystem() :
 	m_loaded				(false)
 {
 	m_isVisible = false;
-
-	m_vertexArray.setNumVertices(1);
-	m_vertexArray.setDrawMode(DrawMode::Points);
-	m_instanceBuffer.create((UIInstanceData*)0, 65536, BufferUsage::Stream);
 }
 
 
@@ -53,10 +49,6 @@ UISystem::UISystem(const std::string& fname) :
 {
 	m_isVisible = false;
 
-	m_vertexArray.setNumVertices(1);
-	m_vertexArray.setDrawMode(DrawMode::Points);
-	m_instanceBuffer.create((UIInstanceData*)0, 65536, BufferUsage::Stream);
-
 	load(fname);
 }
 
@@ -65,6 +57,18 @@ UISystem::UISystem(const std::string& fname) :
 UISystem::~UISystem()
 {
 
+}
+
+
+///////////////////////////////////////////////////////////
+void UISystem::init()
+{
+	if (!m_instanceBuffer.getId())
+	{
+		m_vertexArray.setNumVertices(1);
+		m_vertexArray.setDrawMode(DrawMode::Points);
+		m_instanceBuffer.create((UIInstanceData*)0, 65536, BufferUsage::Stream);
+	}
 }
 
 
@@ -89,6 +93,8 @@ void UISystem::update(float dt)
 ///////////////////////////////////////////////////////////
 void UISystem::render(FrameBuffer& target, bool overlay)
 {
+	ASSERT(m_instanceBuffer.getId(), "The UI system must call init() before rendering");
+
 	START_PROFILING_FUNC;
 
 	// Check if the sizes are the same
@@ -99,14 +105,18 @@ void UISystem::render(FrameBuffer& target, bool overlay)
 	target.bind();
 
 	// Clear only the depth buffer (so the UI can be overlayed)
-	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	if (overlay)
 		glCheck(glClear(GL_DEPTH_BUFFER_BIT));
+
 	else
+	{
+		glCheck(glClearColor(0.0f, 0.0f, 0.0f, 0.0f));
 		glCheck(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
+	}
 
 	// Enable depth test
 	glCheck(glEnable(GL_DEPTH_TEST));
+	glCheck(glDepthFunc(GL_LEQUAL));
 
 	std::vector<UIRenderData> renderData;
 	std::vector<UIRenderData> transparentRenderData;
@@ -490,6 +500,8 @@ void UISystem::setWindow(Window* window)
 ///////////////////////////////////////////////////////////
 bool UISystem::load(const std::string& fname)
 {
+	init();
+
 	// Attempt to unload if the system already has elements in it
 	if (m_children.size())
 	{

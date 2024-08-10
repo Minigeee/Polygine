@@ -1,6 +1,8 @@
 #ifndef POLY_SKYBOX_H
 #define POLY_SKYBOX_H
 
+#include <poly/Engine/Entity.h>
+
 #include <poly/Graphics/RenderSystem.h>
 #include <poly/Graphics/Shader.h>
 #include <poly/Graphics/VertexArray.h>
@@ -65,9 +67,10 @@ public:
 	///
 	/// \param camera The camera to render from
 	/// \param pass The render pass that is being executed
+	/// \param settings The render settings to apply
 	///
 	///////////////////////////////////////////////////////////
-	void render(Camera& camera, RenderPass pass) override;
+	void render(Camera& camera, RenderPass pass, const RenderSettings& settings) override;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Load a single side of the cube map from an image file
@@ -82,6 +85,22 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	bool load(const std::string& fname, Side side);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Skyboxes can only be rendered in forward pass
+	///
+	/// \return False
+	///
+	///////////////////////////////////////////////////////////
+	bool hasDeferredPass() const override;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Skyboxes can only be rendered in forward pass
+	///
+	/// \return True
+	///
+	///////////////////////////////////////////////////////////
+	bool hasForwardPass() const override;
 
 private:
 	static VertexArray s_vertexArray;
@@ -114,7 +133,7 @@ public:
 	/// \brief Initialize the skybox
 	///
 	/// The skybox uses the scene to get the first directional light
-	/// to calculate where in the sky to apply the sun bloom effect.
+	/// to calculate where in the sky to apply the light scatter effect.
 	///
 	/// \param scene A pointer to a scene
 	///
@@ -126,9 +145,31 @@ public:
 	///
 	/// \param camera The camera to render from
 	/// \param pass The render pass that is being executed
+	/// \param settings The render settings to apply
 	///
 	///////////////////////////////////////////////////////////
-	void render(Camera& camera, RenderPass pass) override;
+	void render(Camera& camera, RenderPass pass, const RenderSettings& settings) override;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Apply the procedural skybox uniforms to a shader
+	///
+	/// This function can be used to render the skybox effects outside
+	/// this class (i.e. for rendering a cheap sky-only reflection).
+	///
+	/// \param shader A pointer to a shader
+	///
+	///////////////////////////////////////////////////////////
+	void apply(Shader* shader);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the entity containing the main directional light component
+	///
+	/// This directional light will be used to render the skybox.
+	///
+	/// \param entity The entity containing the directional light component
+	///
+	///////////////////////////////////////////////////////////
+	void setDirLight(Entity entity);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the zenith color
@@ -152,33 +193,26 @@ public:
 	void setHorizonColor(const Vector3f& color);
 
 	///////////////////////////////////////////////////////////
-	/// \brief Set the ground color
+	/// \brief Set the brightness of Mie scattered light
 	///
-	/// \param color The ground color
+	/// This can be used to set the g-factor of the scatter effect.
+	/// This factor is the g value used in the Mie phase function.
+	///
+	/// \param factor The scatter factor
 	///
 	///////////////////////////////////////////////////////////
-	void setGroundColor(const Vector3f& color);
+	void setScatterStrength(float factor);
 
 	///////////////////////////////////////////////////////////
-	/// \brief Set the sun bloom color
+	/// \brief Set the g-factor of the light scatter effect
 	///
-	/// This is the color of the area surrounding the direction
-	/// of the incoming light. This effect is normally caused by
-	/// the mie scattering because this type of scattering scatters
-	/// light in the forward direction more than any other direction.
+	/// This can be used to set the g-factor of the scatter effect.
+	/// This factor is the g value used in the Mie phase function.
 	///
-	/// \param color The sun bloom color
+	/// \param factor The scatter factor
 	///
 	///////////////////////////////////////////////////////////
-	void setBloomColor(const Vector3f& color);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Set the size and relative brightness of the sun bloom effect
-	///
-	/// \param size The size and relative size of the bloom factor
-	///
-	///////////////////////////////////////////////////////////
-	void setBloomSize(float size);
+	void setScatterFactor(float factor);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set light strength
@@ -218,6 +252,14 @@ public:
 	void setAltitude(float alt);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Get the entity used to render the skybox
+	///
+	/// \return The entity containing a directional ligth used to render the skybox
+	///
+	///////////////////////////////////////////////////////////
+	Entity getDirLight() const;
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the zenith color
 	///
 	/// \return The zenith color
@@ -234,28 +276,20 @@ public:
 	const Vector3f& getHorizonColor() const;
 
 	///////////////////////////////////////////////////////////
-	/// \brief Get the ground color
+	/// \brief Get the brightness of Mie scattered light
 	///
-	/// \return The ground color
+	/// \return The brightness of scattered light
 	///
 	///////////////////////////////////////////////////////////
-	const Vector3f& getGroundColor() const;
+	float getScatterStrength() const;
 
 	///////////////////////////////////////////////////////////
-	/// \brief Get the sun bloom color
+	/// \brief Get the light scatter factor
 	///
-	/// \return The sun bloom color
-	///
-	///////////////////////////////////////////////////////////
-	const Vector3f& getBloomColor() const;
-
-	///////////////////////////////////////////////////////////
-	/// \brief Get the sun bloom size and brightness
-	///
-	/// \return The sun bloom size and brightness
+	/// \return The light scatter factor
 	///
 	///////////////////////////////////////////////////////////
-	float getBloomSize() const;
+	float getScatterFactor() const;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Get the light strength multiplier
@@ -299,6 +333,22 @@ public:
 	///////////////////////////////////////////////////////////
 	const Vector3f& getAmbientColor();
 
+	///////////////////////////////////////////////////////////
+	/// \brief Skyboxes can only be rendered in forward pass
+	///
+	/// \return False
+	///
+	///////////////////////////////////////////////////////////
+	bool hasDeferredPass() const override;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Skyboxes can only be rendered in forward pass
+	///
+	/// \return True
+	///
+	///////////////////////////////////////////////////////////
+	bool hasForwardPass() const override;
+
 private:
 	static Shader s_shader;
 
@@ -306,12 +356,12 @@ private:
 
 private:
 	Scene* m_scene;				//!< A pointer to a scene
+	Entity m_dirLight;			//!< The directional light entity
 
 	Vector3f m_zenithColor;		//!< The zenith color
 	Vector3f m_horizonColor;	//!< The horizon color
-	Vector3f m_groundColor;		//!< The ground color
-	Vector3f m_bloomColor;		//!< The sun bloom color
-	float m_bloomSize;			//!< Mie phase function "g" factor
+	float m_scatterStrength;	//!< Scatter brightness
+	float m_scatterFactor;		//!< Mie phase function "g" factor
 	float m_lightStrength;		//!< Color multiplier
 
 	float m_topRadius;			//!< Atmosphere radius

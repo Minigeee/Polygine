@@ -84,4 +84,18 @@ IpAddress IpAddress::getPublicAddress(Time timeout)
 }
 
 
+///////////////////////////////////////////////////////////
+bool IpAddress::operator==(const IpAddress& x) const
+{
+	return m_address == x.m_address;
+}
+
+
+///////////////////////////////////////////////////////////
+bool IpAddress::operator!=(const IpAddress& x) const
+{
+	return m_address != x.m_address;
+}
+
+
 }

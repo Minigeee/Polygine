@@ -153,6 +153,15 @@ inline bool HandleArray<T>::isEmpty() const
 	return m_data.empty();
 }
 
+
+///////////////////////////////////////////////////////////
+template <typename T>
+inline bool HandleArray<T>::isValid(Handle handle) const
+{
+	return handle.m_index < m_handleToData.size() && m_handleToData[handle.m_index].m_counter == handle.m_counter;
+}
+
+
 ///////////////////////////////////////////////////////////
 
 template <typename T>

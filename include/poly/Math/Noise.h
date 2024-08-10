@@ -44,7 +44,7 @@ public:
 	/// \return A random noise value
 	///
 	///////////////////////////////////////////////////////////
-	float generate(float x);
+	float generate(float x) const;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Generate noise from a 2D point
@@ -57,7 +57,7 @@ public:
 	/// \return A random noise value
 	///
 	///////////////////////////////////////////////////////////
-	float generate(float x, float y);
+	float generate(float x, float y) const;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Generate noise from a 3D point
@@ -71,7 +71,7 @@ public:
 	/// \return A random noise value
 	///
 	///////////////////////////////////////////////////////////
-	float generate(float x, float y, float z);
+	float generate(float x, float y, float z) const;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Generate a 2D noise image
@@ -83,7 +83,7 @@ public:
 	/// \param h The height of the image to generate
 	///
 	///////////////////////////////////////////////////////////
-	void generateImage(float* data, Uint32 w, Uint32 h);
+	void generateImage(float* data, Uint32 w, Uint32 h) const;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Generate a 3D noise image
@@ -96,7 +96,7 @@ public:
 	/// \param d The depth of the image to generate
 	///
 	///////////////////////////////////////////////////////////
-	void generateImage(float* data, Uint32 w, Uint32 h, Uint32 d);
+	void generateImage(float* data, Uint32 w, Uint32 h, Uint32 d) const;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the noise seed

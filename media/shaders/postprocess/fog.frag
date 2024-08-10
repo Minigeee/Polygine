@@ -60,7 +60,7 @@ void main()
         f_color.rgb = mix(u_fogColor, color, factor);
         
         // Check if the sun is intersecting
-        f_color.rgb += u_lightColor * phaseFunction_M(0.8f, nu) * u_scatterStrength * (1.0f - factor);
+        f_color.rgb += u_lightColor * phaseFunction_M(0.6f, nu) * u_scatterStrength * (1.0f - factor);
     }
     else
         f_color.rgb = color;

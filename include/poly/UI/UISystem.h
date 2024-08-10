@@ -1,6 +1,8 @@
 #ifndef POLY_UI_SYSTEM_H
 #define POLY_UI_SYSTEM_H
 
+#include <poly/Core/HandleArray.h>
+
 #include <poly/Graphics/FrameBuffer.h>
 #include <poly/Graphics/Shader.h>
 #include <poly/Graphics/VertexArray.h>
@@ -77,6 +79,16 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	~UISystem();
+
+	///////////////////////////////////////////////////////////
+	/// \brief Initialize the UI system
+	///
+	/// Creates the render buffer. This can't be done in the constructor
+	/// in case some applications initialize a UI system before creating
+	/// the window.
+	///
+	///////////////////////////////////////////////////////////
+	void init();
 
 	///////////////////////////////////////////////////////////
 	/// \brief Update UI elements and animations

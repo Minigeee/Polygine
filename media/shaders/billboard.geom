@@ -1,6 +1,7 @@
 #version 330 core
 
 #include "camera.glsl"
+#include "clip_planes.glsl"
 #include "shadows_v.glsl"
 
 layout (points) in;
@@ -34,6 +35,7 @@ void main()
     gl_Position = u_projView * worldPos;
     g_fragPos = worldPos.xyz;
     g_texCoord = vec2(0, 1);
+    applyClipPlanes(worldPos.xyz);
     calcShadowClipSpace(worldPos);
     EmitVertex();
     
@@ -41,6 +43,7 @@ void main()
     gl_Position = u_projView * worldPos;
     g_fragPos = worldPos.xyz;
     g_texCoord = vec2(0, 0);
+    applyClipPlanes(worldPos.xyz);
     calcShadowClipSpace(worldPos);
     EmitVertex();
     
@@ -48,6 +51,7 @@ void main()
     gl_Position = u_projView * worldPos;
     g_fragPos = worldPos.xyz;
     g_texCoord = vec2(1, 1);
+    applyClipPlanes(worldPos.xyz);
     calcShadowClipSpace(worldPos);
     EmitVertex();
     
@@ -55,6 +59,7 @@ void main()
     gl_Position = u_projView * worldPos;
     g_fragPos = worldPos.xyz;
     g_texCoord = vec2(1, 0);
+    applyClipPlanes(worldPos.xyz);
     calcShadowClipSpace(worldPos);
     EmitVertex();
 

@@ -5,6 +5,10 @@
 #include <poly/Graphics/Image.h>
 #include <poly/Graphics/Skybox.h>
 
+#include <poly/Graphics/Shaders/cubemap.vert.h>
+#include <poly/Graphics/Shaders/skybox.frag.h>
+#include <poly/Graphics/Shaders/procedural_skybox.frag.h>
+
 #include <poly/Math/Functions.h>
 
 namespace poly
@@ -47,10 +51,10 @@ void Skybox::init(Scene* scene)
 
 
 ///////////////////////////////////////////////////////////
-void Skybox::render(Camera& camera, RenderPass pass)
+void Skybox::render(Camera& camera, RenderPass pass, const RenderSettings& settings)
 {
-    // The skybox shouldn't be rendered in the shadow pass
-    if (pass == RenderPass::Shadow) return;
+    // The skybox shouldn't be rendered in the shadow or refraction pass
+    if (pass == RenderPass::Shadow || pass == RenderPass::Refraction) return;
 
     Shader& shader = getShader();
 
@@ -118,8 +122,8 @@ Shader& Skybox::getShader()
 {
     if (!s_shader.getId())
     {
-        s_shader.load("shaders/cubemap.vert", Shader::Vertex);
-        s_shader.load("shaders/skybox.frag", Shader::Fragment);
+        s_shader.load("poly/cubemap.vert", SHADER_CUBEMAP_VERT, Shader::Vertex);
+        s_shader.load("poly/skybox.frag", SHADER_SKYBOX_FRAG, Shader::Fragment);
         s_shader.compile();
     }
 
@@ -190,12 +194,25 @@ VertexArray& Skybox::getVertexArray()
 
 
 ///////////////////////////////////////////////////////////
+bool Skybox::hasDeferredPass() const
+{
+    return false;
+}
+
+
+///////////////////////////////////////////////////////////
+bool Skybox::hasForwardPass() const
+{
+    return true;
+}
+
+
+///////////////////////////////////////////////////////////
 ProceduralSkybox::ProceduralSkybox() :
 	m_zenithColor		(0.172f, 0.448f, 0.775f),
 	m_horizonColor		(0.9f, 1.0f, 0.75f),
-    m_groundColor       (0.12f, 0.22f, 0.25f),
-	m_bloomColor		(0.8f, 0.75f, 0.5f),
-	m_bloomSize 		(0.8f),
+    m_scatterStrength   (2.5f),
+	m_scatterFactor 	(0.6f),
 	m_lightStrength		(12.0f),
     m_topRadius         (6420.0f),
     m_botRadius         (6360.0f),
@@ -212,8 +229,8 @@ ProceduralSkybox::ProceduralSkybox() :
 	m_zenithColor		(0.12f, 0.2f, 0.5f),
 	m_horizonColor		(0.05f, 0.15f, 0.25f),
     m_groundColor       (0.12f, 0.22f, 0.25f),
-	m_bloomColor		(0.05f, 0.05f, 0.06f),
-	m_bloomSize 		(0.0f),
+	m_scatterColor		(0.05f, 0.05f, 0.06f),
+	m_scatterFactor 		(0.0f),
 	m_lightStrength		(0.5f),
     m_topRadius         (6420.0f),
     m_botRadius         (6360.0f),
@@ -234,10 +251,10 @@ void ProceduralSkybox::init(Scene* scene)
 
 
 ///////////////////////////////////////////////////////////
-void ProceduralSkybox::render(Camera& camera, RenderPass pass)
+void ProceduralSkybox::render(Camera& camera, RenderPass pass, const RenderSettings& settings)
 {
-    // The skybox shouldn't be rendered in the shadow pass
-    if (pass == RenderPass::Shadow) return;
+    // The skybox shouldn't be rendered in the shadow or refraction pass
+    if (pass == RenderPass::Shadow || pass == RenderPass::Refraction) return;
 
     Shader& shader = getShader();
 
@@ -247,29 +264,8 @@ void ProceduralSkybox::render(Camera& camera, RenderPass pass)
     Matrix4f view = Matrix4f(Matrix3f(camera.getViewMatrix()), 1.0f);
     shader.setUniform("u_projView", camera.getProjMatrix() * view);
 
-    // Set light directions
-    int i = 0;
-    m_scene->system<DirLightComponent>(
-        [&](const Entity::Id id, DirLightComponent& light)
-        {
-            if (i++ == 0)
-            {
-                shader.setUniform("u_lightDir", normalize(light.m_direction));
-                shader.setUniform("u_bloomColor", light.m_diffuse);
-            }
-        }
-    );
-
-    // Skybox parameters
-    shader.setUniform("u_zenithColor", m_zenithColor);
-    shader.setUniform("u_horizonColor", m_horizonColor);
-    shader.setUniform("u_groundColor", m_groundColor);
-    shader.setUniform("u_bloomSize", m_bloomSize);
-    shader.setUniform("u_lightStrength", m_lightStrength);
-    shader.setUniform("u_topRadius", m_topRadius);
-    shader.setUniform("u_botRadius", m_botRadius);
-    shader.setUniform("u_radius", m_altitude + m_botRadius);
-
+    // Apply the rest of the shader uniforms
+    apply(&shader);
 
     // Enable depth testing
     glCheck(glEnable(GL_DEPTH_TEST));
@@ -286,16 +282,45 @@ void ProceduralSkybox::render(Camera& camera, RenderPass pass)
 
 
 ///////////////////////////////////////////////////////////
+void ProceduralSkybox::apply(Shader* shader)
+{
+    // Set light directions
+    DirLightComponent* light = m_dirLight.get<DirLightComponent>();
+    if (light)
+    {
+        shader->setUniform("u_lightDir", normalize(light->m_direction));
+        shader->setUniform("u_scatterColor", light->m_diffuse * m_scatterStrength);
+    }
+
+    // Skybox parameters
+    shader->setUniform("u_zenithColor", m_zenithColor);
+    shader->setUniform("u_horizonColor", m_horizonColor);
+    shader->setUniform("u_scatterFactor", m_scatterFactor);
+    shader->setUniform("u_lightStrength", m_lightStrength);
+    shader->setUniform("u_topRadius", m_topRadius);
+    shader->setUniform("u_botRadius", m_botRadius);
+    shader->setUniform("u_radius", m_altitude + m_botRadius);
+}
+
+
+///////////////////////////////////////////////////////////
 Shader& ProceduralSkybox::getShader()
 {
     if (!s_shader.getId())
     {
-        s_shader.load("shaders/cubemap.vert", Shader::Vertex);
-        s_shader.load("shaders/procedural_skybox.frag", Shader::Fragment);
+        s_shader.load("poly/cubemap.vert", SHADER_CUBEMAP_VERT, Shader::Vertex);
+        s_shader.load("poly/procedural_skybox.frag", SHADER_PROCEDURAL_SKYBOX_FRAG, Shader::Fragment);
         s_shader.compile();
     }
 
 	return s_shader;
+}
+
+
+///////////////////////////////////////////////////////////
+void ProceduralSkybox::setDirLight(Entity light)
+{
+    m_dirLight = light;
 }
 
 
@@ -316,23 +341,16 @@ void ProceduralSkybox::setHorizonColor(const Vector3f& color)
 
 
 ///////////////////////////////////////////////////////////
-void ProceduralSkybox::setGroundColor(const Vector3f& color)
+void ProceduralSkybox::setScatterStrength(float strength)
 {
-    m_groundColor = color;
+    m_scatterStrength = strength;
 }
 
 
 ///////////////////////////////////////////////////////////
-void ProceduralSkybox::setBloomColor(const Vector3f& color)
+void ProceduralSkybox::setScatterFactor(float size)
 {
-    m_bloomColor = color;
-}
-
-
-///////////////////////////////////////////////////////////
-void ProceduralSkybox::setBloomSize(float size)
-{
-    m_bloomSize = size;
+    m_scatterFactor = size;
 }
 
 
@@ -365,6 +383,13 @@ void ProceduralSkybox::setAltitude(float alt)
 
 
 ///////////////////////////////////////////////////////////
+Entity ProceduralSkybox::getDirLight() const
+{
+    return m_dirLight;
+}
+
+
+///////////////////////////////////////////////////////////
 const Vector3f& ProceduralSkybox::getZenithColor() const
 {
     return m_zenithColor;
@@ -379,23 +404,16 @@ const Vector3f& ProceduralSkybox::getHorizonColor() const
 
 
 ///////////////////////////////////////////////////////////
-const Vector3f& ProceduralSkybox::getGroundColor() const
+float ProceduralSkybox::getScatterStrength() const
 {
-    return m_groundColor;
+    return m_scatterStrength;
 }
 
 
 ///////////////////////////////////////////////////////////
-const Vector3f& ProceduralSkybox::getBloomColor() const
+float ProceduralSkybox::getScatterFactor() const
 {
-    return m_bloomColor;
-}
-
-
-///////////////////////////////////////////////////////////
-float ProceduralSkybox::getBloomSize() const
-{
-    return m_bloomSize;
+    return m_scatterFactor;
 }
 
 
@@ -467,6 +485,20 @@ const Vector3f& ProceduralSkybox::getAmbientColor()
     }
 
     return m_ambient;
+}
+
+
+///////////////////////////////////////////////////////////
+bool ProceduralSkybox::hasDeferredPass() const
+{
+    return false;
+}
+
+
+///////////////////////////////////////////////////////////
+bool ProceduralSkybox::hasForwardPass() const
+{
+    return true;
 }
 
 

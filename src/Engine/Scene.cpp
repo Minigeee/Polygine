@@ -3,10 +3,6 @@
 #include <poly/Engine/Components.h>
 #include <poly/Engine/Scene.h>
 
-#include <poly/Graphics/GLCheck.h>
-#include <poly/Graphics/Lighting.h>
-#include <poly/Graphics/RenderSystem.h>
-
 namespace poly
 {
 
@@ -53,10 +49,11 @@ E_EntitiesRemoved::E_EntitiesRemoved(std::vector<Entity>& entities) :
 
 ///////////////////////////////////////////////////////////
 Scene::Scene() :
-	m_handle				(s_idArray.add(true))
+	m_handle				(s_idArray.add(true)),
+	m_renderer				(this),
+	m_numRemoveQueued		(0)
 {
-	// Default extensions
-	getExtension<Lighting>();
+
 }
 
 
@@ -102,6 +99,9 @@ void Scene::removeEntity(const Entity& entity)
 
 	// This function adds it to a remove queue
 	it.value().removeEntity(entity);
+
+	// Increment number of queued entities
+	++m_numRemoveQueued;
 }
 
 
@@ -132,6 +132,22 @@ void Scene::removeQueuedEntities()
 			group.removeQueuedEntities();
 		}
 	}
+
+	// Reset number of queued
+	m_numRemoveQueued = 0;
+}
+
+
+///////////////////////////////////////////////////////////
+Uint32 Scene::getNumRemoveQueued()
+{
+	Uint32 num = 0;
+	{
+		std::lock_guard<std::mutex> lock(m_entityMutex);
+		num = m_numRemoveQueued;
+	}
+
+	return num;
 }
 
 
@@ -141,26 +157,24 @@ void Scene::addRenderSystem(RenderSystem* system)
 	// Initialize the system
 	system->init(this);
 
-	m_renderSystems.push_back(system);
+	// Add to renderer
+	m_renderer.addRenderSystem(system);
 }
 
 
 ///////////////////////////////////////////////////////////
-void Scene::render(Camera& camera, FrameBuffer& target, RenderPass pass)
+void Scene::render(Camera& camera, FrameBuffer& target, RenderPass pass, const RenderSettings& settings)
 {
-	// Update lighting system
-	if (pass != RenderPass::Shadow)
-		getExtension<Lighting>()->update(camera);
-
-	// Bind framebuffer
-	target.bind();
-
-	// Clear framebuffer
-	glCheck(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
-
-	// Render all render systems
-	for (Uint32 i = 0; i < m_renderSystems.size(); ++i)
-		m_renderSystems[i]->render(camera, pass);
+	// Pass to renderer
+	m_renderer.render(camera, target, pass, settings);
 }
+
+
+///////////////////////////////////////////////////////////
+const Renderer& Scene::getRenderer() const
+{
+	return m_renderer;
+}
+
 
 }

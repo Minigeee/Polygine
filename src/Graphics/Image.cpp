@@ -1,13 +1,50 @@
 #include <poly/Core/Allocate.h>
-#include <poly/Core/Logger.h>
 
 #include <poly/Graphics/Image.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+#define STB_IMAGE_RESIZE_IMPLEMENTATION
+#include <stb_image_resize.h>
+
 namespace poly
 {
+
+namespace priv
+{
+
+
+///////////////////////////////////////////////////////////
+bool resize(void* src, void* dst, Uint32 w1, Uint32 h1, Uint32 w2, Uint32 h2, Uint32 c, GLType dtype)
+{
+	// Get type size
+	Uint32 typeSize = 1;
+	if (dtype == GLType::Uint8)
+		typeSize = 1;
+	else if (dtype == GLType::Uint16)
+		typeSize = 2;
+	else if (dtype == GLType::Float)
+		typeSize = 4;
+	else
+		return false;
+
+	Uint32 inputStride = w1 * c * typeSize;
+	Uint32 outputStride = w2 * c * typeSize;
+
+	// Resize
+	if (dtype == GLType::Uint8)
+		stbir_resize_uint8((Uint8*)src, w1, h1, inputStride, (Uint8*)dst, w2, h2, outputStride, c);
+	else if (dtype == GLType::Uint16)
+		stbir_resize_uint16_generic((Uint16*)src, w1, h1, inputStride, (Uint16*)dst, w2, h2, outputStride, c, -1, 0, STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, NULL);
+	else
+		stbir_resize_float((float*)src, w1, h1, inputStride, (float*)dst, w2, h2, outputStride, c);
+
+	return true;
+}
+
+
+}
 
 
 ///////////////////////////////////////////////////////////
@@ -45,6 +82,125 @@ Image::Image(const std::string& fname, GLType dtype) :
 
 
 ///////////////////////////////////////////////////////////
+Image::Image(const Image& other) :
+	m_data			(0),
+	m_width			(other.m_width),
+	m_height		(other.m_height),
+	m_dataType		(other.m_dataType),
+	m_numChannels	(other.m_numChannels),
+	m_ownsData		(other.m_ownsData)
+{
+	if (other.m_data)
+	{
+		if (m_ownsData)
+		{
+			Uint32 typeSize = 1;
+			if (m_dataType == GLType::Uint16)
+				typeSize = 2;
+			else if (m_dataType == GLType::Float)
+				typeSize = 4;
+
+			// The image owns the data, so create a new copy of the data
+			Uint32 dataSize = m_width * m_height * m_numChannels * typeSize;
+			m_data = malloc(dataSize);
+
+			// Copy data
+			memcpy(m_data, other.m_data, dataSize);
+		}
+		else
+			// The data is not owned by the image, copy the pointer
+			m_data = other.m_data;
+	}
+}
+
+
+///////////////////////////////////////////////////////////
+Image& Image::operator=(const Image& other)
+{
+	if (&other != this)
+	{
+		// Free previous image
+		free();
+
+		m_width = other.m_width;
+		m_height = other.m_height;
+		m_dataType = other.m_dataType;
+		m_numChannels = other.m_numChannels;
+		m_ownsData = other.m_ownsData;
+
+		if (other.m_data)
+		{
+			if (m_ownsData)
+			{
+				Uint32 typeSize = 1;
+				if (m_dataType == GLType::Uint16)
+					typeSize = 2;
+				else if (m_dataType == GLType::Float)
+					typeSize = 4;
+
+				// The image owns the data, so create a new copy of the data
+				Uint32 dataSize = m_width * m_height * m_numChannels * typeSize;
+				m_data = malloc(dataSize);
+
+				// Copy data
+				memcpy(m_data, other.m_data, dataSize);
+			}
+			else
+				// The data is not owned by the image, copy the pointer
+				m_data = other.m_data;
+		}
+	}
+
+	return *this;
+}
+
+
+///////////////////////////////////////////////////////////
+Image::Image(Image&& other) :
+	m_data			(other.m_data),
+	m_width			(other.m_width),
+	m_height		(other.m_height),
+	m_dataType		(other.m_dataType),
+	m_numChannels	(other.m_numChannels),
+	m_ownsData		(other.m_ownsData)
+{
+	other.m_data = 0;
+	other.m_width = 0;
+	other.m_height = 0;
+	other.m_dataType = GLType::Unknown;
+	other.m_numChannels = 0;
+	other.m_ownsData = false;
+}
+
+
+///////////////////////////////////////////////////////////
+Image& Image::operator=(Image&& other)
+{
+	if (&other != this)
+	{
+		// Free previous image
+		free();
+
+		m_data = other.m_data;
+		m_width = other.m_width;
+		m_height = other.m_height;
+		m_dataType = other.m_dataType;
+		m_numChannels = other.m_numChannels;
+		m_ownsData = other.m_ownsData;
+
+		other.m_data = 0;
+		other.m_width = 0;
+		other.m_height = 0;
+		other.m_dataType = GLType::Unknown;
+		other.m_numChannels = 0;
+		other.m_ownsData = false;
+	}
+
+	return *this;
+}
+
+
+///////////////////////////////////////////////////////////
 bool Image::load(const std::string& fname, GLType dtype)
 {
 	int x = 0, y = 0, c = 0;
@@ -77,6 +233,42 @@ bool Image::load(const std::string& fname, GLType dtype)
 	m_ownsData = true;
 
 	LOG("Loaded image: %s", fname.c_str());
+	return true;
+}
+
+
+///////////////////////////////////////////////////////////
+bool Image::load(void* mem, Uint32 len, GLType dtype)
+{
+	int x = 0, y = 0, c = 0;
+	void* data = 0;
+
+	// Load image based on type
+	if (dtype == GLType::Uint8)
+		data = stbi_load_from_memory((Uint8*)mem, len, &x, &y, &c, 0);
+	else if (dtype == GLType::Uint16)
+		data = stbi_load_16_from_memory((Uint8*)mem, len, &x, &y, &c, 0);
+	else if (dtype == GLType::Float)
+		data = stbi_loadf_from_memory((Uint8*)mem, len, &x, &y, &c, 0);
+	else
+	{
+		LOG_ERROR("Unsupported data type while loading image from memory");
+		return false;
+	}
+
+	if (!data)
+	{
+		LOG_ERROR("Failed to load image from memory");
+		return false;
+	}
+
+	m_data = data;
+	m_width = x;
+	m_height = y;
+	m_numChannels = c;
+	m_dataType = dtype;
+	m_ownsData = true;
+
 	return true;
 }
 
@@ -134,6 +326,45 @@ void Image::create(void* data, Uint32 w, Uint32 h, Uint32 c, GLType dtype, bool 
 
 
 ///////////////////////////////////////////////////////////
+void Image::resize(Uint32 w, Uint32 h)
+{
+	ASSERT(m_dataType == GLType::Uint8 || m_dataType == GLType::Uint16 || m_dataType == GLType::Float, "Resizing images only works for Uint8, Uint16, and float types");
+
+	// Get type size
+	Uint32 typeSize = 1;
+	if (m_dataType == GLType::Uint16)
+		typeSize = 2;
+	else if (m_dataType == GLType::Float)
+		typeSize = 4;
+
+	Uint32 inputStride = m_width * m_numChannels * typeSize;
+	Uint32 outputStride = w * m_numChannels * typeSize;
+
+	// Allocate data
+	Uint32 size = w * h * m_numChannels * typeSize;
+	void* data = MALLOC_DBG(size);
+
+	// Resize
+	if (m_dataType == GLType::Uint8)
+		stbir_resize_uint8((Uint8*)m_data, m_width, m_height, inputStride, (Uint8*)data, w, h, outputStride, m_numChannels);
+	else if (m_dataType == GLType::Uint16)
+		stbir_resize_uint16_generic((Uint16*)m_data, m_width, m_height, inputStride, (Uint16*)data, w, h, outputStride, m_numChannels, -1, 0, STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, NULL);
+	else
+		stbir_resize_float((float*)m_data, m_width, m_height, inputStride, (float*)data, w, h, outputStride, m_numChannels);
+
+	// If owned previous data, free it
+	if (m_ownsData)
+		::free(m_data);
+
+	// Update new image parameters
+	m_data = data;
+	m_width = w;
+	m_height = h;
+	m_ownsData = true;
+}
+
+
+///////////////////////////////////////////////////////////
 void Image::setSize(const Vector2u& size)
 {
 	m_width = size.x;
@@ -160,6 +391,13 @@ void Image::setDataType(GLType dtype)
 void Image::setNumChannels(Uint32 c)
 {
 	m_numChannels = c;
+}
+
+
+///////////////////////////////////////////////////////////
+void Image::setOwnsData(bool owns)
+{
+	m_ownsData = owns;
 }
 
 

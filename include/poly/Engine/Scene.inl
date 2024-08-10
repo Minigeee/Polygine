@@ -6,6 +6,10 @@
 #include <mutex>
 #include <unordered_set>
 
+#ifndef _COMPONENT_DECAY
+#define _COMPONENT_DECAY(Cs) typename std::remove_pointer<typename std::decay<Cs>::type>::type
+#endif
+
 namespace poly
 {
 
@@ -46,9 +50,9 @@ inline Entity Scene::createEntity()
 
 ///////////////////////////////////////////////////////////
 template <typename... Cs>
-inline Entity Scene::createEntity(const Cs&... components)
+inline Entity Scene::createEntity(Cs&&... components)
 {
-	return createEntities(1, components...)[0];
+	return createEntities(1, std::forward<Cs>(components)...)[0];
 }
 
 
@@ -71,20 +75,22 @@ inline std::vector<Entity> Scene::createEntities(Uint32 num)
 
 ///////////////////////////////////////////////////////////
 template <typename... Cs>
-inline std::vector<Entity> Scene::createEntities(Uint32 num, const Cs&... components)
+inline std::vector<Entity> Scene::createEntities(Uint32 num, Cs&&... components)
 {
 	static_assert(sizeof...(Cs), "Entities must have at least one component type");
-	static_assert(priv::IsUnique<Cs...>::value, "Entities are not allowed to have duplicate component types");
+	static_assert(priv::IsUnique<_COMPONENT_DECAY(Cs)...>::value, "Entities are not allowed to have duplicate component types");
 
 	// Create a group id for this set
-	static Uint32 groupId = priv::generateGroupId<Cs...>();
+	static Uint32 groupId = priv::generateGroupId<_COMPONENT_DECAY(Cs)...>();
 
 	// Find the correct group
 	priv::EntityGroup* group = 0;
 	std::vector<Entity> entities;
 	{
 		// Lock component mutexes
-		std::unique_lock<std::mutex> locks[] = { std::unique_lock<std::mutex>(priv::ComponentMutex<Cs>::s_mutex)... };
+		std::unique_lock<std::mutex> locks[] = {
+			std::unique_lock<std::mutex>(priv::ComponentMutex<_COMPONENT_DECAY(Cs)>::s_mutex)...
+		};
 
 		// Entity creation is protected by mutex
 		std::lock_guard<std::mutex> lock(m_entityMutex);
@@ -94,13 +100,13 @@ inline std::vector<Entity> Scene::createEntities(Uint32 num, const Cs&... compon
 		{
 			// Initialize group
 			group = &(m_entityGroups[groupId] = priv::EntityGroup(this, m_handle.m_index));
-			group->setComponentTypes<Cs...>(groupId);
+			group->setComponentTypes<_COMPONENT_DECAY(Cs)...>(groupId);
 		}
 		else
 			group = &it.value();
 
 		// Create entity
-		entities = std::move(group->createEntities(num, components...));
+		entities = std::move(group->createEntities(num, std::forward<Cs>(components)...));
 	}
 
 	// Send the event

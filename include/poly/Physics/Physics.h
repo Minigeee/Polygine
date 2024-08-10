@@ -2,14 +2,31 @@
 #define POLY_PHYSICS_H
 
 #include <poly/Core/DataTypes.h>
+#include <poly/Core/ObjectPool.h>
 
 #include <poly/Engine/Extension.h>
+
+#include <poly/Graphics/Camera.h>
+#include <poly/Graphics/FrameBuffer.h>
+#include <poly/Graphics/Shader.h>
+#include <poly/Graphics/VertexArray.h>
+#include <poly/Graphics/VertexBuffer.h>
 
 #include <poly/Math/Ray.h>
 
 #include <poly/Physics/Collider.h>
+#include <poly/Physics/Components.h>
 #include <poly/Physics/Joints.h>
 #include <poly/Physics/Shapes.h>
+
+#include <poly/Physics/BoxCollider.h>
+#include <poly/Physics/CapsuleCollider.h>
+#include <poly/Physics/ConcaveMeshCollider.h>
+#include <poly/Physics/ConvexMeshCollider.h>
+#include <poly/Physics/HeightMapCollider.h>
+#include <poly/Physics/SphereCollider.h>
+
+#include <mutex>
 
 namespace poly
 {
@@ -61,6 +78,12 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	~Physics();
+
+	///////////////////////////////////////////////////////////
+	/// \brief Lock the physics engine with a mutex for multithread use
+	///
+	///////////////////////////////////////////////////////////
+	std::unique_lock<std::mutex> lock();
 
 	///////////////////////////////////////////////////////////
 	/// \brief Do a physics simulation step
@@ -177,52 +200,85 @@ public:
 	/// doesn't make sense though). If both components exist in the
 	/// entity, the the collider will only be added to the RigidBodyComponent.
 	///
-	/// Any of the following physics collider shapes can be used:
-	/// \li BoxShape
-	/// \li CapsuleShape
-	/// \li ConcaveMeshShape
-	/// \li ConvexMeshShape
-	/// \li HeightMapShape
-	/// \li SphereShape
-	///
-	/// Each physics shape has a position and a rotation quaternion.
-	/// Use these properties to set the transform orientation of each
+	/// Use the position and rotation parameters to set the transform orientation of each
 	/// collider in the local space of the physics body. This transform
 	/// orientation exists because multiple colliders can be added to
 	/// entities with physics bodies, and using multiple colliders,
 	/// each with their own shape and orientation, can be used to make
 	/// more complex collision shapes.
 	///
-	/// The initial bounciness and friction coefficient of the collider
-	/// can be set using this function, but they can also be changed
-	/// later using the returned Collider object.
+	/// The bounciness, friction coefficient, and other material properties
+	/// of the collider can be changed using the returned collider object
 	///
 	/// \param entity The entity to add a collider to
-	/// \param shape Any shape that inherits from PhysicsShape
-	/// \param bounciness The intial bounciness of the collider
-	/// \param friction The initial friction coefficient of the collider
+	/// \param shape A physics shape
+	/// \param position The intial position of the collider
+	/// \param rotation The initial rotation of the collider
 	///
-	/// \return A Collider object that can be used to control the properties of the collider
+	/// \return A Collider derived object that can be used to control the properties of the collider
 	///
 	///////////////////////////////////////////////////////////
-	Collider addCollider(
+	BoxCollider addCollider(
 		const Entity& entity,
-		const PhysicsShape& shape,
-		float bounciness = 0.1f,
-		float friction = 0.2f
+		const BoxShape& shape,
+		const Vector3f& position = Vector3f(0.0f),
+		const Quaternion& rotation = Quaternion::Identity
 	);
 
 	///////////////////////////////////////////////////////////
-	/// \brief Remove a collider from an entity with a physics body
-	///
-	/// Remove a collider from an entity with a physics body, using
-	/// the index of the collider.
-	///
-	/// \param entity The entity to remove the collider from
-	/// \param index The index of the collider to remove
+	/// \copydoc addCollider(const Entity&,const BoxShape&,const Vector3f&,const Quaternion&)
 	///
 	///////////////////////////////////////////////////////////
-	void removeCollider(const Entity& entity, Uint32 index);
+	CapsuleCollider addCollider(
+		const Entity& entity,
+		const CapsuleShape& shape,
+		const Vector3f& position = Vector3f(0.0f),
+		const Quaternion& rotation = Quaternion::Identity
+	);
+
+	///////////////////////////////////////////////////////////
+	/// \copydoc addCollider(const Entity&,const BoxShape&,const Vector3f&,const Quaternion&)
+	///
+	///////////////////////////////////////////////////////////
+	ConcaveMeshCollider addCollider(
+		const Entity& entity,
+		const ConcaveMeshShape& shape,
+		const Vector3f& position = Vector3f(0.0f),
+		const Quaternion& rotation = Quaternion::Identity
+	);
+
+	///////////////////////////////////////////////////////////
+	/// \copydoc addCollider(const Entity&,const BoxShape&,const Vector3f&,const Quaternion&)
+	///
+	///////////////////////////////////////////////////////////
+	ConvexMeshCollider addCollider(
+		const Entity& entity,
+		const ConvexMeshShape& shape,
+		const Vector3f& position = Vector3f(0.0f),
+		const Quaternion& rotation = Quaternion::Identity
+	);
+
+	///////////////////////////////////////////////////////////
+	/// \copydoc addCollider(const Entity&,const BoxShape&,const Vector3f&,const Quaternion&)
+	///
+	///////////////////////////////////////////////////////////
+	HeightMapCollider addCollider(
+		const Entity& entity,
+		const HeightMapShape& shape,
+		const Vector3f& position = Vector3f(0.0f),
+		const Quaternion& rotation = Quaternion::Identity
+	);
+
+	///////////////////////////////////////////////////////////
+	/// \copydoc addCollider(const Entity&,const BoxShape&,const Vector3f&,const Quaternion&)
+	///
+	///////////////////////////////////////////////////////////
+	SphereCollider addCollider(
+		const Entity& entity,
+		const SphereShape& shape,
+		const Vector3f& position = Vector3f(0.0f),
+		const Quaternion& rotation = Quaternion::Identity
+	);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Remove a collider from an entity with a physics body
@@ -280,12 +336,47 @@ public:
 	///////////////////////////////////////////////////////////
 	void removeJoint(const Joint& joint);
 
+	///////////////////////////////////////////////////////////
+	/// \brief Set whether debug rendering should be enabled or not
+	///
+	/// Enabling debug rendering will force lines and triangles of
+	/// physics geometries to be generated during update(), so it will
+	/// benefit performance to disable this if not using debug rendering.
+	/// To render physics geometries, use render(), which will automatically
+	/// enable debug rendering.
+	///
+	/// \param enabled True if debug rendering should be enabled
+	///
+	///////////////////////////////////////////////////////////
+	void setDebugRenderEnabled(bool enabled);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Check if debug rendering is enabled
+	///
+	/// \return A boolean indicating whether debug rendering is enabled
+	///
+	///////////////////////////////////////////////////////////
+	bool isDebugRenderEnabled();
+
+	///////////////////////////////////////////////////////////
+	/// \brief Render the debug geometries of physics objects
+	///
+	/// This must be called in the rendering thread if using a
+	/// multithreaded application.
+	///
+	/// \param camera The camera to render geomtries from the perspective of
+	/// \param target The framebuffer to render pixels into
+	///
+	///////////////////////////////////////////////////////////
+	void render(Camera& camera, FrameBuffer& target = FrameBuffer::Default);
+
 private:
 	struct BodyData
 	{
 		void* m_body;
 		Uint32 m_group;
 		Uint32 m_index;
+		std::vector<Collider> m_colliders;
 	};
 
 	struct RigidBodyData
@@ -334,6 +425,12 @@ private:
 		void* m_vertexArray;
 	};
 
+	struct DebugRenderPoint
+	{
+		Vector3f m_point;
+		Vector3f m_color;
+	};
+
 	void addRigidBody(Entity::Id id);
 
 	void addCollisionBody(Entity::Id id);
@@ -342,21 +439,25 @@ private:
 
 	void removeCollisionBody(Entity::Id id);
 
-	Collider createCollider(const Entity& entity, const PhysicsShape& shape, void* rp3dShape);
+	void createCollider(Collider& collider, const Entity& entity, void* rp3dShape, const Vector3f& pos, const Quaternion& rot, Collider::Type type);
 
-	void* getBoxShape(const Vector3f& dims);
+	void* createBoxShape(const Vector3f& dims);
 
-	void* getCapsuleShape(const Vector2f& dims);
+	void* createCapsuleShape(const Vector2f& dims);
 
-	void* getConcaveMeshShape(const ConcaveMeshShape& shape);
+	void* createConcaveMeshShape(const ConcaveMeshShape& shape);
 
-	void* getConvexMeshShape(const ConvexMeshShape& shape);
+	void* createConvexMeshShape(const ConvexMeshShape& shape);
 
-	void* getHeightMapShape(const HeightMapShape& shape);
+	void* createHeightMapShape(const HeightMapShape& shape);
 
-	void* getSphereShape(float radius);
+	void* createSphereShape(float radius);
+
+	static Shader& getDebugShader();
 
 private:
+	std::mutex m_mutex;															//!< Mutex to protect multithread access to main physics engine
+	std::mutex m_dataMutex;														//!< Mutex to protect data structures
 	void* m_world;																//!< The RP3D physics world pointer
 	priv::PhysicsEventHandler* m_eventHandler;									//!< The RP3D event handler
 	Vector3f m_gravity;															//!< The gravity acceleration vector
@@ -371,12 +472,14 @@ private:
 	Uint32 m_maxRaycastIntersects;												//!< The max number of raycast intersects allowed for the current raycast query
 	std::vector<poly::RaycastInfo> m_raycastInfo;								//!< The temp storage for storing raycast results
 
-	static HashMap<float, void*> s_boxShapes;
-	static HashMap<float, void*> s_capsuleShapes;
+	VertexArray m_debugRenderArray;												//!< VAO for debug render
+	VertexBuffer m_debugRenderBuffer;											//!< VBO for debug render
+	Uint32 m_debugBufferOffset;													//!< The current render offset in the debug buffer
+
 	static HashMap<void*, ConcaveMeshData> s_concaveMeshShapes;
 	static HashMap<void*, ConvexMeshData> s_convexMeshShapes;
 	static HashMap<float*, void*> s_heightMapShapes;
-	static HashMap<float, void*> s_sphereShapes;
+	static Shader s_debugShader;
 };
 
 
@@ -436,6 +539,7 @@ private:
 ///
 /// // Create the scene and create a few physics objects
 /// Scene scene;
+///	Camera camera;
 ///
 /// // Add an octree for rendering objects
 /// Octree octree;
@@ -482,6 +586,11 @@ private:
 ///
 ///		// Update dynamic objects in the octree
 ///		octree.update();
+///
+///		...
+///
+///		// Render debug physics geometry
+///		physics->render(camera);
 ///
 ///		...
 /// }

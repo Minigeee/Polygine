@@ -72,23 +72,6 @@ bool updateBoundingBox(BoundingBox& a, const BoundingBox& b)
 	return changed;
 }
 
-
-///////////////////////////////////////////////////////////
-void bindShader(Shader* shader, Camera& camera, Scene* scene, RenderPass pass)
-{
-	shader->bind();
-
-	// Camera
-	camera.apply(shader);
-
-	// Lighting
-	scene->getExtension<Lighting>()->apply(shader);
-
-	// Shadows
-	scene->getExtension<Shadows>()->apply(shader);
-	// shader->setUniform("u_isShadowPass", pass == RenderPass::Shadow);
-}
-
 }
 
 
@@ -123,6 +106,7 @@ Octree::Octree() :
 	m_root					(0),
 	m_size					(0.0f),
 	m_maxPerCell			(0),
+	m_numEntitites			(0),
 	m_instanceBufferOffset	(0)
 {
 
@@ -152,6 +136,18 @@ void Octree::init(Scene* scene)
 			{
 				for (Uint32 i = 0; i < e.m_numEntities; ++i)
 					add(e.m_entities[i]);
+			}
+		}
+	);
+
+	// Automatically remove any entities that are removed
+	m_scene->addListener<E_EntitiesRemoved>(
+		[&](const E_EntitiesRemoved& e)
+		{
+			if (e.m_entities->has<RenderComponent>())
+			{
+				for (Uint32 i = 0; i < e.m_numEntities; ++i)
+					remove(e.m_entities[i].getId());
 			}
 		}
 	);
@@ -382,6 +378,9 @@ void Octree::add(Entity::Id entity)
 	// Add to map
 	m_dataMap[entity] = data;
 
+	// Increment number of entities
+	++m_numEntitites;
+
 
 	// Insert into the octree
 	insert(data);
@@ -509,6 +508,61 @@ void Octree::insert(EntityData* data)
 
 
 ///////////////////////////////////////////////////////////
+void Octree::merge(Node* node)
+{
+	// Count the number of entities in children nodes
+	Uint32 numEntities = 0;
+	bool hasChildren = false;
+	bool hasGrandchildren = false;
+
+	for (Uint32 i = 0; i < 8; ++i)
+	{
+		Node* child = node->m_children[i];
+		if (child)
+		{
+			hasChildren = true;
+			numEntities += child->m_data.size();
+
+			for (Uint32 j = 0; j < 8; ++j)
+				hasGrandchildren |= (bool)child->m_children[j];
+		}
+	}
+
+	// Can't merge if there is nothing to merge or if the node has grandchildren
+	if (!hasChildren || hasGrandchildren) return;
+
+	// Only merge if the number of entitites is less than a certain margin
+	if (numEntities < (Uint32)(0.7f * m_maxPerCell))
+	{
+		std::vector<EntityData*>& data = node->m_data;
+
+		for (Uint32 i = 0; i < 8; ++i)
+		{
+			if (node->m_children[i])
+			{
+				// Append all child node data
+				std::vector<EntityData*>& childData = node->m_children[i]->m_data;
+				data.insert(data.end(), childData.begin(), childData.end());
+			}
+		}
+
+		// Update the containing node of each entity
+		for (Uint32 i = 0; i < data.size(); ++i)
+			data[i]->m_node = node;
+
+		// Remove the children node
+		for (Uint32 i = 0; i < 8; ++i)
+		{
+			if (node->m_children[i])
+				m_nodePool.free(node->m_children[i]);
+
+			node->m_children[i] = 0;
+		}
+	}
+}
+
+
+///////////////////////////////////////////////////////////
 void Octree::update()
 {
 	ASSERT(m_scene, "The octree must be initialized before using, by calling the init() function");
@@ -531,17 +585,23 @@ void Octree::update(Entity::Id entity)
 
 	// Get component data
 	auto components = m_scene->getComponents<TransformComponent, RenderComponent>(entity);
-	RenderComponent& r = *components.get<RenderComponent*>();
-	TransformComponent& t = *components.get<TransformComponent*>();
+	RenderComponent* r = components.get<RenderComponent*>();
+	TransformComponent* t = components.get<TransformComponent*>();
 
 	// Update entity
-	update(entity, r, t);
+	if (r && t)
+		update(entity, *r, *t);
 }
 
 
 ///////////////////////////////////////////////////////////
 void Octree::update(const Entity::Id& entity, RenderComponent& r, TransformComponent& t)
 {
+	// Make sure the entity exists in the octree
+	auto it = m_dataMap.find(entity);
+	if (it == m_dataMap.end())
+		return;
+
 	// Get transform matrix
 	Matrix4f transform = toTransformMatrix(t.m_position, t.m_rotation, t.m_scale);
 
@@ -584,7 +644,7 @@ void Octree::update(const Entity::Id& entity, RenderComponent& r, TransformCompo
 
 
 	// Get node
-	EntityData* data = m_dataMap[entity];
+	EntityData* data = it.value();
 	data->m_boundingBox = bbox;
 	data->m_transform = transform;
 	data->m_castsShadows = r.m_castsShadows;
@@ -595,7 +655,7 @@ void Octree::update(const Entity::Id& entity, RenderComponent& r, TransformCompo
 	std::unique_lock<std::mutex> lock(m_mutex);
 
 	// Get cell info
-	float cellSize = BASE_SIZE * powf(2.0f, (float)node->m_level - 1.0f);
+	float cellSize = BASE_SIZE * powf(2.0f, (float)node->m_level);
 	Vector3f cellMin = node->m_boundingBox.m_min / cellSize;
 	cellMin = Vector3f(roundf(cellMin.x), roundf(cellMin.y), roundf(cellMin.z)) * cellSize;
 	Vector3f cellMax = cellMin + Vector3f(cellSize);
@@ -624,6 +684,10 @@ void Octree::update(const Entity::Id& entity, RenderComponent& r, TransformCompo
 
 		// Insert again
 		insert(data);
+
+		// Attempt to merge the parent cell (after inserting in case it was inserted into one of sibling nodes)
+		if (node->m_parent)
+			merge(node->m_parent);
 	}
 }
 
@@ -637,7 +701,8 @@ void Octree::remove(Entity::Id entity)
 	std::unique_lock<std::mutex> lock(m_mutex);
 
 	// Get node
-	EntityData* data = m_dataMap[entity];
+	auto it = m_dataMap.find(entity);
+	EntityData* data = it.value();
 	Node* node = data->m_node;
 
 	// Search for data in node
@@ -652,61 +717,47 @@ void Octree::remove(Entity::Id entity)
 		}
 	}
 
-	// Check if the parent node will have a small enough number of entities to merge
+	// Attempt to merge the parent cell
 	if (node->m_parent)
-	{
-		// Count the number of entities
-		Uint32 numEntities = 0;
-		for (Uint32 i = 0; i < 8; ++i)
-			numEntities += node->m_parent->m_children[i]->m_data.size();
-
-		if (numEntities < (Uint32)(0.7f * m_maxPerCell))
-		{
-			// Merge
-			Node* parent = node->m_parent;
-			std::vector<EntityData*>& parentData = parent->m_data;
-
-			for (Uint32 i = 0; i < 8; ++i)
-			{
-				// Append all child node data
-				std::vector<EntityData*>& childData = parent->m_children[i]->m_data;
-				parentData.insert(parentData.end(), childData.begin(), childData.end());
-			}
-
-			// Update the containing node of each entity
-			for (Uint32 i = 0; i < parentData.size(); ++i)
-				parentData[i]->m_node = parent;
-
-			// Remove the children node
-			for (Uint32 i = 0; i < 8; ++i)
-			{
-				m_nodePool.free(parent->m_children[i]);
-				parent->m_children[i] = 0;
-			}
-		}
-	}
+		merge(node->m_parent);
 
 	// Remove from pool
 	m_dataPool.free(data);
+
+	// Remove from map
+	m_dataMap.erase(it);
+
+	// Decrement the number of entities
+	--m_numEntitites;
 }
 
 
 ///////////////////////////////////////////////////////////
-void Octree::render(Camera& camera, RenderPass pass)
+void Octree::render(Camera& camera, RenderPass pass, const RenderSettings& settings)
 {
 	// Anything in the octree should be rendered for all passes
 
 	ASSERT(m_scene, "The octree must be initialized before using, by calling the init() function");
 
+	if (!settings.m_deferred)
+	{
+		// TODO : Forward render for transparent objects
+
+		return;
+	}
+
 	START_PROFILING_FUNC;
 
+	// Reset transparent render data
+	m_transparentData.clear();
 
 	// Get entity data
 	std::vector<std::vector<EntityData*>> entityData(m_renderGroups.size());
+	std::vector<double> groupAvgDists(m_renderGroups.size());
 	const Frustum& frustum = camera.getFrustum();
 	{
 		std::unique_lock<std::mutex> lock(m_mutex);
-		getRenderData(m_root, frustum, entityData, camera.getPosition(), pass);
+		getRenderData(m_root, frustum, entityData, groupAvgDists, camera.getPosition(), pass);
 	}
 	
 	// Get number of visible entities
@@ -716,6 +767,8 @@ void Octree::render(Camera& camera, RenderPass pass)
 
 	if (!numVisible) return;
 
+
+	HashMap<Shader*, float> groupMinDists;
 
 	// Stream instance data
 	Uint32 size = numVisible * sizeof(Matrix4f);
@@ -750,12 +803,16 @@ void Octree::render(Camera& camera, RenderPass pass)
 		data.m_skeleton = group.m_skeleton;
 		data.m_offset = m_instanceBufferOffset;
 		data.m_instances = entities.size();
+		data.m_dist = (float)::sqrt(groupAvgDists[i] / data.m_instances);
 
 		// Take different actions based on what type of renderable being dealt with
 		Model* model = 0;
 		Billboard* billboard = 0;
 		if ((model = dynamic_cast<Model*>(group.m_renderable)) != 0)
 		{
+			// Number of meshes prevented from rendering because of render mask
+			Uint32 numMasked = 0;
+
 			// Add data for every mesh in the model
 			for (Uint32 j = 0; j < model->getNumMeshes(); ++j)
 			{
@@ -764,17 +821,55 @@ void Octree::render(Camera& camera, RenderPass pass)
 				data.m_vertexArray = &mesh->m_vertexArray;
 				data.m_material = &mesh->m_material;
 				data.m_shader = mesh->m_shader;
-				data.m_transparent = data.m_material->isTransparent();
-				renderData.push_back(data);
+				data.m_isTransparent = data.m_material->isTransparent();
+
+				// Only add the data if it isn't masked
+				if (data.m_material && !(Uint32)(data.m_material->getRenderMask() & pass))
+					++numMasked;
+				else
+				{
+					if (data.m_isTransparent)
+						m_transparentData.push_back(data);
+					else
+						renderData.push_back(data);
+
+					// Keep track of min dists for each shader group
+					auto it = groupMinDists.find(data.m_shader);
+					if (it == groupMinDists.end())
+						groupMinDists[data.m_shader] = data.m_dist;
+					else if (data.m_dist < it.value())
+						it.value() = data.m_dist;
+				}
 			}
+
+			// If the number of masked is equal to the number of meshes, skip this group
+			if (numMasked == model->getNumMeshes())
+				continue;
 		}
 		else if ((billboard = dynamic_cast<Billboard*>(group.m_renderable)) != 0)
 		{
 			data.m_vertexArray = &billboard->getVertexArray();
 			data.m_material = billboard->getMaterial();
 			data.m_shader = billboard->getShader();
-			data.m_transparent = data.m_material->isTransparent();
-			renderData.push_back(data);
+			data.m_isTransparent = data.m_material->isTransparent();
+
+			// Only add the data if it isn't masked
+			if (data.m_material && !(Uint32)(data.m_material->getRenderMask() & pass))
+				continue;
+			else
+			{
+				if (data.m_isTransparent)
+					m_transparentData.push_back(data);
+				else
+					renderData.push_back(data);
+
+				// Keep track of min dists for each shader group
+				auto it = groupMinDists.find(data.m_shader);
+				if (it == groupMinDists.end())
+					groupMinDists[data.m_shader] = data.m_dist;
+				else if (data.m_dist < it.value())
+					it.value() = data.m_dist;
+			}
 		}
 		else
 			// Otherwise, the renderable is not a valid type, and should be skipped
@@ -794,14 +889,24 @@ void Octree::render(Camera& camera, RenderPass pass)
 
 	// Sort by shader to minimize shader changes
 	std::sort(renderData.begin(), renderData.end(),
-		[](const RenderData& a, const RenderData& b) -> bool
+		[&](const RenderData& a, const RenderData& b) -> bool
 		{
-			if (a.m_transparent && !b.m_transparent)
-				return true;
-			else if (a.m_shader == b.m_shader)
-				return a.m_offset < b.m_offset;
+			if (a.m_shader == b.m_shader)
+				// If two groups are in the same shader group, render the group
+				// with the smallest average distance first
+				return a.m_dist < b.m_dist;
 			else
-				return a.m_shader < b.m_shader;
+			{
+				// If in two separate groups, render the group with the smallest
+				// shader average distance
+				float distA = groupMinDists[a.m_shader];
+				float distB = groupMinDists[b.m_shader];
+
+				if (distA == distB)
+					return a.m_shader < b.m_shader;
+				else
+					return distA < distB;
+			}
 		}
 	);
 
@@ -809,13 +914,15 @@ void Octree::render(Camera& camera, RenderPass pass)
 	// Enable depth testing
 	glCheck(glEnable(GL_DEPTH_TEST));
 
-	// Enable alpha blending
-	glCheck(glEnable(GL_BLEND));
-	glCheck(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+	// Disable alpha blending
+	glCheck(glDisable(GL_BLEND));
 
 	// Bind the first shader
 	Shader* shader = renderData.front().m_shader;
-	priv::bindShader(shader, camera, m_scene, pass);
+	bindShader(shader, camera, m_scene, pass);
+
+	// Apply render settings
+	applyRenderSettings(shader, settings);
 
 	// Iterate through render data and render everything
 	for (Uint32 i = 0; i < renderData.size(); ++i)
@@ -826,7 +933,7 @@ void Octree::render(Camera& camera, RenderPass pass)
 		if (data.m_shader != shader)
 		{
 			shader = data.m_shader;
-			priv::bindShader(shader, camera, m_scene, pass);
+			bindShader(shader, camera, m_scene, pass);
 		}
 
 		Model* model = 0;
@@ -874,11 +981,53 @@ void Octree::render(Camera& camera, RenderPass pass)
 			}
 		}
 	}
+
+	// Reset render settings
+	resetRenderSettings(settings);
 }
 
 
 ///////////////////////////////////////////////////////////
-void Octree::getRenderData(Node* node, const Frustum& frustum, std::vector<std::vector<EntityData*>>& entityData, const Vector3f& cameraPos, RenderPass pass)
+bool Octree::hasDeferredPass() const
+{
+	return true;
+}
+
+
+///////////////////////////////////////////////////////////
+bool Octree::hasForwardPass() const
+{
+	return true;
+}
+
+
+///////////////////////////////////////////////////////////
+Uint32 Octree::getNumEntities() const
+{
+	return m_numEntitites;
+}
+
+
+///////////////////////////////////////////////////////////
+void Octree::bindShader(Shader* shader, Camera& camera, Scene* scene, RenderPass pass)
+{
+	shader->bind();
+
+	shader->setUniform("u_time", m_clock.getElapsedTime().toSeconds());
+
+	// Camera
+	camera.apply(shader);
+}
+
+
+///////////////////////////////////////////////////////////
+void Octree::getRenderData(
+	Node* node,
+	const Frustum& frustum,
+	std::vector<std::vector<EntityData*>>& entityData,
+	std::vector<double>& groupAvgDists,
+	const Vector3f& cameraPos,
+	RenderPass pass)
 {
 	// Add all data inside the frustum
 	for (Uint32 i = 0; i < node->m_data.size(); ++i)
@@ -894,21 +1043,30 @@ void Octree::getRenderData(Node* node, const Frustum& frustum, std::vector<std::
 		{
 			Uint32 groupId = data->m_group;
 
+			// Calculate distance squared
+			Vector3f objectOffset = cameraPos - data->m_boundingBox.getCenter();
+			float distSquared = dot(objectOffset, objectOffset);
+
 			// If the renderable is an lod system, add the correct group
 			RenderGroup& group = m_renderGroups[groupId];
 			if (group.m_lodLevels.size())
 			{
 				LodSystem* lod = (LodSystem*)group.m_renderable;
 
-				Vector3f objectOffset = cameraPos - data->m_boundingBox.getCenter();
-				float distSquared = dot(objectOffset, objectOffset);
-
 				// Find the correct lod level
 				Uint32 level = 0;
 				for (; level < lod->getNumLevels() && distSquared > lod->getDistance(level) * lod->getDistance(level); ++level);
 
-				groupId = level < lod->getNumLevels() ? group.m_lodLevels[level] : groupId;
+				// If there isn't an lod level defined for this distance, then don't add this entity
+				if (level >= lod->getNumLevels())
+					continue;
+
+				// Set new group id
+				groupId = group.m_lodLevels[level];
 			}
+
+			// Keep track of average distance
+			groupAvgDists[groupId] += (double)distSquared;
 
 			entityData[groupId].push_back(data);
 		}
@@ -919,7 +1077,7 @@ void Octree::getRenderData(Node* node, const Frustum& frustum, std::vector<std::
 	{
 		Node* child = node->m_children[i];
 		if (child && frustum.contains(child->m_boundingBox))
-			getRenderData(child, frustum, entityData, cameraPos, pass);
+			getRenderData(child, frustum, entityData, groupAvgDists, cameraPos, pass);
 	}
 }
 
@@ -946,8 +1104,6 @@ Uint32 Octree::getRenderGroup(Renderable* renderable, Skeleton* skeleton)
 
 	if (!groupExists)
 	{
-		groupId = m_renderGroups.size();
-
 		RenderGroup group;
 		group.m_renderable = renderable;
 		group.m_skeleton = skeleton;
@@ -963,6 +1119,10 @@ Uint32 Octree::getRenderGroup(Renderable* renderable, Skeleton* skeleton)
 				group.m_lodLevels.push_back(getRenderGroup(lod->getRenderable(i), skeleton));
 		}
 
+		// Get group id
+		groupId = m_renderGroups.size();
+
+		// Add group
 		m_renderGroups.push_back(group);
 	}
 

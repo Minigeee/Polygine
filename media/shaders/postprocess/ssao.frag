@@ -12,7 +12,8 @@ out vec4 f_color;
 uniform sampler2D u_colorTexture;
 uniform sampler2D u_depthTexture;
 
-uniform mat4 u_invProjView;
+uniform mat4 u_proj;
+uniform mat4 u_invProj;
 
 uniform float u_radius;
 uniform float u_bias;
@@ -33,13 +34,13 @@ float getLinearDepth(float d)
 
 
 ///////////////////////////////////////////////////////////////////////////////
-vec3 getFragPos(vec2 uv, out float depth)
+vec3 getPosView(vec2 uv, out float depth)
 {
     depth = 2.0f * texture(u_depthTexture, uv).r - 1.0f;
-    vec4 clipPos = vec4(2.0f * uv - 1.0f, depth, 1.0f);
-    vec4 pos = u_invProjView * clipPos;
+    vec4 posNDC = vec4(2.0f * uv - 1.0f, depth, 1.0f);
+    vec4 posView = u_invProj * posNDC;
 
-    return pos.xyz / pos.w;
+    return posView.xyz / posView.w;
 }
 
 
@@ -49,10 +50,10 @@ vec3 getNormal(vec3 position)
     vec2 pixelSize = 1.0f / textureSize(u_depthTexture, 0);
 
     float depth;
-    vec3 p10 = getFragPos(v_texCoord + vec2(-1, 0) * pixelSize, depth);
-    vec3 p12 = getFragPos(v_texCoord + vec2(1, 0) * pixelSize, depth);
-    vec3 p01 = getFragPos(v_texCoord + vec2(0, 1) * pixelSize, depth);
-    vec3 p21 = getFragPos(v_texCoord + vec2(0, -1) * pixelSize, depth);
+    vec3 p10 = getPosView(v_texCoord + vec2(-1, 0) * pixelSize, depth);
+    vec3 p12 = getPosView(v_texCoord + vec2(1, 0) * pixelSize, depth);
+    vec3 p01 = getPosView(v_texCoord + vec2(0, 1) * pixelSize, depth);
+    vec3 p21 = getPosView(v_texCoord + vec2(0, -1) * pixelSize, depth);
 
     // Change the normal sampling locations if the difference in distances is too large
     float d10 = distance(p10, position);
@@ -80,8 +81,8 @@ vec3 getNormal(vec3 position)
 void main()
 {
     float depth = 0.0f;
-    vec3 position = getFragPos(v_texCoord, depth);
-    vec3 normal = getNormal(position);
+    vec3 posView = getPosView(v_texCoord, depth);
+    vec3 normal = getNormal(posView);
     depth = getLinearDepth(depth * 0.5f + 0.5f);
 
     f_color = texture(u_colorTexture, v_texCoord);
@@ -104,20 +105,20 @@ void main()
     float occlusion = 0.0f;
     for (int i = 0; i < samples; ++i)
     {
-        vec3 samplePos = position + u_radius * sampleSphere[i];
+        vec3 samplePos = posView + u_radius * sampleSphere[i];
         vec3 noiseOffset = (rand3(samplePos) - 0.5f) * u_radius * u_noiseFactor;
         vec3 sphereOffset = u_radius * sampleSphere[i] + noiseOffset;
-        samplePos = position + sign(dot(sphereOffset, normal)) * sphereOffset;
+        samplePos = posView + sign(dot(sphereOffset, normal)) * sphereOffset;
 
-        vec4 uv4 = u_projView * vec4(samplePos, 1.0f);
+        vec4 uv4 = u_proj * vec4(samplePos, 1.0f);
         vec3 samplePosClipSpace = (uv4.xyz / uv4.w) * 0.5f + 0.5f;
 
         float sampleDepth = getLinearDepth(texture(u_depthTexture, samplePosClipSpace.xy).r);
 
         float rangeCheck = smoothstep(0.0, 1.0, u_radius / abs(depth - sampleDepth));
-        occlusion += smoothstep(0.0f, TRANSITION_RANGE, getLinearDepth(samplePosClipSpace.z) + u_bias - sampleDepth) * rangeCheck * u_intensity;
+        occlusion += smoothstep(0.0f, TRANSITION_RANGE, getLinearDepth(samplePosClipSpace.z) + u_bias - sampleDepth) * rangeCheck;
     }
 
-    occlusion = 1.0f - (occlusion / samples) / (1.0f + u_falloff * depth);
+    occlusion = 1.0f - clamp(occlusion / samples * u_intensity, 0.0f, 1.0f) / (1.0f + u_falloff * depth);
     f_color.rgb *= vec3(occlusion);
 }

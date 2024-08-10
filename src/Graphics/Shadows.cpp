@@ -54,8 +54,19 @@ void Shadows::render(Camera& camera)
 	m_scene->system<DirLightComponent>(
 		[&](const Entity::Id& id, const DirLightComponent& light)
 		{
-			// Skip if disabled
-			if (!light.m_shadowsEnabled) return;
+			// Add number of lights used (even if shadows are disabled)
+			++lightNum;
+
+			// Skip if disabled, or if 2 lights already enabled
+			if (!light.m_shadowsEnabled || lightNum > 2)
+			{
+				auto it = m_shadowInfo.find(id);
+				if (it != m_shadowInfo.end())
+					// Set as inactive
+					it.value().m_isActive = false;
+
+				return;
+			}
 
 			// Create light camera
 			Camera lightCamera;
@@ -76,6 +87,8 @@ void Shadows::render(Camera& camera)
 			ShadowInfo* info = &m_shadowInfo[id];
 			info->m_shadowStrength = light.m_shadowStrength;
 			info->m_cameraProj = camera.getProjMatrix();
+			info->m_lightIndex = lightNum - 1;
+			info->m_isActive = true;
 
 			for (Uint32 cascade = 0; cascade < light.m_shadowCascades; ++cascade)
 			{
@@ -88,6 +101,16 @@ void Shadows::render(Camera& camera)
 					info->m_shadowMaps.push_back(shadowMap);
 					info->m_lightProjViews.push_back(Matrix4f(1.0f));
 					info->m_shadowDists.push_back(0.0f);
+					info->m_isActive = true;
+				}
+
+				// Resize framebuffers if needed
+				if (light.m_shadowResolution != info->m_shadowMaps[cascade]->getWidth())
+				{
+					FrameBuffer* shadowMap = info->m_shadowMaps[cascade];
+					shadowMap->reset();
+					shadowMap->create(light.m_shadowResolution, light.m_shadowResolution);
+					shadowMap->attachDepth(shadowMap->getDepthTexture());
 				}
 
 				// Calculate vertices
@@ -138,16 +161,24 @@ void Shadows::render(Camera& camera)
 	);
 
 
+	// Only update uniform buffer if shadows are enabled (when there's a positive number of active lights)
 	if (m_shadowInfo.size())
 	{
 		// Update uniform block
 		UniformBlock_Shadows block;
 
 		// Apply shadow maps to shader
-		Uint32 i = 0;
-		for (auto it = m_shadowInfo.begin(); it != m_shadowInfo.end(); ++it, ++i)
+		for (auto it = m_shadowInfo.begin(); it != m_shadowInfo.end(); ++it)
 		{
 			ShadowInfo& info = it.value();
+			Uint32 i = info.m_lightIndex;
+
+			// Skip if inactive
+			if (!info.m_isActive)
+			{
+				block.m_shadowsEnabled[i] = false;
+				continue;
+			}
 
 			for (Uint32 cascade = 0; cascade < info.m_shadowMaps.size(); ++cascade)
 			{
@@ -160,9 +191,8 @@ void Shadows::render(Camera& camera)
 
 			block.m_shadowStrengths[i] = info.m_shadowStrength;
 			block.m_numShadowCascades[i] = (int)info.m_shadowMaps.size();
+			block.m_shadowsEnabled[i] = true;
 		}
-
-		block.m_numShadows = (int)m_shadowInfo.size();
 
 		// Push data
 		m_uniformBuffer.pushData(block);
@@ -177,10 +207,14 @@ void Shadows::apply(Shader* shader)
 	shader->bindUniformBlock("Shadows", m_uniformBuffer);
 
 	// Apply shadow maps to shader
-	Uint32 i = 0;
-	for (auto it = m_shadowInfo.begin(); it != m_shadowInfo.end(); ++it, ++i)
+	for (auto it = m_shadowInfo.begin(); it != m_shadowInfo.end(); ++it)
 	{
 		ShadowInfo& info = it.value();
+		Uint32 i = info.m_lightIndex;
+
+		// Skip if inactive
+		if (!info.m_isActive)
+			continue;
 
 		for (Uint32 cascade = 0; cascade < info.m_shadowMaps.size(); ++cascade)
 		{

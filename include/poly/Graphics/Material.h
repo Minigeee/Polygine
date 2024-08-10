@@ -3,6 +3,8 @@
 
 #include <poly/Core/DataTypes.h>
 
+#include <poly/Graphics/RenderSystem.h>
+
 #include <poly/Math/Vector3.h>
 
 namespace poly
@@ -23,36 +25,6 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	Material();
-
-	///////////////////////////////////////////////////////////
-	/// \brief Set the ambient color multiplier of the material
-	///
-	/// The ambient color multiplier is the color that gets multplied
-	/// by the global ambient color when applying ambient lighting.
-	/// Ambient lighting is the lighting that comes from the environment
-	/// and is what lights up surfaces of models when there is no direct
-	/// light shining on it.
-	///
-	/// \param color The diffuse color
-	///
-	///////////////////////////////////////////////////////////
-	void setAmbient(const Vector3f& color);
-
-	///////////////////////////////////////////////////////////
-	/// \brief Set the ambient color multiplier of the material
-	///
-	/// The ambient color multiplier is the color that gets multplied
-	/// by the global ambient color when applying ambient lighting.
-	/// Ambient lighting is the lighting that comes from the environment
-	/// and is what lights up surfaces of models when there is no direct
-	/// light shining on it.
-	///
-	/// \param r The r component of the ambient color
-	/// \param g The g component of the ambient color
-	/// \param b The b component of the ambient color
-	///
-	///////////////////////////////////////////////////////////
-	void setAmbient(float r, float g, float b);
 
 	///////////////////////////////////////////////////////////
 	/// \brief Set the diffuse color of the material
@@ -126,11 +98,46 @@ public:
 	void setShininess(float shininess);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Set the material occlusion factor
+	///
+	/// The occlusion factor determines how much the material is affected
+	/// by occluders (i.e. shadows, ambient occlusion, diffuse lighting,
+	/// etc.). The factor should be a value from 0 to 1, where 0 means that
+	/// the material won't be affected by occlusion at all and it will recieve
+	/// uniform diffuse lighting at every location, and 1 means the
+	/// material will be affected by the usual amount.
+	///
+	/// \param factor The material occlusion factor
+	///
+	///////////////////////////////////////////////////////////
+	void setOcclusionFactor(float occlusion);
+
+	///////////////////////////////////////////////////////////
+	/// \brief Set the material reflectivity
+	///
+	/// This property determines how strongly reflections affect
+	/// the material. This property has no effect in the standard
+	/// rendering pipeline, it only comes into effect when some
+	/// type of reflective effect is applied, such as screen space
+	/// reflections (SSR). A value of 0 means the material does not
+	/// reflect any surrounding images, and a value of 1 means that
+	/// the material only reflects its surrounding images.
+	///
+	/// \param reflectivity The material reflectivity
+	///
+	///////////////////////////////////////////////////////////
+	void setReflectivity(float reflectivity);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Set whether the material diffuse texture contains transparent pixels
 	///
-	/// This applies to diffuse textures with transparency of any
-	/// level. The renderer needs to know this information so that it
-	/// can render objects in the correct order.
+	/// This property should be set (manually) to true for any material
+	/// that contains a diffuse texture with partially transparent textures.
+	/// Renderables that use a material with this property set to true will
+	/// be rendered using forward rendering because rendering transparent objects
+	/// with deferred rendering will be hard. So if a custom shader is used on a
+	/// material with this property set to true, make sure it is a forward render
+	/// shader instead of a deferred render shader.
 	///
 	/// \param transparent Whether the diffuse texture contains transparent pixels
 	///
@@ -179,6 +186,17 @@ public:
 	void setNormalTexture(Texture* texture);
 
 	///////////////////////////////////////////////////////////
+	/// \brief Set the material render mask
+	///
+	/// This mask determines which render passes the material gets
+	/// rendered in.
+	///
+	/// \param mask The render pass mask
+	///
+	///////////////////////////////////////////////////////////
+	void setRenderMask(RenderPass mask);
+
+	///////////////////////////////////////////////////////////
 	/// \brief Set the function callback for applying a material to a shader
 	///
 	/// If the function callback exists, then it will be called
@@ -219,14 +237,6 @@ public:
 	void removeTexture(const std::string& uniform);
 
 	///////////////////////////////////////////////////////////
-	/// \brief Get the ambient color multiplier
-	///
-	/// \return The ambient color multiplier
-	///
-	///////////////////////////////////////////////////////////
-	Vector3f& getAmbient();
-
-	///////////////////////////////////////////////////////////
 	/// \brief Get the diffuse color
 	///
 	/// \return The diffuse color
@@ -251,11 +261,29 @@ public:
 	float getShininess() const;
 
 	///////////////////////////////////////////////////////////
+	/// \brief Get the occlusion factor
+	///
+	/// \return The occlusion factor
+	///
+	///////////////////////////////////////////////////////////
+	float getOcclusionFactor() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the material reflectivity
+	///
+	/// \return The material reflectivity
+	///
+	///////////////////////////////////////////////////////////
+	float getReflectivity() const;
+
+	///////////////////////////////////////////////////////////
 	/// \brief Check if the diffuse texture contains transparent pixels
 	///
-	/// This value must be set manually
+	/// This value must be set manually.
 	///
 	/// \return True if the diffuse texture contains transparent pixels
+	///
+	/// \see setTransparent
 	///
 	///////////////////////////////////////////////////////////
 	bool isTransparent() const;
@@ -269,6 +297,30 @@ public:
 	bool getCullFace() const;
 
 	///////////////////////////////////////////////////////////
+	/// \brief Get the material diffuse texture
+	///
+	/// \return A pointer to the material diffuse texture
+	///
+	///////////////////////////////////////////////////////////
+	Texture* getDiffTexture() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the material specular texture
+	///
+	/// \return A pointer to the material specular texture
+	///
+	///////////////////////////////////////////////////////////
+	Texture* getSpecTexture() const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the material normal texture
+	///
+	/// \return A pointer to the material normal texture
+	///
+	///////////////////////////////////////////////////////////
+	Texture* getNormalTexture() const;
+
+	///////////////////////////////////////////////////////////
 	/// \brief Get the texture bound to the specified uniform
 	///
 	/// \param The name of the uniform to retrieve a texture from
@@ -277,6 +329,14 @@ public:
 	///
 	///////////////////////////////////////////////////////////
 	Texture* getTexture(const std::string& uniform) const;
+
+	///////////////////////////////////////////////////////////
+	/// \brief Get the material render mask
+	///
+	/// \return The material render mask
+	///
+	///////////////////////////////////////////////////////////
+	RenderPass getRenderMask() const;
 
 	///////////////////////////////////////////////////////////
 	/// \brief Apply the material to a shader
@@ -318,11 +378,13 @@ public:
 	void apply(Shader* shader) const;
 
 private:
-	Vector3f m_ambient;							//!< The ambient color multiplier
 	Vector3f m_diffuse;							//!< The diffuse color
 	Vector3f m_specular;						//!< The specular color
 	float m_shininess;							//!< The shininess value
-	bool m_isTransparent;
+	float m_occlusionFactor;					//!< The occlusion factor
+	float m_reflectivity;						//!< The reflectivity of the material
+	RenderPass m_renderMask;					//!< The render pass mask
+	bool m_isTransparent;						//!< This is true if the material contains transparent components
 	bool m_cullFace;							//!< Should this material allow face culling
 
 	Texture* m_diffTexture;						//!< The diffuse texture

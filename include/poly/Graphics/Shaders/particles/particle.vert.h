@@ -1,0 +1,3 @@
+#ifndef SHADER_PARTICLES_PARTICLE_VERT
+#define SHADER_PARTICLES_PARTICLE_VERT "#version 330 core\n\nlayout (location = 0) in vec3 a_position;\nlayout (location = 1) in float a_rotation;\nlayout (location = 2) in vec2 a_size;\nlayout (location = 3) in vec4 a_color;\nlayout (location = 4) in vec4 a_texRect;\n\nout vec3 v_position;\nout vec2 v_size;\nout float v_rotation;\nout vec2 v_texCoord;\nout vec2 v_texSize;\nout vec4 v_color;\n\n\n///////////////////////////////////////////////////////////\nvoid main()\n{\n    v_position = a_position;\n    v_rotation = a_rotation;\n    v_size = a_size;\n    v_color = a_color;\n    v_texCoord = a_texRect.xy;\n    v_texSize = a_texRect.zw;\n}"
+#endif

@@ -2,6 +2,7 @@
 #define POLY_VERTEX_ARRAY_H
 
 #include <poly/Core/DataTypes.h>
+#include <poly/Core/NonCopyable.h>
 
 #include <poly/Graphics/VertexBuffer.h>
 
@@ -27,17 +28,9 @@ enum class DrawMode
 /// \brief Stores and maps an array of vertex buffers for rendering
 ///
 ///////////////////////////////////////////////////////////
-class VertexArray
+class VertexArray : public NonMoveable
 {
 public:
-
-#ifndef DOXYGEN_SKIP
-	VertexArray(const VertexArray&) = delete;
-	VertexArray& operator=(const VertexArray&) = delete;
-	VertexArray(VertexArray&&) = default;
-	VertexArray& operator=(VertexArray&&) = default;
-#endif
-
 	///////////////////////////////////////////////////////////
 	/// \brief Default constructor
 	///
